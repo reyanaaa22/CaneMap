@@ -18,7 +18,7 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #f5f7fa;
   color: #333;
-  padding-top: 30px;
+  padding-top: 13px;
 }
   .container {
     background: #fff;
@@ -38,8 +38,8 @@ body {
     font-weight: 700;
     font-size: 1.5rem;
     color: #222;
-    margin-top: 20px;
-    margin-bottom: 16px;
+    margin-top: 24px;
+    margin-bottom: 10px;
   }
   p {
     color: #666;
@@ -140,6 +140,27 @@ body {
     text-align: center;
     min-height: 20px;
   }
+
+  .account-login {
+  margin-top: -10px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: #555;
+  text-align: center; 
+  }
+
+  .account-login a {
+    color: green;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .account-login a:hover {
+    text-decoration: underline;
+  }
+
+
   @media (max-width: 480px) {
     .container {
       width: 90vw;
@@ -169,16 +190,16 @@ body {
 </head>
 <body>
   <div class="container">
-    <h3>Sign Up</h3>
+    <h3>Create An Account</h3>
     <p>Join CaneMap and start managing your sugarcane fields digitally.</p>
 
     <form id="signup-form" novalidate>
       <label for="fullname">Full Name</label>
-      <input type="text" id="fullname" name="fullname" placeholder="Your full name" required />
+      <input type="text" id="fullname" name="fullname" placeholder="eg. Juan Dela Cruz" required />
       <div id="error-fullname" class="error-message"></div>
 
       <label for="email">Email Address</label>
-      <input type="email" id="email" name="email" placeholder="juan@gmail.com" required />
+      <input type="email" id="email" name="email" placeholder="eg. juan@gmail.com" required />
       <div id="error-email" class="error-message"></div>
 
       <label for="contact">Contact Number</label>
@@ -203,7 +224,12 @@ body {
       <button type="submit">Sign Up</button>
     </form>
 
-    <div id="message"></div>
+  <div id="message"></div>
+  <p class="account-login">
+  Already have an account? 
+  <a href="login.html">Login</a>
+  </p>
+
   </div>
 
   <!-- Firebase SDK -->
