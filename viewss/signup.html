@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sign Up - CaneMap</title>
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; 
+  min-height: 100vh;
+  margin: 0;
+  padding: 10px 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f7fa;
+  color: #333;
+  padding-top: 30px;
+}
+  .container {
+    background: #fff;
+    width: 410px;
+    max-width: 95vw;
+    padding: 12px 18px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  h3 {
+    margin: 0 0 8px;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #222;
+    margin-top: 20px;
+    margin-bottom: 16px;
+  }
+  p {
+    color: #666;
+    font-size: 0.7rem;
+    margin: 0 0 14px;
+    line-height: 1.3;
+    margin-bottom: 30px;
+  }
+  form {
+    text-align: left;
+    flex-grow: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 3px;
+    color: #444;
+    font-size: 0.85rem;
+  }
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    width: 98%;
+    padding: 7px 10px;
+    margin-bottom: 2px;
+    border-radius: 7px;
+    border: 1.8px solid #ccc;
+    font-size: 0.9rem;
+    transition: border-color 0.3s ease;
+    outline-offset: 2px;
+    margin-left: 1.1px;
+  }
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus {
+    border-color: green;
+    box-shadow: 0 0 6px rgba(59,246,115,0.4);
+  }
+  .small {
+    font-size: 0.65rem;
+    color: #777;
+    margin: -6px 0 10px;
+    font-style: italic;
+    margin-top: 1px;
+  }
+  .error-message {
+    font-size: 0.8rem;
+    color: #dc2626;
+    margin-bottom: 8px;
+    min-height: 18px;
+  }
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    margin-bottom: 15px;
+    color: #555;
+  }
+  .checkbox-container input[type="checkbox"] {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  .checkbox-container a {
+    color: green;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .checkbox-container a:hover {
+    text-decoration: underline;
+  }
+  button {
+    width: 100%;
+    background: green;
+    border: none;
+    color: white;
+    padding: 11px 0;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 246, 115, 0.4);
+  }
+  button:hover {
+    background: green;
+    box-shadow: 0 6px 18px rgba(59,246,155,0.4);
+  }
+  #message {
+    margin-top: 10px;
+    color: #16a34a;
+    font-weight: 600;
+    text-align: center;
+    min-height: 20px;
+  }
+  @media (max-width: 480px) {
+    .container {
+      width: 90vw;
+      height: calc(100vh - 30px);
+      padding: 10px 12px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      padding: 6px 8px;
+      font-size: 0.85rem;
+    }
+    button {
+      padding: 10px 0;
+      font-size: 0.95rem;
+    }
+    .checkbox-container {
+      font-size: 0.75rem;
+      margin-bottom: 12px;
+    }
+    .small {
+      font-size: 0.6rem;
+      margin-bottom: 8px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h3>Sign Up</h3>
+    <p>Join CaneMap and start managing your sugarcane fields digitally.</p>
+
+    <form id="signup-form" novalidate>
+      <label for="fullname">Full Name</label>
+      <input type="text" id="fullname" name="fullname" placeholder="Your full name" required />
+      <div id="error-fullname" class="error-message"></div>
+
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email" placeholder="juan@gmail.com" required />
+      <div id="error-email" class="error-message"></div>
+
+      <label for="contact">Contact Number</label>
+      <input type="text" id="contact" name="contact" placeholder="+63 9xx xxx xxxx" required />
+      <div id="error-contact" class="error-message"></div>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" minlength="8" placeholder="********" required />
+      <div class="small">Minimum 8 characters with letters and numbers</div>
+      <div id="error-password" class="error-message"></div>
+
+      <label for="confirm-password">Confirm Password</label>
+      <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder="********" required />
+      <div id="error-confirm-password" class="error-message"></div>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="terms" name="terms" required />
+        <label for="terms">I agree to the <a href="#" target="_blank" rel="noopener">Terms of Service</a> and <a href="#" target="_blank" rel="noopener">Privacy Policy</a></label>
+      </div>
+      <div id="error-terms" class="error-message" style="margin-top: -18px; margin-bottom: 12px;"></div>
+
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <div id="message"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
+      authDomain: "canemap-system.firebaseapp.com",
+      projectId: "canemap-system",
+      storageBucket: "canemap-system.firebasestorage.app",
+      messagingSenderId: "624993566775",
+      appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
+      measurementId: "G-08KFJQ1NEJ"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const form = document.getElementById('signup-form');
+    const messageDiv = document.getElementById('message');
+
+    const errors = {
+      fullname: document.getElementById('error-fullname'),
+      email: document.getElementById('error-email'),
+      contact: document.getElementById('error-contact'),
+      password: document.getElementById('error-password'),
+      confirmPassword: document.getElementById('error-confirm-password'),
+      terms: document.getElementById('error-terms'),
+    };
+
+    function clearErrors() {
+      for (const key in errors) {
+        errors[key].textContent = '';
+      }
+      messageDiv.textContent = '';
+      messageDiv.style.color = '#16a34a';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const fullName = form.fullname.value.trim();
+      const email = form.email.value.trim();
+      const contact = form.contact.value.trim();
+      const password = form.password.value;
+      const confirmPassword = form['confirm-password'].value;
+      const terms = form.terms.checked;
+
+      let valid = true;
+
+      if (!fullName) {
+        errors.fullname.textContent = 'Please enter your full name.';
+        valid = false;
+      }
+
+      if (!email) {
+        errors.email.textContent = 'Please enter your email address.';
+        valid = false;
+      } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          errors.email.textContent = 'Please enter a valid email.';
+          valid = false;
+        }
+      }
+
+      if (!contact) {
+        errors.contact.textContent = 'Please enter your contact number.';
+        valid = false;
+      }
+
+      if (!password) {
+        errors.password.textContent = 'Please enter a password.';
+        valid = false;
+      } else if (password.length < 8) {
+        errors.password.textContent = 'Password must be at least 8 characters.';
+        valid = false;
+      }
+
+      if (!confirmPassword) {
+        errors.confirmPassword.textContent = 'Please confirm your password.';
+        valid = false;
+      } else if (password !== confirmPassword) {
+        errors.confirmPassword.textContent = 'Passwords do not match.';
+        valid = false;
+      }
+
+      if (!terms) {
+        errors.terms.textContent = 'You must agree to the Terms of Service and Privacy Policy.';
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        await userCredential.user.updateProfile({ displayName: fullName });
+        await userCredential.user.sendEmailVerification();
+
+        messageDiv.style.color = '#16a34a';
+        messageDiv.textContent = 'Sign-up successful! Please check your email to verify your account before logging in.';
+        form.reset();
+      } catch (error) {
+        messageDiv.style.color = '#dc2626';
+        messageDiv.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>
