@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Forgot Password - CaneMap</title>
+<style>
+    body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    }
+
+    .container {
+    background: white;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    text-align: center;
+    }
+
+    h2 {
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+    }
+
+    p {
+    font-size: 0.95rem;
+    }
+
+    input {
+    width: 95%;
+    padding: 10px;
+    padding-right: 10px;
+    margin: 8px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    }
+
+    button {
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    }
+
+    button:hover {
+    background: #218838;
+    }
+
+    .alert {
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    display: none;
+    }
+
+    .error {
+    background: #f8d7da;
+    color: #721c24;
+    }
+
+    .success {
+    background: #d4edda;
+    color: #155724;
+    }
+
+    /* Modal overlay */
+    #modalOverlay {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    }
+
+    #modalContent {
+    background: white;
+    padding: 20px 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-size: 1rem;
+    font-weight: 600;
+    }
+
+    #modalOkBtn {
+    margin-top: 20px;
+    padding: 8px 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 7px;
+    background-color: #28a745;
+    color: white;
+    cursor: pointer;
+    }
+
+    #modalOkBtn:hover {
+    background-color: #218838;
+    }
+
+    .back-to-login {
+    margin-top: 15px;
+    }
+
+    .back-to-login a {
+    color:  #218838;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    }
+
+    .back-to-login a:hover {
+    text-decoration: underline;
+    }
+
+    /* 📱 Responsive adjustments for small screens */
+    @media (max-width: 480px) {
+    .container {
+        padding: 15px;
+        width: 95%;
+    }
+
+    h2 {
+        font-size: 1.3rem;
+    }
+
+    p {
+        font-size: 0.9rem;
+    }
+
+    input, button {
+        font-size: 0.95rem;
+        padding: 9px;
+    }
+
+    #modalContent {
+        padding: 15px 20px;
+        font-size: 0.95rem;
+    }
+
+    #modalOkBtn {
+        font-size: 0.9rem;
+        padding: 7px 20px;
+    }
+    }
+
+    @media (max-width: 360px) {
+    h2 {
+        font-size: 1.1rem;
+    }
+
+    p {
+        font-size: 0.85rem;
+    }
+
+    input, button {
+        font-size: 0.9rem;
+        padding: 8px;
+    }
+
+    #modalContent {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+    }
+
+    #modalOkBtn {
+        font-size: 0.85rem;
+        padding: 6px 18px;
+    }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Forgot Password</h2>
+  <p>Enter your email address and we'll send you a link to reset your password.</p>
+
+  <input type="email" id="email" placeholder="Email" required />
+  <button id="resetBtn">Send Reset Link</button>
+
+  <div id="alertBox" class="alert"></div>
+
+  <p class="back-to-login">
+    <a href="../viewss/farmers_login.html">Go Back to Login</a>
+  </p>
+</div>
+
+
+<div id="modalOverlay">
+  <div id="modalContent">
+    <div id="modalMessage">We’ve sent you a password reset link! Check your email to continue.</div>
+    <button id="modalOkBtn">OK</button>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, sendPasswordResetEmail, fetchSignInMethodsForEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
+    authDomain: "canemap-system.firebaseapp.com",
+    projectId: "canemap-system",
+    storageBucket: "canemap-system.firebasestorage.app",
+    messagingSenderId: "624993566775",
+    appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
+    measurementId: "G-08KFJQ1NEJ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const emailInput = document.getElementById("email");
+  const resetBtn = document.getElementById("resetBtn");
+  const alertBox = document.getElementById("alertBox");
+
+  const modalOverlay = document.getElementById("modalOverlay");
+  const modalMessage = document.getElementById("modalMessage");
+  const modalOkBtn = document.getElementById("modalOkBtn");
+
+  function showAlert(message, type) {
+    alertBox.textContent = message;
+    alertBox.className = `alert ${type}`;
+    alertBox.style.display = "block";
+  }
+
+  function clearAlert() {
+    alertBox.textContent = "";
+    alertBox.className = "alert";
+    alertBox.style.display = "none";
+  }
+
+  function showModal(message) {
+    modalMessage.textContent = message;
+    modalOverlay.style.display = "flex";
+    modalOkBtn.disabled = false;
+  }
+
+  function hideModal() {
+    modalOverlay.style.display = "none";
+  }
+
+  resetBtn.addEventListener("click", async () => {
+    clearAlert();
+
+    const email = emailInput.value.trim();
+
+    if (!email) {
+      showAlert("Please enter your email address.", "error");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showAlert("Please enter a valid email address.", "error");
+      return;
+    }
+
+    showModal("Password reset email sent! Please check your inbox.");
+
+    
+
+      await sendPasswordResetEmail(auth, email);
+      modalMessage.textContent = "Password reset email sent! Please check your inbox.";
+      modalOkBtn.disabled = false;
+
+    });
+
+  modalOkBtn.addEventListener("click", () => {
+    hideModal();
+    window.location.href = "../viewss/farmers_login.html"; // Redirect to login page
+  });
+
+  emailInput.addEventListener("focus", () => clearAlert());
+</script>
+
+</body>
+</html>
