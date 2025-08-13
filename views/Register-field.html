@@ -17,30 +17,105 @@
             <p class="mb-6 text-gray-600">Register your sugarcane field for monitoring and management</p>
             <form method="POST" enctype="multipart/form-data" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Field Name *</label>
-                        <input type="text" id="field_name" name="field_name" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
-                               placeholder="Enter field name">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Size (hectares) *</label>
-                        <input type="number" id="area_size" name="area_size" step="0.01" min="0.1" max="1000" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
-                               placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Barangay *</label>
-                        <input type="text" id="barangay" name="barangay" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
-                               placeholder="Enter barangay">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">City/Municipality *</label>
-                        <input type="text" id="municipality" name="municipality" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
-                               placeholder="Enter municipality">
-                    </div>
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">Barangay *</label>
+    <input list="barangay-list" id="barangay" name="barangay" required
+           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
+           placeholder="Start typing your barangay...">
+        <datalist id="barangay-list">
+        <option value="Airport">
+        <option value="Alegria">
+        <option value="Alta Vista">
+        <option value="Bagongbong">
+        <option value="Bagong Buhay">
+        <option value="Bantigue">
+        <option value="Batuan">
+        <option value="Bayog">
+        <option value="Biliboy">
+        <option value="Cabaon-an">
+        <option value="Cabintan">
+        <option value="Cabulihan">
+        <option value="Cagbuhangin">
+        <option value="Camp Downes">
+        <option value="Can-adieng">
+        <option value="Can-untog">
+        <option value="Catmon">
+        <option value="Cogon Combado">
+        <option value="Concepcion">
+        <option value="Curva">
+        <option value="Danhug (Lili-on)">
+        <option value="Dayhagan">
+        <option value="Dolores">
+        <option value="Domonar">
+        <option value="Don Carlos B. Rivilla Sr. (Boroc)">
+        <option value="Don Felipe Larrazabal">
+        <option value="Don Potenciano Larrazabal">
+        <option value="Doña Feliza Z. Mejia">
+        <option value="Donghol">
+        <option value="East (Poblacion; consisting former Brgys. District 9–11, 16, 18, 25 (Malbasag), 28)">
+        <option value="Esperanza">
+        <option value="Gaas">
+        <option value="Green Valley">
+        <option value="Guintigui-an">
+        <option value="Hibunawon">
+        <option value="Hugpa">
+        <option value="Ipil">
+        <option value="Juaton">
+        <option value="Kadaohan">
+        <option value="Labrador (Balion)">
+        <option value="Lake Danao">
+        <option value="Lao">
+        <option value="Leondoni">
+        <option value="Libertad">
+        <option value="Liberty">
+        <option value="Licuma">
+        <option value="Liloan">
+        <option value="Linao">
+        <option value="Luna">
+        <option value="Mabato">
+        <option value="Mabini">
+        <option value="Macabug">
+        <option value="Magaswi">
+        <option value="Mahayag">
+        <option value="Mahayahay">
+        <option value="Manlilinao">
+        <option value="Margen">
+        <option value="Mas-in">
+        <option value="Matica-a">
+        <option value="Milagro">
+        <option value="Monterico">
+        <option value="Nasunogan">
+        <option value="Naungan">
+        <option value="North (Poblacion; consisting former Brgy. District 29 (Nadongholan))">
+        <option value="Nueva Sociedad">
+        <option value="Nueva Vista">
+        <option value="Patag">
+        <option value="Punta">
+        <option value="Quezon, Jr.">
+        <option value="Rufina M. Tan (Rawis)">
+        <option value="Sabang Bao">
+        <option value="Salvacion">
+        <option value="San Antonio">
+        <option value="San Isidro">
+        <option value="San Jose">
+        <option value="San Juan">
+        <option value="San Pablo (Simangan)">
+        <option value="San Vicente">
+        <option value="Santo Niño">
+        <option value="South (Poblacion; consisting former Brgys. District 1–8, 12, 13, 15, 17, 23, 27)">
+        <option value="Sumangga">
+        <option value="Tambulilid">
+        <option value="Tongonan">
+        <option value="Valencia">
+        <option value="West (Poblacion; consisting former Brgys. District 14, 19–22, 24, 26 (Isla Verde))">
+    </datalist>
+</div>
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">City/Municipality *</label>
+    <input type="text" id="city" name="city" value="Ormoc City" readonly
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green">
+</div>
+
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Pin your land location</label>
@@ -133,71 +208,6 @@
             </form>
         </div>
     </div>
-    <script>
-        // Initialize map for location selection
-        const locationMap = L.map('locationMap').setView([14.5995, 120.9842], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(locationMap);
-        let locationMarker = null;
-        locationMap.on('click', function(e) {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-            if (locationMarker) locationMap.removeLayer(locationMarker);
-            locationMarker = L.marker([lat, lng]).addTo(locationMap);
-            document.getElementById('latitude').value = lat.toFixed(6);
-            document.getElementById('longitude').value = lng.toFixed(6);
-        });
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const latitude = document.getElementById('latitude').value;
-            const longitude = document.getElementById('longitude').value;
-            if (!latitude || !longitude) {
-                e.preventDefault();
-                alert('Please select a location on the map.');
-                return false;
-            }
-        });
-        function setupCamera(buttonId, cameraDivId, inputId, facingMode = "environment") {
-    const button = document.getElementById(buttonId);
-    const cameraDiv = document.getElementById(cameraDivId);
-    button.addEventListener('click', async function() {
-        cameraDiv.innerHTML = '';
-        const video = document.createElement('video');
-        video.autoplay = true;
-        video.playsInline = true;
-        video.width = 320;
-        video.height = 240;
-        cameraDiv.appendChild(video);
-        let stream;
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
-            video.srcObject = stream;
-        } catch (err) {
-            alert('Camera access denied or not available.');
-            return;
-        }
-        const snapBtn = document.createElement('button');
-        snapBtn.textContent = 'Capture';
-        snapBtn.className = 'px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 mt-2';
-        cameraDiv.appendChild(snapBtn);
-        snapBtn.onclick = function() {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const dataUrl = canvas.toDataURL('image/png');
-            document.getElementById(inputId).value = dataUrl;
-            cameraDiv.innerHTML = '<img src="' + dataUrl + '" class="rounded shadow mt-2" width="160">';
-            stream.getTracks().forEach(track => track.stop());
-        };
-    });
-}
-setupCamera('takePhotoFront', 'camera-front', 'valid_id_front', 'environment');
-setupCamera('takePhotoBack', 'camera-back', 'valid_id_back', 'environment');
-setupCamera('takePhotoSelfie', 'camera-selfie', 'selfie_with_id', 'user');
-    </script>
+    <script src="../backend/Register-field.js"></script>
 </body>
 </html>
-
-<?php include '../includes/footer.php'; ?>
