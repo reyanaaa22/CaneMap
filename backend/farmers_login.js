@@ -118,6 +118,11 @@ async function login() {
 
   localStorage.setItem("farmerName", farmerName);
 
+  let farmerContact = docSnap.exists() 
+    ? docSnap.data().contact || "" 
+    : "";
+  localStorage.setItem("farmerContact", farmerContact);
+
   // --- Reset attempts and redirect ---
   resetAttempts();
   showAlert("Login successful!", "success");
