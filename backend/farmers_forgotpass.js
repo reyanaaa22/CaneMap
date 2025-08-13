@@ -72,7 +72,7 @@
 
   modalOkBtn.addEventListener("click", () => {
     hideModal();
-    window.location.href = "../viewss/farmers_login.html"; // Redirect to login page
+    window.location.href = "../views/farmers_login.html"; // Redirect to login page
   });
 
   emailInput.addEventListener("focus", () => clearAlert());
