@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .container {
+    background: white;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  h2 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  input {
+    width: 95%;
+    padding-right: 10px;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #218838;
+  }
+  .alert {
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 14px;
+    display: none;
+  }
+  .error {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  .success {
+    background: #d4edda;
+    color: #155724;
+  }
+  .warning {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  .signup-text {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.signup-text a {
+  color: #155724;
+  text-decoration: none;
+}
+
+.signup-text a:hover {
+  text-decoration: underline;
+}
+
+.forgot-pass {
+  text-align: right;
+  margin: 5px 0 10px;
+  font-size: 13px;
+}
+
+.forgot-pass a {
+  color: #155724;
+  text-decoration: none;
+}
+
+.forgot-pass a:hover {
+  text-decoration: underline;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Login</h2>
+  <form id="loginForm">
+    <input type="email" id="email" placeholder="Email" required>
+    
+    <input type="password" id="password" placeholder="Password" required>
+    <p class="forgot-pass">
+      <a href="../views/farmers_forgotpass.html">Forgot password?</a>
+    </p>
+
+    <button type="submit">Login</button>
+  </form>
+
+  <div id="alertBox" class="alert"></div>
+
+  <p class="signup-text">
+    Don't have an account yet? 
+    <a href="../views/signup.html">Sign up here</a>
+  </p>
+</div>
+
+
+
+<script type="module" src="../backend/farmers_login.js"></script>

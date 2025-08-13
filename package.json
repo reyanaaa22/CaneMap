@@ -1,0 +1,24 @@
+{
+  "name": "canemap",
+  "version": "1.0.0",
+  "description": "CaneMap is a comprehensive digital platform designed for managing sugarcane fields, tracking farming activities, and facilitating communication between farmers, landowners, and SRA (Sugar Regulatory Administration) officers.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reyanaaa22/CaneMap.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/reyanaaa22/CaneMap/issues"
+  },
+  "homepage": "https://github.com/reyanaaa22/CaneMap#readme",
+  "dependencies": {
+    "firebase": "^12.1.0",
+    "firebase-admin": "^13.4.0"
+  }
+}

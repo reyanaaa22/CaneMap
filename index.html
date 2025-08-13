@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - CaneMap</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            overflow-x: hidden;
+        }
+        .main-background {
+            background-image: url('../img/sugarcane.webp');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        .onboarding-overlay {
+            background: linear-gradient(
+                135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                rgba(255, 255, 255, 0.1) 100%
+            );
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .onboarding-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 
+                0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                0 10px 10px -5px rgba(0, 0, 0, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .placeholder-image {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .nav-dot.active {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: scale(1.2);
+        }
+        .nav-dot.inactive {
+            background: rgba(209, 213, 219, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-next {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn-next:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #374151;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-1px);
+        }
+        .onboarding-screen {
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 0.5s ease;
+            display: none;
+        }
+        .onboarding-screen.active {
+            opacity: 1;
+            transform: translateX(0);
+            display: block;
+        }
+        .skip-btn {
+            color: rgba(107, 114, 128, 0.8);
+            transition: all 0.3s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .skip-btn:hover {
+            color: rgba(55, 65, 81, 1);
+            transform: translateY(-1px);
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+        .title-text {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .description-text {
+            color: rgba(55, 65, 81, 0.8);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="main-background">
+    <div class="min-h-screen onboarding-overlay">
+        <div class="min-h-screen flex items-center justify-center p-4 lg:p-8">
+            
+            <!-- Screen 1: Welcome -->
+            <div id="screen-1" class="onboarding-screen active max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <!-- Placeholder Image -->
+                    <div class="w-32 h-32 placeholder-image mx-auto mb-6 flex items-center justify-center">
+                        <span class="text-4xl"><img src="img/cane.png" alt="CaneMap Logo" class="w-full h-full"></span>
+                    </div>
+                    
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">🎋</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Welcome to CaneMap
+                        </h1>
+                    </div>
+                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                        Your Smart Sugarcane Field Companion. Designed for Farmers, Landowners, and Agriculture Officers.
+                    </p>
+                </div>
+                
+                <button onclick="nextScreen(2)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                    Next
+                </button>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                </div>
+            </div>
+
+            <!-- Screen 2: Smart Field Monitoring -->
+            <div id="screen-2" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">📋</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Track and Manage Sugarcane Fields
+                        </h1>
+                    </div>
+                    
+                    <!-- Three placeholder images -->
+                    <div class="flex justify-center space-x-4 mb-6">
+                        <div class="w-20 h-20 placeholder-image flex items-center justify-center">
+                            <span class="text-2xl">📱</span>
+                        </div>
+                        <div class="w-20 h-20 placeholder-image flex items-center justify-center">
+                            <span class="text-2xl">📸</span>
+                        </div>
+                        <div class="w-20 h-20 placeholder-image flex items-center justify-center">
+                            <span class="text-2xl">📊</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                        Farmers can log daily activities with time-in/out photos, while landowners and MAOs view summaries in real time.
+                    </p>
+                </div>
+                
+                <button onclick="nextScreen(3)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                    Next
+                </button>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                </div>
+            </div>
+
+            <!-- Screen 3: Digital Reporting Made Easy -->
+            <div id="screen-3" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">📤</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Submit Reports Without the Paperwork
+                        </h1>
+                    </div>
+                    
+                    <!-- Large placeholder image -->
+                    <div class="w-full h-32 placeholder-image mb-6 flex items-center justify-center">
+                        <span class="text-4xl">📄</span>
+                    </div>
+                    
+                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                        No more scattered messages. CaneMap organizes field updates, photo logs, and validation reports — all in one place.
+                    </p>
+                </div>
+                
+                <button onclick="nextScreen(4)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                    Next
+                </button>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                </div>
+            </div>
+
+            <!-- Screen 4: Role-Based Access -->
+            <div id="screen-4" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">👥</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Custom Dashboards per Role
+                        </h1>
+                    </div>
+                    
+                    <!-- Large placeholder image -->
+                    <div class="w-full h-32 placeholder-image mb-6 flex items-center justify-center">
+                        <span class="text-4xl">🎛️</span>
+                    </div>
+                    
+                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                        Landowners, Farmers, MAO/RGA officers, and Admins each get personalized access to features relevant to their work.
+                    </p>
+                </div>
+                
+                <button onclick="nextScreen(5)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                    Next
+                </button>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot inactive"></div>
+                    <div class="nav-dot inactive"></div>
+                </div>
+            </div>
+
+            <!-- Screen 5: Harvest Prediction -->
+            <div id="screen-5" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">🌱</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Predict Harvest with Confidence
+                        </h1>
+                    </div>
+                    
+                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                        Know your estimated harvest date based on variety and planting date. Plan ahead for labor, logistics, and reporting.
+                    </p>
+                </div>
+                
+                <button onclick="nextScreen(6)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                    Next
+                </button>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot inactive"></div>
+                </div>
+            </div>
+
+            <!-- Screen 6: Interactive Map Views -->
+            <div id="screen-6" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">🗺️</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Visual Mapping by Barangay and Field
+                        </h1>
+                    </div>
+                    
+                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                        See where sugarcane is growing, track progress per barangay, and monitor active fields at a glance — all in map view.
+                    </p>
+                </div>
+                
+                <button onclick="nextScreen(7)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                    Get Started
+                </button>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                </div>
+            </div>
+
+            <!-- Screen 7: Ready to Start -->
+            <div id="screen-7" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
+                    Skip
+                </button>
+                
+                <div class="mb-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <span class="feature-icon mr-3">🚀</span>
+                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                            Let's Get Started
+                        </h1>
+                    </div>
+                    
+                    <p class="text-lg lg:text-xl description-text leading-relaxed mb-8 max-w-2xl mx-auto">
+                        Register now and digitize your sugarcane farming experience.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <a href="auth/login.php" class="w-full py-4 px-8 btn-secondary font-semibold text-xl block">
+                            Sign In
+                        </a>
+                        <a href="auth/register.php" class="w-full py-4 px-8 btn-next font-semibold text-xl block">
+                            Sign Up →
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Navigation Dots -->
+                <div class="flex justify-center space-x-3 mt-8">
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                    <div class="nav-dot active"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+let currentScreen = 1;
+
+function nextScreen(screenNumber) {
+    if (screenNumber === currentScreen) {
+        return;
+    }
+    // Hide current screen with animation
+    const currentElement = document.getElementById(`screen-${currentScreen}`);
+    currentElement.classList.remove('active');
+    
+    // Wait for animation to complete, then show new screen
+    setTimeout(() => {
+        currentElement.style.display = 'none';
+        
+        // Show new screen
+        const newElement = document.getElementById(`screen-${screenNumber}`);
+        newElement.style.display = 'block';
+        
+        // Trigger animation
+        setTimeout(() => {
+            newElement.classList.add('active');
+        }, 50);
+        
+        currentScreen = screenNumber;
+    }, 500);
+}
+
+function skipOnboarding() {
+    nextScreen(7);
+}
+
+// Initialize first screen
+document.addEventListener('DOMContentLoaded', function() {
+    const firstScreen = document.getElementById('screen-1');
+    firstScreen.style.display = 'block';
+    firstScreen.classList.add('active');
+});
+</script>
+</body>
+</html> 

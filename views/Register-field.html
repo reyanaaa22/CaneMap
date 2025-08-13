@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>create Field Registration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-3xl mx-auto py-8 px-4">
+        <div class="bg-white rounded-xl shadow-xl p-8">
+            <h1 class="text-2xl font-bold text-cane-green mb-4">Field Registration</h1>
+            <p class="mb-6 text-gray-600">Register your sugarcane field for monitoring and management</p>
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Field Name *</label>
+                        <input type="text" id="field_name" name="field_name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
+                               placeholder="Enter field name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Size (hectares) *</label>
+                        <input type="number" id="area_size" name="area_size" step="0.01" min="0.1" max="1000" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
+                               placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Barangay *</label>
+                        <input type="text" id="barangay" name="barangay" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
+                               placeholder="Enter barangay">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">City/Municipality *</label>
+                        <input type="text" id="municipality" name="municipality" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green"
+                               placeholder="Enter municipality">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Pin your land location</label>
+                    <div id="locationMap" class="w-full h-64 rounded-lg border border-gray-300"></div>
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label class="block text-xs text-gray-700 mb-1">Latitude</label>
+                            <input type="number" id="latitude" step="any" required
+                                   class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-cane-green"
+                                   placeholder="14.5995">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-700 mb-1">Longitude</label>
+                            <input type="number" id="longitude" step="any" required
+                                   class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-cane-green"
+                                   placeholder="120.9842">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Click on the map to set the field location</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Terrain Type</label>
+                    <select id="crop_variety" name="crop_variety"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green">
+                        <option value="">Select terrain type...</option>
+                        <option value="Flat">Flat</option>
+                        <option value="Rolling">Rolling</option>
+                        <option value="Hilly">Hilly</option>
+                    </select>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Required Documents</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Barangay Certificate *</label>
+                            <input type="file" id="barangay_certification" name="barangay_certification" accept=".pdf,.jpg,.jpeg,.png" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green">
+                            <p class="text-xs text-gray-500 mt-1">PDF or image file</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Land Title *</label>
+                            <input type="file" id="land_title" name="land_title" accept=".pdf,.jpg,.jpeg,.png" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-cane-green">
+                            <p class="text-xs text-gray-500 mt-1">PDF or image file</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Valid ID (Front) *</label>
+                            <div id="camera-front" class="mb-2"></div>
+                            <button type="button" id="takePhotoFront" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mb-2">Take Photo</button>
+                            <input type="hidden" id="valid_id_front" name="valid_id_front" required>
+                            <p class="text-xs text-gray-500 mt-1">Take a live photo of your ID (Front)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Valid ID (Back) *</label>
+                            <div id="camera-back" class="mb-2"></div>
+                            <button type="button" id="takePhotoBack" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mb-2">Take Photo</button>
+                            <input type="hidden" id="valid_id_back" name="valid_id_back" required>
+                            <p class="text-xs text-gray-500 mt-1">Take a live photo of your ID (Back)</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Selfie Holding Your ID *</label>
+                            <div id="camera-selfie" class="mb-2"></div>
+                            <button type="button" id="takePhotoSelfie" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mb-2">Take Photo</button>
+                            <input type="hidden" id="selfie_with_id" name="selfie_with_id" required>
+                            <p class="text-xs text-gray-500 mt-1">Take a live selfie holding your ID</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="text-sm font-semibold text-blue-800 mb-2">What happens after submission?</h4>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>• Your field registration will be reviewed by SRA officers</li>
+                        <li>• Review process takes 5-10 working days</li>
+                        <li>• Once approved, your field will appear on the map</li>
+                        <li>• You can then add workers and submit reports</li>
+                    </ul>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="agree" required>
+                    <label for="agree" class="text-xs text-gray-700">I agree to the Terms and Conditions and Privacy Policy</label>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <a href="lobby.php" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        Submit Field Registration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        // Initialize map for location selection
+        const locationMap = L.map('locationMap').setView([14.5995, 120.9842], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(locationMap);
+        let locationMarker = null;
+        locationMap.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            if (locationMarker) locationMap.removeLayer(locationMarker);
+            locationMarker = L.marker([lat, lng]).addTo(locationMap);
+            document.getElementById('latitude').value = lat.toFixed(6);
+            document.getElementById('longitude').value = lng.toFixed(6);
+        });
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+            if (!latitude || !longitude) {
+                e.preventDefault();
+                alert('Please select a location on the map.');
+                return false;
+            }
+        });
+        function setupCamera(buttonId, cameraDivId, inputId, facingMode = "environment") {
+    const button = document.getElementById(buttonId);
+    const cameraDiv = document.getElementById(cameraDivId);
+    button.addEventListener('click', async function() {
+        cameraDiv.innerHTML = '';
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.playsInline = true;
+        video.width = 320;
+        video.height = 240;
+        cameraDiv.appendChild(video);
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
+            video.srcObject = stream;
+        } catch (err) {
+            alert('Camera access denied or not available.');
+            return;
+        }
+        const snapBtn = document.createElement('button');
+        snapBtn.textContent = 'Capture';
+        snapBtn.className = 'px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 mt-2';
+        cameraDiv.appendChild(snapBtn);
+        snapBtn.onclick = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/png');
+            document.getElementById(inputId).value = dataUrl;
+            cameraDiv.innerHTML = '<img src="' + dataUrl + '" class="rounded shadow mt-2" width="160">';
+            stream.getTracks().forEach(track => track.stop());
+        };
+    });
+}
+setupCamera('takePhotoFront', 'camera-front', 'valid_id_front', 'environment');
+setupCamera('takePhotoBack', 'camera-back', 'valid_id_back', 'environment');
+setupCamera('takePhotoSelfie', 'camera-selfie', 'selfie_with_id', 'user');
+    </script>
+</body>
+</html>
+
+<?php include '../includes/footer.php'; ?>
