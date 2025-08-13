@@ -113,7 +113,7 @@ async function login() {
 
     resetAttempts();
     showAlert("Login successful!", "success");
-    setTimeout(() => window.location.href = "dashboard.html", 1500);
+    setTimeout(() => window.location.href = "../views/lobby.html", 1500);
 
   } catch (error) {
     if (error.code === "auth/invalid-credential") {
