@@ -98,22 +98,30 @@ async function login() {
       return;
     }
 
-    // --- Save in Firestore ONLY after email verification ---
-    const userRef = doc(db, "users", user.uid);
-    const docSnap = await getDoc(userRef);
+  // --- Save in Firestore ONLY after email verification ---
+  const userRef = doc(db, "users", user.uid);
+  const docSnap = await getDoc(userRef);
 
-    if (!docSnap.exists()) {
-      await setDoc(userRef, {
-        fullname: user.displayName,
-        email: user.email,
-        role: "farmer",
-        createdAt: serverTimestamp()
-      });
-    }
+  if (!docSnap.exists()) {
+    await setDoc(userRef, {
+      fullname: user.displayName,
+      email: user.email,
+      role: "farmer",
+      createdAt: serverTimestamp()
+    });
+  }
 
-    resetAttempts();
-    showAlert("Login successful!", "success");
-    setTimeout(() => window.location.href = "../views/lobby.html", 1500);
+  // ✅ Add this snippet to store farmer name in localStorage
+  let farmerName = docSnap.exists() 
+      ? docSnap.data().fullname || user.displayName || "Farmer Name"
+      : user.displayName || "Farmer Name";
+
+  localStorage.setItem("farmerName", farmerName);
+
+  // --- Reset attempts and redirect ---
+  resetAttempts();
+  showAlert("Login successful!", "success");
+  setTimeout(() => window.location.href = "../views/lobby.html", 1500);
 
   } catch (error) {
     if (error.code === "auth/invalid-credential") {
