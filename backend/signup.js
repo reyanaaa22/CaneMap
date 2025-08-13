@@ -56,14 +56,16 @@ form.addEventListener('submit', async (e) => {
 
   if (!contact) { errors.contact.textContent = 'Please enter your contact number.'; valid = false; } 
   else { 
-    const contactRegex = /^\+?\d{10,15}$/; // allows optional + and 10-15 digits
+    const contactRegex = /^\+?\d{10,15}$/;
     if (!contactRegex.test(contact)) { errors.contact.textContent = 'Please enter a valid contact number (digits only).'; valid = false; }
   }
 
   if (!password) { errors.password.textContent = 'Please enter a password.'; valid = false; } 
   else if (password.length < 8) { errors.password.textContent = 'Password must be at least 8 characters.'; valid = false; } 
-  else { const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
-         if (!strongPasswordRegex.test(password)) { errors.password.textContent = 'Password must have uppercase, lowercase, number, and special character.'; valid = false; } }
+  else { 
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
+    if (!strongPasswordRegex.test(password)) { errors.password.textContent = 'Password must have uppercase, lowercase, number, and special character.'; valid = false; } 
+  }
 
   if (!confirmPassword) { /* Do not show error yet */ } 
   else if (password !== confirmPassword) { errors.confirmPassword.textContent = 'Passwords do not match.'; valid = false; }
@@ -73,32 +75,58 @@ form.addEventListener('submit', async (e) => {
   if (!valid) return;
 
   try {
-    const signInMethods = await auth.fetchSignInMethodsForEmail(email);
+      const signInMethods = await auth.fetchSignInMethodsForEmail(email);
 
-    if (signInMethods.length > 0) {
-      let tempUser = null;
-      try { tempUser = await auth.signInWithEmailAndPassword(email, password); } 
-      catch (err) { if (err.code !== "auth/wrong-password") throw err; }
+      if (signInMethods.length > 0) {
+          let tempUser = null;
+          try { 
+              tempUser = await auth.signInWithEmailAndPassword(email, password); 
+          } catch (err) { 
+              if (err.code !== "auth/wrong-password") throw err; 
+          }
 
-      if (tempUser && !tempUser.user.emailVerified) { await tempUser.user.delete(); } 
-      else if (tempUser && tempUser.user.emailVerified) { throw new Error("Email already in use. Try other email."); }
-    }
+          if (tempUser && !tempUser.user.emailVerified) { 
+              await tempUser.user.delete(); 
+          } else if (tempUser && tempUser.user.emailVerified) { 
+              throw new Error("Email already in use. Try other email."); 
+          }
+      }
 
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    await userCredential.user.updateProfile({ displayName: fullName });
-    await userCredential.user.sendEmailVerification();
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      await userCredential.user.updateProfile({ displayName: fullName });
+      await userCredential.user.sendEmailVerification();
 
-    successModal.style.display = 'flex';
-    modalOkBtn.onclick = () => {
-      successModal.style.display = 'none';
-      window.location.href = "../views/farmers_login.html";
-    };
+      // Save user to Firestore (collection)
+      db.collection("users").doc(userCredential.user.uid).set({
+          fullname: fullName,
+          email: email,
+          contact: contact,
+          role: "farmer",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then(() => {
+          // Save to localStorage for Driver Badge form
+          localStorage.setItem('farmerName', fullName);
+          localStorage.setItem('farmerContact', contact);
 
-    form.reset();
+          successModal.style.display = 'flex';
+          modalOkBtn.onclick = () => {
+              successModal.style.display = 'none';
+              window.location.href = "../views/farmers_login.html";
+          };
+
+          form.reset();
+      })
+      .catch((error) => {
+          messageDiv.style.color = '#dc2626';
+          messageDiv.textContent = error.message;
+          setTimeout(() => { messageDiv.textContent = ''; }, 4000);
+      });
+
   } catch (error) {
-    messageDiv.style.color = '#dc2626';
-    messageDiv.textContent = error.message;
-    setTimeout(() => { messageDiv.textContent = ''; }, 4000);
+      messageDiv.style.color = '#dc2626';
+      messageDiv.textContent = error.message;
+      setTimeout(() => { messageDiv.textContent = ''; }, 4000);
   }
 });
 
@@ -132,10 +160,9 @@ function validateField(field) {
       if (!passVal) errors.password.textContent = 'Please enter a password.';
       else if (passVal.length < 8) errors.password.textContent = 'Password must be at least 8 characters.';
       else { const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/; errors.password.textContent = strongPasswordRegex.test(passVal) ? '' : 'Password must have uppercase, lowercase, number, and special character.'; }
-      validateField('confirmPassword'); // live update confirm password
+      validateField('confirmPassword');
       break;
     case 'confirmPassword':
-      // Show error only if user typed something in confirm password
       if (inputs['confirmPassword'].value) {
         errors.confirmPassword.textContent = inputs['confirmPassword'].value === inputs.password.value ? '' : 'Passwords do not match.';
       } else {
@@ -148,7 +175,6 @@ function validateField(field) {
   }
 }
 
-// Add input/change listeners
 inputs.fullname.addEventListener('input', () => validateField('fullname'));
 inputs.email.addEventListener('input', () => validateField('email'));
 inputs.contact.addEventListener('input', () => validateField('contact'));
