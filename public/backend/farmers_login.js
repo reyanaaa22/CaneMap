@@ -1,6 +1,6 @@
-// Import Firebase services from centralized config
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { auth, db } from "../backend/firebase-config.js"; 
 
 // Firebase services are available from firebase-config.js
 
