@@ -1,16 +1,8 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
-  authDomain: "canemap-system.firebaseapp.com",
-  projectId: "canemap-system",
-  storageBucket: "canemap-system.firebasestorage.app",
-  messagingSenderId: "624993566775",
-  appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
-  measurementId: "G-08KFJQ1NEJ"
-};
+// Import Firebase services from centralized config
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Firebase services are available from firebase-config.js
 
 const form = document.getElementById('signup-form');
 const messageDiv = document.getElementById('message');
@@ -75,12 +67,12 @@ form.addEventListener('submit', async (e) => {
   if (!valid) return;
 
   try {
-      const signInMethods = await auth.fetchSignInMethodsForEmail(email);
+      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
 
       if (signInMethods.length > 0) {
           let tempUser = null;
           try { 
-              tempUser = await auth.signInWithEmailAndPassword(email, password); 
+              tempUser = await signInWithEmailAndPassword(auth, email, password); 
           } catch (err) { 
               if (err.code !== "auth/wrong-password") throw err; 
           }
@@ -92,12 +84,12 @@ form.addEventListener('submit', async (e) => {
           }
       }
 
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await userCredential.user.updateProfile({ displayName: fullName });
       await userCredential.user.sendEmailVerification();
 
       // Save user to Firestore (collection)
-      db.collection("users").doc(userCredential.user.uid).set({
+      await setDoc(doc(db, "users", userCredential.user.uid), {
           fullname: fullName,
           email: email,
           contact: contact,

@@ -1,23 +1,17 @@
 
-        // Firebase config (replace with your actual config)
-        const firebaseConfig = {
-          apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
-          authDomain: "canemap-system.firebaseapp.com",
-          projectId: "canemap-system",
-          storageBucket: "canemap-system.firebasestorage.app",
-          messagingSenderId: "624993566775",
-          appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
-          measurementId: "G-08KFJQ1NEJ"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // Import Firebase services from centralized config
+        import { collection, query, where, orderBy, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        
+        // Firebase services are available from firebase-config.js
         // Listen for notifications for the logged-in user
         function listenNotifications() {
             const userName = localStorage.getItem('farmerName') || 'Farmer Name';
-            db.collection('notifications')
-                .where('recipient', '==', userName)
-                .orderBy('timestamp', 'desc')
-                .onSnapshot(snapshot => {
+            const notificationsQuery = query(
+                collection(db, 'notifications'),
+                where('recipient', '==', userName),
+                orderBy('timestamp', 'desc')
+            );
+            onSnapshot(notificationsQuery, snapshot => {
                     const container = document.querySelector('.space-y-4');
                     if (!container) return;
                     container.innerHTML = '';
@@ -48,7 +42,8 @@
             // Only show fields registered to the current user
             const userName = localStorage.getItem('farmerName') || 'Farmer Name';
             // Example: fetch registered fields from Firestore
-            db.collection('fields').where('owner', '==', userName).get().then(snapshot => {
+            const fieldsQuery = query(collection(db, 'fields'), where('owner', '==', userName));
+            getDocs(fieldsQuery).then(snapshot => {
                 snapshot.forEach(doc => {
                     const field = doc.data();
                     const marker = L.marker([field.lat, field.lng])

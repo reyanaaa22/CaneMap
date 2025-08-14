@@ -1,18 +1,7 @@
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, sendPasswordResetEmail, fetchSignInMethodsForEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
-    authDomain: "canemap-system.firebaseapp.com",
-    projectId: "canemap-system",
-    storageBucket: "canemap-system.firebasestorage.app",
-    messagingSenderId: "624993566775",
-    appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
-    measurementId: "G-08KFJQ1NEJ"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+  // Import Firebase services from centralized config
+  import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+  
+  // Firebase services are available from firebase-config.js
 
   const emailInput = document.getElementById("email");
   const resetBtn = document.getElementById("resetBtn");

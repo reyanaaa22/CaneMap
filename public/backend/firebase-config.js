@@ -5,14 +5,13 @@ import { getFirestore, collection, doc, setDoc, getDocs, getDoc, query, where, o
 
 // Firebase configuration
 const firebaseConfig = {
-  // Add your Firebase config here
-  // You'll need to replace this with your actual Firebase project configuration
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id"
+  apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
+  authDomain: "canemap-system.firebaseapp.com",
+  projectId: "canemap-system",
+  storageBucket: "canemap-system.firebasestorage.app",
+  messagingSenderId: "624993566775",
+  appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
+  measurementId: "G-08KFJQ1NEJ"
 };
 
 // Initialize Firebase
