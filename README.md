@@ -150,6 +150,78 @@ The system implements proper Firestore security rules:
 - **Lucide Icons**: Icon library
 - **Leaflet.js**: Interactive maps
 
+## 📝 Firebase Task Logging System (New)
+
+The Task Logging system has been converted to Firebase, enabling users to record and track daily farming activities with photo documentation.
+
+### Key Features
+- **Activity Tracking**: Log daily tasks with detailed descriptions
+- **Photo Documentation**: Upload selfies and field photos for verification
+- **Status Management**: Track task completion status (Done, In Progress, Not Yet Done, Delayed)
+- **Real-time Updates**: Instant task log updates using Firestore
+- **Field Access Control**: Verify user permissions before allowing task logging
+- **Interactive Map**: Display field location with Leaflet.js integration
+
+### System Components
+- **Frontend**: `public/views/task-logging.html` - User interface for task logging
+- **Backend**: `public/backend/task-logging.js` - Firebase operations and business logic
+- **Configuration**: `public/backend/firebase-config.js` - Firebase setup and initialization
+
+### Firestore Collections Used
+
+#### Task Logs Collection
+```javascript
+{
+  id: "auto-generated",
+  field_id: "string", // Reference to fields collection
+  user_id: "string", // Firebase Auth UID
+  task_name: "string", // Name of the task
+  description: "string", // Optional task description
+  task_status: "done" | "in_progress" | "not_yet_done" | "delayed",
+  selfie_path: "string", // Firebase Storage URL for selfie
+  field_photo_path: "string", // Firebase Storage URL for field photo
+  worker_name: "string", // Name of the worker
+  field_name: "string", // Name of the field
+  logged_at: "timestamp" // When the task was logged
+}
+```
+
+### Features
+
+#### Task Submission
+- Form validation for required fields
+- File upload support for selfies and field photos
+- Automatic user identification and field association
+- Real-time feedback and error handling
+
+#### Task History
+- Chronological display of all tasks for a field
+- Status indicators with color coding
+- Photo links for uploaded images
+- Worker identification and timestamps
+
+#### Field Access Control
+- Verifies user is field owner or approved worker
+- Automatic redirect for unauthorized access
+- Secure field data retrieval
+
+#### Interactive Map
+- Displays field location coordinates
+- Field information popup with details
+- Fallback to default Philippines coordinates if none specified
+
+### Security Features
+- **Authentication Required**: Only authenticated users can access
+- **Field-level Permissions**: Users can only log tasks for accessible fields
+- **File Upload Security**: Images stored securely in Firebase Storage
+- **Data Validation**: Client and server-side validation
+
+### Dependencies
+- **Firebase SDK v12.1.0**: Authentication, Firestore, and Storage
+- **Tailwind CSS**: Responsive styling
+- **Lucide Icons**: Modern icon library
+- **Leaflet.js**: Interactive mapping
+
 ## 🚀 Installation
 
 ### Prerequisites
@@ -205,7 +277,7 @@ The system implements proper Firestore security rules:
 2. **Firestore Security Rules**
    - Configure Firestore security rules for data protection
    - Set up proper user authentication and field access controls
-   - Example rules for Join Field system:
+   - Example rules for Join Field and Task Logging systems:
    ```javascript
    rules_version = '2';
    service cloud.firestore {
@@ -226,6 +298,14 @@ The system implements proper Firestore security rules:
          allow read, write: if request.auth != null && 
            (request.auth.uid == resource.data.user_uid || 
             request.auth.uid == get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.owner_uid);
+       }
+       
+       // Users can read/write task logs for fields they have access to
+       match /task_logs/{logId} {
+         allow read, write: if request.auth != null && 
+           (request.auth.uid == resource.data.user_id || 
+            request.auth.uid == get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.registered_by ||
+            exists(/databases/$(database)/documents/field_workers?field_id=resource.data.field_id&user_id=request.auth.uid&status="approved"));
        }
      }
    }
@@ -490,6 +570,8 @@ For support and questions:
 - `public/backend/reports.js` - Firebase backend logic for reports
 - `public/join-field.html` - Join Field interface for field access requests
 - `public/backend/join-field.js` - Firebase backend logic for field joining
+- `public/views/task-logging.html` - Task logging interface for daily activities
+- `public/backend/task-logging.js` - Firebase backend logic for task logging
 - `public/backend/firebase-config.js` - Firebase configuration and initialization
 
 ### Key Directories
@@ -504,13 +586,14 @@ For support and questions:
 The system is currently in a **hybrid state**:
 - ✅ **Reports System**: Fully migrated to Firebase (client-side)
 - ✅ **Join Field System**: Fully migrated to Firebase (client-side)
+- ✅ **Task Logging System**: Fully migrated to Firebase (client-side)
 - 🔄 **Other Systems**: Still using legacy PHP/MySQL
 - 📋 **Authentication**: Firebase Authentication available
-- 🗄️ **Database**: Firestore collections for reports and field management, MySQL for other data
+- 🗄️ **Database**: Firestore collections for reports, field management, and task logging, MySQL for other data
 
 ### Next Steps for Full Migration
 1. Migrate field registration system to Firebase
-2. Convert task logging to Firestore
+2. ✅ **Task Logging**: Converted to Firebase (client-side)
 3. Update user management to Firebase Auth
 4. Migrate remaining dashboard functionality
 5. Decommission legacy PHP/MySQL components
