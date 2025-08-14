@@ -8,64 +8,104 @@
   *, *::before, *::after {
     box-sizing: border-box;
   }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-y: auto;
+}
+
 body {
   display: flex;
   justify-content: center;
-  align-items: flex-start; 
+  align-items: center;
   min-height: 100vh;
-  margin: 0;
-  padding: 10px 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f5f7fa;
-  color: #333;
-  padding-top: 13px;
+  position: relative;
+  padding: 0;
 }
-  .container {
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: 
+      linear-gradient(
+        135deg, 
+        rgba(255, 255, 255, 0.2) 0%, 
+        rgba(255, 255, 255, 0.05) 50%, 
+        rgba(255, 255, 255, 0.2) 100%
+      ),
+      url('../img/sugarcane.webp') center/cover no-repeat;
+    filter: blur(10px);
+    transform: scale(1.05);
+    z-index: -1;
+}
+
+.container {
     background: #fff;
-    width: 410px;
-    max-width: 95vw;
-    padding: 12px 18px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    width: 500px;
+    max-width: 99vw;
+    padding: 24px 36px;
+    border-radius: 22px;
+    box-shadow: 0 12px 48px 0 rgba(34,197,94,0.22), 0 4px 32px 0 rgba(0,0,0,0.13);
     text-align: center;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-  }
-  h3 {
+    transition: box-shadow 0.3s cubic-bezier(.4,2,.6,1), transform 0.3s cubic-bezier(.4,2,.6,1);
+}
+.container:hover, .container:focus-within {
+    box-shadow: 0 18px 64px 0 rgba(34,197,94,0.32), 0 8px 40px 0 rgba(0,0,0,0.16);
+    transform: translateY(-4px) scale(1.018);
+}
+.row-flex {
+    display: flex;
+    gap: 18px;
+    width: 100%;
+}
+.row-flex > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+h3 {
     margin: 0 0 8px;
     font-weight: 700;
     font-size: 1.5rem;
     color: #222;
     margin-top: 24px;
     margin-bottom: 10px;
-  }
-  p {
+}
+p {
     color: #666;
     font-size: 0.7rem;
     margin: 0 0 14px;
     line-height: 1.3;
     margin-bottom: 30px;
-  }
-  form {
+}
+form {
     text-align: left;
     flex-grow: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-  }
-  label {
+}
+label {
     display: block;
     font-weight: 600;
     margin-bottom: 3px;
     color: #444;
     font-size: 0.85rem;
-  }
-  input[type="text"],
-  input[type="email"],
-  input[type="password"] {
+}
+input[type="text"],
+input[type="email"],
+input[type="password"] {
     width: 98%;
     padding: 7px 10px;
     margin-bottom: 2px;
@@ -75,48 +115,41 @@ body {
     transition: border-color 0.3s ease;
     outline-offset: 2px;
     margin-left: 1.1px;
-  }
-  input[type="text"]:focus,
-  input[type="email"]:focus,
-  input[type="password"]:focus {
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
     border-color: green;
     box-shadow: 0 0 6px rgba(59,246,115,0.4);
-  }
-  .small {
-    font-size: 0.65rem;
-    color: #777;
-    margin: -6px 0 10px;
-    font-style: italic;
-    margin-top: 1px;
-  }
-  .error-message {
+}
+.error-message {
     font-size: 0.8rem;
     color: #dc2626;
     margin-bottom: 8px;
     min-height: 18px;
-  }
-  .checkbox-container {
+}
+.checkbox-container {
     display: flex;
     align-items: center;
     font-size: 0.8rem;
     margin-bottom: 15px;
     color: #555;
-  }
-  .checkbox-container input[type="checkbox"] {
+}
+.checkbox-container input[type="checkbox"] {
     margin-right: 10px;
     width: 18px;
     height: 18px;
     cursor: pointer;
-  }
-  .checkbox-container a {
+}
+.checkbox-container a {
     color: green;
     text-decoration: none;
     font-weight: 600;
-  }
-  .checkbox-container a:hover {
+}
+.checkbox-container a:hover {
     text-decoration: underline;
-  }
-  button {
+}
+button {
     width: 100%;
     background: green;
     border: none;
@@ -128,43 +161,46 @@ body {
     cursor: pointer;
     transition: background-color 0.3s ease;
     box-shadow: 0 4px 12px rgba(59, 246, 115, 0.4);
-  }
-  button:hover {
-    background: green;
+}
+button:hover {
+    background:  #28a745;
     box-shadow: 0 6px 18px rgba(59,246,155,0.4);
-  }
-  #message {
+}
+#message {
     margin-top: 10px;
     color: #16a34a;
     font-weight: 600;
     text-align: center;
     min-height: 20px;
-  }
+}
 
-  .account-login {
+.account-login {
   margin-top: -10px;
   margin-bottom: 20px;
   font-size: 0.9rem;
   color: #555;
   text-align: center; 
-  }
+}
 
-  .account-login a {
+.account-login a {
     color: green;
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
-  }
+}
 
-  .account-login a:hover {
+.account-login a:hover {
     text-decoration: underline;
-  }
+}
 
-  @media (max-width: 480px) {
+@media (max-width: 700px) {
     .container {
-      width: 90vw;
-      height: calc(100vh - 30px);
-      padding: 10px 12px;
+      width: 99vw;
+      padding: 10px 2vw;
+    }
+    .row-flex {
+      flex-direction: column;
+      gap: 0;
     }
     input[type="text"],
     input[type="email"],
@@ -184,23 +220,23 @@ body {
       font-size: 0.6rem;
       margin-bottom: 8px;
     }
-  }
+}
 
-  .modal {
-  display: none; /* Hidden by default */
-  position: fixed;
-  z-index: 9999;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.5);
-  justify-content: center;
-  align-items: center;
-  }
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+}
 
-  .modal-content {
+.modal-content {
     background-color: #fff;
     margin: auto;
     padding: 25px 20px;
@@ -209,16 +245,16 @@ body {
     max-width: 400px;
     text-align: center;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  }
+}
 
-  .modal-content p {
+.modal-content p {
     font-size: 1rem;
     margin-bottom: 20px;
     color: #16a34a;
     font-weight: 600;
-  }
+}
 
-  .modal-content button {
+.modal-content button {
     background: green;
     color: white;
     border: none;
@@ -226,20 +262,58 @@ body {
     font-size: 1rem;
     border-radius: 8px;
     cursor: pointer;
-  }
+}
 
-  .modal-content button:hover {
+.modal-content button:hover {
     background: #059669;
-  }
+}
 
-  #message {
+#message {
     margin-top: 10px;
-    margin-bottom: 12px; /* Added margin at the bottom */
+    margin-bottom: 12px;
     color: #16a34a;
     font-weight: 600;
     text-align: center;
     min-height: 20px;
+}
+
+@media (max-width: 700px), (max-height: 700px) {
+  body {
+    display: block;
+    padding: 20px 0;
   }
+
+  .container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    border-radius: 14px;
+    display: block;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  .container h2, .container h3 {
+    font-size: 1.3rem;
+  }
+
+  input[type="email"], input[type="password"], input[type="text"] {
+    font-size: 1rem;
+    padding: 10px 8px;
+  }
+
+  button {
+    font-size: 1rem;
+    padding: 10px 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .container {
+    width: 95%;
+    padding: 10px 5%;
+  }
+}
 
 </style>
 </head>
@@ -253,24 +327,32 @@ body {
       <input type="text" id="fullname" name="fullname" placeholder="eg. Juan Dela Cruz" required />
       <div id="error-fullname" class="error-message"></div>
 
-      <label for="email">Email Address</label>
-      <input type="email" id="email" name="email" placeholder="eg. juan@gmail.com" required />
-      <div id="error-email" class="error-message"></div>
+      <div class="row-flex">
+        <div>
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="eg. juan@gmail.com" required />
+          <div id="error-email" class="error-message"></div>
+        </div>
+        <div>
+          <label for="contact">Contact Number</label>
+          <input type="text" id="contact" name="contact" placeholder="+63 9xx xxx xxxx" required />
+          <div id="error-contact" class="error-message"></div>
+        </div>
+      </div>
 
-      <label for="contact">Contact Number</label>
-      <input type="text" id="contact" name="contact" placeholder="+63 9xx xxx xxxx" required />
-      <div id="error-contact" class="error-message"></div>
+      <div class="row-flex">
+        <div>
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" minlength="8" placeholder="********" required />
+          <div id="error-password" class="error-message"></div>
+        </div>
+        <div>
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder="********" required />
+          <div id="error-confirm-password" class="error-message"></div>
+        </div>
+      </div>
 
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" minlength="8" placeholder="********" required />
-      <div class="small">Minimum 8 characters with letters and numbers</div>
-      <div id="error-password" class="error-message"></div>
-
-      <label for="confirm-password">Confirm Password</label>
-      <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder="********" required />
-      <div id="error-confirm-password" class="error-message"></div>
-
-      <!-- Hidden role -->
       <input type="hidden" id="role" name="role" value="farmer" />
 
       <div class="checkbox-container">
@@ -296,10 +378,8 @@ body {
       <button id="modalOkBtn">OK</button>
     </div>
   </div>
-  <!-- Firebase SDK -->
-  
 
-      <script type="module" src="../backend/firebase-config.js"></script>
+    <script type="module" src="../backend/firebase-config.js"></script>
     <script type="module" src="../backend/signup.js"></script>
 </body>
 </html>
