@@ -1,9 +1,91 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    // Users can read their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Fields access rules
+    match /fields/{fieldId} {
+      // Anyone authenticated can read fields
+      allow read: if request.auth != null;
+      
+      // Only verified landowners can create fields
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'landowner' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'verified';
+      
+      // Only the field owner can update their fields
+      allow update: if request.auth != null && 
+        resource.data.landowner_id == request.auth.uid;
+      
+      // Only the field owner can delete their fields
+      allow delete: if request.auth != null && 
+        resource.data.landowner_id == request.auth.uid;
+    }
+    
+    // Field workers (join requests) access rules
+    match /field_workers/{requestId} {
+      // Users can read their own requests
+      allow read: if request.auth != null && 
+        (resource.data.user_uid == request.auth.uid || 
+         get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid);
+      
+      // Users can create join requests for any field
+      allow create: if request.auth != null && 
+        request.resource.data.user_uid == request.auth.uid;
+      
+      // Only the field owner can update join requests (approve/reject)
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid;
+      
+      // Users can delete their own requests, field owners can delete requests for their fields
+      allow delete: if request.auth != null && 
+        (resource.data.user_uid == request.auth.uid || 
+         get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid);
+    }
+    
+    // Task logs access rules
+    match /task_logs/{logId} {
+      // Field workers can read logs for fields they're approved to work on
+      allow read: if request.auth != null && 
+        (resource.data.user_uid == request.auth.uid || 
+         get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid);
+      
+      // Approved field workers can create task logs
+      allow create: if request.auth != null && 
+        request.resource.data.user_uid == request.auth.uid &&
+        exists(/databases/$(database)/documents/field_workers/$(request.auth.uid + '_' + resource.data.field_id)) &&
+        get(/databases/$(database)/documents/field_workers/$(request.auth.uid + '_' + resource.data.field_id)).data.status == 'approved';
+      
+      // Users can update their own task logs
+      allow update: if request.auth != null && 
+        resource.data.user_uid == request.auth.uid;
+      
+      // Users can delete their own task logs, field owners can delete logs for their fields
+      allow delete: if request.auth != null && 
+        (resource.data.user_uid == request.auth.uid || 
+         get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid);
+    }
+    
+    // Reports access rules
+    match /reports/{reportId} {
+      // Field owners can read reports for their fields
+      allow read: if request.auth != null && 
+        get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid;
+      
+      // Field owners can create reports for their fields
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/fields/$(request.resource.data.field_id)).data.landowner_id == request.auth.uid;
+      
+      // Field owners can update reports for their fields
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid;
+      
+      // Field owners can delete reports for their fields
+      allow delete: if request.auth != null && 
+        get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid;
     }
   }
 }

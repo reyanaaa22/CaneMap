@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landowner Dashboard - CaneMap</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        .btn-primary {
+            background-color: #059669;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #047857;
+        }
+        
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .card-hover {
+            transition: all 0.2s;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .text-primary {
+            color: #059669;
+        }
+        
+        .bg-primary {
+            background-color: #059669;
+        }
+        
+        .bg-secondary {
+            background-color: #fbbf24;
+        }
+        
+        .text-secondary {
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="lobby.html" class="text-2xl font-bold text-primary">🌾 CaneMap</a>
+                    <div class="ml-4 text-sm text-gray-500">Landowner Dashboard</div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-sm text-gray-700" id="userName">Welcome, Landowner</span>
+                        <div class="relative">
+                            <button onclick="toggleUserMenu()" class="bg-primary text-white p-2 rounded-full">
+                                <i data-lucide="user" class="w-4 h-4"></i>
+                            </button>
+                            <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                <a href="../auth/change-password.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Change Password</a>
+                                <button onclick="logout()" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Pending Verification Notice -->
+        <div id="verificationNotice" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8" style="display: none;">
+            <div class="flex items-center">
+                <i data-lucide="clock" class="w-6 h-6 text-yellow-600 mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-semibold text-yellow-800">Account Verification Pending</h3>
+                    <p class="text-yellow-700">Please wait 5 working days for your account to be verified by our MAO officers.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-primary rounded-lg">
+                        <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Owned Areas</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="ownedAreasCount">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-secondary rounded-lg">
+                        <i data-lucide="users" class="w-6 h-6 text-primary"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Join Requests</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="joinRequestsCount">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Active Tasks</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="activeTasksCount">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Hectares</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="totalHectares">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- My Fields -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-900">My Fields</h2>
+                    <button id="registerNewFieldBtn" onclick="registerNewField()" class="btn-primary px-4 py-2 rounded-lg text-sm" style="display: none;">
+                        <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                        Register New Area
+                    </button>
+                </div>
+
+                <!-- No Fields State -->
+                <div id="noFieldsState" class="bg-white rounded-lg shadow-sm p-8 text-center" style="display: none;">
+                    <div class="text-6xl mb-4">🏡</div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">No Fields Registered</h3>
+                    <p class="text-gray-600 mb-6">Start by registering your first sugarcane field.</p>
+                    <button id="registerFirstFieldBtn" onclick="registerNewField()" class="btn-primary px-6 py-3 rounded-lg" style="display: none;">
+                        <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+                        Register Your First Field
+                    </button>
+                    <p id="verificationRequired" class="text-sm text-gray-500" style="display: none;">Account verification required to register fields</p>
+                </div>
+
+                <!-- Fields List -->
+                <div id="fieldsList" class="space-y-4">
+                    <!-- Fields will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Join Requests -->
+                <div id="joinRequestsSection" class="bg-white rounded-lg shadow-sm p-6" style="display: none;">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Join Requests</h3>
+                    <div id="joinRequestsList" class="space-y-4">
+                        <!-- Join requests will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Quick Reports -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Reports</h3>
+                    <div class="space-y-3">
+                        <button onclick="generateWeeklyReport()" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium">Weekly Summary</span>
+                                <i data-lucide="download" class="w-4 h-4 text-gray-400"></i>
+                            </div>
+                        </button>
+                        <button onclick="generateMonthlyReport()" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium">Monthly Report</span>
+                                <i data-lucide="download" class="w-4 h-4 text-gray-400"></i>
+                            </div>
+                        </button>
+                        <button onclick="generateTaskReport()" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium">Task Completion</span>
+                                <i data-lucide="download" class="w-4 h-4 text-gray-400"></i>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Growth Tracker -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Growth Tracker</h3>
+                    <div id="growthTrackerList" class="space-y-4">
+                        <!-- Growth tracker items will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module" src="../backend/firebase-config.js"></script>
+    <script type="module" src="../backend/landowner.js"></script>
+</body>
+</html>
