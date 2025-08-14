@@ -99,7 +99,7 @@
             try {
                 await signInWithEmailAndPassword(auth, email, password);
                 // Redirect to join field page on successful login
-                window.location.href = '../join-field.html';
+                window.location.href = '../views/join-field.html';
             } catch (error) {
                 console.error('Login error:', error);
                 messageContainer.innerHTML = `
@@ -113,7 +113,7 @@
         // Check if user is already logged in
         auth.onAuthStateChanged((user) => {
             if (user) {
-                window.location.href = '../join-field.html';
+                window.location.href = '../views/join-field.html';
             }
         });
     </script>
