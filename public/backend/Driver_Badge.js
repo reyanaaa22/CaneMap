@@ -7,15 +7,24 @@
 
     // Auto-fill Fullname and Contact if logged-in farmer
     document.addEventListener('DOMContentLoaded', () => {
+        const formIdElement = document.getElementById('formId');
+        if (formIdElement) {
+            const year = new Date().getFullYear();
+            const randomNum = Math.floor(100 + Math.random() * 900);
+            formIdElement.textContent = `#DR-${year}-${randomNum}`;
+        }
+        
         const fullnameInput = document.querySelector('input[placeholder="Enter your full name"]');
         const contactInput = document.querySelector('input[placeholder="+63 XXX XXX XXXX"]');
-        const farmerName = localStorage.getItem('farmerName'); // Name saved during login
-        const farmerContact = localStorage.getItem('farmerContact'); // Contact saved during login
-
+    
+        const farmerName = localStorage.getItem('farmerName');
+        const farmerContact = localStorage.getItem('farmerContact');
+    
         if (farmerName && fullnameInput) {
-            fullnameInput.value = farmerName; // Auto-fill name
+            fullnameInput.value = farmerName;
         }
         if (farmerContact && contactInput) {
-            contactInput.value = farmerContact; // Auto-fill contact
+            contactInput.value = farmerContact;
         }
     });
+
