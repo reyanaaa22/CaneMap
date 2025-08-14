@@ -1,8 +1,17 @@
 // Import Firebase services from centralized config
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-
-// Firebase services are available from firebase-config.js
+import { auth, db } from "../backend/firebase-config.js";
+import {
+  createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
+  signInWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification 
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import {
+  doc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const form = document.getElementById('signup-form');
 const messageDiv = document.getElementById('message');
@@ -43,82 +52,89 @@ form.addEventListener('submit', async (e) => {
 
   if (!fullName) { errors.fullname.textContent = 'Please enter your full name.'; valid = false; }
 
-  if (!email) { errors.email.textContent = 'Please enter your email address.'; valid = false; } 
-  else { const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; if (!emailRegex.test(email)) { errors.email.textContent = 'Please enter a valid email.'; valid = false; } }
+  if (!email) {
+    errors.email.textContent = 'Please enter your email address.'; valid = false;
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) { errors.email.textContent = 'Please enter a valid email.'; valid = false; }
+  }
 
-  if (!contact) { errors.contact.textContent = 'Please enter your contact number.'; valid = false; } 
-  else { 
+  if (!contact) {
+    errors.contact.textContent = 'Please enter your contact number.'; valid = false;
+  } else {
     const contactRegex = /^\+?\d{10,15}$/;
-    if (!contactRegex.test(contact)) { errors.contact.textContent = 'Please enter a valid contact number (digits only).'; valid = false; }
+    if (!contactRegex.test(contact)) { errors.contact.textContent = 'Please enter a valid contact number.'; valid = false; }
   }
 
-  if (!password) { errors.password.textContent = 'Please enter a password.'; valid = false; } 
-  else if (password.length < 8) { errors.password.textContent = 'Password must be at least 8 characters.'; valid = false; } 
-  else { 
+  if (!password) {
+    errors.password.textContent = 'Please enter a password.'; valid = false;
+  } else if (password.length < 8) {
+    errors.password.textContent = 'Password must be at least 8 characters.'; valid = false;
+  } else {
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
-    if (!strongPasswordRegex.test(password)) { errors.password.textContent = 'Password must have uppercase, lowercase, number, and special character.'; valid = false; } 
+    if (!strongPasswordRegex.test(password)) {
+      errors.password.textContent = 'Password must have uppercase, lowercase, number, and special character.'; valid = false;
+    }
   }
 
-  if (!confirmPassword) { /* Do not show error yet */ } 
-  else if (password !== confirmPassword) { errors.confirmPassword.textContent = 'Passwords do not match.'; valid = false; }
+  if (confirmPassword && password !== confirmPassword) {
+    errors.confirmPassword.textContent = 'Passwords do not match.'; valid = false;
+  }
 
-  if (!terms) { errors.terms.textContent = 'You must agree to the Terms of Service and Privacy Policy.'; valid = false; }
+  if (!terms) {
+    errors.terms.textContent = 'You must agree to the Terms of Service and Privacy Policy.'; valid = false;
+  }
 
   if (!valid) return;
 
   try {
-      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+    const signInMethods = await fetchSignInMethodsForEmail(auth, email);
 
-      if (signInMethods.length > 0) {
-          let tempUser = null;
-          try { 
-              tempUser = await signInWithEmailAndPassword(auth, email, password); 
-          } catch (err) { 
-              if (err.code !== "auth/wrong-password") throw err; 
-          }
-
-          if (tempUser && !tempUser.user.emailVerified) { 
-              await tempUser.user.delete(); 
-          } else if (tempUser && tempUser.user.emailVerified) { 
-              throw new Error("Email already in use. Try other email."); 
-          }
+    if (signInMethods.length > 0) {
+      let tempUser = null;
+      try {
+        tempUser = await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        if (err.code !== "auth/wrong-password") throw err;
       }
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await userCredential.user.updateProfile({ displayName: fullName });
-      await userCredential.user.sendEmailVerification();
+      if (tempUser && !tempUser.user.emailVerified) {
+        await tempUser.user.delete();
+      } else if (tempUser && tempUser.user.emailVerified) {
+        throw new Error("Email already in use. Try other email.");
+      }
+    }
 
-      // Save user to Firestore (collection)
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-          fullname: fullName,
-          email: email,
-          contact: contact,
-          role: "farmer",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      })
-      .then(() => {
-          // Save to localStorage for Driver Badge form
-          localStorage.setItem('farmerName', fullName);
-          localStorage.setItem('farmerContact', contact);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(userCredential.user, { displayName: fullName });
+    await sendEmailVerification(userCredential.user);
+    
+    // Save user to Firestore (collection)
+    await setDoc(doc(db, "users", userCredential.user.uid), {
+      fullname: fullName,
+      email: email,
+      contact: contact,
+      role: "farmer",
+      createdAt: serverTimestamp()
+    });
+    
 
-          successModal.style.display = 'flex';
-          modalOkBtn.onclick = () => {
-              successModal.style.display = 'none';
-              window.location.href = "../views/farmers_login.html";
-          };
+    // Save to localStorage for Driver Badge form
+    localStorage.setItem('farmerName', fullName);
+    localStorage.setItem('farmerContact', contact);
 
-          form.reset();
-      })
-      .catch((error) => {
-          messageDiv.style.color = '#dc2626';
-          messageDiv.textContent = error.message;
-          setTimeout(() => { messageDiv.textContent = ''; }, 4000);
-      });
+    successModal.style.display = 'flex';
+    modalOkBtn.onclick = () => {
+      successModal.style.display = 'none';
+      window.location.href = "../views/farmers_login.html";
+    };
+
+    form.reset();
 
   } catch (error) {
-      messageDiv.style.color = '#dc2626';
-      messageDiv.textContent = error.message;
-      setTimeout(() => { messageDiv.textContent = ''; }, 4000);
+    messageDiv.style.color = '#dc2626';
+    messageDiv.textContent = error.message;
+    setTimeout(() => { messageDiv.textContent = ''; }, 4000);
   }
 });
 
@@ -133,30 +149,40 @@ const inputs = {
 };
 
 function validateField(field) {
-  switch(field) {
+  switch (field) {
     case 'fullname':
       errors.fullname.textContent = inputs.fullname.value.trim() ? '' : 'Please enter your full name.';
       break;
     case 'email':
       const emailVal = inputs.email.value.trim();
       if (!emailVal) errors.email.textContent = 'Please enter your email address.';
-      else { const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; errors.email.textContent = emailRegex.test(emailVal) ? '' : 'Please enter a valid email.'; }
+      else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        errors.email.textContent = emailRegex.test(emailVal) ? '' : 'Please enter a valid email.';
+      }
       break;
     case 'contact':
       const contactVal = inputs.contact.value.trim();
       if (!contactVal) errors.contact.textContent = 'Please enter your contact number.';
-      else { const contactRegex = /^\+?\d{10,15}$/; errors.contact.textContent = contactRegex.test(contactVal) ? '' : 'Please enter a valid contact number (digits only).'; }
+      else {
+        const contactRegex = /^\+?\d{10,15}$/;
+        errors.contact.textContent = contactRegex.test(contactVal) ? '' : 'Please enter a valid contact number.';
+      }
       break;
     case 'password':
       const passVal = inputs.password.value;
       if (!passVal) errors.password.textContent = 'Please enter a password.';
       else if (passVal.length < 8) errors.password.textContent = 'Password must be at least 8 characters.';
-      else { const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/; errors.password.textContent = strongPasswordRegex.test(passVal) ? '' : 'Password must have uppercase, lowercase, number, and special character.'; }
+      else {
+        const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
+        errors.password.textContent = strongPasswordRegex.test(passVal) ? '' : 'Password must have uppercase, lowercase, number, and special character.';
+      }
       validateField('confirmPassword');
       break;
     case 'confirmPassword':
-      if (inputs['confirmPassword'].value) {
-        errors.confirmPassword.textContent = inputs['confirmPassword'].value === inputs.password.value ? '' : 'Passwords do not match.';
+      if (inputs.confirmPassword.value) {
+        errors.confirmPassword.textContent =
+          inputs.confirmPassword.value === inputs.password.value ? '' : 'Passwords do not match.';
       } else {
         errors.confirmPassword.textContent = '';
       }
@@ -171,5 +197,5 @@ inputs.fullname.addEventListener('input', () => validateField('fullname'));
 inputs.email.addEventListener('input', () => validateField('email'));
 inputs.contact.addEventListener('input', () => validateField('contact'));
 inputs.password.addEventListener('input', () => validateField('password'));
-inputs['confirmPassword'].addEventListener('input', () => validateField('confirmPassword'));
+inputs.confirmPassword.addEventListener('input', () => validateField('confirmPassword'));
 inputs.terms.addEventListener('change', () => validateField('terms'));
