@@ -42,6 +42,8 @@ const ui = {
   confirmModal: document.getElementById('confirmModal'),
   confirmYes: document.getElementById('confirmYes'),
   confirmNo: document.getElementById('confirmNo'),
+  successModal: document.getElementById('successModal'),
+  successOk: document.getElementById('successOk'),
   verifyModal: document.getElementById('verifyModal'),
   attemptsLabel: document.getElementById('attemptsLabel'),
   verifyPassword: document.getElementById('verifyPassword'),
@@ -287,46 +289,60 @@ ui.editSaveBtn?.addEventListener('click', async () => {
   if (!proceed) return;
   const user = auth.currentUser;
   if (!user) return;
-  const payload = {
-    fullname: ui.input.fullname.value.trim(),
-    contact: ui.input.contact.value.trim(),
-    barangay: ui.input.barangay.value.trim(),
-    municipality: ui.input.municipality.value.trim(),
-    nickname: ui.input.nickname.value.trim(),
-    gender: ui.input.gender.value.trim(),
-    birthday: ui.input.birthday.value.trim(),
-    address: ui.input.address.value.trim(),
-    updatedAt: serverTimestamp()
-  };
-  const newEmail = ui.input.email.value.trim();
-  const promises = [];
-  if (ui.photo.file.files?.length) {
-    promises.push(uploadProfilePhoto(user));
-  }
-  if (newEmail && newEmail !== user.email) {
-    // Email change requires recent login; attempt and fall back silently
-    try { await updateEmail(user, newEmail); } catch (e) { /* ignore for now */ }
-  }
-  if (payload.fullname && payload.fullname !== (user.displayName || '')) {
-    try { await updateProfile(user, { displayName: payload.fullname }); } catch (e) { /* ignore */ }
-  }
-  await Promise.allSettled(promises);
-  await ensureUserDoc(user.uid, payload);
-  const refreshed = await fetchUserDoc(user.uid);
-  userDocCache = refreshed || userDocCache;
-  populateReadOnly(userDocCache || {}, user);
-  setExpanded(ui.editPanel, false);
-  if (payload.fullname) localStorage.setItem('farmerName', payload.fullname);
-  if (payload.contact) localStorage.setItem('farmerContact', payload.contact);
-  if (payload.nickname) localStorage.setItem('farmerNickname', payload.nickname);
-  toggleEditMode(false);
-  // If after editing, all additional info is complete, mark profileCompleted and hide Update
-  if (isAdditionalInfoComplete(userDocCache)) {
-    await ensureUserDoc(user.uid, { profileCompleted: true, updatedAt: serverTimestamp() });
-    setUpdateButtonHidden(true);
-    if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
-  } else {
-    setUpdateButtonHidden(false);
+  try {
+    const payload = {
+      fullname: ui.input.fullname.value.trim(),
+      contact: ui.input.contact.value.trim(),
+      barangay: ui.input.barangay.value.trim(),
+      municipality: ui.input.municipality.value.trim(),
+      nickname: ui.input.nickname.value.trim(),
+      gender: ui.input.gender.value.trim(),
+      birthday: ui.input.birthday.value.trim(),
+      address: ui.input.address.value.trim(),
+      updatedAt: serverTimestamp()
+    };
+    const newEmail = ui.input.email.value.trim();
+    const promises = [];
+    if (ui.photo.file.files?.length) {
+      promises.push(uploadProfilePhoto(user));
+    }
+    if (newEmail && newEmail !== user.email) {
+      try { await updateEmail(user, newEmail); } catch (e) { /* ignore for now */ }
+    }
+    if (payload.fullname && payload.fullname !== (user.displayName || '')) {
+      try { await updateProfile(user, { displayName: payload.fullname }); } catch (e) { /* ignore */ }
+    }
+    await Promise.allSettled(promises);
+    await ensureUserDoc(user.uid, payload);
+    const refreshed = await fetchUserDoc(user.uid);
+    userDocCache = refreshed || userDocCache;
+    populateReadOnly(userDocCache || {}, user);
+    // Stay in edit mode as requested
+    setExpanded(ui.editPanel, true);
+    if (payload.fullname) localStorage.setItem('farmerName', payload.fullname);
+    if (payload.contact) localStorage.setItem('farmerContact', payload.contact);
+    if (payload.nickname) localStorage.setItem('farmerNickname', payload.nickname);
+    toggleEditMode(true);
+    // Show success modal
+    if (ui.successModal) {
+      openModal(ui.successModal);
+      const close = () => {
+        if (ui.successOk) ui.successOk.removeEventListener('click', close);
+        closeModal(ui.successModal);
+      };
+      if (ui.successOk) ui.successOk.addEventListener('click', close);
+    }
+    // If after editing, all additional info is complete, mark profileCompleted and hide Update
+    if (isAdditionalInfoComplete(userDocCache)) {
+      await ensureUserDoc(user.uid, { profileCompleted: true, updatedAt: serverTimestamp() });
+      setUpdateButtonHidden(true);
+      if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
+    } else {
+      setUpdateButtonHidden(false);
+    }
+  } catch (err) {
+    console.error('Save failed:', err);
+    alert('Saving failed: ' + (err?.message || err));
   }
 });
 
