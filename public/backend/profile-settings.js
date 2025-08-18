@@ -104,6 +104,14 @@ function populateReadOnly(data, user) {
   ui.ro.contact.textContent = contact;
   ui.ro.location.textContent = [barangay, municipality].filter(Boolean).join(', ') || '-';
   ui.displayName.textContent = fullname;
+  const roNickname = document.getElementById('ro_nickname');
+  const roGender = document.getElementById('ro_gender');
+  const roBirthday = document.getElementById('ro_birthday');
+  const roAddress = document.getElementById('ro_address');
+  if (roNickname) roNickname.textContent = data.nickname || '-';
+  if (roGender) roGender.textContent = data.gender || '-';
+  if (roBirthday) roBirthday.textContent = data.birthday || '-';
+  if (roAddress) roAddress.textContent = data.address || '-';
   const photoUrl = data.photoURL || user?.photoURL || '';
   ui.photo.img.src = photoUrl || `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><rect width='100%' height='100%' fill='%23ecfcca'/><g fill='%235ea500'><circle cx='64' cy='48' r='22'/><rect x='28' y='80' width='72' height='28' rx='14'/></g></svg>`)}`;
 }
@@ -121,13 +129,32 @@ function populateEditInputs(data, user) {
 }
 
 function buildMissingFieldsUI(data) {
+  const completed = isAdditionalInfoComplete(data);
+  if (data.profileCompleted || completed) {
+    setUpdateButtonHidden(true);
+    if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
+    return;
+  }
   const missing = [];
   if (!data.nickname) missing.push(['nickname', 'Nickname']);
   if (!data.gender) missing.push(['gender', 'Gender', 'select']);
   if (!data.birthday) missing.push(['birthday', 'Birthday', 'date']);
   if (!data.address) missing.push(['address', 'Complete Address']);
   ui.updateFields.innerHTML = missing.map(([n,l,t]) => buildMissingField(n,l,t)).join('');
-  ui.updateBtn.classList.toggle('hidden', missing.length === 0);
+  // Show Update button only when at least one required additional field is missing; otherwise hide forever
+  if (missing.length === 0) {
+    setUpdateButtonHidden(true);
+    if (ui.updatePanel) setExpanded(ui.updatePanel, false);
+  } else {
+    setUpdateButtonHidden(false);
+  }
+}
+
+function isAdditionalInfoComplete(data) {
+  return Boolean((data.nickname && data.nickname.trim()) &&
+                 (data.gender && data.gender.trim()) &&
+                 (data.birthday && data.birthday.trim()) &&
+                 (data.address && data.address.trim()));
 }
 
 async function fetchUserDoc(uid) {
@@ -198,6 +225,8 @@ function init() {
     populateEditInputs(userDocCache || {}, user);
     buildMissingFieldsUI(userDocCache || {});
     showSensitiveForRole(role);
+    // Ensure read-only state by default; enable only when Edit is toggled
+    toggleEditMode(false);
   });
 }
 
@@ -205,6 +234,8 @@ ui.editBtn?.addEventListener('click', () => {
   const nowExpanded = !ui.editPanel.classList.contains('expanded');
   setExpanded(ui.editPanel, nowExpanded);
   if (nowExpanded) setExpanded(ui.updatePanel, false);
+  // Toggle edit mode styles and controls
+  toggleEditMode(nowExpanded);
 });
 
 ui.updateBtn?.addEventListener('click', () => {
@@ -238,13 +269,17 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
   if (missBirthday) updatePayload.birthday = missBirthday;
   if (missAddress) updatePayload.address = missAddress;
   if (Object.keys(updatePayload).length === 0) return;
-  await ensureUserDoc(user.uid, { ...updatePayload, updatedAt: serverTimestamp() });
+  await ensureUserDoc(user.uid, { ...updatePayload, profileCompleted: true, updatedAt: serverTimestamp() });
   const refreshed = await fetchUserDoc(user.uid);
   userDocCache = refreshed || userDocCache;
   populateReadOnly(userDocCache || {}, user);
   buildMissingFieldsUI(userDocCache || {});
   setExpanded(ui.updatePanel, false);
   if (updatePayload.nickname) localStorage.setItem('farmerNickname', updatePayload.nickname);
+  // Permanently hide Update button after first completion
+  setUpdateButtonHidden(true);
+  if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
+  toggleEditMode(false);
 });
 
 ui.editSaveBtn?.addEventListener('click', async () => {
@@ -284,6 +319,15 @@ ui.editSaveBtn?.addEventListener('click', async () => {
   if (payload.fullname) localStorage.setItem('farmerName', payload.fullname);
   if (payload.contact) localStorage.setItem('farmerContact', payload.contact);
   if (payload.nickname) localStorage.setItem('farmerNickname', payload.nickname);
+  toggleEditMode(false);
+  // If after editing, all additional info is complete, mark profileCompleted and hide Update
+  if (isAdditionalInfoComplete(userDocCache)) {
+    await ensureUserDoc(user.uid, { profileCompleted: true, updatedAt: serverTimestamp() });
+    setUpdateButtonHidden(true);
+    if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
+  } else {
+    setUpdateButtonHidden(false);
+  }
 });
 
 // Sensitive info verification (for driver/field roles)
@@ -321,5 +365,48 @@ ui.verifyConfirm?.addEventListener('click', async () => {
 });
 
 document.addEventListener('DOMContentLoaded', init);
+
+function toggleEditMode(isEditing) {
+  // Profile photo camera icon visibility
+  if (ui.photo && ui.photo.btn) {
+    if (isEditing) ui.photo.btn.classList.remove('hidden');
+    else ui.photo.btn.classList.add('hidden');
+  }
+  // Input highlighting
+  const inputs = [
+    ui.input.fullname,
+    ui.input.email,
+    ui.input.contact,
+    ui.input.barangay,
+    ui.input.municipality,
+    ui.input.nickname,
+    ui.input.gender,
+    ui.input.birthday,
+    ui.input.address
+  ].filter(Boolean);
+
+  inputs.forEach(el => {
+    if (isEditing) {
+      el.classList.add('bg-[var(--cane-50)]', 'border-[var(--cane-500)]');
+    } else {
+      el.classList.remove('bg-[var(--cane-50)]', 'border-[var(--cane-500)]');
+    }
+    el.disabled = !isEditing;
+  });
+  // Disable file input when not editing
+  if (ui.photo && ui.photo.file) ui.photo.file.disabled = !isEditing;
+}
+
+function setUpdateButtonHidden(hidden) {
+  if (!ui.updateBtn) return;
+  if (hidden) {
+    ui.updateBtn.classList.add('hidden');
+    ui.updateBtn.classList.remove('inline-flex');
+    ui.updateBtn.classList.remove('sm:inline-flex');
+  } else {
+    ui.updateBtn.classList.remove('hidden');
+    ui.updateBtn.classList.add('inline-flex');
+  }
+}
 
 

@@ -33,7 +33,7 @@
             <div class="flex items-center justify-between mb-6">
                 <h1 class="text-2xl sm:text-3xl font-bold text-[var(--cane-950)]">Profile Information</h1>
                 <div class="flex items-center gap-2">
-                    <button id="updateBtn" class="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 sm:px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition-all duration-300 shadow-md">
+                    <button id="updateBtn" class="hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 sm:px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition-all duration-300 shadow-md">
                         <i class="fa-solid fa-arrow-rotate-right"></i>
                         <span>Update Profile</span>
                     </button>
@@ -47,7 +47,7 @@
             <div class="flex flex-col items-center gap-4 mb-4">
                 <div class="relative">
                     <img id="profilePhoto" alt="Profile Photo" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-[var(--cane-50)]" src=""/>
-                    <button id="photoUploadBtn" class="absolute bottom-0 right-0 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white p-2 rounded-full shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]" title="Change photo">
+                    <button id="photoUploadBtn" class="hidden absolute bottom-0 right-0 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white p-2 rounded-full shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]" title="Change photo">
                         <i class="fa-solid fa-camera"></i>
                     </button>
                 </div>
@@ -71,6 +71,22 @@
                 <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
                     <p class="text-xs text-[var(--cane-600)] font-semibold">Brgy/Municipality</p>
                     <p id="ro_location" class="text-[var(--cane-950)] font-semibold">-</p>
+                </div>
+                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
+                    <p class="text-xs text-[var(--cane-600)] font-semibold">Nickname</p>
+                    <p id="ro_nickname" class="text-[var(--cane-950)] font-semibold">-</p>
+                </div>
+                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
+                    <p class="text-xs text-[var(--cane-600)] font-semibold">Gender</p>
+                    <p id="ro_gender" class="text-[var(--cane-950)] font-semibold">-</p>
+                </div>
+                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
+                    <p class="text-xs text-[var(--cane-600)] font-semibold">Birthday</p>
+                    <p id="ro_birthday" class="text-[var(--cane-950)] font-semibold">-</p>
+                </div>
+                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
+                    <p class="text-xs text-[var(--cane-600)] font-semibold">Complete Address</p>
+                    <p id="ro_address" class="text-[var(--cane-950)] font-semibold break-words">-</p>
                 </div>
             </div>
 
