@@ -26,36 +26,46 @@
             --cane-950: #192e03;
         }
         
+        /* Darker default text for readability */
+        body { color: var(--cane-900); }
+        h1, h2, h3, h4 { color: var(--cane-950); }
+        p, label, li, span { color: var(--cane-900); }
+
+        .form-input { color: var(--cane-900); }
+        .form-input::placeholder { color: #374151; }
         .form-input:focus {
             border-color: var(--cane-500);
             box-shadow: 0 0 0 3px rgba(124, 207, 0, 0.1);
         }
         
+        .form-select { color: var(--cane-900); }
         .form-select:focus {
             border-color: var(--cane-500);
             box-shadow: 0 0 0 3px rgba(124, 207, 0, 0.1);
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
+            background: linear-gradient(135deg, var(--cane-700), var(--cane-800));
+            color: #ffffff;
             transition: all 0.3s ease;
         }
         
         .btn-primary:hover {
-            background: linear-gradient(135deg, var(--cane-600), var(--cane-700));
+            background: linear-gradient(135deg, var(--cane-800), var(--cane-900));
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(94, 165, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
         
         .btn-secondary {
-            background: linear-gradient(135deg, var(--cane-200), var(--cane-300));
-            color: var(--cane-800);
+            background: linear-gradient(135deg, var(--cane-600), var(--cane-700));
+            color: #ffffff;
             transition: all 0.3s ease;
         }
         
         .btn-secondary:hover {
-            background: linear-gradient(135deg, var(--cane-300), var(--cane-400));
+            background: linear-gradient(135deg, var(--cane-700), var(--cane-800));
             transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         }
         
         .section-card {

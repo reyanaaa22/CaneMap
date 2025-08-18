@@ -51,7 +51,7 @@ function setupCamera(buttonId, cameraDivId, inputId, facingMode = "environment")
         }
         const snapBtn = document.createElement('button');
         snapBtn.textContent = 'Capture';
-        snapBtn.className = 'px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 mt-2';
+        snapBtn.className = 'px-3 py-1 bg-[var(--cane-700)] text-white rounded hover:bg-[var(--cane-800)] mt-2';
         cameraDiv.appendChild(snapBtn);
         snapBtn.onclick = function() {
             const canvas = document.createElement('canvas');
