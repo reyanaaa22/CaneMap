@@ -117,38 +117,38 @@
                 </div>
                 <div class="flex-1 flex justify-center">
                      <div class="flex space-x-10"> <!-- Navigation menu centered -->
-                          <a href="#features" class="text-[var(--cane-800)] hover:text-[var(--cane-600)] transition-colors text-lg font-medium">Features</a>
-                          <a href="#about" class="text-[var(--cane-800)] hover:text-[var(--cane-600)] transition-colors text-lg font-medium">About us</a>
-                          <a href="#contact" class="text-[var(--cane-800)] hover:text-[var(--cane-600)] transition-colors text-lg font-medium">Contact</a>
+                          <a href="#features" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-colors text-lg font-semibold">Features</a>
+                          <a href="#about" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-colors text-lg font-semibold">About us</a>
+                          <a href="#contact" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-colors text-lg font-semibold">Contact</a>
                     </div>
                 </div>
                                 
-                     <button class="bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-600)] hover:to-[var(--cane-700)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold" onclick="window.location.href='register-field.html'">
+                     <button class="bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold" onclick="window.location.href='register-field.html'">
                          + Register a Field
                      </button>
                      <!-- Profile Dropdown -->
                      <div class="relative">
-                         <button id="profileDropdownBtn" class="flex items-center space-x-2 text-[var(--cane-800)] hover:text-[var(--cane-600)] transition-all duration-300">
-                             <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md">
+                         <button id="profileDropdownBtn" class="flex items-center space-x-2 text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-all duration-300">
+                             <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ml-1">
                                  <i class="fas fa-user text-white text-sm"></i>
                              </div>
-                             <span class="font-medium" id="userName">Farmer Name</span>
-                             <i class="fas fa-chevron-down text-[var(--cane-600)] text-xs transition-transform duration-300" id="dropdownArrow"></i>
+                             <span class="font-semibold" id="userName">Farmer Name</span>
+                             <i class="fas fa-chevron-down text-[var(--cane-700)] text-xs transition-transform duration-300" id="dropdownArrow"></i>
                          </button>
                          
                          <!-- Dropdown Menu -->
                          <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] opacity-0 invisible transition-all duration-300 transform scale-95 origin-top-right z-50">
                              <div class="py-2">
                                  <div class="px-4 py-3 border-b border-[var(--cane-100)]">
-                                     <p class="text-sm font-medium text-[var(--cane-900)]" id="dropdownUserName">Farmer Name</p>
-                                     <p class="text-xs text-[var(--cane-600)]">Farmer</p>
+                                     <p class="text-sm font-semibold text-[var(--cane-950)]" id="dropdownUserName">Farmer Name</p>
+                                     <p class="text-xs text-[var(--cane-700)] font-medium">Farmer</p>
                                  </div>
-                                 <a href="Workers.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
+                                 <a href="Workers.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium">
                                      <i class="fas fa-tachometer-alt mr-3 text-[var(--cane-500)]"></i>
                                      Dashboard
 
                                  <div class="border-t border-[var(--cane-100)] mt-2">
-                                     <a href="#" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
+                                     <a href="#" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium">
                                          <i class="fas fa-cog mr-3 text-[var(--cane-500)]"></i>
                                          Settings
                                      </a>
@@ -171,10 +171,10 @@
             <!-- Left Panel - Sugarcane Field Map -->
             <div id="mapPanel" class="flex-1 fade-in-left">
                                                   <div class="flex justify-between items-center mb-6">
-                     <h2 class="text-2xl font-bold text-[var(--cane-900)]">Sugarcane Field Map</h2>
+                     <h2 class="text-2xl font-bold text-[var(--cane-950)]">Sugarcane Field Map</h2>
                      <div class="flex items-center space-x-4">
-                         <input type="text" placeholder="Search for fields, locations..." class="w-80 px-4 py-3 border-2 border-[var(--cane-400)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] bg-white shadow-md text-gray-700 placeholder-gray-600">
-                         <button class="bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)] text-white px-6 py-3 rounded-lg hover:from-[var(--cane-600)] hover:to-[var(--cane-700)] transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold">Search</button>
+                         <input type="text" placeholder="Search for sugarcane fields..." class="w-[500px] px-4 py-3 border-2 border-[var(--cane-400)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] bg-white shadow-md text-gray-700 placeholder-gray-600">
+                         <button class="bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-6 py-3 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold">Search</button>
                          <button id="expandMapBtn" class="bg-[var(--cane-700)] text-white px-4 py-3 rounded-lg hover:bg-[var(--cane-800)] transition-all duration-300 transform hover:scale-105 shadow-md">Expand Map</button>
                      </div>
                  </div>
@@ -280,13 +280,13 @@
                 </script>
                 <!-- Get Verified Section -->
                  <div class="bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)] rounded-xl p-6 shadow-lg border border-[var(--cane-400)] slide-in-bottom">
-                     <h3 class="font-bold text-[var(--cane-900)] mb-4 text-lg">Get Verified for Additional Roles</h3>
+                     <h3 class="font-bold text-[var(--cane-950)] mb-4 text-lg">Get Verified for Additional Roles</h3>
                     <div class="flex items-center justify-between">
                         <div>
-                             <h4 class="font-semibold text-[var(--cane-900)] text-lg mb-2">Apply for Driver Badge</h4>
-                             <p class="text-[var(--cane-800)]">Own or operate hauling vehicles? Drivers are for hauling agricultural field workers.</p>
+                             <h4 class="font-semibold text-[var(--cane-950)] text-lg mb-2">Apply for Driver Badge</h4>
+                             <p class="text-[var(--cane-900)] font-medium">Own or operate hauling vehicles? Drivers are for hauling agricultural field workers.</p>
                         </div>
-                         <button onclick="window.location.href='Driver_Badge.html'" class="bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-6 py-3 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold">Apply Now</button>
+                         <button onclick="window.location.href='Driver_Badge.html'" class="bg-gradient-to-r from-[var(--cane-800)] to-[var(--cane-900)] text-white px-6 py-3 rounded-lg hover:from-[var(--cane-900)] hover:to-[var(--cane-950)] transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold">Apply Now</button>
                     </div>
                 </div>
             </div>
@@ -294,7 +294,7 @@
             <div id="sidePanel" class="w-full lg:w-96 space-y-4 fade-in-right">
                                  <!-- Notifications -->
                                   <div class="bg-gradient-to-br from-white to-[var(--cane-100)] rounded-xl shadow-lg p-6 border border-[var(--cane-300)]">
-                      <h3 class="text-lg font-bold text-[var(--cane-900)] mb-6 flex items-center">
+                      <h3 class="text-lg font-bold text-[var(--cane-950)] mb-6 flex items-center">
                           <i class="fas fa-bell text-[var(--cane-500)] mr-3 text-xl"></i>
                           Notifications
                       </h3>
@@ -304,8 +304,8 @@
                                   <i class="fas fa-check text-white text-base"></i>
                              </div>
                              <div>
-                                  <h4 class="font-semibold text-[var(--cane-900)]">Your Request Approved</h4>
-                                  <p class="text-[var(--cane-800)] text-sm">Payment has been accepted by SRA for field registration.</p>
+                                  <h4 class="font-semibold text-[var(--cane-950)]">Your Request Approved</h4>
+                                  <p class="text-[var(--cane-900)] text-sm font-medium">Payment has been accepted by SRA for field registration.</p>
                              </div>
                          </div>
                           <div class="flex items-start space-x-3 p-3 bg-gradient-to-r from-[var(--cane-100)] to-[var(--cane-200)] rounded-lg border-l-4 border-[var(--cane-400)]">
@@ -313,15 +313,15 @@
                                   <i class="fas fa-clipboard text-white text-base"></i>
                              </div>
                              <div>
-                                  <h4 class="font-semibold text-[var(--cane-900)]">Task assignment</h4>
-                                  <p class="text-[var(--cane-800)] text-sm">New weeding task assigned for this week.</p>
+                                  <h4 class="font-semibold text-[var(--cane-950)]">Task assignment</h4>
+                                  <p class="text-[var(--cane-900)] text-sm font-medium">New weeding task assigned for this week.</p>
                              </div>
                          </div>
                      </div>
                  </div>
                                  <!-- Weather Forecast -->
                   <div class="bg-gradient-to-br from-white to-[var(--cane-100)] rounded-xl shadow-lg p-6 border border-[var(--cane-300)]">
-                      <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center">
+                      <h3 class="text-lg font-bold text-[var(--cane-950)] mb-4 flex items-center">
                           <i class="fas fa-cloud-sun text-[var(--cane-500)] mr-3 text-xl"></i>
                           Weather Forecast
                       </h3>
@@ -334,7 +334,7 @@
     </main>
     <!-- Features Section -->
 	<section id="features" class="relative bg-[#0b1020]">
-		<div id="featuresInner" class="relative w-full px-6 py-16 min-h-screen overflow-hidden">
+		<div id="featuresInner" class="relative w-full px-6 py-32 min-h-screen overflow-hidden">
 			<!-- Background image + gradient overlay -->
 			<div class="absolute inset-0">
 				<img id="featuresBg" src="../img/sugarcane.webp" alt="Sugarcane background" class="absolute inset-0 w-full h-full object-cover opacity-40">
@@ -429,59 +429,98 @@
         </div>
     </section>
     <!-- About Us Section -->
-    <section id="about" class="py-16 bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)]">
-        <div class="container mx-auto px-4">
-                         <h2 class="text-4xl font-bold text-center text-[var(--cane-900)] mb-12 fade-in-up">ABOUT US</h2>
-            <div class="max-w-4xl mx-auto text-center mb-12 fade-in-up">
-                 <p class="text-lg text-[var(--cane-800)] leading-relaxed">
-                    CaneMap is an agricultural decision-support platform designed to help sugarcane farmers and field workers register land, track field progress, and collaborate with the Sugar Regulatory Administration (SRA) for better transparency and productivity. Developed in collaboration with local stakeholders and SRA Ormoc Mill Distric, CaneMap empowers farmers through digital mapping, task coordination, and predictive analytics to make informed decisions throughout the crop cycle.
+    <section id="about" class="py-24 bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)]">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in-up">
+                <h2 class="text-5xl font-bold text-[var(--cane-950)] mb-6">About CaneMap</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full"></div>
+            </div>
+            
+            <div class="max-w-5xl mx-auto text-center mb-16 fade-in-up">
+                <p class="text-xl text-[var(--cane-900)] leading-relaxed font-medium">
+                    CaneMap is an agricultural decision-support platform designed to help sugarcane farmers and field workers register land, track field progress, and collaborate with the Sugar Regulatory Administration (SRA) for better transparency and productivity. Developed in collaboration with local stakeholders and SRA Ormoc Mill District, CaneMap empowers farmers through digital mapping, task coordination, and predictive analytics to make informed decisions throughout the crop cycle.
                 </p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                 <div class="bg-gradient-to-br from-[var(--cane-100)] via-[var(--cane-200)] to-[var(--cane-300)] p-8 rounded-lg text-center shadow-lg transform hover:scale-105 transition-all duration-300 border border-[var(--cane-200)] scale-in">
-                     <h3 class="text-2xl font-bold text-[var(--cane-900)] mb-4">Mission</h3>
-                     <p class="text-[var(--cane-800)]">To empower sugarcane farmers with digital tools for better decision-making and productivity.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-10 text-center transform hover:scale-105 transition-all duration-500 border border-[var(--cane-200)] scale-in">
+                    <div class="w-16 h-16 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-bullseye text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-3xl font-bold text-[var(--cane-950)] mb-6">Our Mission</h3>
+                    <p class="text-lg text-[var(--cane-900)] font-medium leading-relaxed">To empower sugarcane farmers with digital tools for better decision-making and productivity through innovative technology solutions.</p>
                 </div>
-                 <div class="bg-gradient-to-br from-[var(--cane-200)] via-[var(--cane-300)] to-[var(--cane-400)] p-8 rounded-lg text-center shadow-lg transform hover:scale-105 transition-all duration-300 border border-[var(--cane-300)] scale-in">
-                     <h3 class="text-2xl font-bold text-[var(--cane-900)] mb-4">Vision</h3>
-                     <p class="text-[var(--cane-800)]">To be the leading agricultural technology platform for sugarcane farming in the Philippines.</p>
+                
+                <div class="bg-white rounded-2xl shadow-xl p-10 text-center transform hover:scale-105 transition-all duration-500 border border-[var(--cane-200)] scale-in">
+                    <div class="w-16 h-16 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-eye text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-3xl font-bold text-[var(--cane-950)] mb-6">Our Vision</h3>
+                    <p class="text-lg text-[var(--cane-900)] font-medium leading-relaxed">To be the leading agricultural technology platform for sugarcane farming in the Philippines, driving digital transformation in agriculture.</p>
                 </div>
             </div>
         </div>
     </section>
     <!-- Contact Section -->
-     <section id="contact" class="bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)] py-16">
-        <div class="container mx-auto px-4">
-              <div class="max-w-6xl mx-auto">
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                      <!-- Left: Contact Form -->
-                 <div class="bg-gradient-to-br from-white to-[var(--cane-100)] rounded-xl shadow-xl p-6 border border-[var(--cane-300)] fade-in-left max-w-md">
-                          <h3 class="text-xl font-bold text-[var(--cane-900)] mb-4">Get in Touch</h3>
-                          <div class="space-y-3 mb-4">
-                                <div class="flex items-center space-x-3">
-                                  <i class="fas fa-envelope text-[var(--cane-500)] text-base"></i>
-                                  <span class="text-[var(--cane-800)] text-sm">info@canemap.com</span>
+    <section id="contact" class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] py-24">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in-up">
+                <h2 class="text-5xl font-bold text-[var(--cane-950)] mb-6">Get in Touch</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full"></div>
+                <p class="text-xl text-[var(--cane-900)] mt-6 max-w-2xl mx-auto">Have questions or need support? We're here to help you with your sugarcane farming needs.</p>
+            </div>
+            
+            <div class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <!-- Left: Contact Form -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-[var(--cane-200)] fade-in-left max-w-sm">
+                        <h3 class="text-xl font-bold text-[var(--cane-950)] mb-4">Send us a Message</h3>
+                        
+                        <div class="space-y-3 mb-4">
+                            <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
+                                <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center">
+                                    <i class="fas fa-envelope text-white text-xs"></i>
                                 </div>
-                                <div class="flex items-center space-x-3">
-                                  <i class="fas fa-phone text-[var(--cane-500)] text-base"></i>
-                                  <span class="text-[var(--cane-800)] text-sm">+63 912 345 6789</span>
-                                </div>
-                                <div class="flex items-center space-x-3">
-                                  <i class="fas fa-map-marker-alt text-[var(--cane-500)] text-base"></i>
-                                  <span class="text-[var(--cane-800)] text-sm">SRA Ormoc Mill District, Philippines</span>
+                                <div>
+                                    <p class="text-xs text-[var(--cane-700)] font-medium">Email</p>
+                                    <p class="text-[var(--cane-900)] font-semibold text-xs">info@canemap.com</p>
                                 </div>
                             </div>
-                          <h3 class="text-lg font-semibold text-[var(--cane-900)] mb-3">Send Message</h3>
-                            <form class="space-y-3">
-                              <input type="text" placeholder="Your Name" class="w-full px-3 py-2 border-2 border-[var(--cane-400)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)] focus:border-[var(--cane-400)] bg-white text-sm">
-                              <input type="email" placeholder="Your Email" class="w-full px-3 py-2 border-2 border-[var(--cane-400)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)] focus:border-[var(--cane-400)] bg-white text-sm">
-                              <textarea placeholder="Your Message" rows="3" class="w-full px-3 py-2 border-2 border-[var(--cane-400)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)] focus:border-[var(--cane-400)] bg-white text-sm"></textarea>
-                              <button type="submit" class="w-full bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)] text-white py-2 rounded-lg hover:from-[var(--cane-600)] hover:to-[var(--cane-700)] transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-sm">Send Message</button>
+                            
+                            <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
+                                <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center">
+                                    <i class="fas fa-phone text-white text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-[var(--cane-700)] font-medium">Phone</p>
+                                    <p class="text-[var(--cane-900)] font-semibold text-xs">+63 912 345 6789</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
+                                <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-700)] to-[var(--cane-800)] rounded-full flex items-center justify-center">
+                                    <i class="fas fa-map-marker-alt text-white text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-[var(--cane-700)] font-medium">Location</p>
+                                    <p class="text-[var(--cane-900)] font-semibold text-xs">SRA Ormoc Mill District, Philippines</p>
+                                </div>
+                            </div>
                         </div>
-                      
-                                            
-                       <div class="flex justify-center items-center fade-in-right">
-                           <dotlottie-wc src="https://lottie.host/91bcd1ed-629b-40f2-bb9c-f589f84356f9/7nRjluWgwr.lottie" style="width: 500px;height: 500px" speed="1" autoplay loop></dotlottie-wc>
+                        
+                        <form class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <input type="text" placeholder="Your Name" class="w-full px-2 py-1.5 border border-[var(--cane-300)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] bg-white text-xs font-medium">
+                                <input type="email" placeholder="Your Email" class="w-full px-2 py-1.5 border border-[var(--cane-300)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] bg-white text-xs font-medium">
+                            </div>
+                            <textarea placeholder="Your Message" rows="3" class="w-full px-2 py-1.5 border border-[var(--cane-300)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] bg-white text-xs font-medium resize-none"></textarea>
+                            <button type="submit" class="w-full bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white py-2 rounded-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold text-sm">Send Message</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Right: Animation -->
+                    <div class="flex justify-center items-center fade-in-right">
+                        <dotlottie-wc src="https://lottie.host/91bcd1ed-629b-40f2-bb9c-f589f84356f9/7nRjluWgwr.lottie" style="width: 500px;height: 500px" speed="1" autoplay loop></dotlottie-wc>
                     </div>
                 </div>
             </div>
