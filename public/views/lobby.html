@@ -88,9 +88,90 @@
             opacity: 1;
             transform: translateY(0);
         }
+        
+        /* Carousel Navigation Styles */
+        .nav-line {
+            width: 0; /* will be set dynamically to span 3 cards */
+            height: 4px; /* Thicker line */
+            background: rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            border-radius: 9999px; /* fully rounded ends */
+        }
+        
+        .progress {
+            width: 16.67%; /* Start at first slide (1/6) */
+            min-width: 16px; /* ensure visible at small values */
+            height: 100%;
+            background: #f9b300; /* Yellow color */
+            transition: width 0.5s ease;
+            border-radius: 9999px; /* fully rounded ends */
+        }
+        
+        .slide-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin-left: 20px; /* Better spacing from the line */
+        }
+		/* Remove Swiper's default blue arrows */
+		.swiper-button-prev::after,
+		.swiper-button-next::after { content: none !important; }
+        /* Make feature cards obviously clickable */
+        .featuresSwiper .swiper-slide { cursor: pointer; }
+        /* Contact top wave divider */
+        .custom-shape-divider-top-1755503018 {
+            position: absolute;
+            top: -6px; /* overlap more to hide any seam */
+            left: 0;
+            width: 100%;
+            overflow: hidden;
+            line-height: 0;
+            transform: rotate(180deg);
+            pointer-events: none;
+        }
+
+        .custom-shape-divider-top-1755503018 svg {
+            position: relative;
+            display: block;
+            width: calc(160% + 2px);
+            height: 160px;
+        }
+
+        .custom-shape-divider-top-1755503018 .shape-fill {
+            /* darker cane green with higher opacity */
+            fill: rgba(124, 207, 0, 0.9);
+        }
+        /* remove overlay to avoid white band */
+        #contact::before { content: none; }
+        /* About bottom wave divider */
+        .custom-shape-divider-bottom-1755503533 {
+            position: absolute;
+            bottom: -50px; /* overlap further to ensure smooth edge */
+            left: 0;
+            width: 100%;
+            overflow: hidden;
+            line-height: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .custom-shape-divider-bottom-1755503533 svg {
+            position: relative;
+            display: block;
+            width: calc(165% + 2px);
+            height: 180px;
+        }
+
+        .custom-shape-divider-bottom-1755503533 .shape-fill {
+            fill: rgba(124, 207, 0, 0.9);
+        }
+        /* ensure about content sits above the wave */
+        .about-content { position: relative; z-index: 1; }
     </style>
 </head>
-    <body class="bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)] min-h-screen">
+    <body class="bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)] min-h-screen antialiased">
     <style>
         :root {
             --cane-50: #f7fee7;
@@ -109,7 +190,7 @@
     <!-- Small green header bar -->
     <div class="w-full h-2 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)]"></div>
     <!-- Header/Navigation -->
-	<header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-green-md sticky top-0 z-50 border-b-2 border-[var(--cane-200)]">
+	<header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-green-md sticky top-0 z-50 border-b-2 border-[var(--cane-200)] backdrop-blur-sm">
         <nav class="container mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
@@ -117,9 +198,9 @@
                 </div>
                 <div class="flex-1 flex justify-center">
                      <div class="flex space-x-10"> <!-- Navigation menu centered -->
-                          <a href="#features" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-colors text-lg font-semibold">Features</a>
-                          <a href="#about" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-colors text-lg font-semibold">About us</a>
-                          <a href="#contact" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] transition-colors text-lg font-semibold">Contact</a>
+                          <a href="#features" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] hover:underline underline-offset-4 decoration-[var(--cane-500)] transition-colors text-lg font-semibold">Features</a>
+                          <a href="#about" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] hover:underline underline-offset-4 decoration-[var(--cane-500)] transition-colors text-lg font-semibold">About us</a>
+                          <a href="#contact" class="text-[var(--cane-900)] hover:text-[var(--cane-700)] hover:underline underline-offset-4 decoration-[var(--cane-500)] transition-colors text-lg font-semibold">Contact</a>
                     </div>
                 </div>
                                 
@@ -189,95 +270,6 @@
                     <div id="map" class="w-full h-96 rounded-xl border-2 border-[var(--cane-400)] mb-6 shadow-xl"></div>
                 </div>
                 
-                <script>
-                    // Initialize the map
-                    let map;
-                    function initMap() {
-                        try {
-                            // Check if map is already initialized
-                            if (map) {
-                                console.log('Map already initialized, skipping...');
-                                return;
-                            }
-                            
-                            // Check if the map container exists and is empty
-                            const mapContainer = document.getElementById('map');
-                            if (!mapContainer) {
-                                console.error('Map container not found');
-                                return;
-                            }
-                            
-                            // Clear any existing content
-                            mapContainer.innerHTML = '';
-                            
-                            // Initialize the map centered on Ormoc City, Philippines
-                            map = L.map('map').setView([11.0064, 124.6075], 12);
-                            
-                            // Add OpenStreetMap tiles
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                attribution: '© OpenStreetMap contributors'
-                            }).addTo(map);
-
-                            // Add a subtle marker for Ormoc City center
-                            L.marker([11.0064, 124.6075])
-                                .addTo(map)
-                                .bindPopup('<b>Ormoc City</b><br>Leyte, Philippines<br><small>SRA Ormoc Mill District</small>')
-                                .openPopup();
-
-                            console.log('Map initialized successfully');
-                        } catch (error) {
-                            console.error('Error initializing map:', error);
-                            // Show error message in map container
-                            document.getElementById('map').innerHTML = `
-                                <div class="flex items-center justify-center h-full bg-red-50 text-red-600">
-                                    <div class="text-center">
-                                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                                        <p>Error loading map</p>
-                                        <p class="text-sm">${error.message}</p>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    }
-                    
-                    // Function to destroy and reinitialize map
-                    function reinitMap() {
-                        if (map) {
-                            map.remove();
-                            map = null;
-                        }
-                        setTimeout(() => {
-                            initMap();
-                        }, 100);
-                    }
-
-                    // Initialize map when page loads
-                    document.addEventListener('DOMContentLoaded', function() {
-                        setTimeout(() => {
-                            initMap();
-                        }, 100);
-                    });
-                    
-                    // Also try to initialize on window load as backup
-                    window.addEventListener('load', function() {
-                        if (!map) {
-                            setTimeout(() => {
-                                initMap();
-                            }, 200);
-                        }
-                    });
-                    
-                    // Add refresh button functionality
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const refreshBtn = document.getElementById('refreshMapIcon');
-                        if (refreshBtn) {
-                            refreshBtn.addEventListener('click', function() {
-                                console.log('Refreshing map...');
-                                reinitMap();
-                            });
-                        }
-                    });
-                </script>
                 <!-- Get Verified Section -->
                  <div class="bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)] rounded-xl p-6 shadow-lg border border-[var(--cane-400)] slide-in-bottom">
                      <h3 class="font-bold text-[var(--cane-950)] mb-4 text-lg">Get Verified for Additional Roles</h3>
@@ -333,104 +325,171 @@
         </div>
     </main>
     <!-- Features Section -->
-	<section id="features" class="relative bg-[#0b1020]">
-		<div id="featuresInner" class="relative w-full px-6 py-32 min-h-screen overflow-hidden">
+    <section id="features" class="relative bg-gradient-to-br from-[var(--cane-900)] to-[var(--cane-950)]">
+        <div id="featuresInner" class="relative w-full py-12 min-h-[80vh] overflow-hidden">
 			<!-- Background image + gradient overlay -->
 			<div class="absolute inset-0">
-				<img id="featuresBg" src="../img/sugarcane.webp" alt="Sugarcane background" class="absolute inset-0 w-full h-full object-cover opacity-40">
+                <img id="featuresBg" src="../img/sugarcane.webp" alt="Sugarcane background" class="absolute inset-0 w-full h-full object-cover opacity-30">
 				<img id="featuresBgSwap" src="" alt="" class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700">
-				<div class="absolute inset-0 bg-gradient-to-r from-[#0b1020] via-[#0b1020]/70 to-transparent"></div>
-				<!-- top and bottom fade to remove any white edges -->
-				<div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#0b1020] to-transparent"></div>
-				<div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0b1020] to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-[var(--cane-900)] via-[var(--cane-900)/80] to-transparent"></div>
+                <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[var(--cane-900)] to-transparent"></div>
+                <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[var(--cane-900)] to-transparent"></div>
 			</div>
 
-			<div class="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-center justify-center">
-				<!-- Left information panel -->
-				<div class="lg:col-span-6 flex justify-center fade-in-left">
-					<div class="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-6 md:p-8 max-w-xl shadow-[0_0_0_9999px_rgba(11,16,32,0.35)]">
-						<h2 id="featureTitle" class="text-3xl md:text-4xl font-bold text-white mb-4">CaneMap Features</h2>
-						<div id="featureTags" class="flex flex-wrap items-center gap-3 text-sm text-slate-200/90 mb-4"></div>
-						<p id="featureDesc" class="text-slate-200/90 leading-relaxed mb-6"></p>
-						                        <div class="flex items-center gap-3">
-							<button class="bg-[#22c55e] hover:bg-[#16a34a] text-white px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2">
-								<i class="fa-solid fa-play"></i>
-								<span>Explore</span>
-							</button>
+                        <div class="relative w-full">
+                <!-- Header Section -->
+                <div class="text-center mb-8 fade-in-up">
+                    <h2 class="text-5xl font-bold text-white mb-2">CaneMap Features</h2>
+                    <div class="w-16 h-0.5 bg-gradient-to-r from-[var(--cane-400)] to-[var(--cane-500)] mx-auto mb-6"></div>
+                    <p class="text-xl text-[var(--cane-200)] max-w-3xl mx-auto">Discover the powerful tools designed to revolutionize sugarcane farming and agricultural management.</p>
 						</div>
+
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 items-center">
+                                         <!-- Left: Feature Details Panel -->
+                     <div class="fade-in-left pl-8 md:pl-12 lg:pl-16">
+                         <h3 id="featureTitle" class="text-3xl md:text-4xl font-extrabold text-white mb-4">Field Registration & Mapping</h3>
+                         <div id="featureTags" class="flex flex-wrap items-center gap-2 mb-4">
+                             <span class="px-3 py-1 bg-white/10 rounded-full text-white text-sm font-semibold">Leaflet.js</span>
+                             <span class="px-3 py-1 bg-white/10 rounded-full text-white text-sm font-semibold">OpenStreetMap</span>
+                             <span class="px-3 py-1 bg-white/10 rounded-full text-white text-sm font-semibold">GeoJSON</span>
 					</div>
+                         <p id="featureDesc" class="text-white/90 leading-relaxed mb-6 text-base md:text-lg font-medium">Register sugarcane areas with precise map coordinates using Leaflet.js and OpenStreetMap. Draw plots, save geometry, and manage boundaries easily.</p>
+                         <button class="bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)] text-white px-5 py-2.5 rounded-lg hover:from-[var(--cane-600)] hover:to-[var(--cane-700)] transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold flex items-center gap-3 text-base">
+                             <i class="fas fa-play text-xs"></i>
+                             <span>Explore Feature</span>
+                         </button>
 				</div>
 
-				<!-- Right coverflow carousel -->
-				<div class="lg:col-span-6 flex justify-center fade-in-right">
+                    <!-- Right: Features Carousel -->
+                    <div class="fade-in-right">
 					<div class="featuresSwiper swiper">
 						<div class="swiper-wrapper">
 							<!-- Field Registration & Mapping -->
-							<div class="swiper-slide relative w-[160px] sm:w-[200px] md:w-[230px] h-[240px] sm:h-[280px] md:h-[320px] rounded-xl overflow-hidden shadow-xl" data-title="Field Registration & Mapping" data-tags="Leaflet.js,OpenStreetMap,GeoJSON" data-desc="Register sugarcane areas with precise map coordinates using Leaflet.js and OpenStreetMap. Draw plots, save geometry, and manage boundaries easily.">
+                                <div class="swiper-slide relative w-[200px] h-[280px] rounded-xl overflow-hidden shadow-xl backdrop-blur-sm bg-white/10 border border-white/20" data-title="Field Registration & Mapping" data-tags="Leaflet.js,OpenStreetMap,GeoJSON" data-desc="Register sugarcane areas with precise map coordinates using Leaflet.js and OpenStreetMap. Draw plots, save geometry, and manage boundaries easily.">
 								<img src="../img/Mapping.webp" alt="Field Registration & Mapping" class="w-full h-full object-cover">
-								<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                                    <div class="absolute top-3 left-3">
+                                        <div class="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                                            <i class="fas fa-map-marked-alt text-white text-sm"></i>
+                                        </div>
+                                    </div>
 								<div class="absolute bottom-0 left-0 right-0 p-4">
-									<h3 class="text-white text-lg font-semibold leading-tight">Field Registration & Mapping</h3>
+                                        <p class="text-[var(--cane-300)] text-xs font-medium mb-1">Mapping Technology</p>
+                                        <h3 class="text-white text-lg font-bold leading-tight mb-1">Field Registration & Mapping</h3>
 									<p class="text-white/80 text-xs">Leaflet + OpenStreetMap</p>
 								</div>
 							</div>
+
 							<!-- Growth Tracker & Harvest Timeline -->
-							<div class="swiper-slide relative w-[160px] sm:w-[200px] md:w-[230px] h-[240px] sm:h-[280px] md:h-[320px] rounded-xl overflow-hidden shadow-xl" data-title="Growth Tracker & Harvest Timeline" data-tags="Planting date,Variety alerts,Readiness" data-desc="Set planting dates and varieties to get automatic growth stage tracking and harvest readiness alerts.">
+                                <div class="swiper-slide relative w-[200px] h-[280px] rounded-xl overflow-hidden shadow-xl backdrop-blur-sm bg-white/10 border border-white/20" data-title="Growth Tracker & Harvest Timeline" data-tags="Planting date,Variety alerts,Readiness" data-desc="Set planting dates and varieties to get automatic growth stage tracking and harvest readiness alerts.">
 								<img src="../img/cane.png" alt="Growth Tracker & Harvest Timeline" class="w-full h-full object-cover">
-								<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                                    <div class="absolute top-3 left-3">
+                                        <div class="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                                            <i class="fas fa-seedling text-white text-sm"></i>
+                                        </div>
+                                    </div>
 								<div class="absolute bottom-0 left-0 right-0 p-4">
-									<h3 class="text-white text-lg font-semibold leading-tight">Growth Tracker & Harvest Timeline</h3>
+                                        <p class="text-[var(--cane-300)] text-xs font-medium mb-1">Growth Management</p>
+                                        <h3 class="text-white text-lg font-bold leading-tight mb-1">Growth Tracker & Harvest Timeline</h3>
 									<p class="text-white/80 text-xs">Planting date + variety alerts</p>
 								</div>
 							</div>
+
 							<!-- Role-Based Dashboards -->
-							<div class="swiper-slide relative w-[160px] sm:w-[200px] md:w-[230px] h-[240px] sm:h-[280px] md:h-[320px] rounded-xl overflow-hidden shadow-xl" data-title="Role-Based Dashboards" data-tags="Farmers,Workers,Drivers,SRA,Admins" data-desc="Separate dashboards tailored for farmers, workers, drivers, SRA officers, and admins for focused workflows.">
+                                <div class="swiper-slide relative w-[200px] h-[280px] rounded-xl overflow-hidden shadow-xl backdrop-blur-sm bg-white/10 border border-white/20" data-title="Role-Based Dashboards" data-tags="Farmers,Workers,Drivers,SRA,Admins" data-desc="Separate dashboards tailored for farmers, workers, drivers, SRA officers, and admins for focused workflows.">
 								<img src="../img/sugarcane.webp" alt="Role-Based Dashboards" class="w-full h-full object-cover">
-								<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                                    <div class="absolute top-3 left-3">
+                                        <div class="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                                            <i class="fas fa-users-cog text-white text-sm"></i>
+                                        </div>
+                                    </div>
 								<div class="absolute bottom-0 left-0 right-0 p-4">
-									<h3 class="text-white text-lg font-semibold leading-tight">Role-Based Dashboards</h3>
+                                        <p class="text-[var(--cane-300)] text-xs font-medium mb-1">User Management</p>
+                                        <h3 class="text-white text-lg font-bold leading-tight mb-1">Role-Based Dashboards</h3>
 									<p class="text-white/80 text-xs">Farmers, SRA officers, admins</p>
 								</div>
 							</div>
+
 							<!-- Weather Forecast Integration -->
-							<div class="swiper-slide relative w-[160px] sm:w-[200px] md:w-[230px] h-[240px] sm:h-[280px] md:h-[320px] rounded-xl overflow-hidden shadow-xl" data-title="Weather Forecast Integration" data-tags="3-day,Weekly,Location-based" data-desc="Get location-based 3-day and weekly weather forecasts to plan field work and logistics.">
+                                <div class="swiper-slide relative w-[200px] h-[280px] rounded-xl overflow-hidden shadow-xl backdrop-blur-sm bg-white/10 border border-white/20" data-title="Weather Forecast Integration" data-tags="3-day,Weekly,Location-based" data-desc="Get location-based 3-day and weekly weather forecasts to plan field work and logistics.">
 								<img src="../img/Weather.jpg" alt="Weather Forecast Integration" class="w-full h-full object-cover">
-								<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                                    <div class="absolute top-3 left-3">
+                                        <div class="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                                            <i class="fas fa-cloud-sun text-white text-sm"></i>
+                                        </div>
+                                    </div>
 								<div class="absolute bottom-0 left-0 right-0 p-4">
-									<h3 class="text-white text-lg font-semibold leading-tight">Weather Forecast Integration</h3>
+                                        <p class="text-[var(--cane-300)] text-xs font-medium mb-1">Weather Intelligence</p>
+                                        <h3 class="text-white text-lg font-bold leading-tight mb-1">Weather Forecast Integration</h3>
 									<p class="text-white/80 text-xs">3-day & weekly, location-based</p>
 								</div>
 							</div>
+
 							<!-- Transport & Logistics Coordination -->
-							<div class="swiper-slide relative w-[160px] sm:w-[200px] md:w-[230px] h-[240px] sm:h-[280px] md:h-[320px] rounded-xl overflow-hidden shadow-xl" data-title="Transport & Logistics Coordination" data-tags="Drivers,Truck rental,Deliveries" data-desc="Coordinate drivers, manage truck rentals, and track delivery updates in real-time.">
+                                <div class="swiper-slide relative w-[200px] h-[280px] rounded-xl overflow-hidden shadow-xl backdrop-blur-sm bg-white/10 border border-white/20" data-title="Transport & Logistics Coordination" data-tags="Drivers,Truck rental,Deliveries" data-desc="Coordinate drivers, manage truck rentals, and track delivery updates in real-time.">
 								<img src="../img/Transport.jpg" alt="Transport & Logistics Coordination" class="w-full h-full object-cover">
-								<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                                    <div class="absolute top-3 left-3">
+                                        <div class="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                                            <i class="fas fa-truck text-white text-sm"></i>
+                                        </div>
+                                    </div>
 								<div class="absolute bottom-0 left-0 right-0 p-4">
-									<h3 class="text-white text-lg font-semibold leading-tight">Transport & Logistics Coordination</h3>
+                                        <p class="text-[var(--cane-300)] text-xs font-medium mb-1">Logistics Management</p>
+                                        <h3 class="text-white text-lg font-bold leading-tight mb-1">Transport & Logistics Coordination</h3>
 									<p class="text-white/80 text-xs">Driver module, rentals, updates</p>
                         </div>
                     </div>
+
 							<!-- Offline Logging -->
-							<div class="swiper-slide relative w-[160px] sm:w-[200px] md:w-[230px] h-[240px] sm:h-[280px] md:h-[320px] rounded-xl overflow-hidden shadow-xl" data-title="Offline Logging" data-tags="No internet,Auto-sync,Background" data-desc="Log activities without internet and automatically sync when back online.">
+                                <div class="swiper-slide relative w-[200px] h-[280px] rounded-xl overflow-hidden shadow-xl backdrop-blur-sm bg-white/10 border border-white/20" data-title="Offline Logging" data-tags="No internet,Auto-sync,Background" data-desc="Log activities without internet and automatically sync when back online.">
 								<img src="../img/cane.png" alt="Offline Logging" class="w-full h-full object-cover">
-								<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                                    <div class="absolute top-3 left-3">
+                                        <div class="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                                            <i class="fas fa-wifi-slash text-white text-sm"></i>
+                                        </div>
+                                    </div>
 								<div class="absolute bottom-0 left-0 right-0 p-4">
-									<h3 class="text-white text-lg font-semibold leading-tight">Offline Logging</h3>
+                                        <p class="text-[var(--cane-300)] text-xs font-medium mb-1">Offline Capability</p>
+                                        <h3 class="text-white text-lg font-bold leading-tight mb-1">Offline Logging</h3>
 									<p class="text-white/80 text-xs">Log tasks offline, auto-sync</p>
                         </div>
                     </div>
                 </div>
-						<div class="swiper-button-prev !text-white"></div>
-						<div class="swiper-button-next !text-white"></div>
-						<div class="swiper-pagination"></div>
+					</div>
+                        <!-- Navigation Controls Below Carousel (aligned to carousel width) -->
+                        <div class="flex items-center justify-start gap-3 mt-2 z-10 relative w-full">
+                            <!-- Arrows side-by-side -->
+                            <div class="flex items-center space-x-3">
+                                <button class="swiper-button-prev !static !w-12 !h-12 rounded-full border-2 border-white hover:border-gray-300 transition-all duration-300 flex items-center justify-center bg-black/30 shadow-lg">
+                                    <i class="fas fa-chevron-left text-white text-lg"></i>
+                                </button>
+                                <button class="swiper-button-next !static !w-12 !h-12 rounded-full border-2 border-white hover:border-gray-300 transition-all duration-300 flex items-center justify-center bg-black/30 shadow-lg">
+                                    <i class="fas fa-chevron-right text-white text-lg"></i>
+                                </button>
+                </div>
+                            
+                            <!-- Progress line and slide number -->
+                            <div class="flex items-center">
+                                <div class="nav-line">
+                                    <div id="progressLine" class="progress"></div>
+                                </div>
+                                <span id="slideNumber" class="slide-number">01</span>
+                            </div>
+                        </div>
 					</div>
                 </div>
             </div>
         </div>
     </section>
     <!-- About Us Section -->
-    <section id="about" class="py-24 bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)]">
-        <div class="container mx-auto px-6">
+    <section id="about" class="relative py-24 bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)]">
+        <div class="container mx-auto px-6 about-content">
             <div class="text-center mb-16 fade-in-up">
                 <h2 class="text-5xl font-bold text-[var(--cane-950)] mb-6">About CaneMap</h2>
                 <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full"></div>
@@ -446,7 +505,7 @@
                 <div class="bg-white rounded-2xl shadow-xl p-10 text-center transform hover:scale-105 transition-all duration-500 border border-[var(--cane-200)] scale-in">
                     <div class="w-16 h-16 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center mx-auto mb-6">
                         <i class="fas fa-bullseye text-white text-2xl"></i>
-                    </div>
+                </div>
                     <h3 class="text-3xl font-bold text-[var(--cane-950)] mb-6">Our Mission</h3>
                     <p class="text-lg text-[var(--cane-900)] font-medium leading-relaxed">To empower sugarcane farmers with digital tools for better decision-making and productivity through innovative technology solutions.</p>
                 </div>
@@ -454,29 +513,41 @@
                 <div class="bg-white rounded-2xl shadow-xl p-10 text-center transform hover:scale-105 transition-all duration-500 border border-[var(--cane-200)] scale-in">
                     <div class="w-16 h-16 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center mx-auto mb-6">
                         <i class="fas fa-eye text-white text-2xl"></i>
-                    </div>
+            </div>
                     <h3 class="text-3xl font-bold text-[var(--cane-950)] mb-6">Our Vision</h3>
                     <p class="text-lg text-[var(--cane-900)] font-medium leading-relaxed">To be the leading agricultural technology platform for sugarcane farming in the Philippines, driving digital transformation in agriculture.</p>
                 </div>
             </div>
         </div>
+        
     </section>
     <!-- Contact Section -->
-    <section id="contact" class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] py-24">
+    <section id="contact" class="relative bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] pt-24 pb-12">
+        <div class="custom-shape-divider-top-1755503018">
+            <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="contactWaveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#5ea500" stop-opacity="1" />
+                        <stop offset="100%" stop-color="#497d00" stop-opacity="1" />
+                    </linearGradient>
+                </defs>
+                <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z" fill="url(#contactWaveGradient)"></path>
+            </svg>
+        </div>
         <div class="container mx-auto px-6">
-            <div class="text-center mb-16 fade-in-up">
+            <div class="text-center mb-8 fade-in-up">
                 <h2 class="text-5xl font-bold text-[var(--cane-950)] mb-6">Get in Touch</h2>
                 <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full"></div>
-                <p class="text-xl text-[var(--cane-900)] mt-6 max-w-2xl mx-auto">Have questions or need support? We're here to help you with your sugarcane farming needs.</p>
+                <p class="text-xl text-[var(--cane-900)] mt-3 max-w-2xl mx-auto">Have questions or need support? We're here to help you with your sugarcane farming needs.</p>
             </div>
             
-            <div class="max-w-6xl mx-auto">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    <!-- Left: Contact Form -->
+              <div class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                      <!-- Left: Contact Form -->
                     <div class="bg-white rounded-xl shadow-lg p-6 border border-[var(--cane-200)] fade-in-left max-w-sm">
-                        <h3 class="text-xl font-bold text-[var(--cane-950)] mb-4">Send us a Message</h3>
+                        <h3 class="text-xl font-bold text-[var(--cane-950)] mb-3">Send us a Message</h3>
                         
-                        <div class="space-y-3 mb-4">
+                          <div class="space-y-3 mb-4">
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
                                 <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center">
                                     <i class="fas fa-envelope text-white text-xs"></i>
@@ -485,18 +556,18 @@
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Email</p>
                                     <p class="text-[var(--cane-900)] font-semibold text-xs">info@canemap.com</p>
                                 </div>
-                            </div>
+                                </div>
                             
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
                                 <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center">
                                     <i class="fas fa-phone text-white text-xs"></i>
-                                </div>
+                            </div>
                                 <div>
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Phone</p>
                                     <p class="text-[var(--cane-900)] font-semibold text-xs">+63 912 345 6789</p>
                                 </div>
-                            </div>
-                            
+                        </div>
+                      
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
                                 <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-700)] to-[var(--cane-800)] rounded-full flex items-center justify-center">
                                     <i class="fas fa-map-marker-alt text-white text-xs"></i>
@@ -519,8 +590,8 @@
                     </div>
                     
                     <!-- Right: Animation -->
-                    <div class="flex justify-center items-center fade-in-right">
-                        <dotlottie-wc src="https://lottie.host/91bcd1ed-629b-40f2-bb9c-f589f84356f9/7nRjluWgwr.lottie" style="width: 500px;height: 500px" speed="1" autoplay loop></dotlottie-wc>
+                       <div class="flex justify-center items-center fade-in-right">
+                           <dotlottie-wc src="https://lottie.host/91bcd1ed-629b-40f2-bb9c-f589f84356f9/7nRjluWgwr.lottie" style="width: 420px;height: 420px" speed="1" autoplay loop></dotlottie-wc>
                     </div>
                 </div>
             </div>
@@ -547,311 +618,6 @@
     <!-- Firebase JS SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script>
-        // Initialize Firebase (you'll need to add your config here)
-        const firebaseConfig = {
-            // Add your Firebase config here
-            // apiKey: "your-api-key",
-            // authDomain: "your-project.firebaseapp.com",
-            // projectId: "your-project-id",
-            // storageBucket: "your-project.appspot.com",
-            // messagingSenderId: "123456789",
-            // appId: "your-app-id"
-        };
-        
-        // Initialize Firebase if config is provided
-        if (firebaseConfig.apiKey) {
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-        }
-
-        // Weather API integration
-        async function getWeather() {
-            try {
-                const apiKey = '2d59a2816a02c3178386f3d51233b2ea';
-                const lat = 11.0064; // Ormoc City latitude
-                const lon = 124.6075; // Ormoc City longitude
-                const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
-                const response = await fetch(url);
-                const data = await response.json();
-                const weatherContainer = document.getElementById('weatherForecast');
-                
-                if (!data.list) {
-                    let errorMsg = 'Weather data unavailable.';
-                    if (data.message) {
-                        errorMsg += `<br><span class='text-xs text-[var(--cane-600)]'>API: ${data.message}</span>`;
-                    }
-                    weatherContainer.innerHTML = `<div class='text-[var(--cane-700)] bg-[var(--cane-50)] p-3 rounded-lg border border-[var(--cane-200)]'>${errorMsg}</div>`;
-                    return;
-                }
-                
-                // Group forecasts by day
-                const days = {};
-                data.list.forEach(item => {
-                    const date = new Date(item.dt * 1000);
-                    const dayStr = date.toLocaleDateString();
-                    if (!days[dayStr]) {
-                        days[dayStr] = [];
-                    }
-                    days[dayStr].push(item);
-                });
-                
-                // Get today, tomorrow, and next day
-                const dayKeys = Object.keys(days).slice(0, 3);
-                const dayNames = ['Today', 'Tomorrow', new Date(dayKeys[2]).toLocaleDateString('en-US', { weekday: 'long' })];
-                
-                                    const html = dayKeys.map((key, idx) => {
-                        // Use the forecast closest to noon for each day
-                        const forecasts = days[key];
-                        let forecast = forecasts.find(f => new Date(f.dt * 1000).getHours() === 12) || forecasts[Math.floor(forecasts.length / 2)];
-                        const temp = `${Math.round(forecast.main.temp_min)}°C / ${Math.round(forecast.main.temp_max)}°C`;
-                        const icon = forecast.weather[0].icon;
-                        const desc = forecast.weather[0].description;
-                        return `
-                            <div class="flex items-center justify-between p-2 bg-gradient-to-r from-[var(--cane-50)] to-[var(--cane-100)] rounded-lg border border-[var(--cane-200)]">
-                                <div class="flex items-center space-x-2">
-                                    <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}" class="w-6 h-6" />
-                                    <span class="font-medium text-[var(--cane-800)] text-sm">${dayNames[idx]}</span>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-[var(--cane-700)] font-semibold text-sm">${temp}</div>
-                                    <div class="text-[var(--cane-600)] text-xs">${desc}</div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                
-                weatherContainer.innerHTML = html;
-            } catch (error) {
-                console.error('Error fetching weather:', error);
-                document.getElementById('weatherForecast').innerHTML = `<div class='text-[var(--cane-700)] bg-[var(--cane-50)] p-3 rounded-lg border border-[var(--cane-200)]'>Weather data unavailable.<br><span class='text-xs text-[var(--cane-600)]'>${error}</span></div>`;
-            }
-        }
-
-        // Remove the old expand button
-        const expandBtn = document.getElementById('expandMapBtn');
-        if (expandBtn) expandBtn.style.display = 'none';
-
-        // New expand/collapse icon logic
-        const expandMapIcon = document.getElementById('expandMapIcon');
-        const expandIcon = document.getElementById('expandIcon');
-        const mainContent = document.getElementById('mainContent');
-        const mapPanel = document.getElementById('mapPanel');
-        const sidePanel = document.getElementById('sidePanel');
-        let expanded = false;
-        
-        expandMapIcon.addEventListener('click', function() {
-            expanded = !expanded;
-            if (expanded) {
-                sidePanel.style.display = 'none';
-                mapPanel.classList.add('w-full');
-                mainContent.classList.remove('flex', 'lg:flex-row', 'gap-8', 'px-4', 'pb-8');
-                mainContent.classList.add('block', 'p-0');
-                expandIcon.classList.remove('fa-expand');
-                expandIcon.classList.add('fa-compress');
-                document.getElementById('map').classList.remove('mb-6', 'rounded-lg', 'border', 'border-gray-200');
-                document.getElementById('map').classList.add('h-[70vh]', 'w-full');
-                
-                // Refresh map when expanded
-                if (map) {
-                    setTimeout(() => map.invalidateSize(), 100);
-                }
-            } else {
-                sidePanel.style.display = '';
-                mapPanel.classList.remove('w-full');
-                mainContent.classList.remove('block', 'p-0');
-                mainContent.classList.add('flex', 'lg:flex-row', 'gap-8', 'px-4', 'pb-8');
-                expandIcon.classList.remove('fa-compress');
-                expandIcon.classList.add('fa-expand');
-                document.getElementById('map').classList.remove('h-[70vh]', 'w-full');
-                document.getElementById('map').classList.add('mb-6', 'rounded-lg', 'border', 'border-gray-200');
-                
-                // Refresh map when collapsed
-                if (map) {
-                    setTimeout(() => map.invalidateSize(), 100);
-                }
-            }
-        });
-
-        // Initialize everything when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize map after a short delay to ensure DOM is ready
-            setTimeout(() => {
-                initMap();
-            }, 100);
-            
-            getWeather();
-            
-            // Update user name from localStorage
-            const userName = localStorage.getItem('farmerName') || 'Farmer Name';
-            const userNameElements = document.querySelectorAll('#userName, #dropdownUserName');
-            userNameElements.forEach(element => {
-                if (element) element.textContent = userName;
-            });
-        });
-
-        // Initialize Swiper
-        const swiper = new Swiper('.featuresSwiper', {
-            effect: 'coverflow',
-            grabCursor: true,
-            centeredSlides: true,
-            slidesPerView: 'auto',
-            coverflowEffect: {
-                rotate: 0,
-                stretch: 0,
-                depth: 100,
-                modifier: 2,
-                slideShadows: false,
-            },
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-            },
-            navigation: {
-                nextEl: '.swiper-button-next',
-                prevEl: '.swiper-button-prev',
-            },
-            breakpoints: {
-                640: {
-                    slidesPerView: 2,
-                },
-                1024: {
-                    slidesPerView: 3,
-                },
-            }
-        });
-
-        // Dynamic left panel content based on active slide
-        function updateFeaturePanel(swiperInstance) {
-            const active = swiperInstance.slides[swiperInstance.activeIndex];
-            if (!active) return;
-            const title = active.getAttribute('data-title') || 'CaneMap Features';
-            const desc = active.getAttribute('data-desc') || '';
-            const tags = (active.getAttribute('data-tags') || '').split(',').filter(Boolean);
-            document.getElementById('featureTitle').textContent = title;
-            document.getElementById('featureDesc').textContent = desc;
-            const tagsContainer = document.getElementById('featureTags');
-            tagsContainer.innerHTML = '';
-            tags.forEach(function(tag) {
-                const span = document.createElement('span');
-                span.className = 'px-2 py-0.5 rounded bg-white/10 border border-white/10';
-                span.textContent = tag.trim();
-                tagsContainer.appendChild(span);
-            });
-        }
-
-        updateFeaturePanel(swiper);
-        swiper.on('slideChange', function () {
-            updateFeaturePanel(swiper);
-
-            // Crossfade background to the active slide image
-            const active = swiper.slides[swiper.activeIndex];
-            if (!active) return;
-            const img = active.querySelector('img');
-            if (!img) return;
-
-            const bg = document.getElementById('featuresBg');
-            const swap = document.getElementById('featuresBgSwap');
-            if (!bg || !swap) return;
-
-            // Prepare swap image
-            swap.src = img.src;
-            swap.classList.remove('opacity-0');
-            swap.classList.add('opacity-40');
-
-            // Fade out previous bg after transition
-            setTimeout(function() {
-                bg.src = swap.src;
-                swap.classList.remove('opacity-40');
-                swap.classList.add('opacity-0');
-            }, 700);
-        });
-
-        // Scroll animations
-        function animateOnScroll() {
-            const elements = document.querySelectorAll('.fade-in-up, .fade-in-left, .fade-in-right, .scale-in, .slide-in-bottom');
-            
-            elements.forEach(element => {
-                const elementTop = element.getBoundingClientRect().top;
-                const elementVisible = 150;
-                
-                if (elementTop < window.innerHeight - elementVisible) {
-                    element.classList.add('animate');
-                }
-            });
-        }
-        
-        // Add scroll event listener
-        window.addEventListener('scroll', animateOnScroll);
-        
-        // Trigger animations on page load
-        window.addEventListener('load', animateOnScroll);
-        
-        // Smooth scroll for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-        
-        // Profile dropdown functionality
-        const profileDropdownBtn = document.getElementById('profileDropdownBtn');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const dropdownArrow = document.getElementById('dropdownArrow');
-        
-        if (profileDropdownBtn && profileDropdown) {
-            profileDropdownBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                
-                // Toggle dropdown visibility
-                const isVisible = profileDropdown.classList.contains('opacity-100');
-                
-                if (isVisible) {
-                    // Hide dropdown
-                    profileDropdown.classList.remove('opacity-100', 'visible', 'scale-100');
-                    profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
-                    dropdownArrow.style.transform = 'rotate(0deg)';
-                } else {
-                    // Show dropdown
-                    profileDropdown.classList.remove('opacity-0', 'invisible', 'scale-95');
-                    profileDropdown.classList.add('opacity-100', 'visible', 'scale-100');
-                    dropdownArrow.style.transform = 'rotate(180deg)';
-                }
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!profileDropdownBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-                    profileDropdown.classList.remove('opacity-100', 'visible', 'scale-100');
-                    profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
-                    dropdownArrow.style.transform = 'rotate(0deg)';
-                }
-            });
-            
-            // Close dropdown on escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    profileDropdown.classList.remove('opacity-100', 'visible', 'scale-100');
-                    profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
-                    dropdownArrow.style.transform = 'rotate(0deg)';
-                }
-            });
-        }
-        
-        // Scroll to top function
-        function scrollToTop() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-    </script>
+    <script src="../backend/lobby.js"></script>
 </body>
 </html>
