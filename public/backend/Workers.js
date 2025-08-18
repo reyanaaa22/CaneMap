@@ -7,8 +7,23 @@ let currentSection = 'dashboard';
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
+    setDisplayNameFromStorage();
+    // Listen for cross-tab updates from profile-settings without reload
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'farmerNickname' || e.key === 'farmerName') {
+            setDisplayNameFromStorage();
+        }
+    });
     setupEventListeners();
 });
+
+function setDisplayNameFromStorage() {
+    const nickname = localStorage.getItem('farmerNickname');
+    const name = localStorage.getItem('farmerName') || 'Worker Name';
+    const display = nickname && nickname.trim().length > 0 ? nickname : name;
+    const nameEls = document.querySelectorAll('#userName, #dropdownUserName');
+    nameEls.forEach(el => { if (el) el.textContent = display; });
+}
 
 // Initialize dashboard based on user type
 function initializeDashboard() {

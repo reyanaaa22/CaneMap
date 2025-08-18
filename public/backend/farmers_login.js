@@ -1,4 +1,4 @@
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { auth, db } from "../backend/firebase-config.js"; 
 
@@ -76,6 +76,8 @@ async function login() {
   const password = passwordInput.value.trim();
 
   try {
+    // Ensure auth persists across tabs/pages
+    await setPersistence(auth, browserLocalPersistence);
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
@@ -105,6 +107,16 @@ async function login() {
       : user.displayName || "Farmer Name";
 
   localStorage.setItem("farmerName", farmerName);
+
+  // ✅ Store nickname if present so other pages (e.g., Workers) can display it
+  let farmerNickname = docSnap.exists() 
+    ? (docSnap.data().nickname || "")
+    : "";
+  if (farmerNickname) {
+    localStorage.setItem("farmerNickname", farmerNickname);
+  } else {
+    localStorage.removeItem("farmerNickname");
+  }
 
   let farmerContact = docSnap.exists() 
     ? docSnap.data().contact || "" 
