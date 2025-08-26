@@ -255,7 +255,7 @@ function toggleNotifications() {
 function logout() {
     // Add your logout logic here
     alert('Logging out...');
-    window.location.href = 'lobby.html';
+                window.location.href = '../frontend/Common/lobby.html';
 }
 
 // Setup event listeners

@@ -18,7 +18,7 @@ class JoinFieldManager {
                 this.renderUI();
             } else {
                 // Redirect to login if not authenticated
-                window.location.href = '/auth/login.html';
+                window.location.href = '../frontend/Handler/farmers_login.html';
             }
         });
     }

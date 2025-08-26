@@ -68,7 +68,7 @@ resetBtn.addEventListener("click", async () => {
 
 modalOkBtn.addEventListener("click", () => {
   hideModal();
-  window.location.href = "../views/farmers_login.html";
+  window.location.href = "../frontend/Handler/farmers_login.html";
 });
 
 emailInput.addEventListener("focus", () => clearAlert());

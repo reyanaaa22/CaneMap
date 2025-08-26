@@ -61,13 +61,13 @@ class TaskLoggingManager {
                     this.fieldData = null;
                     this.taskLogs = [];
                     // Redirect to login if not authenticated
-                    window.location.href = '../auth/login.html';
+                    window.location.href = '../frontend/Handler/farmers_login.html';
                 }
             });
         } catch (error) {
             console.error('Error initializing auth listener:', error);
             // Fallback redirect
-            window.location.href = '../auth/login.html';
+            window.location.href = '../frontend/Handler/farmers_login.html';
         }
     }
 
@@ -79,7 +79,7 @@ class TaskLoggingManager {
         if (!this.fieldId) {
             this.showMessage('No field ID specified. Redirecting to lobby...', 'error');
             setTimeout(() => {
-                window.location.href = 'lobby.html';
+                window.location.href = '../frontend/Common/lobby.html';
             }, 2000);
             return false;
         }
@@ -97,10 +97,10 @@ class TaskLoggingManager {
             const fieldSnap = await getDoc(fieldRef);
             
             if (!fieldSnap.exists()) {
-                this.showMessage('Field not found. Redirecting to lobby...', 'error');
-                setTimeout(() => {
-                    window.location.href = 'lobby.html';
-                }, 2000);
+                            this.showMessage('Field not found. Redirecting to lobby...', 'error');
+            setTimeout(() => {
+                window.location.href = '../frontend/Common/lobby.html';
+            }, 2000);
                 return;
             }
             
@@ -113,7 +113,7 @@ class TaskLoggingManager {
             if (!hasAccess) {
                 this.showMessage('You do not have access to this field. Redirecting to lobby...', 'error');
                 setTimeout(() => {
-                    window.location.href = 'lobby.html';
+                    window.location.href = '../frontend/Common/lobby.html';
                 }, 2000);
                 return;
             }

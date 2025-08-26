@@ -126,7 +126,7 @@ form.addEventListener('submit', async (e) => {
     successModal.style.display = 'flex';
     modalOkBtn.onclick = () => {
       successModal.style.display = 'none';
-      window.location.href = "../views/farmers_login.html";
+      window.location.href = "../frontend/Handler/farmers_login.html";
     };
 
     form.reset();

@@ -561,22 +561,42 @@ For support and questions:
 
 ## 📁 Project Structure
 
+### Current Organized Structure (Updated)
+The project has been reorganized for better maintainability with role-based organization:
+
+```
+public/
+├── backend/          # JavaScript backend files organized by user roles
+│   ├── Common/      # firebase-config.js, lobby.js, profile-settings.js, signup.js
+│   ├── SRA/         # reports.js
+│   ├── Worker/      # task-logging.js, Workers.js
+│   ├── Handler/     # farmer.js, farmers_login.js, farmers_forgotpass.js, join-field.js, landowner.js, Register-field.js
+│   └── Driver/      # Driver_Badge.js
+├── frontend/         # HTML views organized by user roles
+│   ├── Common/      # 404.html, index.html, introduction.html, lobby.html, profile-settings.html
+│   ├── SRA/         # reports.html, SRA_Dashboard.html
+│   ├── Worker/      # task-logging.html, Workers.html
+│   ├── Handler/     # farmers_forgotpass.html, farmers_login.html, join-field.html, landowner.html, Register-field.html, signup.html
+│   └── Driver/      # Driver_Badge.html
+└── img/             # Image assets
+```
+
 ### Legacy PHP Files
 - `public/dashboard/reports.php` - Original PHP reports system
 - `config/database.php` - Database connection and configuration
 
 ### New Firebase Files
-- `public/views/reports.html` - Modern client-side reports interface
-- `public/backend/reports.js` - Firebase backend logic for reports
-- `public/join-field.html` - Join Field interface for field access requests
-- `public/backend/join-field.js` - Firebase backend logic for field joining
-- `public/views/task-logging.html` - Task logging interface for daily activities
-- `public/backend/task-logging.js` - Firebase backend logic for task logging
-- `public/backend/firebase-config.js` - Firebase configuration and initialization
+- `public/frontend/SRA/reports.html` - Modern client-side reports interface
+- `public/backend/SRA/reports.js` - Firebase backend logic for reports
+- `public/frontend/Handler/join-field.html` - Join Field interface for field access requests
+- `public/backend/Handler/join-field.js` - Firebase backend logic for field joining
+- `public/frontend/Worker/task-logging.html` - Task logging interface for daily activities
+- `public/backend/Worker/task-logging.js` - Firebase backend logic for task logging
+- `public/backend/Common/firebase-config.js` - Firebase configuration and initialization
 
 ### Key Directories
-- `public/views/` - HTML interfaces for the system
-- `public/backend/` - JavaScript backend logic and Firebase integration
+- `public/frontend/` - HTML interfaces organized by user roles
+- `public/backend/` - JavaScript backend logic organized by user roles
 - `public/auth/` - Authentication pages
 - `public/dashboard/` - Legacy dashboard pages
 - `public/uploads/` - File storage (legacy system)
@@ -587,16 +607,23 @@ The system is currently in a **hybrid state**:
 - ✅ **Reports System**: Fully migrated to Firebase (client-side)
 - ✅ **Join Field System**: Fully migrated to Firebase (client-side)
 - ✅ **Task Logging System**: Fully migrated to Firebase (client-side)
+- ✅ **Project Structure**: Reorganized for better maintainability
 - 🔄 **Other Systems**: Still using legacy PHP/MySQL
 - 📋 **Authentication**: Firebase Authentication available
 - 🗄️ **Database**: Firestore collections for reports, field management, and task logging, MySQL for other data
 
+### Project Structure Migration (Completed)
+- ✅ **Reorganized**: From flat structure to role-based organization
+- ✅ **Backend**: JavaScript files organized by user roles (SRA, Worker, Handler, Driver, Common)
+- ✅ **Frontend**: HTML views organized by user roles (SRA, Worker, Handler, Driver, Common)
+- ✅ **File References**: All internal links and imports updated to new structure
+- ✅ **Maintainability**: Improved organization for easier development and maintenance
+
 ### Next Steps for Full Migration
 1. Migrate field registration system to Firebase
-2. ✅ **Task Logging**: Converted to Firebase (client-side)
-3. Update user management to Firebase Auth
-4. Migrate remaining dashboard functionality
-5. Decommission legacy PHP/MySQL components
+2. Update user management to Firebase Auth
+3. Migrate remaining dashboard functionality
+4. Decommission legacy PHP/MySQL components
 
 ---
 

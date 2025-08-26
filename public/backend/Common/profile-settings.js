@@ -210,7 +210,7 @@ function init() {
   let authResolved = false;
   const redirectTimerId = setTimeout(() => {
     if (!authResolved) {
-      window.location.href = 'farmers_login.html';
+              window.location.href = '../frontend/Handler/farmers_login.html';
     }
   }, 2000);
 

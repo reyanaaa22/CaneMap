@@ -32,7 +32,7 @@ class FarmerDashboard {
                 await this.checkUserRole();
             } else {
                 // Redirect to login if not authenticated
-                window.location.href = 'farmers_login.html';
+                window.location.href = '../frontend/Handler/farmers_login.html';
             }
         });
     }
@@ -45,18 +45,18 @@ class FarmerDashboard {
                 this.updateUserName();
             } else {
                 console.error('User document not found');
-                window.location.href = 'farmers_login.html';
+                window.location.href = '../frontend/Handler/farmers_login.html';
             }
         } catch (error) {
             console.error('Error loading user data:', error);
-            window.location.href = 'farmers_login.html';
+            window.location.href = '../frontend/Handler/farmers_login.html';
         }
     }
 
     async checkUserRole() {
         if (!this.userData || this.userData.role !== 'farmer') {
             alert('Access denied. This page is for farmers only.');
-            window.location.href = 'farmers_login.html';
+            window.location.href = '../frontend/Handler/farmers_login.html';
             return;
         }
 
@@ -441,7 +441,7 @@ class FarmerDashboard {
     async logout() {
         try {
             await signOut(auth);
-            window.location.href = 'farmers_login.html';
+            window.location.href = '../frontend/Handler/farmers_login.html';
         } catch (error) {
             console.error('Error signing out:', error);
             alert('Error signing out. Please try again.');

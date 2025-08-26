@@ -64,13 +64,13 @@ class ReportsManager {
                     this.costReports = [];
                     this.productionReports = [];
                     // Redirect to login if not authenticated
-                    window.location.href = '../auth/login.html';
+                    window.location.href = '../frontend/Handler/farmers_login.html';
                 }
             });
         } catch (error) {
             console.error('Error initializing auth listener:', error);
             // Fallback redirect
-            window.location.href = '../auth/login.html';
+            window.location.href = '../frontend/Handler/farmers_login.html';
         }
     }
 
