@@ -80,7 +80,7 @@
         <div class="container mx-auto px-6 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="../Common/lobby.html" class="text-[var(--cane-700)] hover:text-[var(--cane-700)] transition-colors">
+                    <a href="lobby.html" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors">
                         <i class="fas fa-arrow-left text-xl"></i>
                     </a>
                     <h1 class="text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">
@@ -261,10 +261,8 @@
 
             <!-- Other Content Sections (Hidden by default) -->
             <div id="field-documents" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Field Documents</h2>
-                    <p class="text-[var(--cane-600)]">Field document management functionality will be implemented here.</p>
-                </div>
+                <!-- Load the field documents partial -->
+                <div id="fieldDocsContainer"></div>
             </div>
 
             <div id="reports" class="content-section hidden">
@@ -368,6 +366,16 @@
                     e.preventDefault();
                     const sectionId = this.getAttribute('data-section');
                     showSection(sectionId);
+                    if (sectionId === 'field-documents') {
+                        // simple fetch to load the partial once
+                        const container = document.getElementById('fieldDocsContainer');
+                        if (container && container.childElementCount === 0) {
+                            fetch('SRA_FieldDocuments.html')
+                                .then(r => r.text())
+                                .then(html => { container.innerHTML = html; })
+                                .catch(() => { container.innerHTML = '<div class="text-[var(--cane-700)]">Unable to load field documents.</div>'; });
+                        }
+                    }
                     
                     // Close sidebar on mobile after navigation
                     if (window.innerWidth < 1024) {

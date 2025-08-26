@@ -1,6 +1,6 @@
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { auth, db } from "../backend/firebase-config.js"; 
+import { auth, db } from "./firebase-config.js"; 
 
 // Firebase services are available from firebase-config.js
 
@@ -126,7 +126,7 @@ async function login() {
   // --- Reset attempts and redirect ---
   resetAttempts();
   showAlert("Login successful!", "success");
-  setTimeout(() => window.location.href = "../frontend/Common/lobby.html", 1500);
+  setTimeout(() => window.location.href = "../../frontend/Common/lobby.html", 1500);
 
   } catch (error) {
     if (error.code === "auth/invalid-credential") {

@@ -148,7 +148,16 @@
                 mapContainer.innerHTML = '';
                 map = L.map('map').setView([11.0064, 124.6075], 12);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-                L.marker([11.0064, 124.6075]).addTo(map).bindPopup('<b>Ormoc City</b><br>Leyte, Philippines<br><small>SRA Ormoc Mill District</small>').openPopup();
+                // Custom cane pin relative to frontend/Common/lobby.html
+                const caneIcon = L.icon({
+                    iconUrl: '../img/PIN.png',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 38],
+                    popupAnchor: [0, -32]
+                });
+                L.marker([11.0064, 124.6075], { icon: caneIcon }).addTo(map)
+                  .bindPopup('<b>Ormoc City</b><br>Leyte, Philippines<br><small>SRA Ormoc Mill District</small>')
+                  .openPopup();
                 window.map = map;
             } catch (error) {
                 console.error('Error initializing map:', error);
