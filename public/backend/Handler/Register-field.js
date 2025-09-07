@@ -1,5 +1,16 @@
 // Simple camera setup used by Register-field.html
 (function(){
+  // Cancel button handler (delegated in HTML via anchor)
+  const cancelLink = document.querySelector('a[href="../Common/lobby.html"]');
+  if (cancelLink) {
+    cancelLink.addEventListener('click', function(){
+      // nothing extra needed; just navigate
+    });
+  }
+
+  // Enhance submit to add details popup on lobby marker (data already stored in HTML inline script)
+  // No extra code required here as HTML script handles storing and redirecting.
+
   function setupCamera(buttonId, cameraDivId, inputId, facingMode = 'environment'){
     const button = document.getElementById(buttonId);
     const cameraDiv = document.getElementById(cameraDivId);

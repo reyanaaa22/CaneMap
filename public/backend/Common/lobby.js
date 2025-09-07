@@ -158,7 +158,13 @@
                   const pending = JSON.parse(localStorage.getItem('pendingFields')||'[]');
                   pending.forEach(f => {
                     const m = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(map);
-                    const label = `<b>${f.barangay || 'Field'}</b><br/>${f.size?`${f.size} ha · `:''}<em>Under Review</em>`;
+                    const parts = [];
+                    parts.push(`<b>${f.barangay || 'Field'}</b>`);
+                    const meta = [];
+                    if (f.size) meta.push(`${f.size} ha`);
+                    if (f.terrain) meta.push(`${f.terrain}`);
+                    meta.push('Under Review');
+                    const label = parts.join('<br/>') + '<br/>' + meta.join(' · ');
                     m.bindPopup(label);
                   });
                 } catch(_) {}

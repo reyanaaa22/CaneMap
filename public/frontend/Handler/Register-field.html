@@ -293,6 +293,12 @@
                         </div>
                     </div>
                     
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div class="flex-1">
+                            <input id="rfSearchInput" type="text" placeholder="Search a place or barangay..." class="w-full px-4 py-2 rounded-md bg-white border border-[var(--cane-300)] focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)]/40">
+                        </div>
+                        <button id="rfSearchBtn" type="button" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Search</button>
+                    </div>
                     <div class="mb-6">
                         <div id="locationMap" class="w-full h-80 rounded-xl border-2 border-[var(--cane-300)] shadow-lg"></div>
                     </div>
@@ -501,13 +507,37 @@
                     if (locationMarker) {
                         locationMarker.remove();
                     }
-                    locationMarker = L.marker([lat, lng])
+                    const caneIcon = L.icon({ iconUrl: '../img/PIN.png', iconSize: [40,40], iconAnchor: [20,38], popupAnchor: [0,-32] });
+                    locationMarker = L.marker([lat, lng], { icon: caneIcon })
                         .addTo(locationMap)
                         .bindPopup('<b>Field Location</b><br>Click to set new location')
                         .openPopup();
                 });
                 
                 console.log('Location map initialized successfully');
+                // Wire search (Nominatim)
+                try {
+                    const input = document.getElementById('rfSearchInput');
+                    const btn = document.getElementById('rfSearchBtn');
+                    async function runSearchRF(){
+                        if (!input || !input.value.trim()) return;
+                        const q = encodeURIComponent(input.value.trim());
+                        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${q}`;
+                        const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                        const results = await res.json();
+                        if (!Array.isArray(results) || results.length === 0) { alert('Place not found.'); return; }
+                        const r = results[0];
+                        const lat = parseFloat(r.lat); const lng = parseFloat(r.lon);
+                        locationMap.setView([lat, lng], 14);
+                        if (locationMarker) locationMarker.remove();
+                        const caneIcon2 = L.icon({ iconUrl: '../img/PIN.png', iconSize: [40,40], iconAnchor: [20,38], popupAnchor: [0,-32] });
+                        locationMarker = L.marker([lat, lng], { icon: caneIcon2 }).addTo(locationMap).bindPopup(r.display_name).openPopup();
+                        document.getElementById('latitude').value = lat.toFixed(6);
+                        document.getElementById('longitude').value = lng.toFixed(6);
+                    }
+                    if (btn) btn.addEventListener('click', function(){ runSearchRF(); });
+                    if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); runSearchRF(); }});
+                } catch(_) {}
             } catch (error) {
                 console.error('Error initializing location map:', error);
                 document.getElementById('locationMap').innerHTML = `
@@ -557,13 +587,14 @@
           e.preventDefault();
           const barangay = (document.getElementById('barangay')||{}).value || '';
           const size = (document.getElementById('field_size')||{}).value || '';
+          const terrain = (document.getElementById('crop_variety')||{}).value || '';
           const lat = parseFloat((document.getElementById('latitude')||{}).value || '0');
           const lng = parseFloat((document.getElementById('longitude')||{}).value || '0');
           if (!lat || !lng) {
             alert('Please set your field location on the map first.');
             return;
           }
-          const field = { barangay, size, lat, lng, status: 'Under Review', createdAt: Date.now() };
+          const field = { barangay, size, terrain, lat, lng, status: 'Under Review', createdAt: Date.now() };
           try {
             const existing = JSON.parse(localStorage.getItem('pendingFields')||'[]');
             existing.push(field);
