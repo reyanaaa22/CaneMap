@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaneMap - Field Handlers Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --cane-50: #f7fee7;
+            --cane-100: #ecfcca;
+            --cane-200: #d8f999;
+            --cane-300: #bbf451;
+            --cane-400: #9ae600;
+            --cane-500: #7ccf00;
+            --cane-600: #5ea500;
+            --cane-700: #497d00;
+            --cane-800: #3c6300;
+            --cane-900: #35530e;
+            --cane-950: #192e03;
+        }
+        .section-card { background: white; border: 1px solid var(--cane-200); }
+        .metric-card { background: white; border: 1px solid var(--cane-200); }
+        .metric-card:hover { box-shadow: 0 4px 15px rgba(94,165,0,.2); transform: translateY(-1px); }
+        .inner-box { background: var(--cane-50); border: 1px solid var(--cane-200); }
+    </style>
+ </head>
+<body class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-lg border-b-2 border-[var(--cane-200)]">
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="../lobby.html" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-arrow-left text-xl"></i></a>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">CaneMap</h1>
+            </div>
+            <div class="flex items-center space-x-3 text-[var(--cane-800)]">
+                <button class="relative text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-bell text-xl"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
+                <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md"><i class="fas fa-user text-white text-sm"></i></div>
+                <span class="font-medium">Profile</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex relative">
+        <!-- Sidebar -->
+        <aside class="hidden lg:block w-64 bg-gray-800 min-h-[calc(100vh-72px)] shadow-lg">
+            <div class="p-6">
+                <nav class="space-y-2">
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 bg-[var(--cane-600)] text-white rounded-lg font-medium" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="field-map">
+                        <i class="fas fa-map w-5 h-5"></i>
+                        <span>Field Map</span>
+                    </a>
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="workers">
+                        <i class="fas fa-users w-5 h-5"></i>
+                        <span>Workers</span>
+                    </a>
+                    <a href="Task_Panel.html" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors">
+                        <i class="fas fa-list-check w-5 h-5"></i>
+                        <span>Task Panel</span>
+                    </a>
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="reports">
+                        <i class="fas fa-chart-bar w-5 h-5"></i>
+                        <span>Reports</span>
+                    </a>
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="growth">
+                        <i class="fas fa-seedling w-5 h-5"></i>
+                        <span>Growth Tracker</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="flex-1 container mx-auto px-4 lg:px-6 py-8">
+        <div id="dashboard" class="content-section">
+        <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Dashboard</h2>
+
+        <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-map text-white text-xl"></i></div>
+                    <div>
+                        <p class="text-sm font-medium text-[var(--cane-600)]">Total Fields</p>
+                        <p class="text-2xl font-semibold text-[var(--cane-900)]">4</p>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-users text-white text-xl"></i></div>
+                    <div>
+                        <p class="text-sm font-medium text-[var(--cane-600)]">Active Workers</p>
+                        <p class="text-2xl font-semibold text-[var(--cane-900)]">12</p>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-300)] to-[var(--cane-400)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-clock text-white text-xl"></i></div>
+                    <div>
+                        <p class="text-sm font-medium text-[var(--cane-600)]">Pending Task</p>
+                        <p class="text-2xl font-semibold text-[var(--cane-900)]">8</p>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-user-plus text-white text-xl"></i></div>
+                    <div>
+                        <p class="text-sm font-medium text-[var(--cane-600)]">Join Request</p>
+                        <p class="text-2xl font-semibold text-[var(--cane-900)]">5</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Panel Section (replaces dashboard when selected) -->
+        <div id="task-panel" class="content-section hidden">
+            <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Task Assignment Form</h2>
+            <div class="section-card rounded-xl p-6">
+                <form id="taskForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Task Title:</label>
+                            <input type="text" placeholder="Enter task title" class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]"/>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Select Field:</label>
+                            <select class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]">
+                                <option>Lot A1 - Naungan</option>
+                                <option>Lot B2 - Ipil</option>
+                                <option>Lot C3 - Linao</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned Date:</label>
+                            <div class="relative">
+                                <input type="date" class="w-full px-3 py-2 pr-10 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]"/>
+                                <i class="fas fa-calendar-alt absolute right-3 top-2.5 text-gray-500"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned Time:</label>
+                            <input type="time" class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]"/>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned to:</label>
+                        <div class="flex items-center space-x-2 mb-2 text-[var(--cane-800)]">
+                            <input type="checkbox" class="w-4 h-4 border-gray-300 rounded">
+                            <span class="text-sm">Show only workers with Driver Badge</span>
+                        </div>
+                        <select class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]">
+                            <option>Select worker…</option>
+                            <option>Maria Sanchez</option>
+                            <option>Peter Romero (Driver)</option>
+                            <option>Anna Reyes</option>
+                            <option>Carl Ramos (Driver)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Task Description:</label>
+                        <textarea rows="6" class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]" placeholder="Add details, instructions, tools, etc."></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end space-x-3">
+                        <button type="button" class="px-5 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Cancel</button>
+                        <button type="submit" class="px-5 py-2 rounded-lg text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)] shadow">Assign Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Join Request panel -->
+            <div class="section-card rounded-xl p-6">
+                <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center"><i class="fas fa-user-plus text-[var(--cane-500)] mr-3"></i>Join Request</h3>
+                <div class="inner-box rounded-lg overflow-hidden">
+                    <div class="p-3 border-b border-[var(--cane-200)] bg-[var(--cane-100)]"><span class="font-semibold text-[var(--cane-800)]">Requests</span></div>
+                    <div class="p-4 space-y-3">
+                        <div class="flex items-start justify-between bg-white border border-[var(--cane-200)] rounded-lg p-3">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-9 h-9 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center text-white"><i class="fas fa-user"></i></div>
+                                <div>
+                                    <p class="font-semibold text-[var(--cane-900)] leading-tight">Maria Sanchez</p>
+                                    <p class="text-xs text-[var(--cane-700)]">Requesting to join: Lot A1 - Naungan</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1 text-xs rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white">Approve</button>
+                                <button class="px-3 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 text-gray-800">Decline</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start justify-between bg-white border border-[var(--cane-200)] rounded-lg p-3">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-9 h-9 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center text-white"><i class="fas fa-user"></i></div>
+                                <div>
+                                    <p class="font-semibold text-[var(--cane-900)] leading-tight">Peter Romero</p>
+                                    <p class="text-xs text-[var(--cane-700)]">Requesting to join: Lot B2 - Ipil</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1 text-xs rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white">Approve</button>
+                                <button class="px-3 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 text-gray-800">Decline</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Logs panel -->
+            <div class="section-card rounded-xl p-6">
+                <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center"><i class="fas fa-stream text-[var(--cane-500)] mr-3"></i>Recent Activity Logs</h3>
+                <div class="space-y-4">
+                    <div class="bg-white border border-[var(--cane-200)] rounded-lg p-4 flex items-start justify-between">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><i class="fas fa-user"></i></div>
+                            <div>
+                                <p class="font-semibold text-[var(--cane-900)]">Anna Reyes</p>
+                                <p class="text-sm text-[var(--cane-700)] leading-tight">Fertilization Task - Lot A1<br/>Applied organic fertilizer to section A. Weather conditions favorable.</p>
+                                <div class="mt-2 flex items-center space-x-4 text-[var(--cane-700)] text-sm">
+                                    <button class="hover:underline"><i class="fas fa-image mr-1"></i>View Photos</button>
+                                    <button class="hover:underline"><i class="fas fa-comment mr-1"></i>Add Comment</button>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">Completed</span>
+                    </div>
+
+                    <div class="bg-white border border-[var(--cane-200)] rounded-lg p-4 flex items-start justify-between">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><i class="fas fa-user"></i></div>
+                            <div>
+                                <p class="font-semibold text-[var(--cane-900)]">Carl Ramos</p>
+                                <p class="text-sm text-[var(--cane-700)] leading-tight">Weeding Task - Lot B2<br/>Started weeding in section B. Approximately 60% completed.</p>
+                                <div class="mt-2 flex items-center space-x-4 text-[var(--cane-700)] text-sm">
+                                    <button class="hover:underline"><i class="fas fa-image mr-1"></i>View Photos</button>
+                                    <button class="hover:underline"><i class="fas fa-comment mr-1"></i>Add Comment</button>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">In Progress</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Embedded sections -->
+        <div id="reports" class="content-section hidden">
+          <div class="section-card rounded-xl p-6">
+            <div id="reports-list">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">Submitted Reports</h3>
+                <button id="btn-open-report-form" class="px-4 py-2 rounded-lg text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)] shadow"><i class="fas fa-plus mr-2"></i>Submit Report</button>
+              </div>
+              <div class="inner-box rounded-lg overflow-hidden">
+                <div class="p-3 border-b border-[var(--cane-200)] bg-[var(--cane-100)] flex text-sm font-semibold">
+                  <div class="w-1/4">Date</div>
+                  <div class="w-1/4">Field</div>
+                  <div class="w-1/4">Report Type</div>
+                  <div class="w-1/4 text-right">Status</div>
+                </div>
+                <div id="reports-rows" class="divide-y divide-[var(--cane-200)]">
+                  <!-- rows injected by JS -->
+                </div>
+              </div>
+            </div>
+            <div id="reports-form" class="hidden">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">Submit Report</h3>
+                <button id="btn-back-to-list" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800"><i class="fas fa-arrow-left mr-2"></i>Back to List</button>
+              </div>
+              <div class="rounded-xl overflow-hidden border border-[var(--cane-200)]">
+                <iframe src="Report.html" class="w-full h-[1600px]" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="growth" class="content-section hidden">
+          <div class="section-card rounded-xl overflow-hidden">
+            <iframe src="GrowthTracker.html" class="w-full h-[1600px]" loading="lazy"></iframe>
+          </div>
+        </div>
+        </main>
+    </div>
+
+    <script>
+      // SPA-style section switcher
+      function showSection(sectionId) {
+        document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+        const el = document.getElementById(sectionId);
+        if (el) el.classList.remove('hidden');
+        // active nav styling
+        document.querySelectorAll('.nav-item').forEach(a => {
+          a.classList.remove('bg-[var(--cane-600)]','text-white');
+          a.classList.add('text-gray-300');
+        });
+        const active = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+        if (active) {
+          active.classList.remove('text-gray-300');
+          active.classList.add('bg-[var(--cane-600)]','text-white');
+        }
+      }
+      document.querySelectorAll('.nav-item').forEach(a => {
+        a.addEventListener('click', (e) => {
+          const section = a.getAttribute('data-section');
+          if (section) {
+            e.preventDefault();
+            showSection(section);
+          }
+        });
+      });
+
+      // Seed demo report rows and wire up toggle between list and form
+      const reports = [
+        {date:'2025-02-12', field:'Lot A1 - Naungan', type:'Production', status:'Approved'},
+        {date:'2025-03-08', field:'Lot B2 - Ipil', type:'Cost of Production', status:'Pending'},
+        {date:'2025-04-20', field:'Lot C3 - Linao', type:'Harvest', status:'Submitted'}
+      ];
+      const rows = document.getElementById('reports-rows');
+      if (rows) {
+        reports.forEach(r => {
+          const el = document.createElement('div');
+          el.className = 'p-3 flex text-sm';
+          el.innerHTML = `
+            <div class="w-1/4">${new Date(r.date).toLocaleDateString()}</div>
+            <div class="w-1/4">${r.field}</div>
+            <div class="w-1/4">${r.type}</div>
+            <div class="w-1/4 text-right"><span class="px-2 py-1 text-xs rounded ${r.status==='Approved'?'bg-green-100 text-green-800':r.status==='Pending'?'bg-yellow-100 text-yellow-800':'bg-blue-100 text-blue-800'}">${r.status}</span></div>
+          `;
+          rows.appendChild(el);
+        });
+      }
+      const btnOpen = document.getElementById('btn-open-report-form');
+      const btnBack = document.getElementById('btn-back-to-list');
+      const listWrap = document.getElementById('reports-list');
+      const formWrap = document.getElementById('reports-form');
+      if (btnOpen && btnBack) {
+        btnOpen.addEventListener('click', ()=>{ listWrap.classList.add('hidden'); formWrap.classList.remove('hidden'); });
+        btnBack.addEventListener('click', ()=>{ formWrap.classList.add('hidden'); listWrap.classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); });
+      }
+    </script>
+
+</body>
+</html>
+

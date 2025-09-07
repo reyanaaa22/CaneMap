@@ -60,14 +60,16 @@
                     const icon = forecast.weather[0].icon;
                     const desc = forecast.weather[0].description;
                     return `
-                        <div class="flex items-center justify-between p-2 bg-gradient-to-r from-[var(--cane-50)] to-[var(--cane-100)] rounded-lg border border-[var(--cane-200)]">
-                            <div class="flex items-center space-x-2">
-                                <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}" class="w-6 h-6" />
-                                <span class="font-medium text-[var(--cane-800)] text-sm">${dayNames[idx]}</span>
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-white text-[var(--cane-900)] border border-[var(--cane-200)] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-8 h-8 rounded-full bg-[var(--cane-100)] flex items-center justify-center border border-[var(--cane-200)]">
+                                    <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}" class="w-5 h-5" />
+                                </span>
+                                <span class="font-semibold text-sm text-[var(--cane-950)]">${dayNames[idx]}</span>
                             </div>
-                            <div class="text-right">
-                                <div class="text-[var(--cane-700)] font-semibold text-sm">${temp}</div>
-                                <div class="text-[var(--cane-600)] text-xs">${desc}</div>
+                            <div class="text-right leading-tight">
+                                <div class="text-[var(--cane-800)] font-bold text-sm">${temp}</div>
+                                <div class="text-[var(--cane-700)] text-xs">${desc}</div>
                             </div>
                         </div>
                     `;
@@ -148,16 +150,18 @@
                 mapContainer.innerHTML = '';
                 map = L.map('map').setView([11.0064, 124.6075], 12);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-                // Custom cane pin relative to frontend/Common/lobby.html
                 const caneIcon = L.icon({
-                    iconUrl: '../img/PIN.png',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 38],
-                    popupAnchor: [0, -32]
+                    iconUrl: '../img/PIN.png', iconSize: [40, 40], iconAnchor: [20, 38], popupAnchor: [0, -32]
                 });
-                L.marker([11.0064, 124.6075], { icon: caneIcon }).addTo(map)
-                  .bindPopup('<b>Ormoc City</b><br>Leyte, Philippines<br><small>SRA Ormoc Mill District</small>')
-                  .openPopup();
+                // Seed any pending fields from Register-field
+                try {
+                  const pending = JSON.parse(localStorage.getItem('pendingFields')||'[]');
+                  pending.forEach(f => {
+                    const m = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(map);
+                    const label = `<b>${f.barangay || 'Field'}</b><br/>${f.size?`${f.size} ha · `:''}<em>Under Review</em>`;
+                    m.bindPopup(label);
+                  });
+                } catch(_) {}
                 window.map = map;
             } catch (error) {
                 console.error('Error initializing map:', error);
@@ -180,9 +184,124 @@
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => { initMap(); }, 100);
             getWeather();
-            const userName = localStorage.getItem('farmerName') || 'Farmer Name';
-            const userNameElements = document.querySelectorAll('#userName, #dropdownUserName');
-            userNameElements.forEach(element => { if (element) element.textContent = userName; });
+            const fullName = localStorage.getItem('farmerName') || 'Farmer Name';
+            const firstName = fullName.trim().split(/\s+/)[0] || fullName;
+            const headerNameEl = document.getElementById('userName');
+            const dropdownNameEl = document.getElementById('dropdownUserName');
+            if (headerNameEl) headerNameEl.textContent = firstName;
+            if (dropdownNameEl) dropdownNameEl.textContent = fullName;
+
+            // Role gating for Dashboard
+            const dashboardLink = document.getElementById('dashboardLink');
+            const role = (localStorage.getItem('userRole') || '').toLowerCase();
+            const approvedRoles = ['handler', 'worker', 'worker_driver', 'sra_officer'];
+            const isApproved = approvedRoles.includes(role);
+            if (dashboardLink) {
+                if (!isApproved) {
+                    dashboardLink.classList.add('opacity-60', 'cursor-not-allowed');
+                    dashboardLink.href = 'javascript:void(0)';
+                    dashboardLink.addEventListener('click', function(e){
+                        e.preventDefault();
+                        alert('Pending → Your account is waiting for approval by the admin.');
+                    });
+                } else {
+                    dashboardLink.classList.remove('opacity-60', 'cursor-not-allowed');
+                    // Route to dashboard based on role
+                    switch (role) {
+                        case 'handler':
+                            dashboardLink.href = '../Handler/HandlerDashboard.html';
+                            break;
+                        case 'worker':
+                            dashboardLink.href = '../Worker/Workers.html';
+                            break;
+                        case 'worker_driver':
+                            dashboardLink.href = '../Driver/Driver_Badge.html';
+                            break;
+                        case 'sra_officer':
+                            dashboardLink.href = '../SRA/SRA_Dashboard.html';
+                            break;
+                        default:
+                            dashboardLink.href = '../Worker/Workers.html';
+                    }
+                }
+            }
+            // Wire buttons to absolute paths within frontend
+            const regBtn = document.getElementById('btnRegisterField');
+            if (regBtn) regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
+            const applyBtn = document.getElementById('btnApplyDriver');
+            if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
+
+            // Render user-specific notifications from localStorage
+            try {
+                const notificationsList = document.getElementById('notificationsList');
+                const userId = localStorage.getItem('userId') || fullName; // fallback to name if no uid
+                if (notificationsList) {
+                    const all = JSON.parse(localStorage.getItem('notifications') || '{}');
+                    const items = Array.isArray(all[userId]) ? all[userId] : [];
+                    if (!items.length) {
+                        notificationsList.innerHTML = '<div class="p-3 rounded-lg border border-[var(--cane-200)] bg-[var(--cane-50)] text-[var(--cane-900)]/90 text-sm">No new notifications.</div>';
+                    } else {
+                        notificationsList.innerHTML = items.map(function(n){
+                            const icon = n.type === 'approved' ? 'fa-check' : (n.type === 'task' ? 'fa-clipboard' : 'fa-info-circle');
+                            return (
+                                '<div class="flex items-start space-x-3 p-3 bg-[var(--cane-50)] rounded-lg border border-[var(--cane-200)]">' +
+                                  '<div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-md">' +
+                                    '<i class="fas ' + icon + ' text-white text-base"></i>' +
+                                  '</div>' +
+                                  '<div>' +
+                                    '<h4 class="font-semibold text-[var(--cane-950)]">' + (n.title || 'Notification') + '</h4>' +
+                                    '<p class="text-[var(--cane-900)]/90 text-sm font-medium">' + (n.message || '') + '</p>' +
+                                  '</div>' +
+                                '</div>'
+                            );
+                        }).join('');
+                    }
+                }
+            } catch(_) {}
+
+            // Feedback FAB bindings (ensure after DOM is ready)
+            try {
+                const fab = document.getElementById('feedbackButton');
+                const label = document.getElementById('feedbackLabel');
+                const modal = document.getElementById('feedbackModal');
+                const dialog = document.getElementById('feedbackDialog');
+                const closeBtn = document.getElementById('feedbackClose');
+                const form = document.getElementById('feedbackForm');
+                const message = document.getElementById('feedbackMessage');
+                if (fab && modal && dialog) {
+                    fab.addEventListener('mouseenter', function(){
+                        if (!label) return; label.classList.remove('opacity-0', 'invisible'); label.classList.add('opacity-100', 'visible');
+                    });
+                    fab.addEventListener('mouseleave', function(){
+                        if (!label) return; label.classList.add('opacity-0', 'invisible'); label.classList.remove('opacity-100', 'visible');
+                    });
+                    const open = function(){
+                        modal.classList.remove('opacity-0', 'invisible'); modal.classList.add('opacity-100', 'visible');
+                        dialog.classList.remove('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                        dialog.classList.add('translate-y-0', 'scale-100', 'opacity-100');
+                    };
+                    const close = function(){
+                        modal.classList.add('opacity-0', 'invisible'); modal.classList.remove('opacity-100', 'visible');
+                        dialog.classList.add('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                        dialog.classList.remove('translate-y-0', 'scale-100', 'opacity-100');
+                    };
+                    fab.addEventListener('click', open);
+                    closeBtn && closeBtn.addEventListener('click', close);
+                    modal.addEventListener('click', function(e){ if (e.target === modal) close(); });
+                    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+                    if (form) {
+                        form.addEventListener('submit', function(e){
+                            e.preventDefault();
+                            const entries = JSON.parse(localStorage.getItem('feedbackEntries') || '[]');
+                            entries.push({ at: new Date().toISOString(), user: localStorage.getItem('userId') || localStorage.getItem('farmerName') || 'anonymous', message: message ? message.value : '' });
+                            localStorage.setItem('feedbackEntries', JSON.stringify(entries));
+                            close();
+                            alert('Thanks for your feedback!');
+                            try { form.reset(); } catch(_) {}
+                        });
+                    }
+                }
+            } catch(_) {}
         });
 
         // Initialize Swiper with enhanced functionality
@@ -365,3 +484,56 @@
         }
         window.scrollToTop = scrollToTop;
     
+        // Feedback FAB interactions (fallback binding in case DOMContentLoaded missed)
+        (function(){
+            const fab = document.getElementById('feedbackButton');
+            const label = document.getElementById('feedbackLabel');
+            const modal = document.getElementById('feedbackModal');
+            const dialog = document.getElementById('feedbackDialog');
+            const closeBtn = document.getElementById('feedbackClose');
+            const form = document.getElementById('feedbackForm');
+            const message = document.getElementById('feedbackMessage');
+            if (!fab || !modal || !dialog) return;
+            // hover label
+            fab.addEventListener('mouseenter', function(){
+                label.classList.remove('opacity-0', 'invisible');
+                label.classList.add('opacity-100', 'visible');
+            });
+            fab.addEventListener('mouseleave', function(){
+                label.classList.add('opacity-0', 'invisible');
+                label.classList.remove('opacity-100', 'visible');
+            });
+            // open
+            fab.addEventListener('click', function(){
+                modal.classList.remove('opacity-0', 'invisible');
+                modal.classList.add('opacity-100', 'visible');
+                dialog.classList.remove('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                dialog.classList.add('translate-y-0', 'scale-100', 'opacity-100');
+            });
+            // close helpers
+            function closeModal(){
+                modal.classList.add('opacity-0', 'invisible');
+                modal.classList.remove('opacity-100', 'visible');
+                dialog.classList.add('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                dialog.classList.remove('translate-y-0', 'scale-100', 'opacity-100');
+            }
+            closeBtn && closeBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
+            document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+            // submit
+            if (form) {
+                form.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    const entries = JSON.parse(localStorage.getItem('feedbackEntries') || '[]');
+                    entries.push({
+                        at: new Date().toISOString(),
+                        user: localStorage.getItem('userId') || localStorage.getItem('farmerName') || 'anonymous',
+                        message: message ? message.value : ''
+                    });
+                    localStorage.setItem('feedbackEntries', JSON.stringify(entries));
+                    closeModal();
+                    alert('Thanks for your feedback!');
+                    try { form.reset(); } catch(_) {}
+                });
+            }
+        })();
