@@ -254,8 +254,8 @@
                                                   <div class="flex justify-between items-center mb-4">
                      <h2 class="text-2xl font-extrabold text-[var(--cane-950)]">Sugarcane Field Map</h2>
                      <div class="flex items-center gap-3 ml-auto">
-                         <input type="text" placeholder="Search for sugarcane fields..." class="w-[500px] px-6 py-3 rounded-full bg-white text-[var(--cane-900)] placeholder-[var(--cane-700)]/70 shadow-[0_4px_12px_rgba(0,0,0,0.10)] border border-[var(--cane-200)] focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)]/40 focus:border-[var(--cane-300)]">
-                         <button class="px-7 h-[48px] rounded-full bg-[var(--cane-800)] text-white font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-[var(--cane-900)] transition-colors shrink-0">Search</button>
+                         <input id="mapSearchInput" type="text" placeholder="Search for sugarcane fields..." class="w-[500px] px-6 py-3 rounded-full bg-white text-[var(--cane-900)] placeholder-[var(--cane-700)]/70 shadow-[0_4px_12px_rgba(0,0,0,0.10)] border border-[var(--cane-200)] focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)]/40 focus:border-[var(--cane-300)]">
+                         <button id="mapSearchBtn" class="px-7 h-[48px] rounded-full bg-[var(--cane-800)] text-white font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-[var(--cane-900)] transition-colors shrink-0">Search</button>
                          <button id="expandMapBtn" class="bg-[var(--cane-700)] text-white px-3 py-2 rounded-lg hover:bg-[var(--cane-800)] transition-all duration-300 transform hover:scale-105 shadow-md shrink-0">Expand Map</button>
                      </div>
                  </div>
@@ -578,7 +578,7 @@
                     <!-- Right: Form -->
                     <div class="w-full lg:w-1/2">
                         <h3 class="text-xl font-bold text-[var(--cane-950)] mb-3">Send us a Message</h3>
-                        <div class="space-y-3 mb-4">
+                          <div class="space-y-3 mb-4">
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
                                 <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center">
                                     <i class="fas fa-envelope text-white text-xs"></i>
@@ -587,16 +587,16 @@
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Email</p>
                                     <p class="text-[var(--cane-900)] font-semibold text-xs">info@canemap.com</p>
                                 </div>
-                            </div>
+                                </div>
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
                                 <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center">
                                     <i class="fas fa-phone text-white text-xs"></i>
-                                </div>
+                            </div>
                                 <div>
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Phone</p>
                                     <p class="text-[var(--cane-900)] font-semibold text-xs">+63 912 345 6789</p>
                                 </div>
-                            </div>
+                        </div>
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
                                 <div class="w-6 h-6 bg-gradient-to-br from-[var(--cane-700)] to-[var(--cane-800)] rounded-full flex items-center justify-center">
                                     <i class="fas fa-map-marker-alt text-white text-xs"></i>
@@ -617,7 +617,7 @@
                         </form>
                     </div>
                 </div>
-              </div>
+            </div>
         </div>
     </section>
     <!-- Footer -->
