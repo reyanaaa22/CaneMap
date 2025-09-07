@@ -163,6 +163,29 @@
                   });
                 } catch(_) {}
                 window.map = map;
+                // Search wiring (Nominatim)
+                try {
+                    const input = document.getElementById('mapSearchInput');
+                    const btn = document.getElementById('mapSearchBtn');
+                    async function runSearch() {
+                        if (!input || !input.value.trim()) return;
+                        const q = encodeURIComponent(input.value.trim());
+                        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${q}`;
+                        const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                        const results = await res.json();
+                        if (!Array.isArray(results) || results.length === 0) {
+                            alert('Place not found. Try a different search.');
+                            return;
+                        }
+                        const first = results[0];
+                        const lat = parseFloat(first.lat);
+                        const lon = parseFloat(first.lon);
+                        map.setView([lat, lon], 14);
+                        L.marker([lat, lon], { icon: caneIcon }).addTo(map).bindPopup(first.display_name).openPopup();
+                    }
+                    if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); runSearch(); });
+                    if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+                } catch(_) {}
             } catch (error) {
                 console.error('Error initializing map:', error);
                 const el = document.getElementById('map');
