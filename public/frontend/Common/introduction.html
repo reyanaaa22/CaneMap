@@ -37,10 +37,10 @@
             pointer-events: none;
             background: linear-gradient(
                 135deg,
-                rgba(60, 99, 0, 0.55) 0%,
-                rgba(73, 125, 0, 0.45) 35%,
-                rgba(124, 207, 0, 0.25) 70%,
-                rgba(25, 46, 3, 0.55) 100%
+                rgba(60, 99, 0, 0.48) 0%,
+                rgba(73, 125, 0, 0.38) 35%,
+                rgba(124, 207, 0, 0.18) 70%,
+                rgba(25, 46, 3, 0.45) 100%
             );
             mix-blend-mode: multiply;
         }
@@ -57,27 +57,31 @@
         .onboarding-content {
             background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,254,231,0.96));
             backdrop-filter: blur(20px);
-            border-radius: 24px;
+            border-radius: 18px;
             box-shadow: 
-                0 20px 25px -5px rgba(0, 0, 0, 0.1),
-                0 10px 10px -5px rgba(0, 0, 0, 0.04),
+                0 14px 24px -6px rgba(0, 0, 0, 0.12),
+                0 8px 14px -6px rgba(0, 0, 0, 0.06),
                 inset 0 1px 0 rgba(255, 255, 255, 0.8);
             border: 1px solid rgba(188, 244, 81, 0.35);
+            max-width: 760px;
+            margin-inline: auto;
+            padding: 28px 28px 32px;
         }
         .placeholder-image {
             background: linear-gradient(135deg, var(--cane-50) 0%, #e2f7c2 100%);
-            border-radius: 16px;
+            border-radius: 14px;
             border: 1px solid rgba(92, 163, 0, 0.15);
+            min-height: 160px;
         }
         .nav-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             transition: all 0.3s ease;
         }
         .nav-dot.active {
             background: linear-gradient(135deg, var(--cane-600) 0%, var(--cane-800) 100%);
-            transform: scale(1.2);
+            transform: scale(1.1);
         }
         .nav-dot.inactive {
             background: rgba(209, 213, 219, 0.6);
@@ -86,21 +90,25 @@
         .btn-next {
             background: linear-gradient(135deg, var(--cane-700) 0%, var(--cane-800) 100%);
             color: white;
-            border-radius: 12px;
+            border-radius: 10px;
             transition: all 0.3s ease;
             border: none;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 10px 20px;
+            font-size: 16px;
         }
         .btn-next:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: 0 8px 15px -3px rgba(60, 99, 0, 0.35);
         }
         .btn-secondary {
             background: linear-gradient(135deg, var(--cane-100), var(--cane-50));
             color: var(--cane-900);
-            border-radius: 12px;
+            border-radius: 10px;
             transition: all 0.3s ease;
             border: 1px solid rgba(92, 163, 0, 0.25);
+            padding: 10px 20px;
+            font-size: 16px;
         }
         .btn-secondary:hover {
             background: linear-gradient(135deg, var(--cane-200), var(--cane-100));
@@ -108,8 +116,8 @@
         }
         .onboarding-screen {
             opacity: 0;
-            transform: translateX(50px);
-            transition: all 0.5s ease;
+            transform: translateX(40px);
+            transition: all 0.45s ease;
             display: none;
         }
         .onboarding-screen.active {
@@ -119,7 +127,7 @@
         }
         .accent-chip {
             display: inline-block;
-            padding: 4px 10px;
+            padding: 3px 10px;
             font-size: 12px;
             border-radius: 9999px;
             background: linear-gradient(135deg, var(--cane-300), var(--cane-400));
@@ -127,21 +135,22 @@
             border: 1px solid rgba(92, 163, 0, 0.25);
         }
         @keyframes floatIn {
-            0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+            0% { opacity: 0; transform: translateY(14px) scale(0.98); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .float-in { animation: floatIn 600ms ease forwards; }
+        .float-in { animation: floatIn 560ms ease forwards; }
         .skip-btn {
             color: rgba(107, 114, 128, 0.8);
             transition: all 0.3s ease;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
         }
         .skip-btn:hover {
             color: rgba(55, 65, 81, 1);
             transform: translateY(-1px);
         }
         .feature-icon {
-            font-size: 2.5rem;
+            font-size: 2rem;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
         .title-text {
@@ -149,11 +158,16 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            font-weight: 800;
+            font-size: clamp(22px, 3vw, 34px);
+            line-height: 1.2;
         }
         .description-text {
             color: rgba(53, 83, 14, 0.85);
             text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+            font-size: clamp(14px, 1.6vw, 18px);
+            line-height: 1.55;
         }
     </style>
 </head>
@@ -168,29 +182,29 @@
                     Skip
                 </button>
                 
-                <div class="mb-8">
+                <div class="mb-6">
                     <!-- Placeholder Image -->
-                    <div class="w-32 h-32 placeholder-image mx-auto mb-6 flex items-center justify-center float-in" style="animation-delay: 50ms;">
+                    <div class="w-32 h-32 mx-auto mb-5 flex items-center justify-center float-in" style="animation-delay: 50ms;">
                         <span class="text-4xl"><img src="../img/Pin.png" alt="CaneMap Logo" class="w-full h-full"></span>
                     </div>
                     
-                    <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                    <div class="flex items-center justify-center mb-3">
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 120ms;"></span>
+                        <h1 class="title-text">
                             Welcome to CaneMap
                         </h1>
                     </div>
-                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                    <p class="description-text max-w-2xl mx-auto float-in" style="animation-delay: 180ms;">
                         Your Smart Sugarcane Field Companion. Designed for Farmers, Landowners, and Agriculture Officers.
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(2)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                <button onclick="nextScreen(2)" class="w-full btn-next font-semibold">
                     Next
                 </button>
                 
                 <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot inactive"></div>
                     <div class="nav-dot inactive"></div>
@@ -206,28 +220,24 @@
                     Skip
                 </button>
                 
-                <div class="mb-8">
-                    <div class="flex items-center justify-center mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                        <h1 class="title-text">
                             Track and Manage Sugarcane Fields
                         </h1>
                     </div>
-                    
-                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
-                        <img src="../img/Track.png" alt="Track and manage sugarcane fields" class="max-h-44 object-contain">
-                    </div>
-                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                    <img src="../img/Track.png" alt="Track and manage sugarcane fields" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <p class="description-text max-w-2xl mx-auto">
                         Farmers can log daily activities with time-in/out photos, while landowners and MAOs view summaries in real time.
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(3)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                <button onclick="nextScreen(3)" class="w-full btn-next font-semibold">
                     Next
                 </button>
                 
-                <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
                     <div class="nav-dot inactive"></div>
@@ -243,28 +253,24 @@
                     Skip
                 </button>
                 
-                <div class="mb-8">
-                    <div class="flex items-center justify-center mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                        <h1 class="title-text">
                             Submit Reports Without the Paperwork
                         </h1>
                     </div>
-                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
-                        <img src="../img/Reports.png" alt="Submit reports without the paperwork" class="max-h-44 object-contain">
-                    </div>
-                    
-                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                    <img src="../img/Reports.png" alt="Submit reports without the paperwork" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <p class="description-text max-w-2xl mx-auto">
                         No more scattered messages. CaneMap organizes field updates, photo logs, and validation reports — all in one place.
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(4)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                <button onclick="nextScreen(4)" class="w-full btn-next font-semibold">
                     Next
                 </button>
                 
-                <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
@@ -280,29 +286,24 @@
                     Skip
                 </button>
                 
-                <div class="mb-8">
-                    <div class="flex items-center justify-center mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                        <h1 class="title-text">
                             Custom Dashboards per Role
                         </h1>
                     </div>
-                    
-                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
-                        <img src="../img/Dashboard.png" alt="Custom dashboards per role" class="max-h-44 object-contain">
-                    </div>
-                    
-                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                    <img src="../img/Dashboard.png" alt="Custom dashboards per role" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <p class="description-text max-w-2xl mx-auto">
                         Landowners, Farmers, MAO/RGA officers, and Admins each get personalized access to features relevant to their work.
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(5)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                <button onclick="nextScreen(5)" class="w-full btn-next font-semibold">
                     Next
                 </button>
                 
-                <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
@@ -318,29 +319,24 @@
                     Skip
                 </button>
                 
-                <div class="mb-8">
-                    <div class="flex items-center justify-center mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                        <h1 class="title-text">
                             Predict Harvest with Confidence
                         </h1>
                     </div>
-                    
-                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
-                        <img src="../img/Estimate.png" alt="Predict harvest with confidence" class="max-h-44 object-contain">
-                    </div>
-                    
-                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                    <img src="../img/Estimate.png" alt="Predict harvest with confidence" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <p class="description-text max-w-2xl mx-auto">
                         Know your estimated harvest date based on variety and planting date. Plan ahead for labor, logistics, and reporting.
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(6)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                <button onclick="nextScreen(6)" class="w-full btn-next font-semibold">
                     Next
                 </button>
                 
-                <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
@@ -356,29 +352,24 @@
                     Skip
                 </button>
                 
-                <div class="mb-8">
-                    <div class="flex items-center justify-center mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                        <h1 class="title-text">
                             Visual Mapping by Barangay and Field
                         </h1>
                     </div>
-                    
-                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
-                        <img src="../img/mapping.png" alt="Visual mapping by barangay and field" class="max-h-44 object-contain">
-                    </div>
-                    
-                    <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
+                    <img src="../img/mapping.png" alt="Visual mapping by barangay and field" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <p class="description-text max-w-2xl mx-auto">
                         See where sugarcane is growing, track progress per barangay, and monitor active fields at a glance — all in map view.
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(7)" class="w-full py-4 px-8 btn-next font-semibold text-xl">
+                <button onclick="nextScreen(7)" class="w-full btn-next font-semibold">
                     Get Started
                 </button>
                 
-                <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
@@ -390,33 +381,27 @@
 
             <!-- Screen 7: Ready to Start -->
             <div id="screen-7" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
-                
-                </button>
-                
-                <div class="mb-8">
-                    <div class="flex items-center justify-center mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
-                        <h1 class="text-4xl lg:text-5xl font-bold title-text">
+                        <h1 class="title-text">
                             Let's Get Started
                         </h1>
                     </div>
-                    
-                    <p class="text-lg lg:text-xl description-text leading-relaxed mb-8 max-w-2xl mx-auto">
+                    <p class="description-text mb-6 max-w-2xl mx-auto">
                         Register now and digitize your sugarcane farming experience.
                     </p>
-                    
-                    <div class="space-y-4">
-                        <a href="./farmers_login.html" class="w-full py-4 px-8 btn-secondary font-semibold text-xl block">
+                    <div class="space-y-3">
+                        <a href="./farmers_login.html" class="w-full btn-secondary font-semibold block text-center">
                             Sign In
                         </a>
-                        <a href="./signup.html" class="w-full py-4 px-8 btn-next font-semibold text-xl block">
+                        <a href="./signup.html" class="w-full btn-next font-semibold block text-center">
                             <span></span> Sign Up →
                         </a>
                     </div>
                 </div>
                 
-                <!-- Navigation Dots -->
-                <div class="flex justify-center space-x-3 mt-8">
+                <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
                     <div class="nav-dot active"></div>
@@ -453,7 +438,7 @@ function nextScreen(screenNumber) {
         }, 50);
         
         currentScreen = screenNumber;
-    }, 500);
+    }, 400);
 }
 
 function skipOnboarding() {
