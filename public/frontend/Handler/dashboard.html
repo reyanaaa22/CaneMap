@@ -24,6 +24,12 @@
         .metric-card { background: white; border: 1px solid var(--cane-200); }
         .metric-card:hover { box-shadow: 0 4px 15px rgba(94,165,0,.2); transform: translateY(-1px); }
         .inner-box { background: var(--cane-50); border: 1px solid var(--cane-200); }
+        /* Sidebar animation */
+        #sidebar { transition: transform 300ms ease, opacity 300ms ease; }
+        #sidebar.closed { transform: translateX(-100%); opacity: 0; }
+        #hamburger.active .bar1 { transform: translateY(6px) rotate(45deg); }
+        #hamburger.active .bar2 { opacity: 0; }
+        #hamburger.active .bar3 { transform: translateY(-6px) rotate(-45deg); }
     </style>
  </head>
 <body class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] min-h-screen">
@@ -31,6 +37,11 @@
     <header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-lg border-b-2 border-[var(--cane-200)]">
         <div class="container mx-auto px-6 py-4 flex items-center justify-between">
             <div class="flex items-center space-x-4">
+                <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-[var(--cane-100)] border border-[var(--cane-200)] flex items-center justify-center group">
+                    <span class="bar1 absolute w-5 h-0.5 bg-[var(--cane-800)] transition-transform"></span>
+                    <span class="bar2 absolute w-5 h-0.5 bg-[var(--cane-800)] transition-opacity"></span>
+                    <span class="bar3 absolute w-5 h-0.5 bg-[var(--cane-800)] transition-transform"></span>
+                </button>
                 <a href="../lobby.html" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-arrow-left text-xl"></i></a>
                 <h1 class="text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">CaneMap</h1>
             </div>
@@ -44,16 +55,12 @@
 
     <div class="flex relative">
         <!-- Sidebar -->
-        <aside class="hidden lg:block w-64 bg-gray-800 min-h-[calc(100vh-72px)] shadow-lg">
+        <aside id="sidebar" class="w-64 bg-gray-800 min-h-[calc(100vh-72px)] shadow-lg">
             <div class="p-6">
                 <nav class="space-y-2">
                     <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 bg-[var(--cane-600)] text-white rounded-lg font-medium" data-section="dashboard">
                         <i class="fas fa-tachometer-alt w-5 h-5"></i>
                         <span>Dashboard</span>
-                    </a>
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="field-map">
-                        <i class="fas fa-map w-5 h-5"></i>
-                        <span>Field Map</span>
                     </a>
                     <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="workers">
                         <i class="fas fa-users w-5 h-5"></i>
@@ -86,7 +93,7 @@
                     <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-map text-white text-xl"></i></div>
                     <div>
                         <p class="text-sm font-medium text-[var(--cane-600)]">Total Fields</p>
-                        <p class="text-2xl font-semibold text-[var(--cane-900)]">4</p>
+                        <p id="mFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
@@ -95,7 +102,7 @@
                     <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-users text-white text-xl"></i></div>
                     <div>
                         <p class="text-sm font-medium text-[var(--cane-600)]">Active Workers</p>
-                        <p class="text-2xl font-semibold text-[var(--cane-900)]">12</p>
+                        <p id="mWorkers" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
@@ -104,7 +111,7 @@
                     <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-300)] to-[var(--cane-400)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-clock text-white text-xl"></i></div>
                     <div>
                         <p class="text-sm font-medium text-[var(--cane-600)]">Pending Task</p>
-                        <p class="text-2xl font-semibold text-[var(--cane-900)]">8</p>
+                        <p id="mTasks" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
@@ -113,7 +120,7 @@
                     <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-user-plus text-white text-xl"></i></div>
                     <div>
                         <p class="text-sm font-medium text-[var(--cane-600)]">Join Request</p>
-                        <p class="text-2xl font-semibold text-[var(--cane-900)]">5</p>
+                        <p id="mRequests" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
@@ -175,6 +182,25 @@
                         <button type="submit" class="px-5 py-2 rounded-lg text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)] shadow">Assign Task</button>
                     </div>
                 </form>
+            </div>
+            <div class="mt-6 section-card rounded-xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">My Tasks</h3>
+                <button id="btnRefreshTasks" class="px-3 py-1.5 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm"><i class="fas fa-rotate mr-2"></i>Refresh</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-[var(--cane-800)]">
+                      <th class="py-2 pr-2">Title</th>
+                      <th class="py-2 pr-2">Field</th>
+                      <th class="py-2 pr-2">Assigned</th>
+                      <th class="py-2 pr-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tasksTbody"></tbody>
+                </table>
+              </div>
             </div>
         </div>
 
@@ -290,6 +316,78 @@
             <iframe src="GrowthTracker.html" class="w-full h-[1600px]" loading="lazy"></iframe>
           </div>
         </div>
+
+        <!-- Workers Section -->
+        <div id="workers" class="content-section hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div class="section-card rounded-xl p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="font-bold text-[var(--cane-950)]">Farmers</h2>
+                <div class="flex items-center gap-2">
+                  <input id="searchFarmers" type="text" placeholder="Search farmers..." class="px-3 py-1.5 border rounded-md text-sm border-[var(--cane-300)]" />
+                  <button id="addFarmer" class="px-3 py-1.5 rounded-md text-sm text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)]">+ Add</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-[var(--cane-800)]">
+                      <th class="py-2 pr-2">Name</th>
+                      <th class="py-2 pr-2">Barangay</th>
+                      <th class="py-2 pr-2">Phone</th>
+                      <th class="py-2 pr-2">Since</th>
+                      <th class="py-2 pr-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="farmersTbody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="section-card rounded-xl p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="font-bold text-[var(--cane-950)]">Drivers</h2>
+                <div class="flex items-center gap-2">
+                  <input id="searchDrivers" type="text" placeholder="Search drivers..." class="px-3 py-1.5 border rounded-md text-sm border-[var(--cane-300)]" />
+                  <button id="addDriver" class="px-3 py-1.5 rounded-md text-sm text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)]">+ Add</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-[var(--cane-800)]">
+                      <th class="py-2 pr-2">Name</th>
+                      <th class="py-2 pr-2">Plate No.</th>
+                      <th class="py-2 pr-2">Phone</th>
+                      <th class="py-2 pr-2">Since</th>
+                      <th class="py-2 pr-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="driversTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="section-card rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-[var(--cane-950)]">Join Requests</h2>
+              <span id="requestsCount" class="px-2 py-1 rounded-full text-xs bg-[var(--cane-100)] border border-[var(--cane-200)] text-[var(--cane-900)]">0 pending</span>
+            </div>
+            <div id="requestsList" class="space-y-2"></div>
+          </div>
+          <template id="requestItemTpl">
+            <div class="flex items-center justify-between p-3 rounded-lg border border-[var(--cane-200)] bg-white">
+              <div>
+                <p class="font-semibold text-[var(--cane-950)]"><span data-field="name"></span> <span class="px-2 py-0.5 rounded-full text-xs ml-2 bg-[var(--cane-100)] border border-[var(--cane-200)] text-[var(--cane-900)]" data-field="role"></span></p>
+                <p class="text-sm text-[var(--cane-800)]"><span data-field="barangay"></span> • <span data-field="phone"></span></p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm" data-action="approve">Approve</button>
+                <button class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm" data-action="reject">Reject</button>
+              </div>
+            </div>
+          </template>
+          <script type="module" src="../../backend/Handler/worker.js"></script>
+        </div>
         </main>
     </div>
 
@@ -320,6 +418,71 @@
         });
       });
 
+      // Hamburger toggle for sidebar
+      const sidebar = document.getElementById('sidebar');
+      const hamburger = document.getElementById('hamburger');
+      if (hamburger && sidebar) {
+        // initialize bars vertical positions
+        const bars = hamburger.querySelectorAll('span');
+        if (bars[0]) bars[0].style.top = '8px';
+        if (bars[1]) bars[1].style.top = '14px';
+        if (bars[2]) bars[2].style.top = '20px';
+        // set initial state: desktop open, mobile closed
+        function setInitial(){
+          if (window.innerWidth >= 1024) { sidebar.classList.remove('closed'); }
+          else { sidebar.classList.add('closed'); }
+        }
+        setInitial();
+        window.addEventListener('resize', setInitial);
+        hamburger.addEventListener('click', () => {
+          sidebar.classList.toggle('closed');
+          hamburger.classList.toggle('active');
+        });
+      }
+
+      // Dynamic metrics
+      function updateMetrics(){
+        try{
+          const fields = JSON.parse(localStorage.getItem('pendingFields')||'[]');
+          const farmers = JSON.parse(localStorage.getItem('cm_farmers')||'[]');
+          const drivers = JSON.parse(localStorage.getItem('cm_drivers')||'[]');
+          const requests = JSON.parse(localStorage.getItem('cm_worker_requests')||'[]');
+          const tasks = JSON.parse(localStorage.getItem('cm_tasks')||'[]');
+          const el = id=>document.getElementById(id);
+          if (el('mFields')) el('mFields').textContent = fields.length;
+          if (el('mWorkers')) el('mWorkers').textContent = farmers.length + drivers.length;
+          if (el('mRequests')) el('mRequests').textContent = requests.length;
+          if (el('mTasks')) el('mTasks').textContent = (tasks.filter(t=> (t.status||'Pending')==='Pending')).length;
+        }catch(_){ }
+      }
+      updateMetrics();
+      setInterval(updateMetrics, 4000);
+
+      // Tasks list
+      async function refreshTasks(){
+        try{
+          const mod = await import('../../backend/Handler/tasks.js');
+          const list = await mod.fetchTasks();
+          const tbody = document.getElementById('tasksTbody');
+          if (!tbody) return;
+          tbody.innerHTML = (list||[]).map(t=>`
+            <tr class="border-t border-[var(--cane-100)]">
+              <td class="py-2 pr-2 font-semibold text-[var(--cane-950)]">${t.title||'Untitled'}</td>
+              <td class="py-2 pr-2">${t.field||''}</td>
+              <td class="py-2 pr-2">${t.assignedAt ? new Date(t.assignedAt).toLocaleString() : ''}</td>
+              <td class="py-2 pr-2"><span class="px-2 py-1 text-xs rounded ${((t.status||'Pending')==='Completed')?'bg-green-100 text-green-800':((t.status||'Pending')==='In Progress')?'bg-blue-100 text-blue-800':'bg-yellow-100 text-yellow-800'}">${t.status||'Pending'}</span></td>
+            </tr>
+          `).join('') || '<tr><td colspan="4" class="py-3 text-sm text-[var(--cane-700)]">No tasks yet.</td></tr>';
+          // mirror to local for metrics fallback
+          localStorage.setItem('cm_tasks', JSON.stringify(list||[]));
+          updateMetrics();
+        }catch(_){ }
+      }
+      const btnRefreshTasks = document.getElementById('btnRefreshTasks');
+      if (btnRefreshTasks) btnRefreshTasks.addEventListener('click', refreshTasks);
+      // initial tasks load on page open
+      refreshTasks();
+
       // Seed demo report rows and wire up toggle between list and form
       const reports = [
         {date:'2025-02-12', field:'Lot A1 - Naungan', type:'Production', status:'Approved'},
@@ -333,7 +496,7 @@
           el.className = 'p-3 flex text-sm';
           el.innerHTML = `
             <div class="w-1/4">${new Date(r.date).toLocaleDateString()}</div>
-            <div class="w-1/4">${r.field}</div>
+            <div class="W-1/4">${r.field}</div>
             <div class="w-1/4">${r.type}</div>
             <div class="w-1/4 text-right"><span class="px-2 py-1 text-xs rounded ${r.status==='Approved'?'bg-green-100 text-green-800':r.status==='Pending'?'bg-yellow-100 text-yellow-800':'bg-blue-100 text-blue-800'}">${r.status}</span></div>
           `;
