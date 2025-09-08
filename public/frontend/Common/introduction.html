@@ -6,6 +6,19 @@
     <title>Welcome - CaneMap</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --cane-50: #f7fee7;
+            --cane-100: #ecfcca;
+            --cane-200: #d8f999;
+            --cane-300: #bbf451;
+            --cane-400: #9ae600;
+            --cane-500: #7ccf00;
+            --cane-600: #5ea500;
+            --cane-700: #497d00;
+            --cane-800: #3c6300;
+            --cane-900: #35530e;
+            --cane-950: #192e03;
+        }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
             overflow-x: hidden;
@@ -16,31 +29,45 @@
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
+            position: relative;
+        }
+        .green-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(
+                135deg,
+                rgba(60, 99, 0, 0.55) 0%,
+                rgba(73, 125, 0, 0.45) 35%,
+                rgba(124, 207, 0, 0.25) 70%,
+                rgba(25, 46, 3, 0.55) 100%
+            );
+            mix-blend-mode: multiply;
         }
         .onboarding-overlay {
             background: linear-gradient(
                 135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                rgba(255, 255, 255, 0.1) 100%
+                rgba(255, 255, 255, 0.10) 0%, 
+                rgba(255, 255, 255, 0.06) 50%, 
+                rgba(255, 255, 255, 0.10) 100%
             );
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .onboarding-content {
-            background: rgba(255, 255, 255, 0.95);
+            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,254,231,0.96));
             backdrop-filter: blur(20px);
             border-radius: 24px;
             box-shadow: 
                 0 20px 25px -5px rgba(0, 0, 0, 0.1),
                 0 10px 10px -5px rgba(0, 0, 0, 0.04),
                 inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(188, 244, 81, 0.35);
         }
         .placeholder-image {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: linear-gradient(135deg, var(--cane-50) 0%, #e2f7c2 100%);
             border-radius: 16px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(92, 163, 0, 0.15);
         }
         .nav-dot {
             width: 10px;
@@ -49,7 +76,7 @@
             transition: all 0.3s ease;
         }
         .nav-dot.active {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            background: linear-gradient(135deg, var(--cane-600) 0%, var(--cane-800) 100%);
             transform: scale(1.2);
         }
         .nav-dot.inactive {
@@ -57,7 +84,7 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         .btn-next {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            background: linear-gradient(135deg, var(--cane-700) 0%, var(--cane-800) 100%);
             color: white;
             border-radius: 12px;
             transition: all 0.3s ease;
@@ -66,17 +93,17 @@
         }
         .btn-next:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 15px -3px rgba(60, 99, 0, 0.35);
         }
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.9);
-            color: #374151;
+            background: linear-gradient(135deg, var(--cane-100), var(--cane-50));
+            color: var(--cane-900);
             border-radius: 12px;
             transition: all 0.3s ease;
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(92, 163, 0, 0.25);
         }
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 1);
+            background: linear-gradient(135deg, var(--cane-200), var(--cane-100));
             transform: translateY(-1px);
         }
         .onboarding-screen {
@@ -90,6 +117,20 @@
             transform: translateX(0);
             display: block;
         }
+        .accent-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, var(--cane-300), var(--cane-400));
+            color: #0b1f01;
+            border: 1px solid rgba(92, 163, 0, 0.25);
+        }
+        @keyframes floatIn {
+            0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .float-in { animation: floatIn 600ms ease forwards; }
         .skip-btn {
             color: rgba(107, 114, 128, 0.8);
             transition: all 0.3s ease;
@@ -104,19 +145,20 @@
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
         .title-text {
-            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            background: linear-gradient(135deg, var(--cane-700) 0%, var(--cane-900) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         .description-text {
-            color: rgba(55, 65, 81, 0.8);
+            color: rgba(53, 83, 14, 0.85);
             text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
 <body class="main-background">
+    <div class="green-overlay"></div>
     <div class="min-h-screen onboarding-overlay">
         <div class="min-h-screen flex items-center justify-center p-4 lg:p-8">
             
@@ -128,12 +170,12 @@
                 
                 <div class="mb-8">
                     <!-- Placeholder Image -->
-                    <div class="w-32 h-32 placeholder-image mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-4xl"><img src="../img/cane.png" alt="CaneMap Logo" class="w-full h-full"></span>
+                    <div class="w-32 h-32 placeholder-image mx-auto mb-6 flex items-center justify-center float-in" style="animation-delay: 50ms;">
+                        <span class="text-4xl"><img src="../img/Pin.png" alt="CaneMap Logo" class="w-full h-full"></span>
                     </div>
                     
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">🎋</span>
+                        <span class="feature-icon mr-3"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Welcome to CaneMap
                         </h1>
@@ -166,25 +208,15 @@
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">📋</span>
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Track and Manage Sugarcane Fields
                         </h1>
                     </div>
                     
-                    <!-- Three placeholder images -->
-                    <div class="flex justify-center space-x-4 mb-6">
-                        <div class="w-20 h-20 placeholder-image flex items-center justify-center">
-                            <span class="text-2xl">📱</span>
-                        </div>
-                        <div class="w-20 h-20 placeholder-image flex items-center justify-center">
-                            <span class="text-2xl">📸</span>
-                        </div>
-                        <div class="w-20 h-20 placeholder-image flex items-center justify-center">
-                            <span class="text-2xl">📊</span>
-                        </div>
+                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
+                        <img src="../img/Track.png" alt="Track and manage sugarcane fields" class="max-h-44 object-contain">
                     </div>
-                    
                     <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
                         Farmers can log daily activities with time-in/out photos, while landowners and MAOs view summaries in real time.
                     </p>
@@ -213,15 +245,13 @@
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">📤</span>
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Submit Reports Without the Paperwork
                         </h1>
                     </div>
-                    
-                    <!-- Large placeholder image -->
-                    <div class="w-full h-32 placeholder-image mb-6 flex items-center justify-center">
-                        <span class="text-4xl">📄</span>
+                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
+                        <img src="../img/Reports.png" alt="Submit reports without the paperwork" class="max-h-44 object-contain">
                     </div>
                     
                     <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
@@ -252,15 +282,14 @@
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">👥</span>
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Custom Dashboards per Role
                         </h1>
                     </div>
                     
-                    <!-- Large placeholder image -->
-                    <div class="w-full h-32 placeholder-image mb-6 flex items-center justify-center">
-                        <span class="text-4xl">🎛️</span>
+                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
+                        <img src="../img/Dashboard.png" alt="Custom dashboards per role" class="max-h-44 object-contain">
                     </div>
                     
                     <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
@@ -291,10 +320,14 @@
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">🌱</span>
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Predict Harvest with Confidence
                         </h1>
+                    </div>
+                    
+                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
+                        <img src="../img/Estimate.png" alt="Predict harvest with confidence" class="max-h-44 object-contain">
                     </div>
                     
                     <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
@@ -325,10 +358,14 @@
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">🗺️</span>
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Visual Mapping by Barangay and Field
                         </h1>
+                    </div>
+                    
+                    <div class="w-full h-48 placeholder-image mb-6 flex items-center justify-center float-in" style="animation-delay: 120ms;">
+                        <img src="../img/mapping.png" alt="Visual mapping by barangay and field" class="max-h-44 object-contain">
                     </div>
                     
                     <p class="text-lg lg:text-xl description-text leading-relaxed max-w-2xl mx-auto">
@@ -353,13 +390,12 @@
 
             <!-- Screen 7: Ready to Start -->
             <div id="screen-7" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
-                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
-                    Skip
+                
                 </button>
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-center mb-6">
-                        <span class="feature-icon mr-3">🚀</span>
+                        <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="text-4xl lg:text-5xl font-bold title-text">
                             Let's Get Started
                         </h1>
@@ -374,7 +410,7 @@
                             Sign In
                         </a>
                         <a href="./signup.html" class="w-full py-4 px-8 btn-next font-semibold text-xl block">
-                            Sign Up →
+                            <span></span> Sign Up →
                         </a>
                     </div>
                 </div>
