@@ -221,18 +221,16 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] min-h-screen">
+<body class="bg-gray-100 min-h-screen">
     <!-- Header -->
-    <header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-lg border-b-2 border-[var(--cane-200)]">
-        <div class="container mx-auto px-6 py-4">
+    <header class="shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600));">
+        <div class="container mx-auto px-6 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="../Common/lobby.html" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors">
-                        <i class="fas fa-arrow-left text-xl"></i>
+                    <a href="../Common/lobby.html" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fas fa-arrow-left text-lg"></i>
                     </a>
-                    <h1 class="text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">
-                        CaneMap
-                    </h1>
+                    <h1 class="text-xl font-bold text-white">CaneMap</h1>
                 </div>
                 <div class="text-center">
                     <div class="flex items-center justify-center space-x-2">
@@ -241,23 +239,23 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <!-- Hamburger Menu Button -->
-                    <button id="hamburgerBtn" class="lg:hidden text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors">
-                        <i class="fas fa-bars text-xl"></i>
+                    <button id="hamburgerBtn" class="lg:hidden text-white hover:text-gray-200 transition-colors">
+                        <i class="fas fa-bars text-lg"></i>
                     </button>
                     
                     <div class="relative">
-                        <button id="notificationBtn" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors relative" onclick="toggleNotifications()">
-                            <i class="fas fa-bell text-xl"></i>
+                        <button id="notificationBtn" class="text-white hover:text-gray-200 transition-colors relative" onclick="toggleNotifications()">
+                            <i class="fas fa-bell text-lg"></i>
                             <span id="notificationCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                         </button>
                     </div>
                     <div class="relative">
-                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-[var(--cane-800)] hover:text-[var(--cane-600)] transition-all duration-300">
-                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md">
+                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-all duration-300">
+                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                                 <i class="fas fa-user text-white text-sm"></i>
                             </div>
                             <span class="font-medium" id="userName">Worker Name</span>
-                            <i class="fas fa-chevron-down text-[var(--cane-600)] text-xs transition-transform duration-300"></i>
+                            <i class="fas fa-chevron-down text-white text-xs transition-transform duration-300"></i>
                         </button>
                         
                         <!-- Profile Dropdown -->
@@ -295,7 +293,7 @@
         <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
         
         <!-- Left Sidebar -->
-        <div id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-800 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0">
+        <div id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0">
             <div class="p-6">
                 <!-- Close button for mobile -->
                 <div class="flex justify-end lg:hidden mb-4">
@@ -303,47 +301,67 @@
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
-                
+
+                <!-- Worker Profile (compact) -->
+                <div class="flex items-center space-x-3 mb-5">
+                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center border border-white/20">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-white font-semibold leading-tight">Worker</p>
+                        <p class="text-gray-400 text-xs">Normal Access</p>
+                    </div>
+                </div>
+                <div class="border-b border-gray-700 mb-4"></div>
+
                 <!-- Navigation Menu -->
                 <nav class="space-y-2">
-                    <a href="#dashboard" class="nav-item flex items-center space-x-3 px-4 py-3 bg-[var(--cane-600)] text-white rounded-lg font-medium" data-section="dashboard">
-                        <i class="fas fa-tachometer-alt w-5 h-5"></i>
+                    <!-- Dashboard -->
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-white rounded-lg font-medium bg-gray-800" data-section="dashboard">
+                        <i class="fas fa-gauge-high w-5 h-5"></i>
                         <span>Dashboard</span>
                     </a>
-                    
-                    <a href="#schedule" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="schedule">
-                        <i class="fas fa-calendar-alt w-5 h-5"></i>
-                        <span>Schedule</span>
-                    </a>
-                    
-                    <a href="#timelog" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="timelog">
-                        <i class="fas fa-clock w-5 h-5"></i>
-                        <span>TimeLog</span>
-                    </a>
-                    
-                    <a href="#activity" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="activity">
-                        <i class="fas fa-list-alt w-5 h-5"></i>
-                        <span>Activity Log</span>
-                    </a>
-                    
-                    <!-- Driver-specific menu items (only visible for workers with badge) -->
-                    <div id="driverMenuItems" class="hidden">
-                        <div class="border-t border-gray-600 my-4"></div>
-                        <a href="#driver-board" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="driver-board">
-                            <i class="fas fa-truck w-5 h-5"></i>
-                            <span>Driver Board</span>
-                        </a>
-                        
-                        <a href="#transport-routes" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="transport-routes">
-                            <i class="fas fa-route w-5 h-5"></i>
-                            <span>Transport Routes</span>
-                        </a>
-                        
-                        <a href="#transport-log" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="transport-log">
-                            <i class="fas fa-clipboard-list w-5 h-5"></i>
-                            <span>Transport Log</span>
-                        </a>
+                    <div class="ml-6 mt-2 space-y-1">
+                        <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="dashboard-overview">Overview</a>
                     </div>
+
+                    <!-- Fields -->
+                    <div>
+                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('fields')">
+                            <i class="fas fa-map-marked-alt w-5 h-5"></i>
+                            <span>Fields</span>
+                            <i id="fields-arrow" class="fas fa-chevron-down ml-auto text-xs transition-transform"></i>
+                        </div>
+                        <div id="fields-submenu" class="ml-6 mt-2 space-y-1 hidden">
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="available-fields">Available Fields</a>
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="my-fields">My Fields</a>
+                        </div>
+                    </div>
+
+                    <!-- Tasks -->
+                    <div>
+                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('tasks')">
+                            <i class="fas fa-clipboard-check w-5 h-5"></i>
+                            <span>Tasks</span>
+                            <i id="tasks-arrow" class="fas fa-chevron-down ml-auto text-xs transition-transform"></i>
+                        </div>
+                        <div id="tasks-submenu" class="ml-6 mt-2 space-y-1 hidden">
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="my-tasks">My Tasks</a>
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="work-logs">Work Logs</a>
+                        </div>
+                    </div>
+
+                    <!-- Transport (no submenu) -->
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="transport">
+                        <i class="fas fa-truck-fast w-5 h-5"></i>
+                        <span>Transport</span>
+                    </a>
+
+                    <!-- Settings (no submenu) -->
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="settings">
+                        <i class="fas fa-cog w-5 h-5"></i>
+                        <span>Settings</span>
+                    </a>
                 </nav>
             </div>
         </div>
@@ -352,6 +370,7 @@
         <main class="flex-1 px-4 lg:px-6 py-8">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Dashboard</h2>
                 <!-- Dashboard Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
                     <div class="section-card rounded-xl p-4 lg:p-6 cursor-pointer hover:scale-105 transition-transform duration-300" onclick="navigateToSection('fields')">
@@ -536,6 +555,63 @@
 
     <!-- Workers Dashboard JavaScript -->
     <script src="../backend/Worker/Workers.js"></script>
+
+    <script>
+      // Submenu toggle functionality
+      function toggleSubmenu(menuId) {
+        const submenu = document.getElementById(menuId + '-submenu');
+        const arrow = document.getElementById(menuId + '-arrow');
+        if (!submenu || !arrow) return;
+        const isHidden = submenu.classList.contains('hidden');
+        // Close all other submenus
+        document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
+          if (menu.id !== menuId + '-submenu') {
+            menu.classList.add('hidden');
+          }
+        });
+        // Reset other arrows
+        document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
+          if (arr.id !== menuId + '-arrow') {
+            arr.style.transform = 'rotate(0deg)';
+          }
+        });
+        // Toggle current submenu
+        if (isHidden) {
+          submenu.classList.remove('hidden');
+          arrow.style.transform = 'rotate(180deg)';
+        } else {
+          submenu.classList.add('hidden');
+          arrow.style.transform = 'rotate(0deg)';
+        }
+      }
+
+      // SPA-style section switcher
+      function showSection(sectionId) {
+        document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+        const el = document.getElementById(sectionId);
+        if (el) el.classList.remove('hidden');
+        // active nav styling
+        document.querySelectorAll('.nav-item').forEach(a => {
+          a.classList.remove('text-white', 'bg-gray-800');
+          a.classList.add('text-gray-300');
+        });
+        const active = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+        if (active) {
+          active.classList.remove('text-gray-300');
+          active.classList.add('text-white', 'bg-gray-800');
+        }
+      }
+      // Handle main nav items and submenu items
+      document.querySelectorAll('.nav-item, [data-section]').forEach(a => {
+        a.addEventListener('click', (e) => {
+          const section = a.getAttribute('data-section');
+          if (section) {
+            e.preventDefault();
+            showSection(section);
+          }
+        });
+      });
+    </script>
 
         
 
