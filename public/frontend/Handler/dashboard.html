@@ -42,10 +42,10 @@
         [id$="-arrow"] { transition: transform 0.3s ease; }
     </style>
  </head>
-<body class="min-h-screen" style="background-color: var(--neutral-bg);">
+<body class="min-h-screen bg-gray-100">
     <!-- Header -->
-    <header class="shadow-lg" style="background: linear-gradient(to right, var(--primary-dark), var(--primary-medium));">
-        <div class="container mx-auto px-4 py-2 flex items-center justify-between">
+    <header class="shadow-lg" style="background: linear-gradient(to right, #497d00, #5ea500);">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-white/20 border border-white/30 flex items-center justify-center group">
                     <span class="bar1 absolute w-5 h-0.5 bg-white transition-transform"></span>
@@ -53,15 +53,15 @@
                     <span class="bar3 absolute w-5 h-0.5 bg-white transition-transform"></span>
                 </button>
                 <a href="../lobby.html" class="text-white hover:text-gray-200"><i class="fas fa-arrow-left text-xl"></i></a>
-                <h1 class="text-xl font-bold text-white">CaneMap</h1>
+                <h1 class="text-2xl font-bold text-white">CaneMap</h1>
             </div>
             <div class="flex items-center space-x-3 text-white">
-                <button class="relative text-white hover:text-gray-200"><i class="fas fa-bell text-xl"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
+                <button class="relative text-white hover:text-gray-200"><i class="fas fa-bell text-lg"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
                 
                 <!-- Profile Dropdown -->
                 <div class="relative">
                     <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
-                        <div class="w-7 h-7 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
+                        <div class="w-7 h-7 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                             <i class="fas fa-user text-white text-xs"></i>
                         </div>
                         <span class="font-medium text-sm">Farmer</span>
@@ -114,13 +114,14 @@
             <!-- Profile Section -->
             <div class="p-6 border-b border-gray-700">
                 <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md border-2 border-white">
-                        <i class="fas fa-user text-white text-lg"></i>
+                    <div class="w-14 h-14 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ring-2 ring-white/10">
+                        <i class="fas fa-user text-white text-xl"></i>
                     </div>
                     <div>
                         <h3 class="text-white font-semibold text-lg">Farmer</h3>
                         <p class="text-gray-400 text-sm">Field Handler</p>
                     </div>
+
                 </div>
                 <div class="flex items-center space-x-2">
                    
@@ -203,11 +204,11 @@
 
         <main class="flex-1 container mx-auto px-4 lg:px-6 py-8">
         <div id="dashboard" class="content-section">
-        <h2 class="text-2xl font-bold mb-6" style="color: var(--text-dark);">Dashboard</h2>
+        <h2 class="text-3xl font-extrabold mb-6 text-gray-900">Dashboard</h2>
 
         <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="metric-card rounded-xl p-6">
+            <div class="metric-card rounded-xl p-6" style="background-color:#E5F2C7; border-color:#D1E3AC;">
                 <div class="flex items-center">
                     <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);"><i class="fas fa-map text-xl" style="color: var(--primary-medium);"></i></div>
                     <div>
@@ -216,7 +217,7 @@
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
+            <div class="metric-card rounded-xl p-6" style="background-color:#D9EEDB; border-color:#C2E0C3;">
                 <div class="flex items-center">
                     <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, var(--primary-light), var(--primary-lighter));"><i class="fas fa-users text-white text-xl"></i></div>
                     <div>
@@ -225,7 +226,7 @@
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
+            <div class="metric-card rounded-xl p-6" style="background-color:#FFE4A8; border-color:#F3D27F;">
                 <div class="flex items-center">
                     <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, var(--accent-orange), #FF9800);"><i class="fas fa-clock text-white text-xl"></i></div>
                     <div>
@@ -234,7 +235,7 @@
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
+            <div class="metric-card rounded-xl p-6" style="background-color:#D6EAFB; border-color:#BFD9F4;">
                 <div class="flex items-center">
                     <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB);"><i class="fas fa-user-plus text-xl" style="color: #1976D2;"></i></div>
                     <div>
@@ -432,6 +433,13 @@
         <div id="growth" class="content-section hidden">
           <div class="section-card rounded-xl overflow-hidden">
             <iframe src="GrowthTracker.html" class="w-full h-[1600px]" loading="lazy"></iframe>
+          </div>
+        </div>
+
+        <!-- Fields embedded section -->
+        <div id="fields" class="content-section hidden">
+          <div class="section-card rounded-xl overflow-hidden">
+            <iframe src="Fields.html" class="w-full h-[800px]" loading="lazy"></iframe>
           </div>
         </div>
 
@@ -693,4 +701,5 @@
 
 </body>
 </html>
+
 
