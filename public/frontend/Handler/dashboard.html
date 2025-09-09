@@ -8,119 +8,238 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --cane-50: #f7fee7;
-            --cane-100: #ecfcca;
-            --cane-200: #d8f999;
-            --cane-300: #bbf451;
-            --cane-400: #9ae600;
-            --cane-500: #7ccf00;
-            --cane-600: #5ea500;
-            --cane-700: #497d00;
-            --cane-800: #3c6300;
-            --cane-900: #35530e;
-            --cane-950: #192e03;
+            /* Two-tone Green Palette */
+            --primary-dark: #1B5E20;      /* Dark Green for sidebar */
+            --primary-medium: #2E7D32;    /* Medium Dark Green */
+            --primary-light: #A5D6A7;     /* Light Green for highlights/buttons */
+            --primary-lighter: #81C784;   /* Lighter Green alternative */
+            
+            /* Accent Colors */
+            --accent-yellow: #FFD600;     /* Yellow for alerts/highlights */
+            --accent-orange: #FFB74D;     /* Orange alternative */
+            
+            /* Neutral Backgrounds */
+            --neutral-bg: #F8F9FA;        /* Light gray/off-white */
+            --neutral-light: #FFFFFF;     /* Pure white */
+            --neutral-medium: #E9ECEF;    /* Medium gray */
+            
+            /* Text Colors */
+            --text-dark: #212529;         /* Dark text */
+            --text-medium: #495057;       /* Medium text */
+            --text-light: #6C757D;        /* Light text */
         }
-        .section-card { background: white; border: 1px solid var(--cane-200); }
-        .metric-card { background: white; border: 1px solid var(--cane-200); }
-        .metric-card:hover { box-shadow: 0 4px 15px rgba(94,165,0,.2); transform: translateY(-1px); }
-        .inner-box { background: var(--cane-50); border: 1px solid var(--cane-200); }
+        .section-card { background: var(--neutral-light); border: 1px solid var(--neutral-medium); }
+        .metric-card { background: var(--neutral-light); border: 1px solid var(--neutral-medium); }
+        .metric-card:hover { box-shadow: 0 4px 15px rgba(27,94,32,.2); transform: translateY(-1px); }
+        .inner-box { background: var(--primary-light); border: 1px solid var(--neutral-medium); }
         /* Sidebar animation */
         #sidebar { transition: transform 300ms ease, opacity 300ms ease; }
         #sidebar.closed { transform: translateX(-100%); opacity: 0; }
         #hamburger.active .bar1 { transform: translateY(6px) rotate(45deg); }
         #hamburger.active .bar2 { opacity: 0; }
         #hamburger.active .bar3 { transform: translateY(-6px) rotate(-45deg); }
+        /* Submenu arrow animation */
+        [id$="-arrow"] { transition: transform 0.3s ease; }
     </style>
  </head>
-<body class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] min-h-screen">
+<body class="min-h-screen" style="background-color: var(--neutral-bg);">
     <!-- Header -->
-    <header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-lg border-b-2 border-[var(--cane-200)]">
-        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+    <header class="shadow-lg" style="background: linear-gradient(to right, var(--primary-dark), var(--primary-medium));">
+        <div class="container mx-auto px-4 py-2 flex items-center justify-between">
             <div class="flex items-center space-x-4">
-                <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-[var(--cane-100)] border border-[var(--cane-200)] flex items-center justify-center group">
-                    <span class="bar1 absolute w-5 h-0.5 bg-[var(--cane-800)] transition-transform"></span>
-                    <span class="bar2 absolute w-5 h-0.5 bg-[var(--cane-800)] transition-opacity"></span>
-                    <span class="bar3 absolute w-5 h-0.5 bg-[var(--cane-800)] transition-transform"></span>
+                <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-white/20 border border-white/30 flex items-center justify-center group">
+                    <span class="bar1 absolute w-5 h-0.5 bg-white transition-transform"></span>
+                    <span class="bar2 absolute w-5 h-0.5 bg-white transition-opacity"></span>
+                    <span class="bar3 absolute w-5 h-0.5 bg-white transition-transform"></span>
                 </button>
-                <a href="../lobby.html" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-arrow-left text-xl"></i></a>
-                <h1 class="text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">CaneMap</h1>
+                <a href="../lobby.html" class="text-white hover:text-gray-200"><i class="fas fa-arrow-left text-xl"></i></a>
+                <h1 class="text-xl font-bold text-white">CaneMap</h1>
             </div>
-            <div class="flex items-center space-x-3 text-[var(--cane-800)]">
-                <button class="relative text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-bell text-xl"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
-                <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md"><i class="fas fa-user text-white text-sm"></i></div>
-                <span class="font-medium">Profile</span>
+            <div class="flex items-center space-x-3 text-white">
+                <button class="relative text-white hover:text-gray-200"><i class="fas fa-bell text-xl"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
+                
+                <!-- Profile Dropdown -->
+                <div class="relative">
+                    <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
+                        <div class="w-7 h-7 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
+                            <i class="fas fa-user text-white text-xs"></i>
+                        </div>
+                        <span class="font-medium text-sm">Farmer</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-50">
+                        <!-- Red Header Section -->
+                        <div class="bg-green-600 rounded-t-lg p-4 text-center">
+                            <div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md mx-auto mb-2">
+                                <i class="fas fa-user text-white text-xl"></i>
+                            </div>
+                            <h3 class="text-white font-semibold text-lg">Farmer</h3>
+                        </div>
+                        
+                        <!-- White Content Section -->
+                        <div class="py-2">
+                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-image w-5 h-5 mr-3 text-gray-500"></i>
+                                <span>Update Photo</span>
+                            </a>
+                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
+                                <span>Profile Settings</span>
+                            </a>
+                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
+                                <span>Change Password</span>
+                            </a>
+                      
+                        </div>
+                        
+                        <!-- Logout Section -->
+                        <div class="border-t border-gray-200 py-2">
+                            <a href="#" class="flex items-center px-4 py-3 text-red-600 hover:bg-red-50 transition-colors">
+                                <i class="fas fa-arrow-right w-5 h-5 mr-3"></i>
+                                <span class="font-medium">Logout</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
     <div class="flex relative">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 bg-gray-800 min-h-[calc(100vh-72px)] shadow-lg">
+        <aside id="sidebar" class="w-64 min-h-[calc(100vh-60px)] shadow-lg bg-gray-900">
+            <!-- Profile Section -->
+            <div class="p-6 border-b border-gray-700">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                        <i class="fas fa-user text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-semibold text-lg">Farmer</h3>
+                        <p class="text-gray-400 text-sm">Field Handler</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                   
+                </div>
+            </div>
+            
             <div class="p-6">
-                <nav class="space-y-2">
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 bg-[var(--cane-600)] text-white rounded-lg font-medium" data-section="dashboard">
+                <nav class="space-y-1">
+                    <!-- Dashboard -->
+                    <div class="mb-4">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-white rounded-lg font-medium bg-gray-800" data-section="dashboard">
                         <i class="fas fa-tachometer-alt w-5 h-5"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="workers">
+                        <div class="ml-6 mt-2 space-y-1">
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors">Overview</a>
+                        </div>
+                    </div>
+
+                    <!-- My Fields -->
+                    <div class="mb-4">
+                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('fields')">
+                            <i class="fas fa-map-marked-alt w-5 h-5"></i>
+                            <span>My Fields</span>
+                            <i class="fas fa-chevron-down ml-auto text-xs transition-transform" id="fields-arrow"></i>
+                        </div>
+                        <div id="fields-submenu" class="ml-6 mt-2 space-y-1 hidden">
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="fields">Fields</a>
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="growth">Growth Tracker</a>
+                        </div>
+                    </div>
+
+                    <!-- Workers -->
+                    <div class="mb-4">
+                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('workers')">
                         <i class="fas fa-users w-5 h-5"></i>
                         <span>Workers</span>
-                    </a>
-                    <a href="Task_Panel.html" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors">
-                        <i class="fas fa-list-check w-5 h-5"></i>
-                        <span>Task Panel</span>
-                    </a>
+                            <i class="fas fa-chevron-down ml-auto text-xs transition-transform" id="workers-arrow"></i>
+                        </div>
+                        <div id="workers-submenu" class="ml-6 mt-2 space-y-1 hidden">
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="workers">Worker List</a>
+                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="approvals">Approvals / Requests</a>
+                        </div>
+                    </div>
+
+                    <!-- Tasks -->
+                    <div class="mb-4">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="tasks">
+                            <i class="fas fa-list-check w-5 h-5"></i>
+                            <span>Tasks</span>
+                        </a>
+                    </div>
+
+                    <!-- Analytics -->
+                    <div class="mb-4">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="analytics">
+                            <i class="fas fa-chart-line w-5 h-5"></i>
+                            <span>Analytics</span>
+                        </a>
+                    </div>
+
+                    <!-- Reports -->
+                    <div class="mb-4">
                     <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="reports">
                         <i class="fas fa-chart-bar w-5 h-5"></i>
                         <span>Reports</span>
                     </a>
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="growth">
-                        <i class="fas fa-seedling w-5 h-5"></i>
-                        <span>Growth Tracker</span>
-                    </a>
+                    </div>
+
+                    <!-- Settings -->
+                    <div class="mb-4">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="settings">
+                            <i class="fas fa-cog w-5 h-5"></i>
+                            <span>Settings</span>
+                        </a>
+                    </div>
                 </nav>
             </div>
         </aside>
 
         <main class="flex-1 container mx-auto px-4 lg:px-6 py-8">
         <div id="dashboard" class="content-section">
-        <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Dashboard</h2>
+        <h2 class="text-2xl font-bold mb-6" style="color: var(--text-dark);">Dashboard</h2>
 
         <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-map text-white text-xl"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);"><i class="fas fa-map text-xl" style="color: var(--primary-medium);"></i></div>
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-600)]">Total Fields</p>
-                        <p id="mFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-sm font-medium" style="color: var(--text-medium);">Total Fields</p>
+                        <p id="mFields" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
                     </div>
                 </div>
             </div>
             <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-users text-white text-xl"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, var(--primary-light), var(--primary-lighter));"><i class="fas fa-users text-white text-xl"></i></div>
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-600)]">Active Workers</p>
-                        <p id="mWorkers" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-sm font-medium" style="color: var(--text-medium);">Active Workers</p>
+                        <p id="mWorkers" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
                     </div>
                 </div>
             </div>
             <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-300)] to-[var(--cane-400)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-clock text-white text-xl"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, var(--accent-orange), #FF9800);"><i class="fas fa-clock text-white text-xl"></i></div>
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-600)]">Pending Task</p>
-                        <p id="mTasks" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-sm font-medium" style="color: var(--text-medium);">Pending Task</p>
+                        <p id="mTasks" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
                     </div>
                 </div>
             </div>
             <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)] rounded-lg flex items-center justify-center mr-4"><i class="fas fa-user-plus text-white text-xl"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB);"><i class="fas fa-user-plus text-xl" style="color: #1976D2;"></i></div>
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-600)]">Join Request</p>
-                        <p id="mRequests" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-sm font-medium" style="color: var(--text-medium);">Join Request</p>
+                        <p id="mRequests" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
                     </div>
                 </div>
             </div>
@@ -207,36 +326,35 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <!-- Join Request panel -->
             <div class="section-card rounded-xl p-6">
-                <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center"><i class="fas fa-user-plus text-[var(--cane-500)] mr-3"></i>Join Request</h3>
-                <div class="inner-box rounded-lg overflow-hidden">
-                    <div class="p-3 border-b border-[var(--cane-200)] bg-[var(--cane-100)]"><span class="font-semibold text-[var(--cane-800)]">Requests</span></div>
-                    <div class="p-4 space-y-3">
-                        <div class="flex items-start justify-between bg-white border border-[var(--cane-200)] rounded-lg p-3">
+                <div class="mb-4 p-3 rounded-lg" style="background-color: #E8F5E9;">
+                    <h3 class="text-lg font-bold flex items-center" style="color: var(--text-dark);"><i class="fas fa-user-plus mr-3" style="color: var(--primary-medium);"></i>Join Request</h3>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-start justify-between bg-white border rounded-lg p-4 shadow-sm" style="border-color: var(--neutral-medium);">
                             <div class="flex items-start space-x-3">
-                                <div class="w-9 h-9 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center text-white"><i class="fas fa-user"></i></div>
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--primary-medium), var(--primary-light));"><i class="fas fa-user"></i></div>
                                 <div>
-                                    <p class="font-semibold text-[var(--cane-900)] leading-tight">Maria Sanchez</p>
-                                    <p class="text-xs text-[var(--cane-700)]">Requesting to join: Lot A1 - Naungan</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <button class="px-3 py-1 text-xs rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white">Approve</button>
-                                <button class="px-3 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 text-gray-800">Decline</button>
+                                <p class="font-semibold leading-tight" style="color: var(--text-dark);">Maria Sanchez</p>
+                                <p class="text-xs" style="color: var(--text-medium);">Requesting to join: Lot A1 - Naungan</p>
                             </div>
                         </div>
-
-                        <div class="flex items-start justify-between bg-white border border-[var(--cane-200)] rounded-lg p-3">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-9 h-9 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center text-white"><i class="fas fa-user"></i></div>
-                                <div>
-                                    <p class="font-semibold text-[var(--cane-900)] leading-tight">Peter Romero</p>
-                                    <p class="text-xs text-[var(--cane-700)]">Requesting to join: Lot B2 - Ipil</p>
+                        <div class="flex items-center space-x-2">
+                            <button class="px-3 py-1 text-xs rounded text-white hover:opacity-90 transition-opacity" style="background-color: #43A047;">Approve</button>
+                            <button class="px-3 py-1 text-xs rounded text-white hover:opacity-90 transition-opacity" style="background-color: #E53935;">Decline</button>
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <button class="px-3 py-1 text-xs rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white">Approve</button>
-                                <button class="px-3 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 text-gray-800">Decline</button>
+
+                    <div class="flex items-start justify-between bg-white border rounded-lg p-4 shadow-sm" style="border-color: var(--neutral-medium);">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--primary-medium), var(--primary-light));"><i class="fas fa-user"></i></div>
+                            <div>
+                                <p class="font-semibold leading-tight" style="color: var(--text-dark);">Peter Romero</p>
+                                <p class="text-xs" style="color: var(--text-medium);">Requesting to join: Lot B2 - Ipil</p>
                             </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="px-3 py-1 text-xs rounded text-white hover:opacity-90 transition-opacity" style="background-color: #43A047;">Approve</button>
+                            <button class="px-3 py-1 text-xs rounded text-white hover:opacity-90 transition-opacity" style="background-color: #E53935;">Decline</button>
                         </div>
                     </div>
                 </div>
@@ -244,36 +362,36 @@
 
             <!-- Recent Activity Logs panel -->
             <div class="section-card rounded-xl p-6">
-                <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center"><i class="fas fa-stream text-[var(--cane-500)] mr-3"></i>Recent Activity Logs</h3>
+                <h3 class="text-lg font-bold mb-4 flex items-center" style="color: var(--text-dark);"><i class="fas fa-stream mr-3" style="color: var(--primary-medium);"></i>Recent Activity Logs</h3>
                 <div class="space-y-4">
-                    <div class="bg-white border border-[var(--cane-200)] rounded-lg p-4 flex items-start justify-between">
+                    <div class="bg-white border rounded-lg p-4 flex items-start justify-between shadow-sm" style="border-color: var(--neutral-medium);">
                         <div class="flex items-start space-x-3">
-                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><i class="fas fa-user"></i></div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--neutral-medium);"><i class="fas fa-user" style="color: var(--text-medium);"></i></div>
                             <div>
-                                <p class="font-semibold text-[var(--cane-900)]">Anna Reyes</p>
-                                <p class="text-sm text-[var(--cane-700)] leading-tight">Fertilization Task - Lot A1<br/>Applied organic fertilizer to section A. Weather conditions favorable.</p>
-                                <div class="mt-2 flex items-center space-x-4 text-[var(--cane-700)] text-sm">
-                                    <button class="hover:underline"><i class="fas fa-image mr-1"></i>View Photos</button>
-                                    <button class="hover:underline"><i class="fas fa-comment mr-1"></i>Add Comment</button>
+                                <p class="font-semibold" style="color: var(--text-dark);">Anna Reyes</p>
+                                <p class="text-sm leading-tight" style="color: var(--text-medium);">Fertilization Task - Lot A1<br/>Applied organic fertilizer to section A. Weather conditions favorable.</p>
+                                <div class="mt-2 flex items-center space-x-4 text-sm">
+                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-image mr-1"></i>View Photos</button>
+                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-comment mr-1"></i>Add Comment</button>
                                 </div>
                             </div>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">Completed</span>
+                        <span class="text-xs px-2 py-1 rounded" style="background-color: #E8F5E9; color: var(--primary-medium);">Completed</span>
                     </div>
 
-                    <div class="bg-white border border-[var(--cane-200)] rounded-lg p-4 flex items-start justify-between">
+                    <div class="bg-white border rounded-lg p-4 flex items-start justify-between shadow-sm" style="border-color: var(--neutral-medium);">
                         <div class="flex items-start space-x-3">
-                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><i class="fas fa-user"></i></div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--neutral-medium);"><i class="fas fa-user" style="color: var(--text-medium);"></i></div>
                             <div>
-                                <p class="font-semibold text-[var(--cane-900)]">Carl Ramos</p>
-                                <p class="text-sm text-[var(--cane-700)] leading-tight">Weeding Task - Lot B2<br/>Started weeding in section B. Approximately 60% completed.</p>
-                                <div class="mt-2 flex items-center space-x-4 text-[var(--cane-700)] text-sm">
-                                    <button class="hover:underline"><i class="fas fa-image mr-1"></i>View Photos</button>
-                                    <button class="hover:underline"><i class="fas fa-comment mr-1"></i>Add Comment</button>
+                                <p class="font-semibold" style="color: var(--text-dark);">Carl Ramos</p>
+                                <p class="text-sm leading-tight" style="color: var(--text-medium);">Weeding Task - Lot B2<br/>Started weeding in section B. Approximately 60% completed.</p>
+                                <div class="mt-2 flex items-center space-x-4 text-sm">
+                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-image mr-1"></i>View Photos</button>
+                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-comment mr-1"></i>Add Comment</button>
                                 </div>
                             </div>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">In Progress</span>
+                        <span class="text-xs px-2 py-1 rounded" style="background-color: #FFF3E0; color: #F57C00;">In Progress</span>
                     </div>
                 </div>
             </div>
@@ -392,6 +510,39 @@
     </div>
 
     <script>
+      // Submenu toggle functionality
+      function toggleSubmenu(menuId) {
+        const submenu = document.getElementById(menuId + '-submenu');
+        const arrow = document.getElementById(menuId + '-arrow');
+        
+        if (submenu && arrow) {
+          const isHidden = submenu.classList.contains('hidden');
+          
+          // Close all other submenus
+          document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
+            if (menu.id !== menuId + '-submenu') {
+              menu.classList.add('hidden');
+            }
+          });
+          
+          // Reset all arrows
+          document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
+            if (arr.id !== menuId + '-arrow') {
+              arr.style.transform = 'rotate(0deg)';
+            }
+          });
+          
+          // Toggle current submenu
+          if (isHidden) {
+            submenu.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+          } else {
+            submenu.classList.add('hidden');
+            arrow.style.transform = 'rotate(0deg)';
+          }
+        }
+      }
+
       // SPA-style section switcher
       function showSection(sectionId) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
@@ -399,16 +550,17 @@
         if (el) el.classList.remove('hidden');
         // active nav styling
         document.querySelectorAll('.nav-item').forEach(a => {
-          a.classList.remove('bg-[var(--cane-600)]','text-white');
+          a.classList.remove('text-white', 'bg-gray-800');
           a.classList.add('text-gray-300');
         });
         const active = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
         if (active) {
           active.classList.remove('text-gray-300');
-          active.classList.add('bg-[var(--cane-600)]','text-white');
+          active.classList.add('text-white', 'bg-gray-800');
         }
       }
-      document.querySelectorAll('.nav-item').forEach(a => {
+      // Handle main nav items and submenu items
+      document.querySelectorAll('.nav-item, [data-section]').forEach(a => {
         a.addEventListener('click', (e) => {
           const section = a.getAttribute('data-section');
           if (section) {
@@ -510,6 +662,32 @@
       if (btnOpen && btnBack) {
         btnOpen.addEventListener('click', ()=>{ listWrap.classList.add('hidden'); formWrap.classList.remove('hidden'); });
         btnBack.addEventListener('click', ()=>{ formWrap.classList.add('hidden'); listWrap.classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); });
+      }
+
+      // Profile dropdown functionality
+      const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+      const profileDropdown = document.getElementById('profileDropdown');
+      
+      if (profileDropdownBtn && profileDropdown) {
+        // Toggle dropdown on button click
+        profileDropdownBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          profileDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!profileDropdownBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+            profileDropdown.classList.add('hidden');
+          }
+        });
+        
+        // Close dropdown when pressing Escape key
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            profileDropdown.classList.add('hidden');
+          }
+        });
       }
     </script>
 
