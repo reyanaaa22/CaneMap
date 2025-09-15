@@ -1,5 +1,6 @@
 // Import Firebase services from centralized config
-import { auth, db } from "../backend/firebase-config.js";
+// inside public/backend/Common/signup.js
+import { auth, db } from "./firebase-config.js";
 import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
@@ -126,7 +127,7 @@ form.addEventListener('submit', async (e) => {
     successModal.style.display = 'flex';
     modalOkBtn.onclick = () => {
       successModal.style.display = 'none';
-      window.location.href = "../frontend/Handler/farmers_login.html";
+      window.location.href = "../../frontend/Common/farmers_login.html";
     };
 
     form.reset();
