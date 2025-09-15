@@ -126,7 +126,7 @@
     <main class="container mx-auto px-6 py-8">
         <div class="max-w-4xl mx-auto">
             <!-- Form Container -->
-            <form class="space-y-8">
+            <form id="driverBadgeForm" class="space-y-8">
                 
                 <!-- Personal Information Section -->
                 <div class="section-card rounded-xl p-8">
@@ -468,61 +468,8 @@
     </div>
     </footer>
 
-    <script>
-        // Form validation and enhancement
-        document.addEventListener('DOMContentLoaded', function() {
-            // Update progress bar based on form completion
-            const form = document.querySelector('form');
-            const inputs = form.querySelectorAll('input, select');
-            const progressBar = document.querySelector('.progress-bar');
-            
-            function updateProgress() {
-                let filled = 0;
-                inputs.forEach(input => {
-                    if (input.type === 'checkbox') {
-                        if (input.checked) filled++;
-                    } else if (input.value.trim() !== '') {
-                        filled++;
-                    }
-                });
-                
-                const progress = Math.min((filled / inputs.length) * 100, 100);
-                progressBar.style.width = progress + '%';
-            }
-            
-            // Add event listeners to all inputs
-            inputs.forEach(input => {
-                input.addEventListener('input', updateProgress);
-                input.addEventListener('change', updateProgress);
-            });
-            
-            // Form submission handling
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Basic validation
-                const requiredFields = form.querySelectorAll('[required]');
-                let isValid = true;
-                
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        field.classList.add('border-red-500');
-                        isValid = false;
-                    } else {
-                        field.classList.remove('border-red-500');
-                    }
-                });
-                
-                if (isValid) {
-                    // Show success message
-                    alert('Driver Badge Application submitted successfully! You will receive a confirmation email shortly.');
-                    // You can redirect or show success page here
-                } else {
-                    alert('Please fill in all required fields.');
-                }
-            });
-        });
-    </script>
-    <script src="../backend/Driver/Driver_Badge.js"></script>
+    <script type="module" src="../../backend/Driver/Driver_Badge.js"></script>
+
+
 </body>
 </html>
