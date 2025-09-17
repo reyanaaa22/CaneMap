@@ -88,6 +88,46 @@
             opacity: 1;
             transform: translateY(0);
         }
+        /* Weather Now card (glassy dark style) */
+        .weather-card {
+            position: relative;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(15,23,15,0.55), rgba(15,23,15,0.35));
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        .weather-card::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: var(--wx-bg-image, url('../img/Weather.jpg')) center/cover no-repeat;
+            opacity: 0.25;
+            filter: grayscale(40%);
+        }
+        .weather-card::after {
+            content: "";
+            position: absolute; inset: 0;
+            background: radial-gradient(1200px 400px at 20% -10%, rgba(255,255,255,0.18), transparent 60%),
+                        radial-gradient(1000px 400px at 110% 110%, rgba(124,207,0,0.12), transparent 60%);
+            pointer-events: none;
+        }
+        /* Dynamic weather background helpers (set your own image paths if available) */
+        .wx-bg-rain { --wx-bg-image: url('../img/rain.jpg'); }
+        .wx-bg-sun { --wx-bg-image: url('../img/sunny.jpg'); }
+        .wx-bg-storm { --wx-bg-image: url('../img/lightning.jpg'); }
+        .wx-bg-cloudy { --wx-bg-image: url('../img/Weather.jpg'); }
+        .glass {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+        }
+        .wx-mini-bar { width: 6px; border-radius: 9999px; background: rgba(255,255,255,0.45); }
+        .wx-mini-bar.highlight { background: linear-gradient(180deg, #fff, rgba(255,255,255,0.6)); }
+        .wx-day-list { display: flex; flex-direction: column; gap: 8px; }
+        .wx-day { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 8px; }
+        .wx-day .name { font-weight: 700; font-size: 12px; color: rgba(255,255,255,0.9); }
+        .wx-day .temp { font-weight: 700; font-size: 12px; text-align: right; color: rgba(255,255,255,0.95); }
+        .wx-pill { border-radius: 9999px; padding: 6px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
         
         /* Carousel Navigation Styles */
         .nav-line {
@@ -169,6 +209,18 @@
         }
         /* ensure about content sits above the wave */
         .about-content { position: relative; z-index: 1; }
+        /* Driver badge micro-animations */
+        @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+        .reveal-up { opacity: 0; transform: translateY(16px); animation: rise .7s ease-out .1s forwards; }
+        @keyframes floatY { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-8px);} }
+        .float-slow { animation: floatY 6s ease-in-out infinite; }
+        @keyframes shine { from { transform: translateX(-100%);} to { transform: translateX(100%);} }
+        .shine::before { content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.18) 50%, transparent 100%); transform: translateX(-100%); animation: shine 5s linear infinite; }
+        .blob {
+          position:absolute; border-radius:9999px; filter: blur(40px); opacity:.35; pointer-events:none;
+        }
+        .blob-emerald { background: radial-gradient(closest-side, rgba(16,185,129,.45), transparent 70%); }
+        .blob-lime { background: radial-gradient(closest-side, rgba(132,204,22,.45), transparent 70%); }
     </style>
 </head>
     <body class="bg-[#F5F5F0] min-h-screen antialiased">
@@ -200,6 +252,7 @@
                      <div class="flex space-x-10"> <!-- Navigation menu centered -->
                           <a href="#features" class="text-white hover:text-[var(--cane-100)] hover:underline underline-offset-4 decoration-[var(--cane-300)] transition-colors text-lg font-semibold">Features</a>
                           <a href="#about" class="text-white hover:text-[var(--cane-100)] hover:underline underline-offset-4 decoration-[var(--cane-300)] transition-colors text-lg font-semibold">About us</a>
+                          <a href="#driver-badge" class="text-white hover:text-[var(--cane-100)] hover:underline underline-offset-4 decoration-[var(--cane-300)] transition-colors text-lg font-semibold">Driver Badge</a>
                           <a href="#contact" class="text-white hover:text-[var(--cane-100)] hover:underline underline-offset-4 decoration-[var(--cane-300)] transition-colors text-lg font-semibold">Contact</a>
                     </div>
                 </div>
@@ -247,7 +300,7 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="w-full min-h-screen py-4 px-2 mt-4 bg-[#F5F5F0] relative overflow-hidden">
+    <main class="w-full min-h-screen py-4 px-2 mt-8 bg-[#F5F5F0] relative overflow-hidden">
     <div id="mainContent" class="w-full px-4 pb-8 flex flex-col lg:flex-row gap-8">
             <!-- Left Panel - Sugarcane Field Map -->
             <div id="mapPanel" class="flex-1 fade-in-left">
@@ -267,20 +320,10 @@
                     <div id="refreshMapIcon" class="absolute top-4 right-16 z-10 bg-white rounded-full shadow-lg p-3 cursor-pointer hover:bg-[var(--cane-100)] transition-all duration-300 transform hover:scale-110" title="Refresh Map">
                         <i class="fas fa-sync-alt text-[var(--cane-600)] text-xl"></i>
                     </div>
-                    <div id="map" class="w-full h-[28rem] rounded-xl mb-4 shadow-[0_8px_22px_rgba(94,165,0,0.16)] border border-[var(--cane-200)] bg-white"></div>
+                    <div id="map" class="w-full h-[32rem] rounded-xl mb-4 shadow-[0_8px_22px_rgba(94,165,0,0.16)] border border-[var(--cane-200)] bg-white"></div>
                 </div>
                 
-                <!-- Get Verified Section -->
-                 <div class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] rounded-xl p-5 shadow-[0_8px_20px_rgba(94,165,0,0.15)] border border-[var(--cane-200)] slide-in-bottom">
-                    <h3 class="font-bold text-[var(--cane-950)] mb-3 text-lg">Get Verified for Additional Roles</h3>
-                    <div class="flex items-center justify-between">
-                        <div>
-                             <h4 class="font-semibold text-[var(--cane-950)] text-base mb-1.5">Apply for Driver Badge</h4>
-                             <p class="text-[var(--cane-900)]/90 font-medium text-sm">Own or operate hauling vehicles? Drivers are for hauling agricultural field workers.</p>
-                        </div>
-                         <button onclick="window.location.href='../Driver/Driver_Badge.html'" class="bg-gradient-to-r from-[var(--cane-800)] to-[var(--cane-900)] text-white px-5 py-2.5 rounded-lg hover:from-[var(--cane-900)] hover:to-[var(--cane-950)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold">Apply Now</button>
-                    </div>
-                </div>
+                <!-- removed get verified section per request -->
             </div>
             <!-- Right Panel -->
             <div id="sidePanel" class="w-full lg:w-96 space-y-3 fade-in-right">
@@ -292,14 +335,52 @@
                       </h3>
                      <div id="notificationsList" class="space-y-3"></div>
                  </div>
-                                 <!-- Weather Forecast -->
-                  <div class="bg-gradient-to-r from-[var(--cane-800)] to-[var(--cane-700)] rounded-xl p-7 shadow-[0_8px_24px_rgba(94,165,0,0.18)]">
-                      <h3 class="text-lg font-bold text-white mb-4 flex items-center">
-                          <i class="fas fa-cloud-sun text-white mr-3 text-xl"></i>
-                          Weather Forecast
-                      </h3>
-                     <div class="space-y-2 text-white" id="weatherForecast">
-                         <!-- Weather data will be populated by JavaScript -->
+                                 <!-- Weather Now (glassy dark) -->
+                  <div id="weatherForecast" class="weather-card p-5 text-white">
+                      <div class="relative z-[1]">
+                          <div class="flex items-start justify-between gap-4">
+                              <!-- Left: Today big -->
+                              <div class="flex-1 min-w-0">
+                                  <p class="text-white/80 text-sm">Today</p>
+                                  <h3 class="text-3xl font-extrabold tracking-tight">Weather Now</h3>
+                                  <p class="text-white/70 text-xs max-w-xs">Condition for today.</p>
+                                  <div class="flex items-end gap-2 mt-3">
+                                      <span id="wxTemp" class="text-6xl leading-none font-extrabold">--</span>
+                                      <span class="text-3xl">°C</span>
+                                      <div class="ml-3 glass px-3 py-2 text-sm">Wind: <span id="wxWind">-- km/h</span></div>
+                                  </div>
+                                  <div class="mt-3 glass p-3 w-full max-w-sm">
+                                      <p class="text-xs text-white/80 mb-2">UV Index</p>
+                                      <div class="flex items-center justify-between">
+                                          <div class="w-full h-2 bg-white/20 rounded-full overflow-hidden mr-3">
+                                              <div id="wxUvBar" class="h-full bg-gradient-to-r from-yellow-300 to-orange-400" style="width: 0%"></div>
+                                          </div>
+                                          <span id="wxUv" class="text-sm font-semibold">--</span>
+                             </div>
+                             </div>
+                         </div>
+                              <!-- Right: Upcoming compact -->
+                              <div class="w-48 glass p-3 self-stretch">
+                                  <p class="text-xs text-white/80 mb-2">Next days</p>
+                                  <div id="wxDaily" class="wx-day-list">
+                                      <div class="wx-day">
+                                          <span class="name">Tomorrow</span>
+                                          <span class="wx-pill"><i class="fas fa-cloud-rain"></i></span>
+                                          <span class="temp">--/--°</span>
+                                      </div>
+                                      <div class="wx-day">
+                                          <span class="name">+2 days</span>
+                                          <span class="wx-pill"><i class="fas fa-cloud"></i></span>
+                                          <span class="temp">--/--°</span>
+                             </div>
+                                      <div class="wx-day">
+                                          <span class="name">+3 days</span>
+                                          <span class="wx-pill"><i class="fas fa-sun"></i></span>
+                                          <span class="temp">--/--°</span>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
                      </div>
                  </div>
             </div>
@@ -471,13 +552,13 @@
     <!-- Interactive Mockups (Scrollable) -->
     <section id="mockups" class="relative py-10 bg-[#F5F5F0]">
             <div class="px-6 md:px-10 mb-6">
-                <h2 class="text-3xl md:text-4xl font-bold text-[var(--cane-950)]">Device Mockups</h2>
-                <p class="text-[var(--cane-800)] font-medium">Showcasing CaneMap on a laptop and a phone</p>
+                <h2 class="text-3xl md:text-4xl font-bold text-[var(--cane-950)] fade-in-up">Device Mockups</h2>
+                <p class="text-[var(--cane-800)] font-medium fade-in-up">Showcasing CaneMap on a laptop and a phone</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 items-center gap-8 px-6 md:px-10">
                 <!-- Left: Accessible Anytime, Anywhere copy -->
-                <div class="order-2 lg:order-1 max-w-2xl">
+                <div class="order-2 lg:order-1 max-w-2xl fade-in-left">
                     <h3 class="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-500)] bg-clip-text text-transparent mb-4">Accessible Anytime, Anywhere</h3>
                     <p class="text-[var(--cane-900)]/90 leading-relaxed text-base md:text-lg font-medium mb-5">
                         CaneMap is designed for flexibility and convenience. You can access our system through:
@@ -508,21 +589,30 @@
                 </div>
 
                 <!-- Right: Enlarged mockup image -->
-                <div class="order-1 lg:order-2 flex justify-end">
-                    <img src="../img/Mockup.png" alt="CaneMap 3D Mockup" class="w-[560px] md:w-[720px] max-w-full rounded-none shadow-none" loading="eager" decoding="async" style="image-rendering: -webkit-optimize-contrast;" />
+                <div class="order-1 lg:order-2 flex justify-end fade-in-right">
+                    <img src="../img/Mockup.png" alt="CaneMap 3D Mockup" class="w-[560px] md:w-[720px] max-w-full rounded-none shadow-none transition-transform duration-700 ease-out hover:-translate-y-1 hover:rotate-1" loading="eager" decoding="async" style="image-rendering: -webkit-optimize-contrast;" />
             </div>
         </div>
     </section>
     <!-- About Us Section -->
-    <section id="about" class="relative py-24 bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)]">
+    <section id="about" class="relative py-24">
+        <!-- Background image + gradient overlay (match features style) -->
+        <div class="absolute inset-0">
+            <img src="../img/sugarcane.webp" alt="Sugarcane background" class="absolute inset-0 w-full h-full object-cover">
+            <!-- green tint + fade to clear -->
+            <div class="absolute inset-0 bg-[var(--cane-900)]/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-[var(--cane-900)] via-[var(--cane-900)/80] to-transparent"></div>
+            <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[var(--cane-900)] to-transparent"></div>
+            <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[var(--cane-900)] to-transparent"></div>
+        </div>
         <div class="container mx-auto px-6 about-content">
             <div class="text-center mb-16 fade-in-up">
-                <h2 class="text-5xl font-bold text-[var(--cane-950)] mb-6">About CaneMap</h2>
+                <h2 class="text-5xl font-bold text-white mb-6">About CaneMap</h2>
                 <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full"></div>
             </div>
             
             <div class="max-w-5xl mx-auto text-center mb-16 fade-in-up">
-                <p class="text-xl text-[var(--cane-900)] leading-relaxed font-medium">
+                <p class="text-xl text-white/90 leading-relaxed font-medium">
                     CaneMap is an agricultural decision-support platform designed to help sugarcane farmers and field workers register land, track field progress, and collaborate with the Sugar Regulatory Administration (SRA) for better transparency and productivity. Developed in collaboration with local stakeholders and SRA Ormoc Mill District, CaneMap empowers farmers through digital mapping, task coordination, and predictive analytics to make informed decisions throughout the crop cycle.
                 </p>
             </div>
@@ -546,6 +636,41 @@
             </div>
         </div>
         
+    </section>
+    <!-- Driver Badge Promo Section -->
+    <section id="driver-badge" class="relative py-24 bg-gradient-to-br from-white to-[#ECF2F6] overflow-hidden">
+        <!-- ambient blobs -->
+        <div class="blob blob-emerald w-[360px] h-[360px] -top-20 -left-20"></div>
+        <div class="blob blob-lime w-[300px] h-[300px] -bottom-10 -right-16"></div>
+        <div class="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 items-center gap-10">
+            <!-- Left copy -->
+            <div class="reveal-up">
+                <p class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold mb-4">
+                    <i class="fas fa-shield-alt"></i> Verified Drivers Program
+                </p>
+                <h2 class="text-6xl md:text-7xl lg:text-8xl font-black text-[#0f172a] leading-[0.9] mb-1">Be a</h2>
+                <h2 class="text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] mb-1" style="background:linear-gradient(180deg,#cfcfcf,#8f8f8f);-webkit-background-clip:text;background-clip:text;color:transparent;">Driver Badge</h2>
+                <h2 class="text-6xl md:text-7xl lg:text-8xl font-black text-[#0f172a] leading-[0.9] mb-6">Holder</h2>
+                <p class="text-slate-700 text-lg max-w-xl mb-6">Get verified, receive tasks faster, and access transport features tailored for professional drivers in CaneMap.</p>
+                <a href="../Driver/Driver_Badge.html" class="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-[var(--cane-700)] text-white font-semibold shadow hover:shadow-xl transition transform hover:-translate-y-0.5">
+                    Get Driver Badge <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <!-- Right visual: standalone image (no container frame) -->
+            <div class="relative w-[120%] lg:w-[140%] ml-auto mr-[-10%] lg:mr-[-16%]">
+                <img src="../img/Transport.jpg" alt="Driver logistics" class="w-full h-[440px] lg:h-[520px] object-cover object-center rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.18)]" />
+                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent"></div>
+                <div class="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg border border-emerald-100 px-3 py-2 flex items-center gap-2 float-slow">
+                    <i class="fas fa-check-circle text-emerald-600"></i>
+                    <span class="text-sm font-semibold text-emerald-700">Verified</span>
+                </div>
+                <div class="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg border border-emerald-100 px-3 py-2 flex items-center gap-2 float-slow" style="animation-delay:1s">
+                    <i class="fas fa-truck text-emerald-600"></i>
+                    <span class="text-sm font-semibold text-emerald-700">Hauling Ready</span>
+                </div>
+            </div>
+        </div>
     </section>
     <!-- Contact Section -->
     <section id="contact" class="relative bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] pt-24 pb-12">
@@ -688,5 +813,151 @@
     <!-- Backend Common scripts -->
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
     <script src="../../backend/Common/lobby.js"></script>
+    <script>
+      // Background swapper based on today's condition only
+      (function(){
+        const card = document.getElementById('weatherForecast');
+        if (!card) return;
+
+        const IMG = {
+          rain: "../img/rain.jpg",
+          sun: "../img/sunny.jpg",
+          storm: "../img/lightning.jpg",
+          cloudy: "../img/Weather.jpg"
+        };
+
+        function pickKey(text){
+          const t = (text || "").toLowerCase();
+          if (t.includes('thunder') || t.includes('storm')) return 'storm';
+          if (t.includes('rain') || t.includes('shower') || t.includes('drizzle')) return 'rain';
+          if (t.includes('sun') || t.includes('clear')) return 'sun';
+          if (t.includes('cloud')) return 'cloudy';
+          return 'cloudy';
+        }
+
+        function extractTodayConditionFromText(raw){
+          const lines = (raw || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
+          const todayIdx = lines.findIndex(l => /today/i.test(l));
+          if (todayIdx === -1) return '';
+          // Search next 1-4 lines for a condition keyword
+          const condWindow = lines.slice(todayIdx, todayIdx + 6).join(' ').toLowerCase();
+          const m = condWindow.match(/(thunderstorm|storm|light rain|moderate rain|heavy rain|rain|drizzle|sunny|clear|few clouds|broken clouds|overcast clouds|clouds)/i);
+          return m ? m[0] : '';
+        }
+
+        function guessConditionFromDOM(){
+          // Prefer a dedicated element if present
+          const todayRow = Array.from(card.querySelectorAll('*')).find(el => /today/i.test(el.textContent||''));
+          if (todayRow) {
+            // Look into the row container text
+            const block = (todayRow.closest('div') || todayRow).innerText || todayRow.textContent || '';
+            const cond = extractTodayConditionFromText(block);
+            if (cond) return pickKey(cond);
+          }
+          // Fallback: parse full card but lock to the first occurrence after 'Today'
+          return pickKey(extractTodayConditionFromText(card.innerText || card.textContent || ''));
+        }
+
+        function setBg(key){
+          const url = IMG[key] || IMG.cloudy;
+          card.style.setProperty('--wx-bg-image', `url('${url}')`);
+        }
+
+        function update(){ setBg(guessConditionFromDOM()); }
+
+        // Initial update
+        update();
+
+        // Support explicit event updates
+        window.addEventListener('canemap:weather-updated', function(e){
+          const cond = (e && e.detail && e.detail.condition) || '';
+          if (cond) setBg(pickKey(cond));
+          const temp = e?.detail?.temp;
+          if (typeof temp === 'number') {
+            const t = document.getElementById('wxTemp');
+            if (t) t.textContent = String(Math.round(temp));
+          }
+          const wind = e?.detail?.windKmh;
+          if (typeof wind === 'number') {
+            const w = document.getElementById('wxWind');
+            if (w) w.textContent = wind.toFixed(1) + ' km/h';
+          }
+          const uv = e?.detail?.uvIndex;
+          if (typeof uv === 'number') {
+            const bar = document.getElementById('wxUvBar');
+            const label = document.getElementById('wxUv');
+            const pct = Math.max(0, Math.min(100, (uv/11)*100));
+            if (bar) bar.style.width = pct + '%';
+            if (label) label.textContent = uv.toFixed(1);
+          }
+        });
+
+        // Re-check a few times to catch late content
+        let checks = 0;
+        const id = setInterval(() => { update(); if (++checks > 15) clearInterval(id); }, 2000);
+      })();
+
+      // Transform any list-based weather widget into: Big Today + compact side list
+      (function(){
+        const container = document.getElementById('weatherForecast');
+        if (!container) return;
+ 
+        function parseItemText(txt){
+          const t = (txt||'').trim();
+          const nameMatch = t.match(/(Today|Tomorrow|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
+          const temps = t.match(/-?\d+\s*°?\s*C?/gi) || [];
+          const tempPair = temps.slice(0,2).map(s=>s.replace(/[^-\d]/g,'')).filter(Boolean);
+          const condMatch = t.match(/(thunderstorm|drizzle|rain|clear|clouds|overcast|broken clouds|few clouds|light rain|moderate rain)/i);
+          return {
+            name: nameMatch ? nameMatch[0] : '',
+            tempHi: tempPair[0] ? tempPair[0] : '',
+            tempLo: tempPair[1] ? tempPair[1] : '',
+            cond: condMatch ? condMatch[0] : ''
+          };
+        }
+ 
+        function collectRows(){
+          const all = Array.from(container.querySelectorAll('*')).filter(el=>/today|tomorrow|mon|tue|wed|thu|fri|sat|sun/i.test(el.textContent||''));
+          const uniqueBlocks = [];
+          const seen = new Set();
+          for (const el of all){
+            const block = (el.closest('div')) || el;
+            if (!block) continue;
+            const key = (block.innerText||'').slice(0,120);
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            uniqueBlocks.push(block);
+            if (uniqueBlocks.length>=4) break;
+          }
+          return uniqueBlocks.map(b=>parseItemText(b.innerText)).filter(x=>x.name);
+        }
+ 
+        let mo; let scheduled = false; let rebuildCount = 0;
+        function rebuild(){
+          if (scheduled) return;
+          scheduled = true;
+          requestAnimationFrame(() => {
+            scheduled = false;
+            try {
+              if (mo) mo.disconnect();
+              rebuild();
+            } catch(e) { /* ignore */ }
+            finally {
+              rebuildCount++;
+              if (rebuildCount < 10) { // avoid observing forever
+                if (mo) mo.observe(container, { childList: true, subtree: true });
+              }
+            }
+          });
+        }
+ 
+        // Initial and delayed attempts (widget may render late)
+        mo = new MutationObserver(() => { tryRebuild(); });
+        tryRebuild();
+        setTimeout(tryRebuild, 800);
+        setTimeout(tryRebuild, 1600);
+        mo.observe(container, { childList: true, subtree: true });
+      })();
+    </script>
 </body>
 </html>
