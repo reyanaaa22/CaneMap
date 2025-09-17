@@ -66,6 +66,20 @@
             max-width: 760px;
             margin-inline: auto;
             padding: 28px 28px 32px;
+            position: relative;
+            overflow: hidden;
+        }
+        .onboarding-content.map-bg::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url('../img/map.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.18;
+            mix-blend-mode: multiply;
+            pointer-events: none;
         }
         .placeholder-image {
             background: linear-gradient(135deg, var(--cane-50) 0%, #e2f7c2 100%);
@@ -177,7 +191,7 @@
         <div class="min-h-screen flex items-center justify-center p-4 lg:p-8">
             
             <!-- Screen 1: Welcome -->
-            <div id="screen-1" class="onboarding-screen active max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-1" class="onboarding-screen active max-w-2xl w-full onboarding-content map-bg p-8 lg:p-12 text-center relative">
                 <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
                     Skip
                 </button>
