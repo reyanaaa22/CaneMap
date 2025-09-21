@@ -113,9 +113,9 @@
         
         /* Chevron arrow animations */
         .fa-chevron-down {
-            transition: transform 0.3s ease;
-        }
-        
+                transition: transform 0.3s ease;
+            }
+            
         .fa-chevron-down.rotated {
             transform: rotate(180deg);
         }
@@ -256,7 +256,7 @@
                         <span>Admins</span>
                     </a>
                 </div>
-            </div>
+        </div>
         
             <!-- Driver Badge Management -->
             <div class="space-y-1 mb-4" data-expanded="false">
@@ -264,7 +264,7 @@
                     <i class="fas fa-id-badge text-white text-sm"></i>
                     <span>Driver Badges</span>
                     <i class="fas fa-chevron-down ml-auto text-white" id="badges-arrow"></i>
-                </button>
+            </button>
                 <div class="ml-6 mt-3 space-y-1 hidden" id="badges-submenu">
                     <a href="#" onclick="showSection('badge-requests')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-clock text-white text-sm"></i>
@@ -278,7 +278,7 @@
                         <i class="fas fa-history text-white text-sm"></i>
                         <span>Badge History</span>
                     </a>
-                </div>
+        </div>
             </div>
             
             <!-- Security & Monitoring -->
@@ -287,7 +287,7 @@
                     <i class="fas fa-shield-alt text-white text-sm"></i>
                     <span>Security</span>
                     <i class="fas fa-chevron-down ml-auto text-white" id="security-arrow"></i>
-                </button>
+                    </button>
                 <div class="ml-6 mt-3 space-y-1 hidden" id="security-submenu">
                     <a href="#" onclick="showSection('activity-log')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-history text-white text-sm"></i>
@@ -302,7 +302,7 @@
                         <span>Security Settings</span>
                     </a>
                 </div>
-            </div>
+                </div>
                 
             <!-- System Management -->
             <div class="space-y-1 mb-4" data-expanded="false">
@@ -310,7 +310,7 @@
                     <i class="fas fa-cogs text-white text-sm"></i>
                     <span>System</span>
                     <i class="fas fa-chevron-down ml-auto text-white" id="system-arrow"></i>
-                </button>
+                        </button>
                 <div class="ml-6 mt-3 space-y-1 hidden" id="system-submenu">
                     <a href="#" onclick="showSection('system-settings')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-sliders-h text-white text-sm"></i>
@@ -325,7 +325,7 @@
                         <span>System Logs</span>
                     </a>
                 </div>
-            </div>
+                    </div>
                     
             <!-- Reports -->
             <div class="space-y-1 mb-4">
@@ -433,240 +433,37 @@
                 <div class="mt-4 flex items-center text-sm">
                     <span class="text-green-600 font-medium">+5</span>
                     <span class="text-gray-500 ml-2">this week</span>
-                    </div>
-                </div>
-            </div>
-
-        <!-- Main Dashboard Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- User Management Section -->
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-xl shadow-lg fade-in">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-xl font-bold text-gray-900">User Management</h2>
-                            <button onclick="openAddUserModal()" class="bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] transition-colors flex items-center space-x-2">
-                                <i class="fas fa-plus"></i>
-                                <span>Add User</span>
-                    </button>
-                        </div>
-                </div>
-                
-                <!-- User Filters -->
-                    <div class="p-6 border-b border-gray-200">
-                    <div class="flex flex-wrap items-center gap-4">
-                        <div class="flex items-center space-x-2">
-                                <label class="text-sm font-medium text-gray-700">Filter by Role:</label>
-                                <select id="roleFilter" class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                                    <option value="">All Roles</option>
-                                <option value="farmer">Farmers</option>
-                                <option value="worker">Workers</option>
-                                <option value="sra">SRA Officers</option>
-                                    <option value="admin">Admins</option>
-                            </select>
-                        </div>
-                        
-                        <div class="flex items-center space-x-2">
-                                <label class="text-sm font-medium text-gray-700">Status:</label>
-                                <select id="statusFilter" class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="pending">Pending</option>
-                            </select>
-                        </div>
-                        
-                        <div class="flex items-center space-x-2">
-                                <label class="text-sm font-medium text-gray-700">Search:</label>
-                                <input type="text" id="userSearch" placeholder="Search users..." class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] w-48">
                         </div>
                     </div>
                 </div>
                 
-                <!-- Users Table -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Badge</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
-                                <!-- Users will be loaded here -->
-                            </tbody>
-                        </table>
-            </div>
-            
-                    <!-- Pagination -->
-                    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                        <div class="text-sm text-gray-700">
-                            Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalRecords">0</span> results
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button id="prevPage" class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <span id="currentPage" class="px-3 py-1 text-sm font-medium">1</span>
-                            <button id="nextPage" class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i class="fas fa-chevron-right"></i>
-                        </button>
+        <!-- Analytics Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- User Growth Chart -->
+            <div class="bg-white rounded-xl shadow-lg fade-in">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
+                    <p class="text-sm text-gray-600">Monthly user registration trends</p>
                     </div>
-                    </div>
+                <div class="p-6">
+                    <canvas id="userGrowthChart" width="400" height="200"></canvas>
                 </div>
             </div>
             
-            <!-- Activity Log Section -->
-            <div class="lg:col-span-1">
-                <div class="bg-white rounded-xl shadow-lg fade-in">
-                    <div class="p-6 border-b border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-900">Activity Log</h2>
-                    </div>
-                    
-                    <div class="p-6">
-                        <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" id="activityLog">
-                            <!-- Activity items will be loaded here -->
-                            </div>
-                    </div>
+            <!-- User Role Distribution Chart -->
+            <div class="bg-white rounded-xl shadow-lg fade-in">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
+                    <p class="text-sm text-gray-600">Current user roles breakdown</p>
+                </div>
+                <div class="p-6">
+                    <canvas id="userRoleChart" width="400" height="200"></canvas>
                 </div>
             </div>
         </div>
+
     </main>
     
-    <!-- Add User Modal -->
-    <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-900">Add New User</h3>
-                    <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                </button>
-                </div>
-            </div>
-            
-            <form id="addUserForm" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                    <input type="text" id="userName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input type="email" id="userEmail" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                    <select id="userRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="">Select Role</option>
-                        <option value="farmer">Farmer</option>
-                        <option value="worker">Worker</option>
-                        <option value="sra">SRA Officer</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                    <input type="tel" id="userPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Driver Badge</label>
-                    <select id="userBadge" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="none">No Badge</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                    </select>
-                </div>
-                
-                <div class="flex items-center justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="px-4 py-2 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors">
-                        Add User
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Edit User Modal -->
-    <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-900">Edit User</h3>
-                    <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                </button>
-                </div>
-            </div>
-            
-            <form id="editUserForm" class="p-6 space-y-4">
-                <input type="hidden" id="editUserId">
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                    <input type="text" id="editUserName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input type="email" id="editUserEmail" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                    <select id="editUserRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="farmer">Farmer</option>
-                        <option value="worker">Worker</option>
-                        <option value="sra">SRA Officer</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                    <input type="tel" id="editUserPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select id="editUserStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="pending">Pending</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Driver Badge</label>
-                    <select id="editUserBadge" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="none">No Badge</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                    </select>
-                </div>
-                
-                <div class="flex items-center justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeEditUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="px-4 py-2 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors">
-                        Update User
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Alert Container -->
     <div id="alertContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
@@ -719,8 +516,8 @@
                 item.classList.remove('bg-gray-700', 'shadow-lg');
                 item.classList.add('hover:bg-gray-800/60');
             });
-            
-            // Add active class to clicked item
+                    
+                    // Add active class to clicked item
             const activeItem = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
             if (activeItem) {
                 activeItem.classList.add('bg-gray-700', 'shadow-lg');
@@ -791,6 +588,31 @@
         function showDashboardContent() {
             // Show the main dashboard content
             document.querySelector('main').innerHTML = `
+                <!-- Analytics Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- User Growth Chart -->
+                    <div class="bg-white rounded-xl shadow-lg fade-in">
+                        <div class="p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
+                            <p class="text-sm text-gray-600">Monthly user registration trends</p>
+                        </div>
+                        <div class="p-6">
+                            <canvas id="userGrowthChart" width="400" height="200"></canvas>
+                        </div>
+                        </div>
+                        
+                    <!-- User Role Distribution Chart -->
+                    <div class="bg-white rounded-xl shadow-lg fade-in">
+                        <div class="p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
+                            <p class="text-sm text-gray-600">Current user roles breakdown</p>
+                        </div>
+                        <div class="p-6">
+                            <canvas id="userRoleChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Dashboard Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <!-- Total Users -->
@@ -799,20 +621,20 @@
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Total Users</p>
                                 <p class="text-3xl font-bold text-gray-900" id="totalUsers">0</p>
-                            </div>
+                    </div>
                             <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-users text-blue-600 text-xl"></i>
-                            </div>
-                        </div>
+                </div>
+            </div>
                         <div class="mt-4 flex items-center text-sm">
                             <span class="text-green-600 font-medium">+12%</span>
                             <span class="text-gray-500 ml-2">from last month</span>
-                        </div>
-                    </div>
-                    
+                </div>
+            </div>
+            
                     <!-- Active Users -->
                     <div class="bg-white rounded-xl p-6 card-shadow-lg fade-in border border-gray-100">
-                        <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Active Users</p>
                                 <p class="text-3xl font-bold text-gray-900" id="activeUsers">0</p>
@@ -829,7 +651,7 @@
                     
                     <!-- Failed Logins -->
                     <div class="bg-white rounded-xl p-6 card-shadow-lg fade-in border border-gray-100">
-                        <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Failed Logins</p>
                                 <p class="text-3xl font-bold text-gray-900" id="failedLogins">0</p>
@@ -862,116 +684,11 @@
                     </div>
                 </div>
 
-                <!-- Main Dashboard Content -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    <!-- User Management Section -->
-                    <div class="lg:col-span-2">
-                        <div class="bg-white rounded-xl card-shadow-lg fade-in border border-gray-100">
-                            <div class="p-6 border-b border-gray-200">
-                                <div class="flex items-center justify-between">
-                                    <h2 class="text-xl font-bold text-gray-900">User Management</h2>
-                                    <button onclick="openAddUserModal()" class="bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] transition-colors flex items-center space-x-2">
-                                        <i class="fas fa-plus"></i>
-                                        <span>Add User</span>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- User Filters -->
-                            <div class="p-6 border-b border-gray-200">
-                                <div class="flex flex-wrap items-center gap-4">
-                                    <div class="flex items-center space-x-2">
-                                        <label class="text-sm font-medium text-gray-700">Filter by Role:</label>
-                                        <select id="roleFilter" class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                                            <option value="">All Roles</option>
-                                            <option value="farmer">Farmers</option>
-                                            <option value="worker">Workers</option>
-                                            <option value="sra">SRA Officers</option>
-                                            <option value="admin">Admins</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="flex items-center space-x-2">
-                                        <label class="text-sm font-medium text-gray-700">Status:</label>
-                                        <select id="statusFilter" class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                                            <option value="">All Status</option>
-                                            <option value="active">Active</option>
-                                            <option value="inactive">Inactive</option>
-                                            <option value="pending">Pending</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="flex items-center space-x-2">
-                                        <label class="text-sm font-medium text-gray-700">Search:</label>
-                                        <input type="text" id="userSearch" placeholder="Search users..." class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] w-48">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Users Table -->
-                            <div class="overflow-x-auto">
-                                <table class="w-full">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Badge</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
-                                        <!-- Users will be loaded here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <!-- Pagination -->
-                            <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                                <div class="text-sm text-gray-700">
-                                    Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalRecords">0</span> results
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <button id="prevPage" class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
-                                    <span id="currentPage" class="px-3 py-1 text-sm font-medium">1</span>
-                                    <button id="nextPage" class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Activity Log Section -->
-                    <div class="lg:col-span-1">
-                        <div class="bg-white rounded-xl card-shadow-lg fade-in border border-gray-100">
-                            <div class="p-6 border-b border-gray-200">
-                                <h2 class="text-xl font-bold text-gray-900">Activity Log</h2>
-                            </div>
-                            
-                            <div class="p-6">
-                                <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" id="activityLog">
-                                    <!-- Activity items will be loaded here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             `;
             
             // Re-initialize the dashboard functionality
             if (typeof loadDashboardStats === 'function') {
                 loadDashboardStats();
-            }
-            if (typeof loadUsers === 'function') {
-                loadUsers();
-            }
-            if (typeof loadActivityLogs === 'function') {
-                loadActivityLogs();
             }
         }
         
@@ -1034,7 +751,7 @@
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Approved Driver Badges</h2>
                     <p class="text-gray-600">Approved badges content will be implemented here.</p>
-                </div>
+        </div>
             `;
         }
         
@@ -1043,7 +760,7 @@
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Driver Badge History</h2>
                     <p class="text-gray-600">Badge history content will be implemented here.</p>
-                </div>
+    </div>
             `;
         }
         
@@ -1052,7 +769,7 @@
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Activity Log</h2>
                     <p class="text-gray-600">Activity log content will be implemented here.</p>
-                </div>
+            </div>
             `;
         }
         

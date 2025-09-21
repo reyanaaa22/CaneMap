@@ -106,6 +106,9 @@ async function loadDashboardStats() {
         document.getElementById('failedLogins').textContent = failedLogins;
         document.getElementById('driverBadges').textContent = driverBadges;
         
+        // Load analytics charts
+        await loadAnalyticsCharts();
+        
     } catch (error) {
         console.error('❌ Error loading dashboard stats:', error);
     }
@@ -579,6 +582,169 @@ function formatDate(date) {
     if (days < 7) return `${days}d ago`;
     
     return date.toLocaleDateString();
+}
+
+// Load analytics charts
+async function loadAnalyticsCharts() {
+    try {
+        // Get all users for analytics
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const allUsers = [];
+        
+        usersSnapshot.forEach((doc) => {
+            const userData = doc.data();
+            allUsers.push({
+                id: doc.id,
+                ...userData,
+                createdAt: userData.createdAt?.toDate() || new Date(),
+                lastLogin: userData.lastLogin?.toDate() || null
+            });
+        });
+        
+        // Create user growth chart
+        createUserGrowthChart(allUsers);
+        
+        // Create user role distribution chart
+        createUserRoleChart(allUsers);
+        
+    } catch (error) {
+        console.error('❌ Error loading analytics charts:', error);
+    }
+}
+
+// Create user growth chart
+function createUserGrowthChart(users) {
+    const ctx = document.getElementById('userGrowthChart');
+    if (!ctx) return;
+    
+    // Generate last 12 months data
+    const months = [];
+    const userCounts = [];
+    const now = new Date();
+    
+    for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthName = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        months.push(monthName);
+        
+        // Count users created in this month
+        const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        
+        const usersInMonth = users.filter(user => {
+            const userDate = user.createdAt;
+            return userDate >= monthStart && userDate <= monthEnd;
+        }).length;
+        
+        userCounts.push(usersInMonth);
+    }
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'New Users',
+                data: userCounts,
+                borderColor: '#7ccf00',
+                backgroundColor: 'rgba(124, 207, 0, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#7ccf00',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        stepSize: 1
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    hoverBackgroundColor: '#7ccf00'
+                }
+            }
+        }
+    });
+}
+
+// Create user role distribution chart
+function createUserRoleChart(users) {
+    const ctx = document.getElementById('userRoleChart');
+    if (!ctx) return;
+    
+    // Count users by role
+    const roleCounts = {
+        farmer: 0,
+        worker: 0,
+        sra: 0,
+        admin: 0
+    };
+    
+    users.forEach(user => {
+        const role = user.role || 'worker';
+        if (roleCounts.hasOwnProperty(role)) {
+            roleCounts[role]++;
+        }
+    });
+    
+    const labels = Object.keys(roleCounts).map(role => 
+        role.charAt(0).toUpperCase() + role.slice(1) + 's'
+    );
+    const data = Object.values(roleCounts);
+    const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#ef4444'];
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderColor: '#ffffff',
+                borderWidth: 3,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
 }
 
 // Export functions for global access
