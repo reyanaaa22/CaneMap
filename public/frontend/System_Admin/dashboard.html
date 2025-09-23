@@ -235,50 +235,23 @@
                     <i class="fas fa-chevron-down ml-auto text-white" id="users-arrow"></i>
                 </button>
                 <div class="ml-6 mt-3 space-y-1 hidden" id="users-submenu">
-                    <a href="#" onclick="showSection('all-users')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-list text-white text-sm"></i>
-                        <span>All Users</span>
-                    </a>
                     <a href="#" onclick="showSection('farmers')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-seedling text-white text-sm"></i>
                         <span>Farmers</span>
-                    </a>
-                    <a href="#" onclick="showSection('workers')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-hard-hat text-white text-sm"></i>
-                        <span>Workers</span>
                     </a>
                     <a href="#" onclick="showSection('sra-officers')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-user-tie text-white text-sm"></i>
                         <span>SRA Officers</span>
                     </a>
-                    <a href="#" onclick="showSection('admins')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-user-shield text-white text-sm"></i>
-                        <span>Admins</span>
-                    </a>
                 </div>
         </div>
         
             <!-- Driver Badge Management -->
-            <div class="space-y-1 mb-4" data-expanded="false">
-                <button onclick="toggleSubmenu('badges')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
+            <div class="space-y-1 mb-4">
+                <a href="#" onclick="showSection('badge-requests')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
                     <i class="fas fa-id-badge text-white text-sm"></i>
                     <span>Driver Badges</span>
-                    <i class="fas fa-chevron-down ml-auto text-white" id="badges-arrow"></i>
-            </button>
-                <div class="ml-6 mt-3 space-y-1 hidden" id="badges-submenu">
-                    <a href="#" onclick="showSection('badge-requests')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-clock text-white text-sm"></i>
-                        <span>Pending Requests</span>
-                    </a>
-                    <a href="#" onclick="showSection('approved-badges')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-check-circle text-white text-sm"></i>
-                        <span>Approved Badges</span>
-                    </a>
-                    <a href="#" onclick="showSection('badge-history')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-history text-white text-sm"></i>
-                        <span>Badge History</span>
-                    </a>
-        </div>
+                </a>
             </div>
             
             <!-- Security & Monitoring -->
@@ -464,7 +437,117 @@
 
     </main>
     
-
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-900">Add New User</h3>
+                    <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="addUserForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="userName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="userEmail" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                    <select id="userRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <option value="">Select Role</option>
+                        <option value="farmer">Farmer</option>
+                        <option value="worker">Worker</option>
+                        <option value="sra">SRA Officer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input type="tel" id="userPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Driver Badge</label>
+                    <select id="userBadge" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <option value="none">No Badge</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-900">Edit User</h3>
+                    <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="editUserForm" class="p-6 space-y-4">
+                <input type="hidden" id="editUserId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="editUserName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="editUserEmail" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                    <select id="editUserRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <option value="farmer">Farmer</option>
+                        <option value="worker">Worker</option>
+                        <option value="sra">SRA Officer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input type="tel" id="editUserPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select id="editUserStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Driver Badge</label>
+                    <select id="editUserBadge" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <option value="none">No Badge</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeEditUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors">Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    
     <!-- Alert Container -->
     <div id="alertContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
     
@@ -532,20 +615,11 @@
                 case 'overview':
                     showOverviewContent();
                     break;
-                case 'all-users':
-                    showAllUsersContent();
-                    break;
                 case 'farmers':
                     showFarmersContent();
                     break;
-                case 'workers':
-                    showWorkersContent();
-                    break;
                 case 'sra-officers':
                     showSRAOfficersContent();
-                    break;
-                case 'admins':
-                    showAdminsContent();
                     break;
                 case 'badge-requests':
                     showBadgeRequestsContent();
@@ -697,17 +771,192 @@
             showDashboardContent(); // For now, show dashboard content
         }
         
-        function showAllUsersContent() {
-            showDashboardContent(); // For now, show dashboard content
-        }
-        
         function showFarmersContent() {
             document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Farmers Management</h2>
-                    <p class="text-gray-600">Farmer management content will be implemented here.</p>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">Farmers Management</h2>
+                            <p class="text-gray-600 text-sm">Manage farmers and their roles</p>
+                        </div>
+                        <button onclick="openAddFarmer()" class="bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] transition-colors flex items-center space-x-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Add Farmer</span>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <span class="text-sm font-medium text-gray-700">Filter:</span>
+                        <button data-filter="all" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">All</button>
+                        <button data-filter="Field Handler" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Field Handlers</button>
+                        <button data-filter="Field Worker" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Field Workers</button>
+                        <button data-filter="Driver" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Drivers</button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="farmersTableBody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading farmers...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `;
+
+            // Attach filter handlers
+            document.querySelectorAll('.farmer-filter').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.getAttribute('data-filter');
+                    fetchAndRenderFarmers(type);
+                });
+            });
+
+            // Initial load
+            fetchAndRenderFarmers('all');
+        }
+
+        function showSRAOfficersContent() {
+            document.querySelector('main').innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">SRA Officers Management</h2>
+                            <p class="text-gray-600 text-sm">Manage SRA officers</p>
+                        </div>
+                        <button onclick="openAddSRA()" class="bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] transition-colors flex items-center space-x-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Add SRA Officer</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sraTableBody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading SRA officers...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            fetchAndRenderSRA();
+        }
+
+        // Data rendering helpers using Firestore (window.* provided by firebase-config.js)
+        async function fetchAndRenderFarmers(filterType = 'all') {
+            try {
+                const q = window.query(
+                    window.collection(window.db || db, 'users'),
+                    window.where('role', '==', 'farmer'),
+                    window.orderBy('createdAt', 'desc')
+                );
+                const snap = await window.getDocs(q);
+                const rows = [];
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    const farmerType = u.farmerType || u.subRole || u.type || 'N/A';
+                    if (filterType !== 'all' && farmerType !== filterType) return;
+                    const status = u.status || 'inactive';
+                    rows.push(`
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">${u.name || 'N/A'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${farmerType}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${u.email || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">${status}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="editUser('${doc.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-edit"></i></button>
+                                    <button onclick="deleteUser('${doc.id}')" class="text-red-600 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                });
+                document.getElementById('farmersTableBody').innerHTML = rows.length ? rows.join('') : `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No farmers found</td></tr>`;
+            } catch (e) {
+                document.getElementById('farmersTableBody').innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-red-500">Failed to load farmers</td></tr>`;
+                console.error(e);
+            }
+        }
+
+        async function fetchAndRenderSRA() {
+            try {
+                const q = window.query(
+                    window.collection(window.db || db, 'users'),
+                    window.where('role', '==', 'sra'),
+                    window.orderBy('createdAt', 'desc')
+                );
+                const snap = await window.getDocs(q);
+                const rows = [];
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    const status = u.status || 'inactive';
+                    rows.push(`
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${u.name || 'N/A'}</div></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${u.email || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">${status}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="editUser('${doc.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-edit"></i></button>
+                                    <button onclick="deleteUser('${doc.id}')" class="text-red-600 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                });
+                document.getElementById('sraTableBody').innerHTML = rows.length ? rows.join('') : `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No SRA officers found</td></tr>`;
+            } catch (e) {
+                document.getElementById('sraTableBody').innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-500">Failed to load SRA officers</td></tr>`;
+                console.error(e);
+            }
+        }
+
+        // Open preset modals
+        function openAddFarmer() {
+            if (document.getElementById('addUserModal')) {
+                openAddUserModal();
+                const roleSel = document.getElementById('userRole');
+                if (roleSel) roleSel.value = 'farmer';
+            } else {
+                showAlert('Add User modal not available', 'warning');
+            }
+        }
+        function openAddSRA() {
+            if (document.getElementById('addUserModal')) {
+                openAddUserModal();
+                const roleSel = document.getElementById('userRole');
+                if (roleSel) roleSel.value = 'sra';
+            } else {
+                showAlert('Add User modal not available', 'warning');
+            }
         }
         
         function showWorkersContent() {
@@ -715,15 +964,6 @@
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Workers Management</h2>
                     <p class="text-gray-600">Worker management content will be implemented here.</p>
-                </div>
-            `;
-        }
-        
-        function showSRAOfficersContent() {
-            document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">SRA Officers Management</h2>
-                    <p class="text-gray-600">SRA Officer management content will be implemented here.</p>
                 </div>
             `;
         }
