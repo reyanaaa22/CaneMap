@@ -82,28 +82,30 @@
         .progress-bar {
             background: linear-gradient(90deg, var(--cane-400), var(--cane-500), var(--cane-600));
         }
-    </style>
+
+.field-header {
+  text-align: left;
+}
+
+</style>
+
 </head>
 <body class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] min-h-screen">
-    <!-- Header -->
     <header class="bg-gradient-to-r from-white to-[var(--cane-50)] shadow-lg border-b-2 border-[var(--cane-200)]">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="../Common/lobby.html" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors">
-                        <i class="fas fa-arrow-left text-xl"></i>
-                    </a>
-                    <h1 class="text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">
-                        CaneMap
-                    </h1>
-                </div>
-                <div class="text-center">
-                    <h2 class="text-xl font-semibold text-[var(--cane-800)]">Field Registration</h2>
-                    <p class="text-sm text-[var(--cane-600)]">Sugarcane Field Registration Form</p>
-                </div>
-                <div class="w-20"></div> <!-- Spacer for centering -->
-            </div>
+    <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+       
+        <a href="../Common/lobby.html" class="mr-4 text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </a>
+
+        <div class="field-header flex-1 text-left">
+            <h2 class="text-xl font-semibold text-[var(--cane-800)]">Field Registration</h2>
+            <p class="text-sm text-[var(--cane-600)]">Sugarcane Field Registration Form</p>
         </div>
+
+        </div>
+    </div>
     </header>
 
     <!-- Progress Bar -->
