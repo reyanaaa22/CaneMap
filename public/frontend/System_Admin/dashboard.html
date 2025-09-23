@@ -551,7 +551,7 @@
     
     <!-- Scripts -->
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
-    <script src="../../backend/System_Admin/dashboard.js"></script>
+    <script type="module" src="../../backend/System_Admin/dashboard.js"></script>
     
     <script>
         // Initialize dashboard
@@ -1108,8 +1108,8 @@
                     sessionStorage.clear();
                 localStorage.removeItem('admin_session');
                 
-                // Redirect to login
-                    window.location.href = 'login.html';
+                // Stay on page for now (no redirect)
+                    showAlert('You have been logged out.', 'success');
                 }
         }
         

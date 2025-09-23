@@ -32,7 +32,8 @@ async function initializeDashboard() {
         // Check if user is logged in
         const adminUser = sessionStorage.getItem('admin_user');
         if (!adminUser) {
-            window.location.href = 'login.html';
+            // Temporarily disabled redirect to login during development
+            // window.location.href = 'login.html';
             return;
         }
         
@@ -754,3 +755,6 @@ window.openAddUserModal = openAddUserModal;
 window.closeAddUserModal = closeAddUserModal;
 window.openEditUserModal = openEditUserModal;
 window.closeEditUserModal = closeEditUserModal;
+
+// Export initializeDashboard to global scope for inline script
+window.initializeDashboard = initializeDashboard;
