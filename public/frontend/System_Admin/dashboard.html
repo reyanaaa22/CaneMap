@@ -243,17 +243,15 @@
                         <i class="fas fa-user-tie text-white text-sm"></i>
                         <span>SRA Officers</span>
                     </a>
+
+                    <!-- Driver Badges submenu (no dropdown) -->
+                    <a href="#" onclick="showSection('badge-requests')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
+                        <i class="fas fa-id-badge text-white text-sm"></i>
+                        <span class="ml-2">Driver Badges</span>
+                    </a>
                 </div>
         </div>
         
-            <!-- Driver Badge Management -->
-            <div class="space-y-1 mb-4">
-                <a href="#" onclick="showSection('badge-requests')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
-                    <i class="fas fa-id-badge text-white text-sm"></i>
-                    <span>Driver Badges</span>
-                </a>
-            </div>
-            
             <!-- Security & Monitoring -->
             <div class="space-y-1 mb-4" data-expanded="false">
                 <button onclick="toggleSubmenu('security')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
@@ -322,12 +320,12 @@
                     <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-lg">
                     <i class="fas fa-user-shield text-white text-sm"></i>
-                        </div>
+                </div>
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-white" id="sidebarAdminName">Admin</p>
                     <p class="text-xs text-gray-400 font-medium">Super Administrator</p>
-                    </div>
                 </div>
+                    </div>
             </div>
     </div>
 
@@ -584,6 +582,29 @@
                 submenu.style.maxHeight = '0';
                 group.setAttribute('data-expanded', 'false');
                 
+                setTimeout(() => {
+                    submenu.classList.add('hidden');
+                    arrow.classList.remove('rotated');
+                    submenu.style.maxHeight = '';
+                    submenu.style.transition = '';
+                }, 300);
+            }
+        }
+
+        function toggleInnerSubmenu(menuId) {
+            const submenu = document.getElementById(menuId + '-inner-submenu');
+            const arrow = document.getElementById(menuId + '-inner-arrow');
+            if (submenu.classList.contains('hidden')) {
+                submenu.classList.remove('hidden');
+                arrow.classList.add('rotated');
+                submenu.style.maxHeight = '0';
+                submenu.style.overflow = 'hidden';
+                submenu.style.transition = 'max-height 0.3s ease-out';
+                setTimeout(() => {
+                    submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                }, 10);
+            } else {
+                submenu.style.maxHeight = '0';
                 setTimeout(() => {
                     submenu.classList.add('hidden');
                     arrow.classList.remove('rotated');
@@ -1134,6 +1155,8 @@
                 }, 300);
             }
         }
+
+        // Sidebar profile dropdown (footer) removed - footer is static now
     </script>
 </body>
 </html>
