@@ -135,11 +135,17 @@
                 @apply hidden;
             }
         }
+        .sidebar { transition: width 0.3s ease; }
+        .main { transition: margin-left 0.3s ease; }
+        .sidebar-collapsed .sidebar { width: 4rem; }
+        .sidebar-collapsed .main { margin-left: 4rem !important; }
+        .sidebar-collapsed .sidebar nav span { display: none; }
+        .sidebar-collapsed .sidebar .sidebar-header-details { display: none; }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-[var(--cane-900)] via-[var(--cane-800)] to-[var(--cane-950)]">
     
-    <!-- Header -->
+        <!-- Header -->
     <header class="bg-gradient-to-r from-[var(--cane-800)] to-[var(--cane-700)] shadow-lg border-b border-[var(--cane-600)]">
         <div class="container mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
@@ -156,14 +162,14 @@
                             <i class="fas fa-bell text-xl"></i>
                             <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                         </button>
-            </div>
-            
+                    </div>
+                    
             <!-- Admin Profile -->
                     <div class="relative">
                         <button id="adminProfileBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
                             <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md">
                                 <i class="fas fa-user-shield text-white text-sm"></i>
-                            </div>
+                        </div>
                             <span class="font-semibold" id="adminName">Admin</span>
                             <i class="fas fa-chevron-down text-white/80 text-xs"></i>
                         </button>
@@ -174,7 +180,7 @@
                                 <div class="px-4 py-3 border-b border-gray-100">
                                     <p class="text-sm font-semibold text-gray-900" id="dropdownAdminName">System Admin</p>
                                     <p class="text-xs text-gray-600">Super Administrator</p>
-                                </div>
+                    </div>
                                 <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                     <i class="fas fa-user-cog mr-3 text-gray-500"></i>
                                     Profile Settings
@@ -185,33 +191,33 @@
                                 </a>
                                 <div class="border-t border-gray-100 mt-2">
                                     <a href="#" onclick="logout()" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                                        <i class="fas fa-sign-out-alt mr-3"></i>
-                                        Logout
+                <i class="fas fa-sign-out-alt mr-3"></i>
+                Logout
                                     </a>
-                                </div>
+                </div>
+            </div>
+                            </div>
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
-        </div>
-    </header>
-
+        </header>
+        
     <!-- Sidebar -->
-    <div class="fixed left-0 top-0 h-full w-64 bg-gray-900 shadow-lg z-40">
+    <div class="fixed left-0 top-0 h-full w-64 bg-gray-900 shadow-lg z-40 sidebar">
         <!-- Sidebar Header -->
         <div class="p-6 border-b border-gray-700 bg-gray-800/50">
             <div class="flex items-center space-x-3">
                 <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-xl flex items-center justify-center shadow-lg">
                     <i class="fas fa-shield-alt text-white text-lg"></i>
                     </div>
-                    <div>
+                    <div class="sidebar-header-details">
                     <h2 class="text-lg font-bold text-white">System Admin</h2>
                     <p class="text-xs text-gray-400 font-medium">Control Panel</p>
                     </div>
                 </div>
             </div>
-            
+                    
         <!-- Sidebar Navigation -->
         <nav class="p-4 space-y-3 overflow-y-auto custom-scrollbar" style="height: calc(100vh - 200px);">
             <!-- Dashboard -->
@@ -224,8 +230,8 @@
                     <a href="#" onclick="showSection('overview')" class="text-white font-normal text-sm px-0 py-1 hover:text-white hover:bg-transparent transition-all duration-300 cursor-pointer">
                         <span>Overview</span>
                     </a>
-                </div>
-            </div>
+                            </div>
+                            </div>
             
             <!-- User Management -->
             <div class="space-y-1 mb-4" data-expanded="false">
@@ -249,9 +255,9 @@
                         <i class="fas fa-id-badge text-white text-sm"></i>
                         <span class="ml-2">Driver Badges</span>
                     </a>
-                </div>
-        </div>
-        
+                        </div>
+                    </div>
+                    
             <!-- Security & Monitoring -->
             <div class="space-y-1 mb-4" data-expanded="false">
                 <button onclick="toggleSubmenu('security')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
@@ -272,39 +278,16 @@
                         <i class="fas fa-cog text-white text-sm"></i>
                         <span>Security Settings</span>
                     </a>
-                </div>
-                </div>
+                            </div>
+                            </div>
                 
-            <!-- System Management -->
-            <div class="space-y-1 mb-4" data-expanded="false">
-                <button onclick="toggleSubmenu('system')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
-                    <i class="fas fa-cogs text-white text-sm"></i>
-                    <span>System</span>
-                    <i class="fas fa-chevron-down ml-auto text-white" id="system-arrow"></i>
-                        </button>
-                <div class="ml-6 mt-3 space-y-1 hidden" id="system-submenu">
-                    <a href="#" onclick="showSection('system-settings')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-sliders-h text-white text-sm"></i>
-                        <span>System Settings</span>
-                    </a>
-                    <a href="#" onclick="showSection('backup-restore')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-database text-white text-sm"></i>
-                        <span>Backup & Restore</span>
-                    </a>
-                    <a href="#" onclick="showSection('system-logs')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-file-alt text-white text-sm"></i>
-                        <span>System Logs</span>
-                    </a>
-                </div>
-                    </div>
-                    
             <!-- Reports -->
             <div class="space-y-1 mb-4">
                 <a href="#" onclick="showSection('reports')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group" id="nav-reports">
                     <i class="fas fa-chart-bar text-white text-sm"></i>
                     <span>Reports</span>
                 </a>
-            </div>
+                    </div>
             
             <!-- Settings -->
             <div class="space-y-1 mb-4">
@@ -312,7 +295,15 @@
                     <i class="fas fa-cog text-white text-sm"></i>
                     <span>Settings</span>
                 </a>
-            </div>
+                </div>
+                
+            <!-- Help & Support -->
+            <div class="space-y-1 mb-4">
+                <a href="#" onclick="showSection('help')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group" id="nav-help">
+                    <i class="fas fa-life-ring text-white text-sm"></i>
+                    <span>Help & Support</span>
+                </a>
+                    </div>
         </nav>
         
         <!-- Sidebar Footer -->
@@ -324,19 +315,19 @@
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-white" id="sidebarAdminName">Admin</p>
                     <p class="text-xs text-gray-400 font-medium">Super Administrator</p>
-                </div>
-                    </div>
             </div>
-    </div>
-
+                </div>
+                </div>
+                        </div>
+                        
     <!-- Main Content -->
-    <main class="ml-64 px-8 py-8 bg-gray-100 min-h-screen">
+    <main class="ml-64 px-8 py-8 bg-gray-100 min-h-screen main">
         
         <!-- Dashboard Title -->
         <div class="mb-8">
             <h1 class="text-4xl font-bold text-gray-800">Dashboard</h1>
-        </div>
-        
+                        </div>
+                        
         <!-- Dashboard Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Total Users -->
@@ -345,41 +336,41 @@
                             <div>
                         <p class="text-sm font-medium text-gray-600">Total Users</p>
                         <p class="text-3xl font-bold text-gray-900" id="totalUsers">0</p>
-                            </div>
+                        </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                         <i class="fas fa-users text-blue-600 text-xl"></i>
-                            </div>
                         </div>
+                    </div>
                 <div class="mt-4 flex items-center text-sm">
                     <span class="text-green-600 font-medium">+12%</span>
                     <span class="text-gray-500 ml-2">from last month</span>
-                        </div>
                     </div>
-                    
+                </div>
+                
             <!-- Active Users -->
             <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
                         <div class="flex items-center justify-between">
                             <div>
                         <p class="text-sm font-medium text-gray-600">Active Users</p>
                         <p class="text-3xl font-bold text-gray-900" id="activeUsers">0</p>
-                            </div>
+                    </div>
                     <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                         <i class="fas fa-user-check text-green-600 text-xl"></i>
-                            </div>
-                        </div>
+                </div>
+            </div>
                 <div class="mt-4 flex items-center text-sm">
                     <span class="text-green-600 font-medium">+8%</span>
                     <span class="text-gray-500 ml-2">from last month</span>
-                        </div>
                     </div>
-                    
+                </div>
+                
             <!-- Failed Logins -->
             <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
                         <div class="flex items-center justify-between">
                             <div>
                         <p class="text-sm font-medium text-gray-600">Failed Logins</p>
                         <p class="text-3xl font-bold text-gray-900" id="failedLogins">0</p>
-                            </div>
+                    </div>
                     <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                         <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                             </div>
@@ -387,12 +378,12 @@
                 <div class="mt-4 flex items-center text-sm">
                     <span class="text-red-600 font-medium">+3</span>
                     <span class="text-gray-500 ml-2">today</span>
-                        </div>
-                    </div>
-                    
+                </div>
+            </div>
+            
             <!-- Driver Badges -->
             <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
-                        <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between">
                             <div>
                         <p class="text-sm font-medium text-gray-600">Driver Badges</p>
                         <p class="text-3xl font-bold text-gray-900" id="driverBadges">0</p>
@@ -404,10 +395,10 @@
                 <div class="mt-4 flex items-center text-sm">
                     <span class="text-green-600 font-medium">+5</span>
                     <span class="text-gray-500 ml-2">this week</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
+                    
         <!-- Analytics Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <!-- User Growth Chart -->
@@ -415,23 +406,23 @@
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
                     <p class="text-sm text-gray-600">Monthly user registration trends</p>
-                    </div>
+                            </div>
                 <div class="p-6">
                     <canvas id="userGrowthChart" width="400" height="200"></canvas>
-                </div>
-            </div>
+                            </div>
+                            </div>
             
             <!-- User Role Distribution Chart -->
             <div class="bg-white rounded-xl shadow-lg fade-in">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
                     <p class="text-sm text-gray-600">Current user roles breakdown</p>
-                </div>
+                        </div>
                 <div class="p-6">
                     <canvas id="userRoleChart" width="400" height="200"></canvas>
+                    </div>
                 </div>
             </div>
-        </div>
 
     </main>
     
@@ -443,7 +434,7 @@
                     <h3 class="text-lg font-bold text-gray-900">Add New User</h3>
                     <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times"></i>
-                    </button>
+                </button>
                 </div>
             </div>
             
@@ -494,7 +485,7 @@
                     <h3 class="text-lg font-bold text-gray-900">Edit User</h3>
                     <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times"></i>
-                    </button>
+                </button>
                 </div>
             </div>
             
@@ -675,6 +666,9 @@
                 case 'settings':
                     showSettingsContent();
                     break;
+                case 'help':
+                    showHelpContent();
+                    break;
                 default:
                     showDashboardContent();
             }
@@ -793,95 +787,28 @@
         }
         
         function showFarmersContent() {
-            document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-900">Farmers Management</h2>
-                            <p class="text-gray-600 text-sm">Manage farmers and their roles</p>
-                        </div>
-                        <button onclick="openAddFarmer()" class="bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] transition-colors flex items-center space-x-2">
-                            <i class="fas fa-plus"></i>
-                            <span>Add Farmer</span>
-                        </button>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-3 mb-4">
-                        <span class="text-sm font-medium text-gray-700">Filter:</span>
-                        <button data-filter="all" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">All</button>
-                        <button data-filter="Field Handler" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Field Handlers</button>
-                        <button data-filter="Field Worker" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Field Workers</button>
-                        <button data-filter="Driver" class="farmer-filter px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">Drivers</button>
-                    </div>
-
-                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="farmersTableBody" class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading farmers...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
-            // Attach filter handlers
-            document.querySelectorAll('.farmer-filter').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const type = btn.getAttribute('data-filter');
-                    fetchAndRenderFarmers(type);
+            fetch('partials/farmers.html')
+                .then(r => r.text())
+                .then(html => {
+                    document.querySelector('main').innerHTML = html;
+                    // Attach filter handlers
+                    document.querySelectorAll('.farmer-filter').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const type = btn.getAttribute('data-filter');
+                            fetchAndRenderFarmers(type);
                 });
             });
-
-            // Initial load
-            fetchAndRenderFarmers('all');
-        }
-
-        function showSRAOfficersContent() {
-            document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-900">SRA Officers Management</h2>
-                            <p class="text-gray-600 text-sm">Manage SRA officers</p>
-                        </div>
-                        <button onclick="openAddSRA()" class="bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] transition-colors flex items-center space-x-2">
-                            <i class="fas fa-plus"></i>
-                            <span>Add SRA Officer</span>
-                        </button>
-                    </div>
-
-                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sraTableBody" class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading SRA officers...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
-            fetchAndRenderSRA();
+                    // Page size handler
+                    const pageSizeSel = document.getElementById('farmersPageSize');
+                    if (pageSizeSel) {
+                        pageSizeSel.addEventListener('change', () => fetchAndRenderFarmers());
+                    }
+                    // Initial load
+                    fetchAndRenderFarmers('all');
+                })
+                .catch(() => {
+                    document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
+                });
         }
 
         // Data rendering helpers using Firestore (window.* provided by firebase-config.js)
@@ -893,36 +820,76 @@
                     window.orderBy('createdAt', 'desc')
                 );
                 const snap = await window.getDocs(q);
-                const rows = [];
+                const allRows = [];
                 snap.forEach(doc => {
                     const u = doc.data();
                     const farmerType = u.farmerType || u.subRole || u.type || 'N/A';
                     if (filterType !== 'all' && farmerType !== filterType) return;
                     const status = u.status || 'inactive';
-                    rows.push(`
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">${u.name || 'N/A'}</div>
+                    allRows.push({ id: doc.id, html: `
+                        <tr class=\"hover:bg-gray-50\">
+                            <td class=\"px-6 py-4 whitespace-nowrap\">
+                                <div class=\"text-sm font-medium text-gray-900\">${u.name || 'N/A'}</div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${farmerType}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${u.email || 'N/A'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">${status}</span>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${farmerType}</td>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${u.email || 'N/A'}</td>
+                            <td class=\"px-6 py-4 whitespace-nowrap\">
+                                <span class=\"px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}\">${status}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div class="flex items-center space-x-2">
-                                    <button onclick="editUser('${doc.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-edit"></i></button>
-                                    <button onclick="deleteUser('${doc.id}')" class="text-red-600 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm font-medium\">
+                                <div class=\"flex items-center space-x-2\">
+                                    <button onclick=\"editUser('${doc.id}')\" class=\"text-[var(--cane-600)] hover:text-[var(--cane-700)]\"><i class=\"fas fa-edit\"></i></button>
+                                    <button onclick=\"deleteUser('${doc.id}')\" class=\"text-red-600 hover:text-red-700\"><i class=\"fas fa-trash\"></i></button>
                                 </div>
                             </td>
                         </tr>
-                    `);
+                    `});
                 });
-                document.getElementById('farmersTableBody').innerHTML = rows.length ? rows.join('') : `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No farmers found</td></tr>`;
+
+                const tableBody = document.getElementById('farmersTableBody');
+                const total = allRows.length;
+                const pageSizeEl = document.getElementById('farmersPageSize');
+                const pageSize = pageSizeEl ? parseInt(pageSizeEl.value || '10', 10) : 10;
+                const slice = allRows.slice(0, pageSize);
+
+                if (slice.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-gray-500\">No farmers found</div></td></tr>`;
+                } else {
+                    tableBody.innerHTML = slice.map(r => r.html).join('');
+                }
+
+                // Update counts
+                const start = total === 0 ? 0 : 1;
+                const end = Math.min(pageSize, total);
+                const totalEl = document.getElementById('farmersTotal');
+                const startEl = document.getElementById('farmersShowingStart');
+                const endEl = document.getElementById('farmersShowingEnd');
+                if (totalEl && startEl && endEl) {
+                    totalEl.textContent = String(total);
+                    startEl.textContent = String(start);
+                    endEl.textContent = String(end);
+                }
             } catch (e) {
-                document.getElementById('farmersTableBody').innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-red-500">Failed to load farmers</td></tr>`;
+                const tableBody = document.getElementById('farmersTableBody');
+                if (tableBody) tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-red-500\">Failed to load farmers</div></td></tr>`;
                 console.error(e);
             }
+        }
+
+        function showSRAOfficersContent() {
+            fetch('partials/sra_officers.html')
+                .then(r => r.text())
+                .then(html => {
+                    document.querySelector('main').innerHTML = html;
+                    const pageSizeSel = document.getElementById('sraPageSize');
+                    if (pageSizeSel) {
+                        pageSizeSel.addEventListener('change', () => fetchAndRenderSRA());
+                    }
+                    fetchAndRenderSRA();
+                })
+                .catch(() => {
+                    document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
+                });
         }
 
         async function fetchAndRenderSRA() {
@@ -933,29 +900,53 @@
                     window.orderBy('createdAt', 'desc')
                 );
                 const snap = await window.getDocs(q);
-                const rows = [];
+                const allRows = [];
                 snap.forEach(doc => {
                     const u = doc.data();
                     const status = u.status || 'inactive';
-                    rows.push(`
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${u.name || 'N/A'}</div></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${u.email || 'N/A'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">${status}</span>
+                    allRows.push({ id: doc.id, html: `
+                        <tr class=\"hover:bg-gray-50\">
+                            <td class=\"px-6 py-4 whitespace-nowrap\"><div class=\"text-sm font-medium text-gray-900\">${u.name || 'N/A'}</div></td>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${u.email || 'N/A'}</td>
+                            <td class=\"px-6 py-4 whitespace-nowrap\">
+                                <span class=\"px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}\">${status}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div class="flex items-center space-x-2">
-                                    <button onclick="editUser('${doc.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"><i class="fas fa-edit"></i></button>
-                                    <button onclick="deleteUser('${doc.id}')" class="text-red-600 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm font-medium\">
+                                <div class=\"flex items-center space-x-2\">
+                                    <button onclick=\"editUser('${doc.id}')\" class=\"text-[var(--cane-600)] hover:text-[var(--cane-700)]\"><i class=\"fas fa-edit\"></i></button>
+                                    <button onclick=\"deleteUser('${doc.id}')\" class=\"text-red-600 hover:text-red-700\"><i class=\"fas fa-trash\"></i></button>
                                 </div>
                             </td>
                         </tr>
-                    `);
+                    `});
                 });
-                document.getElementById('sraTableBody').innerHTML = rows.length ? rows.join('') : `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No SRA officers found</td></tr>`;
+
+                const tableBody = document.getElementById('sraTableBody');
+                const total = allRows.length;
+                const pageSizeEl = document.getElementById('sraPageSize');
+                const pageSize = pageSizeEl ? parseInt(pageSizeEl.value || '10', 10) : 10;
+                const slice = allRows.slice(0, pageSize);
+
+                if (slice.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan=\"4\" class=\"px-6 py-10\"><div class=\"text-center text-gray-500\">No SRA officers found</div></td></tr>`;
+                } else {
+                    tableBody.innerHTML = slice.map(r => r.html).join('');
+                }
+
+                // Update counts
+                const start = total === 0 ? 0 : 1;
+                const end = Math.min(pageSize, total);
+                const totalEl = document.getElementById('sraTotal');
+                const startEl = document.getElementById('sraShowingStart');
+                const endEl = document.getElementById('sraShowingEnd');
+                if (totalEl && startEl && endEl) {
+                    totalEl.textContent = String(total);
+                    startEl.textContent = String(start);
+                    endEl.textContent = String(end);
+                }
             } catch (e) {
-                document.getElementById('sraTableBody').innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-500">Failed to load SRA officers</td></tr>`;
+                const tableBody = document.getElementById('sraTableBody');
+                if (tableBody) tableBody.innerHTML = `<tr><td colspan=\"4\" class=\"px-6 py-10\"><div class=\"text-center text-red-500\">Failed to load SRA officers</div></td></tr>`;
                 console.error(e);
             }
         }
@@ -999,13 +990,88 @@
         }
         
         function showBadgeRequestsContent() {
-            document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Driver Badge Requests</h2>
-                    <p class="text-gray-600">Badge requests content will be implemented here.</p>
-                </div>
-            `;
+            fetch('partials/badge_requests.html')
+                .then(r => r.text())
+                .then(html => {
+                    document.querySelector('main').innerHTML = html;
+                    document.querySelectorAll('.badge-filter').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const status = btn.getAttribute('data-status');
+                            fetchAndRenderBadgeRequests(status);
+                        });
+                    });
+                    const pageSizeSel = document.getElementById('badgePageSize');
+                    if (pageSizeSel) pageSizeSel.addEventListener('change', () => fetchAndRenderBadgeRequests());
+                    fetchAndRenderBadgeRequests('all');
+                })
+                .catch(() => {
+                    document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
+                });
         }
+
+        async function fetchAndRenderBadgeRequests(filterStatus = 'all') {
+            try {
+                const q = window.query(
+                    window.collection(window.db || db, 'driver_badge_requests'),
+                    window.orderBy('createdAt', 'desc')
+                );
+                const snap = await window.getDocs(q);
+                const allRows = [];
+                snap.forEach(doc => {
+                    const r = doc.data();
+                    const status = r.status || 'pending';
+                    if (filterStatus !== 'all' && status !== filterStatus) return;
+                    const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt || new Date());
+                    const dateStr = new Date(created).toLocaleDateString();
+                    allRows.push({ id: doc.id, html: `
+                        <tr class=\"hover:bg-gray-50\">
+                            <td class=\"px-6 py-4 whitespace-nowrap\"><div class=\"text-sm font-medium text-gray-900\">${r.name || 'N/A'}</div></td>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${r.licenseNo || 'N/A'}</td>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${dateStr}</td>
+                            <td class=\"px-6 py-4 whitespace-nowrap\"><span class=\"px-2 py-1 text-xs font-semibold rounded-full ${status === 'approved' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}\">${status}</span></td>
+                            <td class=\"px-6 py-4 whitespace-nowrap text-sm font-medium\">
+                                <div class=\"flex items-center space-x-2\">
+                                    <button onclick=\"viewBadgeDetails('${doc.id}')\" class=\"text-blue-600 hover:text-blue-700\" title=\"View Details\"><i class=\"fas fa-eye\"></i></button>
+                                    <button onclick=\"approveBadgeRequest('${doc.id}')\" class=\"text-green-600 hover:text-green-700\" title=\"Approve\"><i class=\"fas fa-check\"></i></button>
+                                    <button onclick=\"rejectBadgeRequest('${doc.id}')\" class=\"text-red-600 hover:text-red-700\" title=\"Reject\"><i class=\"fas fa-times\"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `});
+                });
+
+                const tableBody = document.getElementById('badgeRequestsTableBody');
+                const total = allRows.length;
+                const pageSizeEl = document.getElementById('badgePageSize');
+                const pageSize = pageSizeEl ? parseInt(pageSizeEl.value || '10', 10) : 10;
+                const slice = allRows.slice(0, pageSize);
+
+                if (slice.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-gray-500\">No requests found</div></td></tr>`;
+                } else {
+                    tableBody.innerHTML = slice.map(r => r.html).join('');
+                }
+
+                const start = total === 0 ? 0 : 1;
+                const end = Math.min(pageSize, total);
+                const totalEl = document.getElementById('badgeTotal');
+                const startEl = document.getElementById('badgeShowingStart');
+                const endEl = document.getElementById('badgeShowingEnd');
+                if (totalEl && startEl && endEl) {
+                    totalEl.textContent = String(total);
+                    startEl.textContent = String(start);
+                    endEl.textContent = String(end);
+                }
+            } catch (e) {
+                const tableBody = document.getElementById('badgeRequestsTableBody');
+                if (tableBody) tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-red-500\">Failed to load requests</div></td></tr>`;
+                console.error(e);
+            }
+        }
+
+        // Placeholder action handlers
+        window.approveBadgeRequest = async function (id) { showAlert('Approved request '+id); }
+        window.rejectBadgeRequest = async function (id) { showAlert('Rejected request '+id, 'warning'); }
         
         function showApprovedBadgesContent() {
             document.querySelector('main').innerHTML = `
@@ -1097,6 +1163,25 @@
             `;
         }
 
+        function showHelpContent() {
+            document.querySelector('main').innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Help & Support</h2>
+                    <p class="text-gray-600">If you need assistance, please contact the system administrator or email <a href="mailto:support@canemap.example" class="text-[var(--cane-600)] font-medium">support@canemap.example</a>.</p>
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 rounded-lg border border-gray-200">
+                            <h3 class="font-semibold text-gray-900 mb-2">Documentation</h3>
+                            <p class="text-gray-600 text-sm">User guides and FAQs coming soon.</p>
+                        </div>
+                        <div class="p-4 rounded-lg border border-gray-200">
+                            <h3 class="font-semibold text-gray-900 mb-2">Report an Issue</h3>
+                            <p class="text-gray-600 text-sm">Describe your issue and steps to reproduce; include screenshots if possible.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         // Utility functions
         function goBack() {
             window.history.back();
@@ -1155,6 +1240,33 @@
                 }, 300);
             }
         }
+
+        async function viewBadgeDetails(id) {
+            try {
+                window._currentBadgeId = id;
+                const ref = window.doc(window.db || db, 'driver_badge_requests', id);
+                const d = await window.getDoc(ref);
+                if (!d.exists()) return;
+                const r = d.data();
+                const dateStr = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
+                document.getElementById('bd_name').textContent = r.name || '-';
+                document.getElementById('bd_email').textContent = r.email || '-';
+                document.getElementById('bd_phone').textContent = r.phone || '-';
+                document.getElementById('bd_license').textContent = r.licenseNo || '-';
+                document.getElementById('bd_submitted').textContent = dateStr;
+                document.getElementById('bd_status').textContent = r.status || 'pending';
+                document.getElementById('bd_address').textContent = r.address || '-';
+                document.getElementById('bd_notes').textContent = r.notes || '-';
+                const modal = document.getElementById('badgeDetailsModal');
+                if (modal) modal.classList.remove('hidden');
+            } catch (e) { console.error(e); }
+        }
+        function closeBadgeDetails() {
+            const modal = document.getElementById('badgeDetailsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+        window.viewBadgeDetails = viewBadgeDetails;
+        window.closeBadgeDetails = closeBadgeDetails;
 
         // Sidebar profile dropdown (footer) removed - footer is static now
     </script>
