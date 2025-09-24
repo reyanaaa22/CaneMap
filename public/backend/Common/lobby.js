@@ -331,6 +331,54 @@
                     }
                 }
             } catch(_) {}
+
+            // Logout confirmation modal wiring
+            try {
+                const logoutTrigger = document.getElementById('logoutLink');
+                const modal = document.getElementById('logoutModal');
+                const dialog = document.getElementById('logoutDialog');
+                const btnYes = document.getElementById('logoutConfirm');
+                const btnNo = document.getElementById('logoutCancel');
+                function openLogout(){
+                    if (!modal || !dialog) return;
+                    modal.classList.remove('opacity-0', 'invisible');
+                    modal.classList.add('opacity-100', 'visible');
+                    dialog.classList.remove('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                    dialog.classList.add('translate-y-0', 'scale-100', 'opacity-100');
+                }
+                function closeLogout(){
+                    if (!modal || !dialog) return;
+                    modal.classList.add('opacity-0', 'invisible');
+                    modal.classList.remove('opacity-100', 'visible');
+                    dialog.classList.add('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                    dialog.classList.remove('translate-y-0', 'scale-100', 'opacity-100');
+                }
+                if (logoutTrigger) {
+                    logoutTrigger.addEventListener('click', function(e){ e.preventDefault(); openLogout(); });
+                }
+                if (modal) {
+                    modal.addEventListener('click', function(e){ if (e.target === modal) closeLogout(); });
+                }
+                document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeLogout(); });
+                if (btnNo) btnNo.addEventListener('click', function(){ closeLogout(); });
+                if (btnYes) btnYes.addEventListener('click', async function(){
+                    try {
+                        if (window.signOut && window.auth) {
+                            await window.signOut(window.auth);
+                        }
+                    } catch (err) {
+                        console.error('Error during sign out:', err);
+                    } finally {
+                        // Clean up local data regardless, then redirect
+                        try {
+                            localStorage.removeItem('userId');
+                            localStorage.removeItem('userRole');
+                            localStorage.removeItem('farmerName');
+                        } catch(_) {}
+                        window.location.href = '../Common/farmers_login.html';
+                    }
+                });
+            } catch(_) {}
         });
 
         // Initialize Swiper with enhanced functionality

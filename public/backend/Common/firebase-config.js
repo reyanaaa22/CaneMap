@@ -1,6 +1,6 @@
 // Firebase SDK imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getAuth, signOut } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { getFirestore, collection, doc, setDoc, getDocs, getDoc, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 // Firebase configuration
@@ -19,6 +19,15 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Expose commonly used auth helpers for non-module scripts
+// This allows classic scripts (e.g., lobby.js) to call signOut(auth)
+// without needing to import modules directly.
+// Intentionally minimal global exposure.
+// eslint-disable-next-line no-undef
+window.auth = auth;
+// eslint-disable-next-line no-undef
+window.signOut = signOut;
 
 window.collection = collection;
 window.doc = doc;
