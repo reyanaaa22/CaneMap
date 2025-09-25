@@ -351,6 +351,15 @@ function setupEventListeners() {
     
     // Edit user form
     document.getElementById('editUserForm').addEventListener('submit', handleEditUser);
+    
+    // Delegate Change PIN form submission (content injected in HTML)
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (form && form.id === 'changePinForm') {
+            e.preventDefault();
+            handleChangePin(form);
+        }
+    });
 }
 
 // Filter users
@@ -426,16 +435,28 @@ async function handleAddUser(e) {
             name: document.getElementById('userName').value,
             email: document.getElementById('userEmail').value,
             role: document.getElementById('userRole').value,
-            phone: document.getElementById('userPhone').value,
-            driverBadge: document.getElementById('userBadge').value,
-            status: 'active',
+            // phone and driverBadge removed from form
+            status: (document.querySelector('input[name="userStatus"]:checked')?.value || 'active'),
             createdAt: serverTimestamp(),
             lastLogin: null,
             loginCount: 0,
-            failedAttempts: 0
+            failedAttempts: 0,
+            forcePasswordChange: document.getElementById('userForceChange')?.checked === true
         };
         
         await addDoc(collection(db, 'users'), userData);
+        // Store temp password separately (optional - could be emailed). For demo, save to a subcollection
+        const tempPass = document.getElementById('userTempPassword')?.value || '';
+        if (tempPass) {
+            try {
+                await addDoc(collection(db, 'temp_passwords'), {
+                    email: userData.email,
+                    tempPassword: tempPass,
+                    role: userData.role,
+                    createdAt: serverTimestamp(),
+                });
+            } catch(_) {}
+        }
         
         showAlert('User added successfully', 'success');
         closeAddUserModal();
@@ -758,3 +779,34 @@ window.closeEditUserModal = closeEditUserModal;
 
 // Export initializeDashboard to global scope for inline script
 window.initializeDashboard = initializeDashboard;
+
+// Handle Change PIN
+async function handleChangePin(form){
+    try{
+        const currentPin = (new FormData(form).get('currentPin')||'').trim();
+        const newPin = (new FormData(form).get('newPin')||'').trim();
+        const confirmPin = (new FormData(form).get('confirmPin')||'').trim();
+        if (!/^\d{6}$/.test(currentPin) || !/^\d{6}$/.test(newPin)){
+            showAlert('PIN must be 6 digits','error');
+            return;
+        }
+        if (newPin !== confirmPin){
+            showAlert('New PIN and confirmation do not match','error');
+            return;
+        }
+        // Verify current pin
+        const qOld = query(collection(db,'admin_pins'), where('pin','==', currentPin), limit(1));
+        const snapOld = await getDocs(qOld);
+        if (snapOld.empty){
+            showAlert('Current PIN is incorrect','error');
+            return;
+        }
+        const docRef = snapOld.docs[0].ref;
+        await updateDoc(docRef, { pin: newPin, updatedAt: serverTimestamp() });
+        showAlert('PIN updated successfully','success');
+        form.reset();
+    }catch(e){
+        console.error('Change PIN failed', e);
+        showAlert('Failed to update PIN','error');
+    }
+}

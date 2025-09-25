@@ -98,18 +98,18 @@
             background: rgba(255, 255, 255, 0.5);
         }
         
-        /* Status badges */
-        .status-active { @apply bg-green-100 text-green-800 border border-green-200; }
-        .status-inactive { @apply bg-red-100 text-red-800 border border-red-200; }
-        .status-pending { @apply bg-yellow-100 text-yellow-800 border border-yellow-200; }
-        .status-badge { @apply bg-blue-100 text-blue-800 border border-blue-200; }
-        .status-no-badge { @apply bg-gray-100 text-gray-800 border border-gray-200; }
+        /* Status badges (no Tailwind @apply in inline CSS) */
+        .status-active { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .status-inactive { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .status-pending { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+        .status-badge { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .status-no-badge { background-color: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb; }
         
         /* Role badges */
-        .role-farmer { @apply bg-green-100 text-green-800; }
-        .role-worker { @apply bg-blue-100 text-blue-800; }
-        .role-sra { @apply bg-purple-100 text-purple-800; }
-        .role-admin { @apply bg-red-100 text-red-800; }
+        .role-farmer { background-color: #dcfce7; color: #166534; }
+        .role-worker { background-color: #dbeafe; color: #1e40af; }
+        .role-sra { background-color: #f3e8ff; color: #6b21a8; }
+        .role-admin { background-color: #fee2e2; color: #991b1b; }
         
         /* Chevron arrow animations */
         .fa-chevron-down {
@@ -131,9 +131,7 @@
         
         /* Mobile responsive */
         @media (max-width: 768px) {
-            .sidebar-mobile-hidden {
-                @apply hidden;
-            }
+            .sidebar-mobile-hidden { display: none; }
         }
         .sidebar { transition: width 0.3s ease; }
         .main { transition: margin-left 0.3s ease; }
@@ -457,17 +455,33 @@
                         <option value="admin">Admin</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                    <input type="tel" id="userPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                
+                <div id="tempPasswordRow">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Temporary Password</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="userTempPassword" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" placeholder="Auto-generated on click">
+                        <button type="button" id="genUserTempPassword" class="px-3 py-2 rounded-lg bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)]">Auto-generate 🔄</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">On first login, the officer will change this password.</p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Driver Badge</label>
-                    <select id="userBadge" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="none">No Badge</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                    </select>
+                <div id="statusRow">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <div class="flex items-center gap-5">
+                        <label class="inline-flex items-center gap-2">
+                            <input type="radio" name="userStatus" value="active" checked>
+                            <span>Active ⬤</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="radio" name="userStatus" value="inactive">
+                            <span>Inactive ○</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="forceChangeRow" class="pt-1">
+                    <label class="inline-flex items-start gap-2">
+                        <input id="userForceChange" type="checkbox" class="mt-1" checked>
+                        <span class="text-sm text-gray-700">Force password change on first login</span>
+                    </label>
                 </div>
                 <div class="flex items-center justify-end space-x-3 pt-4">
                     <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
@@ -543,12 +557,14 @@
     <!-- Scripts -->
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
     <script type="module" src="../../backend/System_Admin/dashboard.js"></script>
+    <script type="module" src="../../backend/System_Admin/add_user_modals.js"></script>
     
     <script>
         // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeDashboard();
-        });
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeDashboard();
+                if (window.wireAddUserModal) window.wireAddUserModal();
+            });
         
         // Enhanced Sidebar functions
         function toggleSubmenu(menuId) {
@@ -949,24 +965,8 @@
         }
 
         // Open preset modals
-        function openAddFarmer() {
-            if (document.getElementById('addUserModal')) {
-                openAddUserModal();
-                const roleSel = document.getElementById('userRole');
-                if (roleSel) roleSel.value = 'farmer';
-            } else {
-                showAlert('Add User modal not available', 'warning');
-            }
-        }
-        function openAddSRA() {
-            if (document.getElementById('addUserModal')) {
-                openAddUserModal();
-                const roleSel = document.getElementById('userRole');
-                if (roleSel) roleSel.value = 'sra';
-            } else {
-                showAlert('Add User modal not available', 'warning');
-            }
-        }
+        function openAddFarmer(){ if (window.openAddFarmerModal) window.openAddFarmerModal(); }
+        function openAddSRA(){ if (window.openAddSRAModal) window.openAddSRAModal(); }
         
         function showWorkersContent() {
             document.querySelector('main').innerHTML = `
@@ -1117,9 +1117,33 @@
         
         function showSystemSettingsContent() {
             document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="bg-white rounded-xl shadow-lg p-8 max-w-2xl">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">System Settings</h2>
-                    <p class="text-gray-600">System settings content will be implemented here.</p>
+                    <div class="space-y-8">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3">Change Admin PIN</h3>
+                            <p class="text-sm text-gray-500 mb-4">Update the PIN used to access the System Admin panel. PIN must be 6 digits.</p>
+                            <form id="changePinForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Current PIN</label>
+                                    <input type="password" name="currentPin" maxlength="6" inputmode="numeric" pattern="\\d{6}" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">New PIN</label>
+                                        <input type="password" name="newPin" maxlength="6" inputmode="numeric" pattern="\\d{6}" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New PIN</label>
+                                        <input type="password" name="confirmPin" maxlength="6" inputmode="numeric" pattern="\\d{6}" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                                    </div>
+                                </div>
+                                <div class="pt-2">
+                                    <button type="submit" class="px-5 py-2.5 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg">Update PIN</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             `;
         }

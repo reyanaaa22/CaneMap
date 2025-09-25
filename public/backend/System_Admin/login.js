@@ -256,8 +256,30 @@ class AdminAuth {
     }
     
     static async getAdminCredentials(pinCode) {
-        // In production, this would fetch from a secure database
-        // For demo purposes, using hardcoded admin PIN codes
+        // Try Firestore-based PINs first
+        try {
+            const qPins = query(
+                collection(db, 'admin_pins'),
+                where('pin', '==', pinCode),
+                limit(1)
+            );
+            const snap = await getDocs(qPins);
+            if (!snap.empty) {
+                const d = snap.docs[0].data();
+                return {
+                    uid: d.uid || ('admin_' + snap.docs[0].id),
+                    email: d.email || 'admin@canemap.com',
+                    pin: d.pin,
+                    role: d.role || 'system_admin',
+                    permissions: Array.isArray(d.permissions) ? d.permissions : ['admin_access'],
+                    name: d.name || 'System Administrator'
+                };
+            }
+        } catch (err) {
+            console.error('Error reading admin_pins:', err);
+        }
+
+        // Fallback to hardcoded admin PIN codes
         const adminPins = {
             '123456': {
                 uid: 'admin_001',
@@ -292,8 +314,34 @@ class AdminAuth {
                 name: 'Demo Administrator'
             }
         };
-        
         return adminPins[pinCode] || null;
+    }
+
+    static async ensureDefaultAdminPin() {
+        try {
+            // Seed default PIN 123456 if not present
+            const defaultPin = '123456';
+            const qPins = query(
+                collection(db, 'admin_pins'),
+                where('pin', '==', defaultPin),
+                limit(1)
+            );
+            const snap = await getDocs(qPins);
+            if (snap.empty) {
+                await addDoc(collection(db, 'admin_pins'), {
+                    pin: defaultPin,
+                    name: 'System Administrator',
+                    email: 'admin@canemap.com',
+                    role: 'super_admin',
+                    permissions: ['admin_access', 'system_management', 'user_management', 'security_management'],
+                    createdAt: serverTimestamp(),
+                    active: true
+                });
+                await SecurityLogger.logEvent('seed_admin_pin_created', { pin: defaultPin });
+            }
+        } catch (e) {
+            console.error('Failed to seed default admin PIN', e);
+        }
     }
     
     static async logout() {
@@ -408,7 +456,7 @@ async function handleLogin(event) {
             
             // Redirect to admin dashboard
             setTimeout(() => {
-                window.location.href = '../System_Admin/dashboard.html';
+                window.location.href = 'dashboard.html';
             }, 1500);
             
         } else {
@@ -438,7 +486,7 @@ function initializeSession() {
         const adminUser = sessionStorage.getItem('admin_user');
         if (adminUser) {
             // Redirect to dashboard
-            window.location.href = '../System_Admin/dashboard.html';
+            window.location.href = 'dashboard.html';
             return;
         }
     }
@@ -515,6 +563,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     console.log('System Admin Login initialized');
+    // Ensure default admin PIN exists in Firestore
+    AdminAuth.ensureDefaultAdminPin();
 });
 
 // Export functions for global access

@@ -51,3 +51,94 @@
         </div>
     </div>
 </div>
+
+<!-- Create Admin Officer Account Modal -->
+<div id="addSraModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl w-[92%] max-w-xl p-6 shadow-2xl relative">
+        <button class="absolute top-3 right-4 text-xl" onclick="closeAddSRA()">×</button>
+        <h3 class="text-xl font-bold text-gray-900 mb-4">Create Admin Officer Account</h3>
+        <form id="addSRAForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input id="sraName" type="text" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" placeholder="Full name">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input id="sraEmail" type="email" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" placeholder="name@example.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select id="sraRole" class="w-full px-4 py-2 border rounded-lg bg-gray-50" disabled>
+                    <option value="sra">SRA Officer</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Temporary Password</label>
+                <div class="flex gap-2">
+                    <input id="sraTempPassword" type="text" required class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" placeholder="Auto-generated">
+                    <button type="button" id="genTempPass" class="px-3 py-2 rounded-lg bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)]">
+                        Auto-generate <span class="ml-1">🔄</span>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Share this one-time password with the officer.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <div class="flex items-center gap-4">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="sraStatus" value="active" checked>
+                        <span>Active ⬤</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="radio" name="sraStatus" value="inactive">
+                        <span>Inactive ○</span>
+                    </label>
+                </div>
+            </div>
+            <div class="pt-1">
+                <label class="inline-flex items-start gap-2">
+                    <input id="requireChange" type="checkbox" class="mt-1" checked>
+                    <span class="text-sm text-gray-700">On first login, SRA Officer is forced to change password.</span>
+                </label>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200" onclick="closeAddSRA()">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-lg bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white">Create Officer</button>
+            </div>
+        </form>
+    </div>
+    </div>
+
+<script>
+    // Open/Close modal functions used by the Add SRA button
+    function openAddSRA(){
+        const m = document.getElementById('addSraModal');
+        if (m){ m.classList.remove('hidden'); m.classList.add('flex'); }
+        // generate default password if empty
+        const pw = document.getElementById('sraTempPassword');
+        if (pw && !pw.value) pw.value = generatePassword();
+    }
+    function closeAddSRA(){
+        const m = document.getElementById('addSraModal');
+        if (m){ m.classList.add('hidden'); m.classList.remove('flex'); }
+    }
+    function generatePassword(){
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%';
+        let out = '';
+        for (let i=0;i<10;i++) out += chars[Math.floor(Math.random()*chars.length)];
+        return out;
+    }
+    (function(){
+        const genBtn = document.getElementById('genTempPass');
+        const pw = document.getElementById('sraTempPassword');
+        if (genBtn && pw){ genBtn.addEventListener('click', () => { pw.value = generatePassword(); }); }
+        const form = document.getElementById('addSRAForm');
+        if (form){
+            form.addEventListener('submit', function(e){
+                e.preventDefault();
+                // This form only handles UI; actual save should be wired in dashboard.js if needed
+                closeAddSRA();
+            });
+        }
+    })();
+</script>
