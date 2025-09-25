@@ -8,8 +8,32 @@
     });
   }
 
-  // Enhance submit to add details popup on lobby marker (data already stored in HTML inline script)
-  // No extra code required here as HTML script handles storing and redirecting.
+  // Persist submission to Firestore
+  import('../Common/firebase-config.js').then(async ({ db }) => {
+    const { addDoc, collection, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+    const form = document.querySelector('form');
+    if (!form) return;
+    form.addEventListener('submit', async function(){
+      try {
+        const barangay = (document.getElementById('barangay')||{}).value || '';
+        const size = (document.getElementById('field_size')||{}).value || '';
+        const terrain = (document.getElementById('crop_variety')||{}).value || '';
+        const lat = parseFloat((document.getElementById('latitude')||{}).value || '0');
+        const lng = parseFloat((document.getElementById('longitude')||{}).value || '0');
+        const payload = {
+          applicantName: 'Handler',
+          barangay, size, terrain, lat, lng,
+          status: 'pending',
+          createdAt: serverTimestamp()
+        };
+        await addDoc(collection(db, 'field_applications'), payload);
+      } catch(e) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to submit to Firestore', e);
+      }
+    });
+  }).catch(()=>{});
 
   function setupCamera(buttonId, cameraDivId, inputId, facingMode = 'environment'){
     const button = document.getElementById(buttonId);

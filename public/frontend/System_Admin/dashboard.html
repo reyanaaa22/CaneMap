@@ -113,7 +113,7 @@
         
         /* Chevron arrow animations */
         .fa-chevron-down {
-                transition: transform 0.3s ease;
+                transition: color 0.3s ease;
             }
             
         .fa-chevron-down.rotated {
@@ -553,12 +553,10 @@
         // Enhanced Sidebar functions
         function toggleSubmenu(menuId) {
             const submenu = document.getElementById(menuId + '-submenu');
-            const arrow = document.getElementById(menuId + '-arrow');
             const group = submenu.closest('div[data-expanded]');
             
             if (submenu.classList.contains('hidden')) {
                 submenu.classList.remove('hidden');
-                arrow.classList.add('rotated');
                 group.setAttribute('data-expanded', 'true');
                 
                 // Add smooth animation
@@ -575,7 +573,6 @@
                 
                 setTimeout(() => {
                     submenu.classList.add('hidden');
-                    arrow.classList.remove('rotated');
                     submenu.style.maxHeight = '';
                     submenu.style.transition = '';
                 }, 300);
