@@ -231,7 +231,42 @@
                     dashboardLink.href = 'javascript:void(0)';
                     dashboardLink.addEventListener('click', function(e){
                         e.preventDefault();
-                        alert('Pending → Your account is waiting for approval by the admin.');
+                        // Open locked modal tutorial
+                        try {
+                            const modal = document.getElementById('lockedModal');
+                            const dialog = document.getElementById('lockedDialog');
+                            const slides = Array.from(document.querySelectorAll('#lockedSlides .slide'));
+                            const prev = document.getElementById('lockedPrev');
+                            const next = document.getElementById('lockedNext');
+                            const gotIt = document.getElementById('lockedGotIt');
+                            const counter = document.getElementById('lockedCounter');
+                            let idx = 0;
+                            function render(){
+                                slides.forEach((el,i)=>{ if (i===idx){ el.classList.remove('hidden'); el.classList.add('animate'); } else { el.classList.add('hidden'); el.classList.remove('animate'); } });
+                                if (counter) counter.textContent = (idx+1) + ' / ' + slides.length;
+                                if (prev) prev.disabled = (idx===0);
+                                if (next) next.disabled = (idx===slides.length-1);
+                            }
+                            function open(){
+                                if (!modal || !dialog) return;
+                                idx = 0; render();
+                                modal.classList.remove('opacity-0','invisible'); modal.classList.add('opacity-100','visible');
+                                dialog.classList.remove('translate-y-2','scale-95','opacity-0','pointer-events-none');
+                                dialog.classList.add('translate-y-0','scale-100','opacity-100');
+                            }
+                            function close(){
+                                if (!modal || !dialog) return;
+                                modal.classList.add('opacity-0','invisible'); modal.classList.remove('opacity-100','visible');
+                                dialog.classList.add('translate-y-2','scale-95','opacity-0','pointer-events-none');
+                                dialog.classList.remove('translate-y-0','scale-100','opacity-100');
+                            }
+                            if (prev) prev.onclick = function(){ if (idx>0){ idx--; render(); } };
+                            if (next) next.onclick = function(){ if (idx<slides.length-1){ idx++; render(); } };
+                            if (gotIt) gotIt.onclick = close;
+                            if (modal) modal.addEventListener('click', function(ev){ if (ev.target === modal) close(); });
+                            document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape') close(); }, { once: true });
+                            open();
+                        } catch(_) {}
                     });
                 } else {
                     dashboardLink.classList.remove('opacity-60', 'cursor-not-allowed');

@@ -939,6 +939,68 @@ header nav .flex.items-center.justify-between > .relative {
             </div>
         </div>
     </div>
+    
+    <!-- Locked Dashboard Info Modal -->
+    <div id="lockedModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 invisible transition-opacity duration-200 ease-out z-[75]">
+        <div id="lockedDialog" class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--cane-200)] transform transition-all duration-200 ease-out translate-y-2 scale-95 opacity-0 pointer-events-none">
+            <div class="px-6 pt-6 pb-4 border-b border-[var(--cane-100)]">
+                <h3 class="text-lg font-extrabold text-[var(--cane-950)] flex items-center gap-2"><i class="fas fa-lock text-[var(--cane-600)]"></i> Why is the dashboard locked?</h3>
+            </div>
+            <div class="px-6 py-4">
+                <div class="relative overflow-hidden" id="lockedSlides" data-index="0">
+                    <div class="min-h-[180px]">
+                        <!-- Intro -->
+                        <div class="slide text-[var(--cane-900)] font-medium transition-opacity duration-200" data-step="0">
+                            <p class="mb-2">Your dashboard is currently locked.</p>
+                            <p class="text-[var(--cane-700)]">Choose a path below to unlock the right tools for your role.</p>
+                        </div>
+                        <!-- Worker Guide -->
+                        <div class="slide text-[var(--cane-900)] font-medium hidden transition-opacity duration-200" data-step="1">
+                            <div class="font-bold mb-1 flex items-center gap-2"><i class="fas fa-user-hard-hat text-[var(--cane-600)]"></i> Unlock as Worker</div>
+                            <ol class="list-decimal ml-5 space-y-1 text-[var(--cane-800)]">
+                                <li>Open the map and find a registered field near you.</li>
+                                <li>Click <span class="px-2 py-0.5 rounded bg-[var(--cane-50)] border border-[var(--cane-200)]">Join Field</span>.</li>
+                                <li>Wait for the Handler to approve your request.</li>
+                                <li>Once approved, the Worker dashboard unlocks automatically.</li>
+                            </ol>
+                        </div>
+                        <!-- Handler Guide -->
+                        <div class="slide text-[var(--cane-900)] font-medium hidden transition-opacity duration-200" data-step="2">
+                            <div class="font-bold mb-1 flex items-center gap-2"><i class="fas fa-map-marked-alt text-[var(--cane-600)]"></i> Unlock as Handler</div>
+                            <ol class="list-decimal ml-5 space-y-1 text-[var(--cane-800)]">
+                                <li>Click <span class="px-2 py-0.5 rounded bg-[var(--cane-50)] border border-[var(--cane-200)]">Register Field</span> in the header.</li>
+                                <li>Fill out field details and upload required documents.</li>
+                                <li>The SRA will review your submission.</li>
+                                <li>Once approved, your Handler tools and dashboard unlock.</li>
+                            </ol>
+                        </div>
+                        <!-- Driver Guide -->
+                        <div class="slide text-[var(--cane-900)] font-medium hidden transition-opacity duration-200" data-step="3">
+                            <div class="font-bold mb-1 flex items-center gap-2"><i class="fas fa-truck text-[var(--cane-600)]"></i> Unlock as Driver</div>
+                            <ol class="list-decimal ml-5 space-y-1 text-[var(--cane-800)]">
+                                <li>Apply for a <span class="px-2 py-0.5 rounded bg-[var(--cane-50)] border border-[var(--cane-200)]">Driver Badge</span>.</li>
+                                <li>Provide your transport details and required documents.</li>
+                                <li>Wait for SRA review and approval.</li>
+                                <li>Once approved, the Driver dashboard unlocks.</li>
+                            </ol>
+                        </div>
+                        <!-- Closing Slide -->
+                        <div class="slide text-[var(--cane-900)] font-medium hidden transition-opacity duration-200" data-step="4">
+                            <div class="space-y-2">
+                                <div class="flex items-start gap-2 text-[var(--cane-800)]"><i class="fas fa-check text-[var(--cane-600)] mt-1"></i> You’re all set. Follow the steps above to unlock your tools.</div>
+                                <button id="lockedGotIt" class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Got it ✅</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 pb-6 flex items-center justify-between">
+                <button id="lockedPrev" class="px-3 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-900)] bg-white hover:bg-[var(--cane-50)]">← Back</button>
+                <div class="text-sm text-[var(--cane-700)]" id="lockedCounter">1 / 5</div>
+                <button id="lockedNext" class="px-3 py-2 rounded-lg bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Next →</button>
+            </div>
+        </div>
+    </div>
     <!-- Backend Common scripts -->
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
     <script src="../../backend/Common/lobby.js"></script>
