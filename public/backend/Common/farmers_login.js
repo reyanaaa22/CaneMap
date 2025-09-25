@@ -1,10 +1,10 @@
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js"; 
 
 // Firebase services are available from firebase-config.js
 
-const alertBox = document.getElementById("alertBox");
+let alertBox = document.getElementById("alertBox");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const loginButton = document.querySelector("button[type='submit']");
@@ -13,7 +13,19 @@ const MAX_ATTEMPTS = 5;
 const LOCK_TIME = 30 * 1000; 
 
 function showAlert(message, type) {
-  alertBox.textContent = message;
+  // Lazily resolve/construct alert box if not yet present
+  if (!alertBox) {
+    alertBox = document.getElementById("alertBox");
+    if (!alertBox) {
+      const container = document.querySelector('.container') || document.body;
+      const div = document.createElement('div');
+      div.id = 'alertBox';
+      div.className = 'alert';
+      container.appendChild(div);
+      alertBox = div;
+    }
+  }
+  alertBox.innerHTML = message;
   alertBox.className = `alert ${type}`;
   alertBox.style.display = "block";
 }
@@ -82,7 +94,27 @@ async function login() {
     const user = userCredential.user;
 
     if (!user.emailVerified) {
-      showAlert("Please verify your email before logging in.", "error");
+      // Provide friendly message with option to resend verification email
+      showAlert(
+        'Your email is registered but not yet verified. Please check your inbox for the verification link. ' +
+        '<button id="resendVerifyBtn" style="margin-left:8px;padding:6px 10px;border:none;border-radius:6px;background:#16a34a;color:#fff;cursor:pointer">Resend verification</button>',
+        "warning"
+      );
+      const resendBtn = document.getElementById("resendVerifyBtn");
+      if (resendBtn) {
+        resendBtn.addEventListener("click", async () => {
+          try {
+            resendBtn.disabled = true;
+            resendBtn.textContent = "Sending...";
+            await sendEmailVerification(user);
+            showAlert("Verification email sent. Please check your inbox (or Spam).", "success");
+          } catch (e) {
+            showAlert("Could not send verification email. Please try again later.", "error");
+          } finally {
+            try { resendBtn.disabled = false; resendBtn.textContent = "Resend verification"; } catch (_) {}
+          }
+        });
+      }
       passwordInput.value = "";
       recordFailedAttempt();
       return;
@@ -129,10 +161,19 @@ async function login() {
   setTimeout(() => window.location.href = "../../frontend/Common/lobby.html", 1500);
 
   } catch (error) {
-    if (error.code === "auth/invalid-credential") {
-      showAlert("Invalid credentials. Please check your email and password.", "error");
+    // Friendly, specific error messaging
+    const code = (error && error.code) || "";
+    if (code === "auth/user-not-found") {
+      showAlert("No account found with this email. Please check your email or sign up first.", "error");
+    } else if (code === "auth/wrong-password") {
+      showAlert("Incorrect password. Please try again.", "error");
+    } else if (code === "auth/invalid-credential") {
+      showAlert("Incorrect email or password. Please try again.", "error");
+    } else if (code === "auth/too-many-requests") {
+      showAlert("Too many failed login attempts. Please wait a moment before trying again.", "error");
     } else {
-      showAlert("Login failed: " + error.message, "error");
+      // Prevent raw Firebase message leakage
+      showAlert("Login failed. Please try again.", "error");
     }
     passwordInput.value = "";
     recordFailedAttempt();
@@ -146,7 +187,8 @@ document.getElementById("loginForm").addEventListener("submit", (e) => {
 
 document.querySelectorAll("#email, #password").forEach(input => {
   input.addEventListener("focus", () => {
-    alertBox.style.display = "none";
+    const box = document.getElementById('alertBox');
+    if (box) box.style.display = "none";
   });
 });
 
