@@ -25,14 +25,15 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 const weatherContainer = document.getElementById('weatherForecast');
+                const wxDaily = document.getElementById('wxDaily');
                 
                 if (!data.list) {
                     let errorMsg = 'Weather data unavailable.';
                     if (data.message) {
                         errorMsg += `<br><span class='text-xs text-[var(--cane-600)]'>API: ${data.message}</span>`;
                     }
-                    if (weatherContainer) {
-                        weatherContainer.innerHTML = `<div class='text-[var(--cane-700)] bg-[var(--cane-50)] p-3 rounded-lg border border-[var(--cane-200)]'>${errorMsg}</div>`;
+                    if (wxDaily) {
+                        wxDaily.innerHTML = `<div class='p-3 rounded-lg border border-[var(--cane-200)] bg-white/10 text-white/90'>${errorMsg}</div>`;
                     }
                     return;
                 }
@@ -50,9 +51,13 @@
                 
                 // Get today, tomorrow, and next day
                 const dayKeys = Object.keys(days).slice(0, 3);
-                const dayNames = ['Today', 'Tomorrow', new Date(dayKeys[2]).toLocaleDateString('en-US', { weekday: 'long' })];
+                const dayNames = [
+                    'Today',
+                    dayKeys[1] ? 'Tomorrow' : '',
+                    dayKeys[2] ? new Date(dayKeys[2]).toLocaleDateString('en-US', { weekday: 'long' }) : ''
+                ].filter(Boolean);
                 
-                const html = dayKeys.map((key, idx) => {
+                const rows = dayKeys.map((key, idx) => {
                     // Use the forecast closest to noon for each day
                     const forecasts = days[key];
                     let forecast = forecasts.find(f => new Date(f.dt * 1000).getHours() === 12) || forecasts[Math.floor(forecasts.length / 2)];
@@ -60,22 +65,47 @@
                     const icon = forecast.weather[0].icon;
                     const desc = forecast.weather[0].description;
                     return `
-                        <div class="flex items-center justify-between p-3 rounded-lg bg-white text-[var(--cane-900)] border border-[var(--cane-200)] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-white/10 text-white border border-white/20">
                             <div class="flex items-center space-x-3">
-                                <span class="w-8 h-8 rounded-full bg-[var(--cane-100)] flex items-center justify-center border border-[var(--cane-200)]">
-                                    <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}" class="w-5 h-5" />
+                                <span class="w-8 h-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
+                                    <img src="https://openweathermap.org/img/wn/${icon}.png" alt="${desc}" class="w-5 h-5" />
                                 </span>
-                                <span class="font-semibold text-sm text-[var(--cane-950)]">${dayNames[idx]}</span>
+                                <span class="font-semibold text-sm">${dayNames[idx]}</span>
                             </div>
                             <div class="text-right leading-tight">
-                                <div class="text-[var(--cane-800)] font-bold text-sm">${temp}</div>
-                                <div class="text-[var(--cane-700)] text-xs">${desc}</div>
+                                <div class="font-bold text-sm">${temp}</div>
+                                <div class="text-xs opacity-90">${desc}</div>
                             </div>
                         </div>
                     `;
                 }).join('');
-                
-                if (weatherContainer) weatherContainer.innerHTML = html;
+
+                // Render into the compact list area only (preserve card structure)
+                if (wxDaily) wxDaily.innerHTML = rows;
+
+                // Update big "Today" metrics from first day
+                try {
+                    const firstKey = dayKeys[0];
+                    const forecasts = days[firstKey] || [];
+                    const forecast = forecasts.find(f => new Date(f.dt * 1000).getHours() === 12) || forecasts[0];
+                    if (forecast) {
+                        const tEl = document.getElementById('wxTemp');
+                        const wEl = document.getElementById('wxWind');
+                        const uvEl = document.getElementById('wxUv');
+                        const uvBar = document.getElementById('wxUvBar');
+                        const tempNow = Math.round(forecast.main.temp);
+                        const windKmh = typeof forecast.wind?.speed === 'number' ? (forecast.wind.speed * 3.6) : null; // m/s → km/h
+                        if (tEl) tEl.textContent = String(tempNow);
+                        if (wEl && windKmh !== null) wEl.textContent = windKmh.toFixed(1) + ' km/h';
+                        // UV not in forecast endpoint; leave as is if not available
+
+                        // Notify background swapper
+                        const cond = forecast.weather?.[0]?.description || '';
+                        window.dispatchEvent(new CustomEvent('canemap:weather-updated', {
+                            detail: { condition: cond, temp: tempNow, windKmh }
+                        }));
+                    }
+                } catch(_) {}
             } catch (error) {
                 console.error('Error fetching weather:', error);
                 const el = document.getElementById('weatherForecast');
