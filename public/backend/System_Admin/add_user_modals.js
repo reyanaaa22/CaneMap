@@ -60,130 +60,12 @@ function showCustomAlert(message, type = 'info') {
   }, 5000);
 }
 
-export function openAddFarmerModal(){
-  if (!document.getElementById('addUserModal')) return;
-  window.openAddUserModal();
-  const roleSel = document.getElementById('userRole');
-  if (roleSel) roleSel.value = 'farmer';
-  // Hide SRA-specific rows
-  toggleSRAFields(false);
-}
 
 export function openAddSRAModal(){
-  if (!document.getElementById('addUserModal')) return;
-  window.openAddUserModal();
-  const roleSel = document.getElementById('userRole');
-  if (roleSel) roleSel.value = 'sra';
-  toggleSRAFields(true);
-  const pw = document.getElementById('userTempPassword');
-  if (pw && !pw.value) pw.value = generateTempPassword();
-
-  // Wire success popup + save
-  const form = document.getElementById('addUserForm');
-  if (form && !form.dataset.sraWired){
-    form.dataset.sraWired = '1';
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = (document.getElementById('userName')||{}).value || '';
-      const email = (document.getElementById('userEmail')||{}).value || '';
-      const temp = (document.getElementById('userTempPassword')||{}).value || generateTempPassword();
-      const status = (document.querySelector('input[name="userStatus"]:checked')||{}).value || 'active';
-
-      if (!name || !email) {
-        showCustomAlert('Please fill in all required fields', 'warning');
-        return;
-      }
-
-      try {
-        // Create Firebase Auth user for SRA Officer
-        const userCredential = await createUser(auth, email, temp);
-        const user = userCredential.user;
-        
-        // Update user profile with display name
-        await updateUserProfile(user, { displayName: name });
-        
-        // Send email verification
-        await sendVerification(user);
-        
-        // Save to Firestore with SRA Officer role (using setDoc like regular signup)
-        await setDoc(doc(db, 'users', user.uid), {
-          name, 
-          email, 
-          role: 'sra_officer', 
-          status,
-          forcePasswordChange: true,
-          emailVerified: false,
-          createdAt: serverTimestamp(),
-        });
-        
-        // Save temporary password for reference
-        await addDoc(collection(db,'temp_passwords'), { 
-          email, 
-          tempPassword: temp, 
-          role: 'sra_officer', 
-          uid: user.uid,
-          createdAt: serverTimestamp() 
-        });
-        
-        // Add notification entry
-        await addDoc(collection(db,'notifications'), { 
-          title: `SRA Officer account created for ${name}`,
-          message: `New SRA Officer ${name} has been registered and verification email sent.`,
-          type: 'user_created',
-          createdAt: serverTimestamp()
-        });
-        
-        // Show success popup
-        await showSRASuccessPopup({ name, email, temp });
-        
-        // Store SRA Officer data in localStorage for System Admin dashboard
-        const sraOfficerData = {
-          id: user.uid,
-          name,
-          email,
-          role: 'sra_officer',
-          status,
-          emailVerified: false,
-          createdAt: new Date().toISOString(),
-          lastLogin: null
-        };
-        
-        // Get existing SRA officers from localStorage
-        const existingSRAOfficers = JSON.parse(localStorage.getItem('sraOfficers') || '[]');
-        existingSRAOfficers.push(sraOfficerData);
-        localStorage.setItem('sraOfficers', JSON.stringify(existingSRAOfficers));
-        
-        // Show success alert
-        showCustomAlert(`SRA Officer ${name} created successfully! Verification email sent.`, 'success');
-        
-        // Close modal and refresh data
-        window.closeAddUserModal();
-        if (window.loadUsers) window.loadUsers();
-        if (window.fetchAndRenderSRA) window.fetchAndRenderSRA();
-        
-      } catch (error) {
-        console.error('Error creating SRA Officer:', error);
-        
-        let errorMessage = 'Failed to create SRA Officer account. ';
-        
-        if (error.code === 'auth/email-already-in-use') {
-          errorMessage += 'Email is already in use.';
-        } else if (error.code === 'auth/invalid-email') {
-          errorMessage += 'Invalid email address.';
-        } else if (error.code === 'auth/weak-password') {
-          errorMessage += 'Password is too weak.';
-        } else if (error.code === 'permission-denied') {
-          errorMessage += 'Permission denied. Please check Firestore rules.';
-        } else if (error.message.includes('Missing or insufficient permissions')) {
-          errorMessage += 'Database permission error. The account may have been created but not saved to database.';
-        } else {
-          errorMessage += error.message;
-        }
-        
-        showCustomAlert(errorMessage, 'error');
-      }
-    });
-  }
+  // Since the addUserModal was removed, this function is no longer functional
+  // You may want to create a new modal or redirect to a different page
+  console.log('Add SRA modal functionality has been disabled');
+  return;
 }
 
 function toggleSRAFields(show){
@@ -222,8 +104,6 @@ export function wireSubmitAugment(){
 }
 
 // Expose to window for inline usage
-// eslint-disable-next-line no-undef
-window.openAddFarmerModal = openAddFarmerModal;
 // eslint-disable-next-line no-undef
 window.openAddSRAModal = openAddSRAModal;
 // eslint-disable-next-line no-undef
