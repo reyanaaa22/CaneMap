@@ -30,20 +30,32 @@ let filteredUsers = [];
 // Initialize dashboard
 async function initializeDashboard() {
     try {
+        console.log('🔄 Initializing dashboard...');
+        
         // Check if user is logged in
         const adminUser = sessionStorage.getItem('admin_user');
         if (!adminUser) {
-            // Temporarily disabled redirect to login during development
-            // window.location.href = 'login.html';
-            return;
+            console.log('⚠️ No admin user found, using default values');
+            // Set default admin name
+            const adminNameEl = document.getElementById('adminName');
+            const dropdownAdminNameEl = document.getElementById('dropdownAdminName');
+            const sidebarAdminNameEl = document.getElementById('sidebarAdminName');
+            
+            if (adminNameEl) adminNameEl.textContent = 'System Admin';
+            if (dropdownAdminNameEl) dropdownAdminNameEl.textContent = 'System Admin';
+            if (sidebarAdminNameEl) sidebarAdminNameEl.textContent = 'System Admin';
+        } else {
+            currentUser = JSON.parse(adminUser);
+            
+            // Update admin name in header and sidebar
+            const adminNameEl = document.getElementById('adminName');
+            const dropdownAdminNameEl = document.getElementById('dropdownAdminName');
+            const sidebarAdminNameEl = document.getElementById('sidebarAdminName');
+            
+            if (adminNameEl) adminNameEl.textContent = currentUser.name;
+            if (dropdownAdminNameEl) dropdownAdminNameEl.textContent = currentUser.name;
+            if (sidebarAdminNameEl) sidebarAdminNameEl.textContent = currentUser.name;
         }
-        
-        currentUser = JSON.parse(adminUser);
-        
-        // Update admin name in header and sidebar
-        document.getElementById('adminName').textContent = currentUser.name;
-        document.getElementById('dropdownAdminName').textContent = currentUser.name;
-        document.getElementById('sidebarAdminName').textContent = currentUser.name;
         
         // Load dashboard data
         await loadDashboardStats();
@@ -60,65 +72,111 @@ async function initializeDashboard() {
         
     } catch (error) {
         console.error('❌ Error initializing dashboard:', error);
-        showAlert('Failed to initialize dashboard', 'error');
+        // Don't show alert on initialization error, just log it
+        console.log('⚠️ Dashboard initialization failed, but continuing...');
     }
 }
 
 // Load dashboard statistics
 async function loadDashboardStats() {
     try {
+        console.log('🔄 Loading dashboard stats...');
+        
         // Get total users
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const totalUsers = usersSnapshot.size;
+        let totalUsers = 0;
+        try {
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            totalUsers = usersSnapshot.size;
+            console.log(`📊 Total users: ${totalUsers}`);
+        } catch (error) {
+            console.log('⚠️ Could not load users collection:', error.message);
+        }
         
         // Get active users (logged in within last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const activeUsersQuery = query(
-            collection(db, 'users'),
-            where('lastLogin', '>=', thirtyDaysAgo)
-        );
-        const activeUsersSnapshot = await getDocs(activeUsersQuery);
-        const activeUsers = activeUsersSnapshot.size;
+        let activeUsers = 0;
+        try {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const activeUsersQuery = query(
+                collection(db, 'users'),
+                where('lastLogin', '>=', thirtyDaysAgo)
+            );
+            const activeUsersSnapshot = await getDocs(activeUsersQuery);
+            activeUsers = activeUsersSnapshot.size;
+            console.log(`📊 Active users: ${activeUsers}`);
+        } catch (error) {
+            console.log('⚠️ Could not load active users:', error.message);
+        }
         
         // Get failed logins today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const failedLoginsQuery = query(
-            collection(db, 'security_logs'),
-            where('eventType', '==', 'failed_login'),
-            where('timestamp', '>=', today)
-        );
-        const failedLoginsSnapshot = await getDocs(failedLoginsQuery);
-        const failedLogins = failedLoginsSnapshot.size;
+        let failedLogins = 0;
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const failedLoginsQuery = query(
+                collection(db, 'admin_security_logs'),
+                where('eventType', '==', 'failed_login'),
+                where('timestamp', '>=', today)
+            );
+            const failedLoginsSnapshot = await getDocs(failedLoginsQuery);
+            failedLogins = failedLoginsSnapshot.size;
+            console.log(`📊 Failed logins: ${failedLogins}`);
+        } catch (error) {
+            console.log('⚠️ Could not load failed logins:', error.message);
+        }
         
         // Get driver badges
-        const driverBadgesQuery = query(
-            collection(db, 'users'),
-            where('driverBadge', '==', 'approved')
-        );
-        const driverBadgesSnapshot = await getDocs(driverBadgesQuery);
-        const driverBadges = driverBadgesSnapshot.size;
+        let driverBadges = 0;
+        try {
+            const driverBadgesQuery = query(
+                collection(db, 'users'),
+                where('driverBadge', '==', 'approved')
+            );
+            const driverBadgesSnapshot = await getDocs(driverBadgesQuery);
+            driverBadges = driverBadgesSnapshot.size;
+            console.log(`📊 Driver badges: ${driverBadges}`);
+        } catch (error) {
+            console.log('⚠️ Could not load driver badges:', error.message);
+        }
         
         // Update UI
-        document.getElementById('totalUsers').textContent = totalUsers;
-        document.getElementById('activeUsers').textContent = activeUsers;
-        document.getElementById('failedLogins').textContent = failedLogins;
-        document.getElementById('driverBadges').textContent = driverBadges;
+        const totalUsersEl = document.getElementById('totalUsers');
+        const activeUsersEl = document.getElementById('activeUsers');
+        const failedLoginsEl = document.getElementById('failedLogins');
+        const driverBadgesEl = document.getElementById('driverBadges');
+        
+        if (totalUsersEl) totalUsersEl.textContent = totalUsers;
+        if (activeUsersEl) activeUsersEl.textContent = activeUsers;
+        if (failedLoginsEl) failedLoginsEl.textContent = failedLogins;
+        if (driverBadgesEl) driverBadgesEl.textContent = driverBadges;
+        
+        console.log('✅ Dashboard stats loaded successfully');
         
         // Load analytics charts
         await loadAnalyticsCharts();
         
     } catch (error) {
         console.error('❌ Error loading dashboard stats:', error);
+        // Set default values if loading fails
+        const totalUsersEl = document.getElementById('totalUsers');
+        const activeUsersEl = document.getElementById('activeUsers');
+        const failedLoginsEl = document.getElementById('failedLogins');
+        const driverBadgesEl = document.getElementById('driverBadges');
+        
+        if (totalUsersEl) totalUsersEl.textContent = '0';
+        if (activeUsersEl) activeUsersEl.textContent = '0';
+        if (failedLoginsEl) failedLoginsEl.textContent = '0';
+        if (driverBadgesEl) driverBadgesEl.textContent = '0';
     }
 }
 
 // Load users from Firebase
 async function loadUsers() {
     try {
+        console.log('🔄 Loading users...');
+        
         const usersQuery = query(
             collection(db, 'users'),
             orderBy('createdAt', 'desc')
@@ -138,11 +196,21 @@ async function loadUsers() {
         });
         
         filteredUsers = [...users];
-        renderUsersTable();
+        console.log(`📊 Loaded ${users.length} users`);
+        
+        // Only render table if the users table exists
+        const usersTableBody = document.getElementById('usersTableBody');
+        if (usersTableBody) {
+            renderUsersTable();
+        }
         
     } catch (error) {
         console.error('❌ Error loading users:', error);
-        showAlert('Failed to load users', 'error');
+        // Don't show alert if we're not on the users page
+        const usersTableBody = document.getElementById('usersTableBody');
+        if (usersTableBody) {
+            showAlert('Failed to load users', 'error');
+        }
     }
 }
 
@@ -227,8 +295,10 @@ function renderUsersTable() {
 // Load activity logs
 async function loadActivityLogs() {
     try {
+        console.log('🔄 Loading activity logs...');
+        
         const activityQuery = query(
-            collection(db, 'security_logs'),
+            collection(db, 'admin_security_logs'),
             orderBy('timestamp', 'desc'),
             limit(20)
         );
@@ -245,10 +315,17 @@ async function loadActivityLogs() {
             });
         });
         
-        renderActivityLogs();
+        console.log(`📊 Loaded ${activityLogs.length} activity logs`);
+        
+        // Only render if the activity log container exists
+        const activityLogContainer = document.getElementById('activityLog');
+        if (activityLogContainer) {
+            renderActivityLogs();
+        }
         
     } catch (error) {
         console.error('❌ Error loading activity logs:', error);
+        // Don't show error if we're not on the activity log page
     }
 }
 
@@ -347,8 +424,6 @@ function setupEventListeners() {
         }
     });
     
-    // Add user form
-    document.getElementById('addUserForm').addEventListener('submit', handleAddUser);
     
     // Edit user form
     document.getElementById('editUserForm').addEventListener('submit', handleEditUser);
@@ -399,14 +474,6 @@ function updatePagination() {
 }
 
 // Modal functions
-function openAddUserModal() {
-    document.getElementById('addUserModal').classList.remove('hidden');
-    document.getElementById('addUserForm').reset();
-}
-
-function closeAddUserModal() {
-    document.getElementById('addUserModal').classList.add('hidden');
-}
 
 function openEditUserModal(userId) {
     const user = users.find(u => u.id === userId);
@@ -427,47 +494,6 @@ function closeEditUserModal() {
     document.getElementById('editUserModal').classList.add('hidden');
 }
 
-// Handle add user
-async function handleAddUser(e) {
-    e.preventDefault();
-    
-    try {
-        const userData = {
-            name: document.getElementById('userName').value,
-            email: document.getElementById('userEmail').value,
-            role: document.getElementById('userRole').value,
-            // phone and driverBadge removed from form
-            status: (document.querySelector('input[name="userStatus"]:checked')?.value || 'active'),
-            createdAt: serverTimestamp(),
-            lastLogin: null,
-            loginCount: 0,
-            failedAttempts: 0,
-            forcePasswordChange: document.getElementById('userForceChange')?.checked === true
-        };
-        
-        await addDoc(collection(db, 'users'), userData);
-        // Store temp password separately (optional - could be emailed). For demo, save to a subcollection
-        const tempPass = document.getElementById('userTempPassword')?.value || '';
-        if (tempPass) {
-            try {
-                await addDoc(collection(db, 'temp_passwords'), {
-                    email: userData.email,
-                    tempPassword: tempPass,
-                    role: userData.role,
-                    createdAt: serverTimestamp(),
-                });
-            } catch(_) {}
-        }
-        
-        showAlert('User added successfully', 'success');
-        closeAddUserModal();
-        loadUsers();
-        
-    } catch (error) {
-        console.error('❌ Error adding user:', error);
-        showAlert('Failed to add user', 'error');
-    }
-}
 
 // Handle edit user
 async function handleEditUser(e) {
@@ -1015,8 +1041,6 @@ function importAllExistingSRAOfficers() {
 // Export functions for global access
 window.editUser = editUser;
 window.deleteUser = deleteUser;
-window.openAddUserModal = openAddUserModal;
-window.closeAddUserModal = closeAddUserModal;
 window.openEditUserModal = openEditUserModal;
 window.closeEditUserModal = closeEditUserModal;
 window.fetchAndRenderSRA = fetchAndRenderSRA;
@@ -1025,8 +1049,66 @@ window.addExistingSRAOfficer = addExistingSRAOfficer;
 window.importAllExistingSRAOfficers = importAllExistingSRAOfficers;
 window.clearSRAOfficersData = clearSRAOfficersData;
 
-// Export initializeDashboard to global scope for inline script
+// Add sample data for demonstration
+async function addSampleData() {
+    try {
+        console.log('🔄 Adding sample data...');
+        
+        // Check if we already have data
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        if (usersSnapshot.size > 0) {
+            console.log('📊 Sample data already exists, skipping...');
+            return;
+        }
+        
+        // Add sample users
+        const sampleUsers = [
+            {
+                name: 'John Doe',
+                email: 'john.doe@example.com',
+                role: 'farmer',
+                status: 'active',
+                createdAt: serverTimestamp(),
+                lastLogin: new Date(),
+                driverBadge: 'none'
+            },
+            {
+                name: 'Jane Smith',
+                email: 'jane.smith@example.com',
+                role: 'sra',
+                status: 'active',
+                createdAt: serverTimestamp(),
+                lastLogin: new Date(),
+                driverBadge: 'approved'
+            },
+            {
+                name: 'Mike Johnson',
+                email: 'mike.johnson@example.com',
+                role: 'worker',
+                status: 'active',
+                createdAt: serverTimestamp(),
+                lastLogin: new Date(),
+                driverBadge: 'pending'
+            }
+        ];
+        
+        for (const user of sampleUsers) {
+            await addDoc(collection(db, 'users'), user);
+        }
+        
+        console.log('✅ Sample data added successfully');
+        
+        // Reload dashboard stats
+        await loadDashboardStats();
+        
+    } catch (error) {
+        console.error('❌ Error adding sample data:', error);
+    }
+}
+
+// Export functions for global access
 window.initializeDashboard = initializeDashboard;
+window.addSampleData = addSampleData;
 
 // Handle Change PIN
 async function handleChangePin(form){

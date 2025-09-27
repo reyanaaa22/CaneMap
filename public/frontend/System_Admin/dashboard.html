@@ -133,6 +133,15 @@
         @media (max-width: 768px) {
             .sidebar-mobile-hidden { display: none; }
         }
+        
+        /* Fixed layout - prevent scrolling */
+        body {
+            overflow: hidden;
+        }
+        
+        .main {
+            overflow-y: auto;
+        }
         .sidebar { transition: width 0.3s ease; }
         .main { transition: margin-left 0.3s ease; }
         .sidebar-collapsed .sidebar { width: 4rem; }
@@ -252,28 +261,21 @@
                         </div>
                     </div>
                     
-            <!-- Security & Monitoring -->
-            <div class="space-y-1 mb-4" data-expanded="false">
-                <button onclick="toggleSubmenu('security')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group w-full text-left">
+            <!-- Security -->
+            <div class="space-y-1 mb-4">
+                <a href="#" onclick="showSection('security-settings')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group" id="nav-security">
                     <i class="fas fa-shield-alt text-white text-sm"></i>
                     <span>Security</span>
-                    <i class="fas fa-chevron-down ml-auto text-white" id="security-arrow"></i>
-                    </button>
-                <div class="ml-6 mt-3 space-y-1 hidden" id="security-submenu">
-                    <a href="#" onclick="showSection('activity-log')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-history text-white text-sm"></i>
-                        <span>Activity Log</span>
-                    </a>
-                    <a href="#" onclick="showSection('failed-logins')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-exclamation-triangle text-white text-sm"></i>
-                        <span>Failed Logins</span>
-                    </a>
-                    <a href="#" onclick="showSection('security-settings')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
-                        <i class="fas fa-cog text-white text-sm"></i>
-                        <span>Security Settings</span>
-                    </a>
-                            </div>
-                            </div>
+                </a>
+            </div>
+            
+            <!-- Maintenance -->
+            <div class="space-y-1 mb-4">
+                <a href="#" onclick="showSection('maintenance')" class="flex items-center space-x-3 px-4 py-3 text-white hover:text-white hover:bg-gray-800/60 rounded-lg transition-all duration-300 cursor-pointer font-medium text-sm relative group" id="nav-maintenance">
+                    <i class="fas fa-tools text-white text-sm"></i>
+                    <span>Maintenance</span>
+                </a>
+            </div>
                 
             <!-- Reports -->
             <div class="space-y-1 mb-4">
@@ -315,15 +317,15 @@
                         </div>
                         
     <!-- Main Content -->
-    <main class="ml-64 px-8 py-8 bg-gray-100 min-h-screen main">
+    <main class="ml-64 px-8 py-8 bg-gray-100 h-screen overflow-hidden main">
         
         <!-- Dashboard Title -->
         <div class="mb-8">
             <h1 class="text-4xl font-bold text-gray-800">Dashboard</h1>
-                        </div>
+        </div>
                         
         <!-- Dashboard Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <!-- Total Users -->
             <div class="bg-white rounded-xl p-6 card-shadow-lg fade-in border border-gray-100">
                         <div class="flex items-center justify-between">
@@ -394,14 +396,14 @@
                     </div>
                     
         <!-- Analytics Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
             <!-- User Growth Chart -->
             <div class="bg-white rounded-xl shadow-lg fade-in">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
                     <p class="text-sm text-gray-600">Monthly user registration trends</p>
                             </div>
-                <div class="p-6">
+                <div class="p-4 h-64">
                     <canvas id="userGrowthChart" width="400" height="200"></canvas>
                             </div>
                             </div>
@@ -412,7 +414,7 @@
                     <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
                     <p class="text-sm text-gray-600">Current user roles breakdown</p>
                         </div>
-                <div class="p-6">
+                <div class="p-4 h-64">
                     <canvas id="userRoleChart" width="400" height="200"></canvas>
                     </div>
                 </div>
@@ -420,72 +422,6 @@
 
     </main>
     
-    <!-- Add User Modal -->
-    <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-900">Add New User</h3>
-                    <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                </button>
-                </div>
-            </div>
-            
-            <form id="addUserForm" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                    <input type="text" id="userName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input type="email" id="userEmail" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                    <select id="userRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="">Select Role</option>
-                        <option value="farmer">Farmer</option>
-                        <option value="worker">Worker</option>
-                        <option value="sra">SRA Officer</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                
-                <div id="tempPasswordRow">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Temporary Password</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="userTempPassword" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" placeholder="Auto-generated on click">
-                        <button type="button" id="genUserTempPassword" class="px-3 py-2 rounded-lg bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)]">Auto-generate 🔄</button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">On first login, the officer will change this password.</p>
-                </div>
-                <div id="statusRow">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <div class="flex items-center gap-5">
-                        <label class="inline-flex items-center gap-2">
-                            <input type="radio" name="userStatus" value="active" checked>
-                            <span>Active ⬤</span>
-                        </label>
-                        <label class="inline-flex items-center gap-2">
-                            <input type="radio" name="userStatus" value="inactive">
-                            <span>Inactive ○</span>
-                        </label>
-                    </div>
-                </div>
-                <div id="forceChangeRow" class="pt-1">
-                    <label class="inline-flex items-start gap-2">
-                        <input id="userForceChange" type="checkbox" class="mt-1" checked>
-                        <span class="text-sm text-gray-700">Force password change on first login</span>
-                    </label>
-                </div>
-                <div class="flex items-center justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors">Add User</button>
-                </div>
-            </form>
-        </div>
-    </div>
     
     <!-- Edit User Modal -->
     <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
@@ -554,6 +490,10 @@
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
     <script type="module" src="../../backend/System_Admin/dashboard.js"></script>
     <script type="module" src="../../backend/System_Admin/add_user_modals.js"></script>
+    <script type="module" src="../../backend/System_Admin/badge_filter.js"></script>
+    <script type="module" src="../../backend/System_Admin/Farmers.js"></script>
+    <script type="module" src="../../backend/System_Admin/security.js"></script>
+    <script type="module" src="../../backend/System_Admin/maintenance.js"></script>
     
     <script>
         // Initialize dashboard
@@ -660,6 +600,9 @@
                 case 'security-settings':
                     showSecuritySettingsContent();
                     break;
+                case 'maintenance':
+                    showMaintenanceContent();
+                    break;
                 case 'system-settings':
                     showSystemSettingsContent();
                     break;
@@ -685,16 +628,19 @@
         
         function showDashboardContent() {
             // Show the main dashboard content
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'hidden';
+            mainContent.innerHTML = `
                 <!-- Analytics Charts Section -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
                     <!-- User Growth Chart -->
                     <div class="bg-white rounded-xl shadow-lg fade-in">
                         <div class="p-6 border-b border-gray-200">
                             <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
                             <p class="text-sm text-gray-600">Monthly user registration trends</p>
                         </div>
-                        <div class="p-6">
+                        <div class="p-4 h-64">
                             <canvas id="userGrowthChart" width="400" height="200"></canvas>
                         </div>
                         </div>
@@ -705,14 +651,14 @@
                             <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
                             <p class="text-sm text-gray-600">Current user roles breakdown</p>
                         </div>
-                        <div class="p-6">
+                        <div class="p-4 h-64">
                             <canvas id="userRoleChart" width="400" height="200"></canvas>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Dashboard Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <!-- Total Users -->
                     <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
                         <div class="flex items-center justify-between">
@@ -796,100 +742,35 @@
         }
         
         function showFarmersContent() {
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
             fetch('partials/farmers.html')
                 .then(r => r.text())
                 .then(html => {
-                    document.querySelector('main').innerHTML = html;
-                    // Attach filter handlers
-                    document.querySelectorAll('.farmer-filter').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const type = btn.getAttribute('data-filter');
-                            fetchAndRenderFarmers(type);
-                });
-            });
-                    // Page size handler
-                    const pageSizeSel = document.getElementById('farmersPageSize');
-                    if (pageSizeSel) {
-                        pageSizeSel.addEventListener('change', () => fetchAndRenderFarmers());
+                    mainContent.innerHTML = html;
+                    // Initialize the farmers management system
+                    if (window.initializeFarmers) {
+                        window.initializeFarmers();
                     }
-                    // Initial load
-                    fetchAndRenderFarmers('all');
                 })
                 .catch(() => {
-                    document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
+                    const mainContent = document.querySelector('main');
+                    mainContent.style.height = '100vh';
+                    mainContent.style.overflow = 'auto';
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
                 });
         }
 
-        // Data rendering helpers using Firestore (window.* provided by firebase-config.js)
-        async function fetchAndRenderFarmers(filterType = 'all') {
-            try {
-                const q = window.query(
-                    window.collection(window.db || db, 'users'),
-                    window.where('role', '==', 'farmer'),
-                    window.orderBy('createdAt', 'desc')
-                );
-                const snap = await window.getDocs(q);
-                const allRows = [];
-                snap.forEach(doc => {
-                    const u = doc.data();
-                    const farmerType = u.farmerType || u.subRole || u.type || 'N/A';
-                    if (filterType !== 'all' && farmerType !== filterType) return;
-                    const status = u.status || 'inactive';
-                    allRows.push({ id: doc.id, html: `
-                        <tr class=\"hover:bg-gray-50\">
-                            <td class=\"px-6 py-4 whitespace-nowrap\">
-                                <div class=\"text-sm font-medium text-gray-900\">${u.name || 'N/A'}</div>
-                            </td>
-                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${farmerType}</td>
-                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${u.email || 'N/A'}</td>
-                            <td class=\"px-6 py-4 whitespace-nowrap\">
-                                <span class=\"px-2 py-1 text-xs font-semibold rounded-full ${status === 'active' ? 'bg-green-100 text-green-800' : status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}\">${status}</span>
-                            </td>
-                            <td class=\"px-6 py-4 whitespace-nowrap text-sm font-medium\">
-                                <div class=\"flex items-center space-x-2\">
-                                    <button onclick=\"editUser('${doc.id}')\" class=\"text-[var(--cane-600)] hover:text-[var(--cane-700)]\"><i class=\"fas fa-edit\"></i></button>
-                                    <button onclick=\"deleteUser('${doc.id}')\" class=\"text-red-600 hover:text-red-700\"><i class=\"fas fa-trash\"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `});
-                });
-
-                const tableBody = document.getElementById('farmersTableBody');
-                const total = allRows.length;
-                const pageSizeEl = document.getElementById('farmersPageSize');
-                const pageSize = pageSizeEl ? parseInt(pageSizeEl.value || '10', 10) : 10;
-                const slice = allRows.slice(0, pageSize);
-
-                if (slice.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-gray-500\">No farmers found</div></td></tr>`;
-                } else {
-                    tableBody.innerHTML = slice.map(r => r.html).join('');
-                }
-
-                // Update counts
-                const start = total === 0 ? 0 : 1;
-                const end = Math.min(pageSize, total);
-                const totalEl = document.getElementById('farmersTotal');
-                const startEl = document.getElementById('farmersShowingStart');
-                const endEl = document.getElementById('farmersShowingEnd');
-                if (totalEl && startEl && endEl) {
-                    totalEl.textContent = String(total);
-                    startEl.textContent = String(start);
-                    endEl.textContent = String(end);
-                }
-            } catch (e) {
-                const tableBody = document.getElementById('farmersTableBody');
-                if (tableBody) tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-red-500\">Failed to load farmers</div></td></tr>`;
-                console.error(e);
-            }
-        }
 
         function showSRAOfficersContent() {
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
             fetch('partials/sra_officers.html')
                 .then(r => r.text())
                 .then(html => {
-                    document.querySelector('main').innerHTML = html;
+                    mainContent.innerHTML = html;
                     const pageSizeSel = document.getElementById('sraPageSize');
                     if (pageSizeSel) {
                         pageSizeSel.addEventListener('change', () => fetchAndRenderSRA());
@@ -897,7 +778,10 @@
                     fetchAndRenderSRA();
                 })
                 .catch(() => {
-                    document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
+                    const mainContent = document.querySelector('main');
+                    mainContent.style.height = '100vh';
+                    mainContent.style.overflow = 'auto';
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
                 });
         }
 
@@ -961,11 +845,13 @@
         }
 
         // Open preset modals
-        function openAddFarmer(){ if (window.openAddFarmerModal) window.openAddFarmerModal(); }
         function openAddSRA(){ if (window.openAddSRAModal) window.openAddSRAModal(); }
         
         function showWorkersContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Workers Management</h2>
                     <p class="text-gray-600">Worker management content will be implemented here.</p>
@@ -974,7 +860,10 @@
         }
         
         function showAdminsContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Admins Management</h2>
                     <p class="text-gray-600">Admin management content will be implemented here.</p>
@@ -983,91 +872,33 @@
         }
         
         function showBadgeRequestsContent() {
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
             fetch('partials/badge_requests.html')
                 .then(r => r.text())
                 .then(html => {
-                    document.querySelector('main').innerHTML = html;
-                    document.querySelectorAll('.badge-filter').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const status = btn.getAttribute('data-status');
-                            fetchAndRenderBadgeRequests(status);
-                        });
-                    });
-                    const pageSizeSel = document.getElementById('badgePageSize');
-                    if (pageSizeSel) pageSizeSel.addEventListener('change', () => fetchAndRenderBadgeRequests());
-                    fetchAndRenderBadgeRequests('all');
+                    mainContent.innerHTML = html;
+                    // Initialize the badge filter system
+                    if (window.initializeBadgeFilter) {
+                        window.initializeBadgeFilter();
+                    }
                 })
                 .catch(() => {
-                    document.querySelector('main').innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
+                    const mainContent = document.querySelector('main');
+                    mainContent.style.height = '100vh';
+                    mainContent.style.overflow = 'auto';
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
                 });
         }
 
-        async function fetchAndRenderBadgeRequests(filterStatus = 'all') {
-            try {
-                const q = window.query(
-                    window.collection(window.db || db, 'driver_badge_requests'),
-                    window.orderBy('createdAt', 'desc')
-                );
-                const snap = await window.getDocs(q);
-                const allRows = [];
-                snap.forEach(doc => {
-                    const r = doc.data();
-                    const status = r.status || 'pending';
-                    if (filterStatus !== 'all' && status !== filterStatus) return;
-                    const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt || new Date());
-                    const dateStr = new Date(created).toLocaleDateString();
-                    allRows.push({ id: doc.id, html: `
-                        <tr class=\"hover:bg-gray-50\">
-                            <td class=\"px-6 py-4 whitespace-nowrap\"><div class=\"text-sm font-medium text-gray-900\">${r.name || 'N/A'}</div></td>
-                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${r.licenseNo || 'N/A'}</td>
-                            <td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-700\">${dateStr}</td>
-                            <td class=\"px-6 py-4 whitespace-nowrap\"><span class=\"px-2 py-1 text-xs font-semibold rounded-full ${status === 'approved' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}\">${status}</span></td>
-                            <td class=\"px-6 py-4 whitespace-nowrap text-sm font-medium\">
-                                <div class=\"flex items-center space-x-2\">
-                                    <button onclick=\"viewBadgeDetails('${doc.id}')\" class=\"text-blue-600 hover:text-blue-700\" title=\"View Details\"><i class=\"fas fa-eye\"></i></button>
-                                    <button onclick=\"approveBadgeRequest('${doc.id}')\" class=\"text-green-600 hover:text-green-700\" title=\"Approve\"><i class=\"fas fa-check\"></i></button>
-                                    <button onclick=\"rejectBadgeRequest('${doc.id}')\" class=\"text-red-600 hover:text-red-700\" title=\"Reject\"><i class=\"fas fa-times\"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `});
-                });
 
-                const tableBody = document.getElementById('badgeRequestsTableBody');
-                const total = allRows.length;
-                const pageSizeEl = document.getElementById('badgePageSize');
-                const pageSize = pageSizeEl ? parseInt(pageSizeEl.value || '10', 10) : 10;
-                const slice = allRows.slice(0, pageSize);
-
-                if (slice.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-gray-500\">No requests found</div></td></tr>`;
-                } else {
-                    tableBody.innerHTML = slice.map(r => r.html).join('');
-                }
-
-                const start = total === 0 ? 0 : 1;
-                const end = Math.min(pageSize, total);
-                const totalEl = document.getElementById('badgeTotal');
-                const startEl = document.getElementById('badgeShowingStart');
-                const endEl = document.getElementById('badgeShowingEnd');
-                if (totalEl && startEl && endEl) {
-                    totalEl.textContent = String(total);
-                    startEl.textContent = String(start);
-                    endEl.textContent = String(end);
-                }
-            } catch (e) {
-                const tableBody = document.getElementById('badgeRequestsTableBody');
-                if (tableBody) tableBody.innerHTML = `<tr><td colspan=\"5\" class=\"px-6 py-10\"><div class=\"text-center text-red-500\">Failed to load requests</div></td></tr>`;
-                console.error(e);
-            }
-        }
-
-        // Placeholder action handlers
-        window.approveBadgeRequest = async function (id) { showAlert('Approved request '+id); }
-        window.rejectBadgeRequest = async function (id) { showAlert('Rejected request '+id, 'warning'); }
         
         function showApprovedBadgesContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Approved Driver Badges</h2>
                     <p class="text-gray-600">Approved badges content will be implemented here.</p>
@@ -1076,7 +907,10 @@
         }
         
         function showBadgeHistoryContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Driver Badge History</h2>
                     <p class="text-gray-600">Badge history content will be implemented here.</p>
@@ -1085,7 +919,10 @@
         }
         
         function showActivityLogContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Activity Log</h2>
                     <p class="text-gray-600">Activity log content will be implemented here.</p>
@@ -1094,7 +931,10 @@
         }
         
         function showFailedLoginsContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Failed Login Attempts</h2>
                     <p class="text-gray-600">Failed logins content will be implemented here.</p>
@@ -1103,16 +943,52 @@
         }
         
         function showSecuritySettingsContent() {
-            document.querySelector('main').innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Security Settings</h2>
-                    <p class="text-gray-600">Security settings content will be implemented here.</p>
-                </div>
-            `;
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            fetch('partials/security.html')
+                .then(r => r.text())
+                .then(html => {
+                    mainContent.innerHTML = html;
+                    // Initialize the security management system
+                    if (window.initializeSecurity) {
+                        window.initializeSecurity();
+                    }
+                })
+                .catch(() => {
+                    const mainContent = document.querySelector('main');
+                    mainContent.style.height = '100vh';
+                    mainContent.style.overflow = 'auto';
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load security section.</p></div>';
+                });
+        }
+        
+        function showMaintenanceContent() {
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            fetch('partials/maintenance.html')
+                .then(r => r.text())
+                .then(html => {
+                    mainContent.innerHTML = html;
+                    // Initialize the maintenance management system
+                    if (window.initializeMaintenance) {
+                        window.initializeMaintenance();
+                    }
+                })
+                .catch(() => {
+                    const mainContent = document.querySelector('main');
+                    mainContent.style.height = '100vh';
+                    mainContent.style.overflow = 'auto';
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load maintenance section.</p></div>';
+                });
         }
         
         function showSystemSettingsContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8 max-w-2xl">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">System Settings</h2>
                     <div class="space-y-8">
@@ -1145,7 +1021,10 @@
         }
         
         function showBackupRestoreContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Backup & Restore</h2>
                     <p class="text-gray-600">Backup and restore content will be implemented here.</p>
@@ -1154,7 +1033,10 @@
         }
         
         function showSystemLogsContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">System Logs</h2>
                     <p class="text-gray-600">System logs content will be implemented here.</p>
@@ -1163,7 +1045,10 @@
         }
         
         function showReportsContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Reports</h2>
                     <p class="text-gray-600">Reports content will be implemented here.</p>
@@ -1172,7 +1057,10 @@
         }
         
         function showSettingsContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Settings</h2>
                     <p class="text-gray-600">Settings content will be implemented here.</p>
@@ -1181,7 +1069,10 @@
         }
 
         function showHelpContent() {
-            document.querySelector('main').innerHTML = `
+            const mainContent = document.querySelector('main');
+            mainContent.style.height = '100vh';
+            mainContent.style.overflow = 'auto';
+            mainContent.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-4">Help & Support</h2>
                     <p class="text-gray-600">If you need assistance, please contact the system administrator or email <a href="mailto:support@canemap.example" class="text-[var(--cane-600)] font-medium">support@canemap.example</a>.</p>
