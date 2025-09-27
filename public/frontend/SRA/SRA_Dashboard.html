@@ -86,7 +86,7 @@
         <div class="container mx-auto px-6 py-4 text-white">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="lobby.html" class="hover:opacity-90 transition-opacity">
+                    <a href="../Common/lobby.html" class="hover:opacity-90 transition-opacity">
                         <i class="fas fa-arrow-left text-xl"></i>
                     </a>
                     <h1 class="text-2xl font-bold tracking-tight">CaneMap</h1>
@@ -298,9 +298,27 @@
             try {
                 const { auth, db } = await import('../../backend/Common/firebase-config.js');
                 const { onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
-                const { collection, query, orderBy, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                const { collection, query, orderBy, limit, getDocs, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        // Check if user is verified
+                        if (!user.emailVerified) {
+                            alert('Please verify your email before accessing the SRA dashboard.');
+                            window.location.href = '../Common/farmers_login.html';
+                            return;
+                        }
+                        
+                        // Check user role in Firestore
+                        const userRef = doc(db, 'users', user.uid);
+                        const userSnap = await getDoc(userRef);
+                        const userRole = userSnap.exists() ? userSnap.data().role : 'farmer';
+                        
+                        if (userRole !== 'sra_officer') {
+                            alert('Access denied. This dashboard is only for SRA Officers.');
+                            window.location.href = '../Common/lobby.html';
+                            return;
+                        }
+                        
                         const display = user.displayName || user.email || 'SRA Officer';
                         const headerName = document.getElementById('headerUserName');
                         const sideName = document.getElementById('sidebarUserName');
@@ -381,7 +399,14 @@
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', async () => {
-                        try { await signOut(auth); window.location.href = '../Common/login.html'; } catch(_) {}
+                        try { 
+                            await signOut(auth); 
+                            // Clear localStorage
+                            localStorage.removeItem('farmerName');
+                            localStorage.removeItem('userRole');
+                            localStorage.removeItem('userId');
+                            window.location.href = '../Common/farmers_login.html'; 
+                        } catch(_) {}
                     });
                 }
             } catch (e) {

@@ -303,7 +303,7 @@
                     // Route to dashboard based on role
                     switch (role) {
                         case 'handler':
-                            dashboardLink.href = '../Handler/HandlerDashboard.html';
+                            dashboardLink.href = '../Handler/dashboard.html';
                             break;
                         case 'worker':
                             dashboardLink.href = '../Worker/Workers.html';

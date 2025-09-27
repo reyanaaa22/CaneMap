@@ -6,6 +6,29 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Allow creation of users for SRA Officer registration
+    match /users/{userId} {
+      allow create: if request.auth != null || 
+        (request.resource.data.role == 'sra_officer' && 
+         request.resource.data.email != null && 
+         request.resource.data.name != null);
+    }
+    
+    // Allow creation of temp_passwords for user management
+    match /temp_passwords/{tempId} {
+      allow create, read, update, delete: if request.auth != null;
+    }
+    
+    // Allow creation of notifications
+    match /notifications/{notificationId} {
+      allow create, read, update, delete: if request.auth != null;
+    }
+    
+    // Allow creation of email_queue
+    match /email_queue/{emailId} {
+      allow create, read, update, delete: if request.auth != null;
+    }
+    
     // Fields access rules
     match /fields/{fieldId} {
       // Anyone authenticated can read fields

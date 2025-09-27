@@ -15,7 +15,8 @@ import {
     updateDoc,
     getDoc,
     deleteDoc,
-    onSnapshot
+    onSnapshot,
+    setDoc
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 // Global variables
@@ -769,6 +770,248 @@ function createUserRoleChart(users) {
     });
 }
 
+// Fetch and render SRA officers
+async function fetchAndRenderSRA() {
+    try {
+        // First, try to get from localStorage
+        const sraOfficersData = localStorage.getItem('sraOfficers');
+        let sraOfficers = [];
+        
+        if (sraOfficersData) {
+            sraOfficers = JSON.parse(sraOfficersData);
+        }
+        
+        // If no localStorage data, try to create a temporary admin user to fetch from Firestore
+        if (sraOfficers.length === 0) {
+            try {
+                // Create a temporary admin user for fetching data
+                const tempAdminEmail = 'temp-admin@canemap.com';
+                const tempAdminPassword = 'TempAdmin123!';
+                
+                // Try to sign in as temp admin
+                let tempAdmin = null;
+                try {
+                    const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+                    tempAdmin = await signInWithEmailAndPassword(auth, tempAdminEmail, tempAdminPassword);
+                } catch (signInError) {
+                    // Create temp admin if doesn't exist
+                    const { createUserWithEmailAndPassword, updateProfile } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+                    const adminCredential = await createUserWithEmailAndPassword(auth, tempAdminEmail, tempAdminPassword);
+                    tempAdmin = adminCredential.user;
+                    await updateProfile(tempAdmin, { displayName: 'Temp Admin' });
+                    
+                    // Save admin to Firestore
+                    await setDoc(doc(db, 'users', tempAdmin.uid), {
+                        name: 'Temp Admin',
+                        email: tempAdminEmail,
+                        role: 'admin',
+                        status: 'active',
+                        createdAt: serverTimestamp(),
+                    });
+                }
+                
+                // Now fetch SRA officers
+                const usersQuery = query(
+                    collection(db, 'users'),
+                    orderBy('createdAt', 'desc')
+                );
+                
+                const querySnapshot = await getDocs(usersQuery);
+                const firestoreSRAOfficers = [];
+                
+                querySnapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    if (userData.role === 'sra_officer') {
+                        firestoreSRAOfficers.push({
+                            id: doc.id,
+                            ...userData,
+                            createdAt: userData.createdAt?.toDate() || new Date(),
+                            lastLogin: userData.lastLogin?.toDate() || null
+                        });
+                    }
+                });
+                
+                // Sign out temp admin
+                const { signOut } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+                await signOut(auth);
+                
+                sraOfficers = firestoreSRAOfficers;
+                
+                // Store in localStorage for future use
+                localStorage.setItem('sraOfficers', JSON.stringify(sraOfficers));
+                
+            } catch (firestoreError) {
+                console.log('Could not fetch from Firestore:', firestoreError.message);
+            }
+        }
+        
+        // Sort by creation date (newest first)
+        sraOfficers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        renderSRATable(sraOfficers);
+        
+    } catch (error) {
+        console.error('❌ Error loading SRA officers:', error);
+        const tableBody = document.getElementById('sraTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-6 py-10">
+                        <div class="text-center text-red-500">
+                            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                            <p>Failed to load SRA officers</p>
+                            <p class="text-sm mt-2">Error: ${error.message}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Render SRA officers table
+function renderSRATable(sraOfficers) {
+    const tbody = document.getElementById('sraTableBody');
+    if (!tbody) return;
+    
+    if (sraOfficers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-6 py-10">
+                    <div class="flex flex-col items-center justify-center text-center text-gray-500">
+                        <i class="fas fa-user-tie text-2xl mb-2 text-gray-400"></i>
+                        <p>No SRA officers found</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    sraOfficers.forEach(officer => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        
+        const statusClass = getStatusClass(officer.status);
+        const emailVerified = officer.emailVerified ? 'Verified' : 'Pending';
+        const emailVerifiedClass = officer.emailVerified ? 'text-green-600' : 'text-yellow-600';
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-tie text-white text-sm"></i>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-900">${officer.name || 'N/A'}</div>
+                        <div class="text-sm text-gray-500">${officer.email || 'N/A'}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">${officer.email || 'N/A'}</div>
+                <div class="text-xs ${emailVerifiedClass}">${emailVerified}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                    ${officer.status || 'inactive'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex items-center space-x-2">
+                    <button onclick="editUser('${officer.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteUser('${officer.id}')" class="text-red-600 hover:text-red-700">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Refresh SRA Officers function
+function refreshSRAOfficers() {
+    fetchAndRenderSRA();
+}
+
+// Debug function to clear SRA Officers data (for testing)
+function clearSRAOfficersData() {
+    localStorage.removeItem('sraOfficers');
+    fetchAndRenderSRA();
+    console.log('SRA Officers data cleared');
+}
+
+// Function to manually add existing SRA Officer data
+function addExistingSRAOfficer() {
+    // Check if data already exists
+    const existingData = JSON.parse(localStorage.getItem('sraOfficers') || '[]');
+    const existingEmail = 'almackieandrew.bangalao@evsu.edu.ph';
+    
+    if (existingData.some(officer => officer.email === existingEmail)) {
+        alert('SRA Officer data already exists in localStorage!');
+        return;
+    }
+    
+    const officerData = {
+        id: 'existing-sra-001', // You can use the actual UID from Firestore
+        name: 'Almackie Bangalao',
+        email: 'almackieandrew.bangalao@evsu.edu.ph',
+        role: 'sra_officer',
+        status: 'active',
+        emailVerified: false,
+        createdAt: new Date('2025-09-27T05:52:58.000Z').toISOString(), // Convert Firestore timestamp
+        lastLogin: null
+    };
+    
+    existingData.push(officerData);
+    localStorage.setItem('sraOfficers', JSON.stringify(existingData));
+    
+    fetchAndRenderSRA();
+    alert('Existing SRA Officer data loaded successfully!');
+    console.log('Existing SRA Officer added to localStorage');
+}
+
+// Function to import all existing SRA Officers from a predefined list
+function importAllExistingSRAOfficers() {
+    const existingOfficers = [
+        {
+            id: 'existing-sra-001',
+            name: 'Almackie Bangalao',
+            email: 'almackieandrew.bangalao@evsu.edu.ph',
+            role: 'sra_officer',
+            status: 'active',
+            emailVerified: false,
+            createdAt: new Date('2025-09-27T05:52:58.000Z').toISOString(),
+            lastLogin: null
+        }
+        // Add more existing SRA Officers here if needed
+    ];
+    
+    const existingData = JSON.parse(localStorage.getItem('sraOfficers') || '[]');
+    let addedCount = 0;
+    
+    existingOfficers.forEach(officer => {
+        if (!existingData.some(existing => existing.email === officer.email)) {
+            existingData.push(officer);
+            addedCount++;
+        }
+    });
+    
+    if (addedCount > 0) {
+        localStorage.setItem('sraOfficers', JSON.stringify(existingData));
+        fetchAndRenderSRA();
+        alert(`Imported ${addedCount} existing SRA Officer(s) successfully!`);
+    } else {
+        alert('All existing SRA Officers are already imported!');
+    }
+}
+
 // Export functions for global access
 window.editUser = editUser;
 window.deleteUser = deleteUser;
@@ -776,6 +1019,11 @@ window.openAddUserModal = openAddUserModal;
 window.closeAddUserModal = closeAddUserModal;
 window.openEditUserModal = openEditUserModal;
 window.closeEditUserModal = closeEditUserModal;
+window.fetchAndRenderSRA = fetchAndRenderSRA;
+window.refreshSRAOfficers = refreshSRAOfficers;
+window.addExistingSRAOfficer = addExistingSRAOfficer;
+window.importAllExistingSRAOfficers = importAllExistingSRAOfficers;
+window.clearSRAOfficersData = clearSRAOfficersData;
 
 // Export initializeDashboard to global scope for inline script
 window.initializeDashboard = initializeDashboard;

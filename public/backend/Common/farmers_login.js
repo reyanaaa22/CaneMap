@@ -133,12 +133,20 @@ async function login() {
     });
   }
 
-  // ✅ Add this snippet to store farmer name in localStorage
-  let farmerName = docSnap.exists() 
-      ? docSnap.data().fullname || user.displayName || "Farmer Name"
-      : user.displayName || "Farmer Name";
+  // Get user role from Firestore
+  let userRole = "farmer";
+  if (docSnap.exists()) {
+    userRole = docSnap.data().role || "farmer";
+  }
 
-  localStorage.setItem("farmerName", farmerName);
+  // ✅ Store user information in localStorage
+  let userName = docSnap.exists() 
+      ? docSnap.data().fullname || docSnap.data().name || user.displayName || "User"
+      : user.displayName || "User";
+
+  localStorage.setItem("farmerName", userName);
+  localStorage.setItem("userRole", userRole);
+  localStorage.setItem("userId", user.uid);
 
   // ✅ Store nickname if present so other pages (e.g., Workers) can display it
   let farmerNickname = docSnap.exists() 
@@ -155,10 +163,36 @@ async function login() {
     : "";
   localStorage.setItem("farmerContact", farmerContact);
 
-  // --- Reset attempts and redirect ---
+  // --- Reset attempts and redirect based on role ---
   resetAttempts();
   showAlert("Login successful!", "success");
-  setTimeout(() => window.location.href = "../../frontend/Common/lobby.html", 1500);
+  
+  // Update SRA Officer data in localStorage if they're an SRA Officer
+  if (userRole === "sra_officer") {
+    try {
+      const sraOfficersData = localStorage.getItem('sraOfficers');
+      if (sraOfficersData) {
+        const sraOfficers = JSON.parse(sraOfficersData);
+        const officerIndex = sraOfficers.findIndex(o => o.id === user.uid);
+        if (officerIndex !== -1) {
+          sraOfficers[officerIndex].emailVerified = user.emailVerified;
+          sraOfficers[officerIndex].lastLogin = new Date().toISOString();
+          localStorage.setItem('sraOfficers', JSON.stringify(sraOfficers));
+        }
+      }
+    } catch (error) {
+      console.log('Could not update SRA Officer data:', error);
+    }
+  }
+
+  // Redirect based on user role
+  setTimeout(() => {
+    if (userRole === "sra_officer") {
+      window.location.href = "../../frontend/SRA/SRA_Dashboard.html";
+    } else {
+      window.location.href = "../../frontend/Common/lobby.html";
+    }
+  }, 1500);
 
   } catch (error) {
     // Friendly, specific error messaging
