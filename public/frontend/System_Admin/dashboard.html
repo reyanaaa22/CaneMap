@@ -132,6 +132,24 @@
         /* Mobile responsive */
         @media (max-width: 768px) {
             .sidebar-mobile-hidden { display: none; }
+            
+            /* On mobile, sidebar takes full width when expanded */
+            .sidebar { 
+                width: 100% !important; 
+                transform: translateX(-100%);
+            }
+            .sidebar-expanded .sidebar {
+                transform: translateX(0);
+            }
+            .main {
+                margin-left: 0 !important;
+            }
+            
+            /* Hide main content when sidebar is open on mobile */
+            .sidebar-expanded .main {
+                opacity: 0.3;
+                pointer-events: none;
+            }
         }
         
         /* Fixed layout - prevent scrolling */
@@ -142,12 +160,62 @@
         .main {
             overflow-y: auto;
         }
-        .sidebar { transition: width 0.3s ease; }
-        .main { transition: margin-left 0.3s ease; }
-        .sidebar-collapsed .sidebar { width: 4rem; }
-        .sidebar-collapsed .main { margin-left: 4rem !important; }
-        .sidebar-collapsed .sidebar nav span { display: none; }
-        .sidebar-collapsed .sidebar .sidebar-header-details { display: none; }
+        
+        /* Sidebar toggle animations */
+        .sidebar { 
+            transition: width 0.3s ease, transform 0.3s ease; 
+        }
+        .main { 
+            transition: margin-left 0.3s ease; 
+        }
+        
+        /* Collapsed sidebar styles */
+        .sidebar-collapsed .sidebar { 
+            width: 4rem; 
+        }
+        .sidebar-collapsed .main { 
+            margin-left: 4rem !important; 
+        }
+        .sidebar-collapsed .sidebar nav span { 
+            display: none; 
+        }
+        .sidebar-collapsed .sidebar .sidebar-header-details { 
+            display: none; 
+        }
+        .sidebar-collapsed .sidebar .hamburger-icon {
+            margin-right: 0;
+        }
+        .sidebar-collapsed .sidebar .sidebar-header {
+            justify-content: center;
+        }
+        /* Center hamburger icon when collapsed */
+        .sidebar-collapsed .sidebar .flex.justify-end {
+            justify-content: center !important;
+        }
+        /* Hide footer details when collapsed */
+        .sidebar-collapsed .sidebar .sidebar-footer .flex-1 {
+            display: none;
+        }
+        /* Center icons in collapsed state */
+        .sidebar-collapsed .sidebar nav a {
+            justify-content: center;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .sidebar-collapsed .sidebar nav button {
+            justify-content: center;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        
+        /* Hamburger icon styles */
+        .hamburger-icon {
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .hamburger-icon:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-[var(--cane-900)] via-[var(--cane-800)] to-[var(--cane-950)]">
@@ -188,7 +256,7 @@
                                     <p class="text-sm font-semibold text-gray-900" id="dropdownAdminName">System Admin</p>
                                     <p class="text-xs text-gray-600">Super Administrator</p>
                     </div>
-                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                <a href="profile_settings.html" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                     <i class="fas fa-user-cog mr-3 text-gray-500"></i>
                                     Profile Settings
                                 </a>
@@ -213,17 +281,27 @@
     <!-- Sidebar -->
     <div class="fixed left-0 top-0 h-full w-64 bg-gray-900 shadow-lg z-40 sidebar">
         <!-- Sidebar Header -->
-        <div class="p-6 border-b border-gray-700 bg-gray-800/50">
-            <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-xl flex items-center justify-center shadow-lg">
-                    <i class="fas fa-shield-alt text-white text-lg"></i>
+        <div class="border-b border-gray-700 bg-gray-800/50">
+            <!-- Hamburger Icon Row -->
+            <div class="flex justify-end p-3 pb-0">
+                <button onclick="toggleSidebar()" class="hamburger-icon w-8 h-8 flex items-center justify-center rounded-lg text-white hover:bg-white/10 transition-all duration-300">
+                    <i class="fas fa-bars text-sm"></i>
+                </button>
+            </div>
+            
+            <!-- Title and Icon Row -->
+            <div class="px-6 pb-6 pt-2">
+                <div class="flex items-center space-x-3 sidebar-header">
+                    <div class="w-12 h-12 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-shield-alt text-white text-lg"></i>
                     </div>
                     <div class="sidebar-header-details">
-                    <h2 class="text-lg font-bold text-white">System Admin</h2>
-                    <p class="text-xs text-gray-400 font-medium">Control Panel</p>
+                        <h2 class="text-lg font-bold text-white">System Admin</h2>
+                        <p class="text-xs text-gray-400 font-medium">Control Panel</p>
                     </div>
                 </div>
             </div>
+        </div>
                     
         <!-- Sidebar Navigation -->
         <nav class="p-4 space-y-3 overflow-y-auto custom-scrollbar" style="height: calc(100vh - 200px);">
@@ -303,7 +381,7 @@
         </nav>
         
         <!-- Sidebar Footer -->
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 bg-gray-800/50">
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 bg-gray-800/50 sidebar-footer">
                     <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-lg">
                     <i class="fas fa-user-shield text-white text-sm"></i>
@@ -499,6 +577,7 @@
         // Initialize dashboard
             document.addEventListener('DOMContentLoaded', function() {
                 initializeDashboard();
+                initializeSidebarState();
                 if (window.wireAddUserModal) window.wireAddUserModal();
             });
         
@@ -1089,6 +1168,114 @@
                 </div>
             `;
         }
+
+        // Sidebar toggle function
+        function toggleSidebar() {
+            const body = document.body;
+            const hamburgerIcon = document.querySelector('.hamburger-icon i');
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // Mobile behavior: toggle sidebar-expanded class
+                body.classList.toggle('sidebar-expanded');
+                
+                // Change the hamburger icon
+                if (body.classList.contains('sidebar-expanded')) {
+                    hamburgerIcon.className = 'fas fa-times text-sm';
+                } else {
+                    hamburgerIcon.className = 'fas fa-bars text-sm';
+                }
+            } else {
+                // Desktop behavior: toggle sidebar-collapsed class
+                body.classList.toggle('sidebar-collapsed');
+                
+                // Change the hamburger icon
+                if (body.classList.contains('sidebar-collapsed')) {
+                    hamburgerIcon.className = 'fas fa-chevron-right text-sm';
+                } else {
+                    hamburgerIcon.className = 'fas fa-bars text-sm';
+                }
+                
+                // Store the sidebar state in localStorage for desktop
+                const isCollapsed = body.classList.contains('sidebar-collapsed');
+                localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
+            }
+        }
+        
+        // Initialize sidebar state from localStorage
+        function initializeSidebarState() {
+            const isMobile = window.innerWidth <= 768;
+            const body = document.body;
+            const hamburgerIcon = document.querySelector('.hamburger-icon i');
+            
+            if (!isMobile) {
+                // Only apply localStorage state on desktop
+                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    if (hamburgerIcon) {
+                        hamburgerIcon.className = 'fas fa-chevron-right text-sm';
+                    }
+                }
+            } else {
+                // On mobile, start with sidebar hidden
+                body.classList.remove('sidebar-expanded');
+                if (hamburgerIcon) {
+                    hamburgerIcon.className = 'fas fa-bars text-sm';
+                }
+            }
+        }
+        
+        // Handle window resize to reset sidebar state when switching between mobile/desktop
+        window.addEventListener('resize', function() {
+            const body = document.body;
+            const hamburgerIcon = document.querySelector('.hamburger-icon i');
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // Switch to mobile mode
+                body.classList.remove('sidebar-collapsed');
+                body.classList.remove('sidebar-expanded');
+                if (hamburgerIcon) {
+                    hamburgerIcon.className = 'fas fa-bars text-sm';
+                }
+            } else {
+                // Switch to desktop mode
+                body.classList.remove('sidebar-expanded');
+                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (isCollapsed) {
+                    body.classList.add('sidebar-collapsed');
+                    if (hamburgerIcon) {
+                        hamburgerIcon.className = 'fas fa-chevron-right text-sm';
+                    }
+                } else {
+                    body.classList.remove('sidebar-collapsed');
+                    if (hamburgerIcon) {
+                        hamburgerIcon.className = 'fas fa-bars text-sm';
+                    }
+                }
+            }
+        });
+        
+        // Close mobile sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+            const isMobile = window.innerWidth <= 768;
+            const body = document.body;
+            const sidebar = document.querySelector('.sidebar');
+            const hamburgerBtn = document.querySelector('.hamburger-icon');
+            
+            if (isMobile && body.classList.contains('sidebar-expanded')) {
+                // Check if click is outside sidebar and not on hamburger button
+                if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                    body.classList.remove('sidebar-expanded');
+                    const hamburgerIcon = document.querySelector('.hamburger-icon i');
+                    if (hamburgerIcon) {
+                        hamburgerIcon.className = 'fas fa-bars text-sm';
+                    }
+                }
+            }
+        });
 
         // Utility functions
         function goBack() {
