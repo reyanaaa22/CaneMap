@@ -11,7 +11,8 @@ import {
   doc,
   updateDoc,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 function h(tag, className = '', children = []) {
@@ -76,9 +77,57 @@ function buildItem(app) {
 async function updateStatus(id, status) {
   try {
     await updateDoc(doc(db, 'field_applications', id), { status, statusUpdatedAt: serverTimestamp() });
+    // If approved, also add to 'fields' collection and notify farmer
+    if (status === 'reviewed') {
+      const appSnap = await getDoc(doc(db, 'field_applications', id));
+      const app = appSnap.data();
+      if (app) {
+        // Save to 'fields' collection for map display
+        await addDoc(collection(db, 'fields'), {
+          userId: app.userId,
+          barangay: app.barangay,
+          size: app.size,
+          terrain: app.terrain,
+          lat: app.lat,
+          lng: app.lng,
+          registeredAt: serverTimestamp(),
+          applicantName: app.applicantName
+        });
+        // Send notification to farmer (Firestore or localStorage)
+        try {
+          // Use localStorage for demo, but ideally use Firestore notifications
+          const notifications = JSON.parse(localStorage.getItem('notifications') || '{}');
+          const userId = app.userId || app.applicantName;
+          if (!notifications[userId]) notifications[userId] = [];
+          notifications[userId].push({
+            type: 'approved',
+            title: 'Field Approved!',
+            message: 'Your field has been reviewed and is now officially registered in CaneMap. You can now access the Handler Dashboard.',
+            at: new Date().toISOString()
+          });
+          localStorage.setItem('notifications', JSON.stringify(notifications));
+        } catch(e) { /* fallback: no notification */ }
+      }
+      // Custom confirmation popup
+      const popup = document.createElement('div');
+      popup.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+      popup.innerHTML = `<div class='bg-white rounded-xl p-6 shadow-xl text-center max-w-sm mx-auto'><h2 class='text-xl font-bold mb-2 text-green-700'>Field Approved</h2><p class='mb-4 text-gray-700'>The field is now registered and visible on the map. The farmer has been notified.</p><button id='closeSraPopupBtn' class='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700'>OK</button></div>`;
+      document.body.appendChild(popup);
+      document.getElementById('closeSraPopupBtn').onclick = function(){ popup.remove(); };
+    }
     await render();
   } catch (e) {
-    alert('Failed to update status.');
+    const errPopup = document.createElement('div');
+    errPopup.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+    errPopup.innerHTML = `<div class='bg-white rounded-xl p-6 shadow-xl text-center max-w-sm mx-auto'>
+      <h2 class='text-xl font-bold mb-2 text-red-700'>Update Failed</h2>
+      <p class='mb-4 text-gray-700'>There was an error updating the field status. Please try again.<br>
+      <span class='text-xs text-red-500'>${e.message || e}</span></p>
+      <pre class='bg-gray-100 text-xs text-left p-2 rounded border border-gray-300 max-w-xs mx-auto mb-2'>${JSON.stringify(e, null, 2)}</pre>
+      <button id='closeErrSraPopupBtn' class='px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700'>Close</button>
+    </div>`;
+    document.body.appendChild(errPopup);
+    document.getElementById('closeErrSraPopupBtn').onclick = function(){ errPopup.remove(); };
     // eslint-disable-next-line no-console
     console.error(e);
   }

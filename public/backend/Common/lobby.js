@@ -1,5 +1,4 @@
-
-        // Scroll animations (define early and run immediately to avoid hidden content if later errors occur)
+// Scroll animations (define early and run immediately to avoid hidden content if later errors occur)
         function animateOnScroll() {
             const elements = document.querySelectorAll('.fade-in-up, .fade-in-left, .fade-in-right, .scale-in, .slide-in-bottom');
             elements.forEach(element => {
@@ -172,6 +171,27 @@
 
         // Initialize map
         let map;
+        async function fetchApprovedFields() {
+            try {
+                const { db } = await import('./firebase-config.js');
+                const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                const snap = await getDocs(collection(db, 'fields'));
+                return snap.docs.map(d => d.data());
+            } catch(e) { return []; }
+        }
+
+        async function showApprovedFieldsOnMap(map) {
+            const caneIcon = L.icon({
+                iconUrl: '../img/PIN.png', iconSize: [40, 40], iconAnchor: [20, 38], popupAnchor: [0, -32]
+            });
+            const fields = await fetchApprovedFields();
+            fields.forEach(f => {
+                const m = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(map);
+                const label = `<b>${f.barangay || 'Field'}</b><br/>${f.size || ''} ha · ${f.terrain || ''}`;
+                m.bindPopup(label);
+            });
+        }
+
         function initMap() {
             try {
                 if (map) return;
@@ -180,9 +200,7 @@
                 mapContainer.innerHTML = '';
                 map = L.map('map').setView([11.0064, 124.6075], 12);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-                const caneIcon = L.icon({
-                    iconUrl: '../img/PIN.png', iconSize: [40, 40], iconAnchor: [20, 38], popupAnchor: [0, -32]
-                });
+                showApprovedFieldsOnMap(map);
                 // Seed any pending fields from Register-field
                 try {
                   const pending = JSON.parse(localStorage.getItem('pendingFields')||'[]');
@@ -255,6 +273,24 @@
             const role = (localStorage.getItem('userRole') || '').toLowerCase();
             const approvedRoles = ['handler', 'worker', 'worker_driver', 'sra_officer'];
             const isApproved = approvedRoles.includes(role);
+            const userId = localStorage.getItem('userId') || fullName;
+            async function checkHandlerAccess() {
+                // If user has approved field, grant handler dashboard access
+                try {
+                    const { db } = await import('./firebase-config.js');
+                    const { collection, getDocs, where, query } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                    const q = query(collection(db, 'fields'), where('userId', '==', userId));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        localStorage.setItem('userRole', 'handler');
+                        if (dashboardLink) {
+                            dashboardLink.classList.remove('opacity-60', 'cursor-not-allowed');
+                            dashboardLink.href = '../Handler/dashboard.html';
+                        }
+                    }
+                } catch(_){}
+            }
+            checkHandlerAccess();
             if (dashboardLink) {
                 if (!isApproved) {
                     dashboardLink.classList.add('opacity-60', 'cursor-not-allowed');
