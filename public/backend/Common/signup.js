@@ -113,9 +113,13 @@ form.addEventListener('submit', async (e) => {
     // Save user to Firestore (collection)
     await setDoc(doc(db, "users", userCredential.user.uid), {
       fullname: fullName,
+      name: fullName,
       email: email,
       contact: contact,
       role: "farmer",
+      status: "pending",
+      lastLogin: null,
+      failedLogins: 0,
       createdAt: serverTimestamp()
     });
     
