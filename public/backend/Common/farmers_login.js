@@ -1,5 +1,6 @@
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
 import { auth, db } from "./firebase-config.js"; 
 
 // Firebase services are available from firebase-config.js
@@ -127,10 +128,20 @@ async function login() {
   if (!docSnap.exists()) {
     await setDoc(userRef, {
       fullname: user.displayName,
+      name: user.displayName,
       email: user.email,
       role: "farmer",
-      createdAt: serverTimestamp()
+      status: user.emailVerified ? "verified" : "active",
+      createdAt: serverTimestamp(),
+      lastLogin: serverTimestamp(),
+      failedLogins: 0
     });
+  } else {
+    // Update lastLogin and set status to verified if email is verified
+    await setDoc(userRef, { 
+      lastLogin: serverTimestamp(), 
+      status: user.emailVerified ? "verified" : (docSnap.data().status || "active")
+    }, { merge: true });
   }
 
   // Get user role from Firestore
@@ -197,6 +208,29 @@ async function login() {
   } catch (error) {
     // Friendly, specific error messaging
     const code = (error && error.code) || "";
+    // Log failed login attempt via callable (server increments users.failedLogins)
+    try {
+      const emailKey = (email || '').toLowerCase();
+      if (emailKey) {
+        let details = {};
+        try {
+          const resp = await fetch('https://ipapi.co/json/');
+          if (resp.ok) {
+            const info = await resp.json();
+            details = {
+              ip: info.ip || null,
+              city: info.city || null,
+              region: info.region || info.region_code || null,
+              country: info.country_name || info.country || null,
+              loc: info.latitude && info.longitude ? `${info.latitude},${info.longitude}` : (info.loc || null)
+            };
+          }
+        } catch (_) {}
+        const functions = getFunctions();
+        const record = httpsCallable(functions, 'recordFailedLogin');
+        await record({ email: emailKey, details });
+      }
+    } catch (_) {}
     if (code === "auth/user-not-found") {
       showAlert("No account found with this email. Please check your email or sign up first.", "error");
     } else if (code === "auth/wrong-password") {
