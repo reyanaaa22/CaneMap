@@ -361,32 +361,71 @@
             const applyBtn = document.getElementById('btnApplyDriver');
             if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
 
-            // Render user-specific notifications from localStorage
+            // Render user-specific notifications from Firestore and localStorage (merged)
             try {
                 const notificationsList = document.getElementById('notificationsList');
                 const userId = localStorage.getItem('userId') || fullName; // fallback to name if no uid
-                if (notificationsList) {
-                    const all = JSON.parse(localStorage.getItem('notifications') || '{}');
-                    const items = Array.isArray(all[userId]) ? all[userId] : [];
-                    if (!items.length) {
-                        notificationsList.innerHTML = '<div class="p-3 rounded-lg border border-[var(--cane-200)] bg-[var(--cane-50)] text-[var(--cane-900)]/90 text-sm">No new notifications.</div>';
-                    } else {
-                        notificationsList.innerHTML = items.map(function(n){
-                            const icon = n.type === 'approved' ? 'fa-check' : (n.type === 'task' ? 'fa-clipboard' : 'fa-info-circle');
-                            return (
-                                '<div class="flex items-start space-x-3 p-3 bg-[var(--cane-50)] rounded-lg border border-[var(--cane-200)]">' +
-                                  '<div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-md">' +
-                                    '<i class="fas ' + icon + ' text-white text-base"></i>' +
-                                  '</div>' +
-                                  '<div>' +
-                                    '<h4 class="font-semibold text-[var(--cane-950)]">' + (n.title || 'Notification') + '</h4>' +
-                                    '<p class="text-[var(--cane-900)]/90 text-sm font-medium">' + (n.message || '') + '</p>' +
-                                  '</div>' +
-                                '</div>'
-                            );
-                        }).join('');
+                async function loadNotifications() {
+                    try {
+                        const { db } = await import('./firebase-config.js');
+                        const { collection, getDocs, query, where, orderBy } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                        const q = query(collection(db, 'notifications'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+                        const snap = await getDocs(q);
+                        const serverItems = snap.docs.map(d => ({ id: d.id, ...d.data(), source: 'server' }));
+                        const all = JSON.parse(localStorage.getItem('notifications') || '{}');
+                        const localItems = (Array.isArray(all[userId]) ? all[userId] : []).map(x => ({ ...x, source: 'local' }));
+                        // Merge (server first)
+                        const items = [...serverItems, ...localItems];
+                        if (notificationsList) {
+                            if (!items.length) {
+                                notificationsList.innerHTML = '<div class="p-3 rounded-lg border border-[var(--cane-200)] bg-[var(--cane-50)] text-[var(--cane-900)]/90 text-sm">No new notifications.</div>';
+                            } else {
+                                notificationsList.innerHTML = items.map(function(n){
+                                    const type = n.type || 'info';
+                                    const icon = type === 'approved' ? 'fa-check' : (type === 'task' ? 'fa-clipboard' : (type === 'remark' ? 'fa-comment-dots' : 'fa-info-circle'));
+                                    return (
+                                        '<div class="flex items-start space-x-3 p-3 bg-[var(--cane-50)] rounded-lg border border-[var(--cane-200)]">' +
+                                          '<div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-md">' +
+                                            '<i class="fas ' + icon + ' text-white text-base"></i>' +
+                                          '</div>' +
+                                          '<div>' +
+                                            '<h4 class="font-semibold text-[var(--cane-950)]">' + (n.title || 'Notification') + '</h4>' +
+                                            '<p class="text-[var(--cane-900)]/90 text-sm font-medium">' + (n.message || '') + '</p>' +
+                                          '</div>' +
+                                        '</div>'
+                                    );
+                                }).join('');
+                            }
+                        }
+                    } catch (err) {
+                        // fallback to local only
+                        try {
+                            const all = JSON.parse(localStorage.getItem('notifications') || '{}');
+                            const items = Array.isArray(all[userId]) ? all[userId] : [];
+                            if (notificationsList) {
+                                if (!items.length) {
+                                    notificationsList.innerHTML = '<div class="p-3 rounded-lg border border-[var(--cane-200)] bg-[var(--cane-50)] text-[var(--cane-900)]/90 text-sm">No new notifications.</div>';
+                                } else {
+                                    notificationsList.innerHTML = items.map(function(n){
+                                        const icon = n.type === 'approved' ? 'fa-check' : (n.type === 'task' ? 'fa-clipboard' : (n.type === 'remark' ? 'fa-comment-dots' : 'fa-info-circle'));
+                                        return (
+                                            '<div class="flex items-start space-x-3 p-3 bg-[var(--cane-50)] rounded-lg border border-[var(--cane-200)]">' +
+                                              '<div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-md">' +
+                                                '<i class="fas ' + icon + ' text-white text-base"></i>' +
+                                              '</div>' +
+                                              '<div>' +
+                                                '<h4 class="font-semibold text-[var(--cane-950)]">' + (n.title || 'Notification') + '</h4>' +
+                                                '<p class="text-[var(--cane-900)]/90 text-sm font-medium">' + (n.message || '') + '</p>' +
+                                              '</div>' +
+                                            '</div>'
+                                        );
+                                    }).join('');
+                                }
+                            }
+                        } catch(_) {}
                     }
                 }
+                loadNotifications();
             } catch(_) {}
 
             // Feedback FAB bindings (ensure after DOM is ready)
