@@ -5,6 +5,17 @@ rules_version = '2';
 //    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow driver badge uploads only to the owner's folder
+    match /driver_badges/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      // Read restricted to owner and staff; otherwise deny
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        firestore.get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra_officer', 'admin']
+      );
+    }
+
+    // Default deny for everything else
     match /{allPaths=**} {
       allow read, write: if false;
     }

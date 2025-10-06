@@ -120,5 +120,42 @@ service cloud.firestore {
       allow delete: if request.auth != null && 
         get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid;
     }
+
+    // Drivers Badge applications
+    match /Drivers_Badge/{docId} {
+      // Owner can create exactly once; docId must equal uid
+      allow create: if request.auth != null &&
+        docId == request.auth.uid &&
+        request.resource.data.requestedBy == request.auth.uid &&
+        !exists(/databases/$(database)/documents/Drivers_Badge/$(request.auth.uid));
+
+      // Owner can read; officers/admins can read all
+      allow read: if request.auth != null && (
+        resource.data.requestedBy == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra_officer', 'admin']
+      );
+
+      // Owner can update at most once every 30 days; officers/admins can always update
+      allow update: if request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra_officer', 'admin'] ||
+        (
+          resource.data.requestedBy == request.auth.uid &&
+          (
+            // Allow update if no lastEdit exists (first edit) or 30 days passed
+            !resource.data.lastEdit ||
+            (
+              // Firestore rules: request.time is current server time
+              request.time.toMillis() - resource.data.lastEdit.toMillis() >= 30 * 24 * 60 * 60 * 1000
+            )
+          )
+        )
+      );
+
+      // Allow deletes by owner or staff. For full cascade on account deletion, use a Cloud Function.
+      allow delete: if request.auth != null && (
+        resource.data.requestedBy == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra_officer', 'admin']
+      );
+    }
   }
 }
