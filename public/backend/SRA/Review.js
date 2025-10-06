@@ -95,6 +95,16 @@ async function updateStatus(id, status) {
         });
         // Send notification to farmer (Firestore or localStorage)
         try {
+          // Write user-scoped notification in Firestore so the lobby can read it cross-device
+          try {
+            await addDoc(collection(db, 'notifications'), {
+              userId: app.userId || app.applicantName,
+              type: 'approved',
+              title: 'Field Approved!\n',
+              message: 'Your field has been reviewed and is now officially registered in CaneMap. You can now access the Handler Dashboard.',
+              createdAt: serverTimestamp()
+            });
+          } catch(_) {}
           // Use localStorage for demo, but ideally use Firestore notifications
           const notifications = JSON.parse(localStorage.getItem('notifications') || '{}');
           const userId = app.userId || app.applicantName;
@@ -163,6 +173,49 @@ function openModal(app) {
   const actions = h('div', 'pt-2 flex justify-end space-x-2');
   const toPending = h('button', 'px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-sm', 'Mark Pending');
   const toReviewed = h('button', 'px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white text-sm', 'Mark Reviewed');
+  // Remarks UI
+  const remarksBox = h('textarea', 'w-full border border-[var(--cane-200)] rounded-lg p-2 text-sm', []);
+  remarksBox.placeholder = 'Add remarks for the applicant (optional)';
+  const sendRemarksBtn = h('button', 'px-3 py-2 rounded bg-[var(--cane-100)] text-[var(--cane-800)] hover:bg-[var(--cane-200)] text-sm', 'Send Remarks');
+  sendRemarksBtn.addEventListener('click', async () => {
+    const text = (remarksBox.value || '').trim();
+    if (!text) { return; }
+    try {
+      // Save remark in a subcollection and stamp on the application for quick view
+      await addDoc(collection(db, 'field_applications', app.id, 'remarks'), {
+        message: text,
+        createdAt: serverTimestamp()
+      });
+      await updateDoc(doc(db, 'field_applications', app.id), { latestRemark: text, latestRemarkAt: serverTimestamp() });
+      // Also notify the applicant
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          userId: app.userId || app.applicantName,
+          type: 'remark',
+          title: 'New remarks from SRA',
+          message: text,
+          createdAt: serverTimestamp()
+        });
+      } catch(_) {}
+      try {
+        const notifications = JSON.parse(localStorage.getItem('notifications') || '{}');
+        const userId = app.userId || app.applicantName;
+        if (!notifications[userId]) notifications[userId] = [];
+        notifications[userId].push({ type: 'remark', title: 'SRA Remarks', message: text, at: new Date().toISOString() });
+        localStorage.setItem('notifications', JSON.stringify(notifications));
+      } catch(_) {}
+      // Lightweight toast
+      sendRemarksBtn.textContent = 'Sent';
+      sendRemarksBtn.className = 'px-3 py-2 rounded bg-green-100 text-green-700';
+      setTimeout(()=>{ sendRemarksBtn.textContent = 'Send Remarks'; sendRemarksBtn.className = 'px-3 py-2 rounded bg-[var(--cane-100)] text-[var(--cane-800)] hover:bg-[var(--cane-200)] text-sm'; }, 1500);
+    } catch(e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send remarks', e);
+      alert('Failed to send remarks. Please try again.');
+    }
+  });
+  const remarksWrap = h('div', 'space-y-2', [h('label', 'text-sm text-[var(--cane-700)]', 'Remarks (optional)'), remarksBox, sendRemarksBtn]);
+  card.appendChild(remarksWrap);
   toPending.addEventListener('click', async () => { await updateStatus(app.id, 'pending'); modal.classList.add('hidden'); });
   toReviewed.addEventListener('click', async () => { await updateStatus(app.id, 'reviewed'); modal.classList.add('hidden'); });
   actions.append(toPending, toReviewed);
