@@ -62,10 +62,27 @@ function showCustomAlert(message, type = 'info') {
 
 
 export function openAddSRAModal(){
-  // Since the addUserModal was removed, this function is no longer functional
-  // You may want to create a new modal or redirect to a different page
-  console.log('Add SRA modal functionality has been disabled');
-  return;
+  try{
+    const modal = document.getElementById('addSraModal');
+    if (modal){
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      const pw = document.getElementById('sraTempPassword');
+      if (pw && !pw.value) pw.value = generateTempPassword();
+      return;
+    }
+  }catch(_){ }
+  console.warn('Add SRA modal not found in DOM. Ensure SRA Officers section is loaded.');
+}
+
+function closeAddSRAModal(){
+  try{
+    const modal = document.getElementById('addSraModal');
+    if (modal){
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }catch(_){ }
 }
 
 function toggleSRAFields(show){
@@ -103,11 +120,74 @@ export function wireSubmitAugment(){
   }, { once: true });
 }
 
+// Wire up the SRA Officer add modal that lives inside the sra_officers.html partial
+export function wireSRAAddForm(){
+  // Generate temp password button inside SRA modal
+  const genBtn = document.getElementById('genTempPass');
+  const pw = document.getElementById('sraTempPassword');
+  if (genBtn && pw){
+    genBtn.addEventListener('click', () => { pw.value = generateTempPassword(); });
+  }
+
+  const form = document.getElementById('addSRAForm');
+  if (!form) return;
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    try{
+      const name = (document.getElementById('sraName')||{}).value || '';
+      const email = (document.getElementById('sraEmail')||{}).value || '';
+      const temp = (document.getElementById('sraTempPassword')||{}).value || '';
+      if (!name || !email || !temp){
+        showCustomAlert('Please fill in name, email, and temporary password.', 'warning');
+        return;
+      }
+
+      // Persist a user document for visibility in the table
+      // Note: Creating Auth users from client admin is not supported without Admin SDK
+      const payload = {
+        name,
+        email,
+        role: 'sra',
+        status: 'pending',
+        emailVerified: false,
+        createdAt: serverTimestamp(),
+        lastLogin: null
+      };
+      await addDoc(collection(db, 'users'), payload);
+
+      // Store the temp password in a separate collection
+      await addDoc(collection(db, 'temp_passwords'), {
+        email,
+        tempPassword: temp,
+        role: 'sra',
+        createdAt: serverTimestamp()
+      });
+
+      closeAddSRAModal();
+      if (typeof showSRASuccessPopup === 'function'){
+        try{ await showSRASuccessPopup({ name, email, temp }); }catch(_){ }
+      }
+      if (typeof window.fetchAndRenderSRA === 'function'){
+        try{ await window.fetchAndRenderSRA(); }catch(_){ }
+      }
+      showCustomAlert('SRA Officer added to records.', 'success');
+      form.reset();
+    }catch(err){
+      console.error(err);
+      showCustomAlert('Failed to add SRA Officer. Check console for details.', 'error');
+    }
+  }, { once: true });
+}
+
 // Expose to window for inline usage
 // eslint-disable-next-line no-undef
 window.openAddSRAModal = openAddSRAModal;
 // eslint-disable-next-line no-undef
 window.wireAddUserModal = () => { wireGenerators(); wireSubmitAugment(); };
+// eslint-disable-next-line no-undef
+window.wireSRAAddForm = () => { try{ wireSRAAddForm(); }catch(_){ } };
+// eslint-disable-next-line no-undef
+window.closeAddSRAModal = closeAddSRAModal;
 
 async function showSRASuccessPopup({ name, email, temp }){
   return new Promise((resolve) => {

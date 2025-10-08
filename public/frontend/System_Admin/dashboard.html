@@ -850,6 +850,7 @@
                 .then(r => r.text())
                 .then(html => {
                     mainContent.innerHTML = html;
+                    if (window.wireSRAAddForm) { try { window.wireSRAAddForm(); } catch(_){} }
                     const pageSizeSel = document.getElementById('sraPageSize');
                     if (pageSizeSel) {
                         pageSizeSel.addEventListener('change', () => fetchAndRenderSRA());
