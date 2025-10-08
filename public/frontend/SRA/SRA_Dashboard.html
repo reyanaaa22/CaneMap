@@ -80,7 +80,7 @@
         }
     </style>
 </head>
-<body class="bg-[#eef2f7] min-h-screen overflow-hidden">
+<body class="bg-[#eef2f7] min-h-screen">
     <!-- Header -->
     <header class="app-header shadow-md">
         <div class="container mx-auto px-6 py-4 text-white">
@@ -96,7 +96,7 @@
                     <div class="relative">
                         <button class="hover:opacity-90 transition-opacity relative">
                             <i class="fas fa-bell text-xl"></i>
-                            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span>
+                            <span id="notificationsBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">0</span>
                         </button>
                     </div>
                     <!-- Profile -->
@@ -110,11 +110,11 @@
                         </button>
                         <!-- Dropdown -->
                         <div id="profileMenu" class="hidden absolute right-0 mt-2 w-44 bg-white text-[var(--cane-900)] rounded-lg shadow-lg ring-1 ring-black/5 py-2 z-50">
-                            <a href="#" id="profileSettings" class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                <i class="fas fa-cog mr-2 text-gray-500"></i>Profile Settings
+                            <a href="#" id="profileSettings" class="block px-4 py-2 text-sm text-[var(--cane-500)] hover:bg-[var(--cane-50)]">
+                                <i class="fas fa-cog mr-2 text-[var(--cane-500)]"></i>Profile Settings
                             </a>
-                            <button id="logoutBtn" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                                <i class="fas fa-right-from-bracket mr-2 text-gray-500"></i>Logout
+                            <button id="logoutBtn" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-100">
+                                <i class="fas fa-right-from-bracket mr-2 text-red-500"></i>Logout
                             </button>
                         </div>
                     </div>
@@ -124,7 +124,7 @@
     </header>
 
     <!-- Main Content with Sidebar -->
-    <div class="flex relative">
+    <div class="flex relative h-[calc(100vh-72px)] overflow-hidden">
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
         
@@ -177,7 +177,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <main class="flex-1 px-4 lg:px-6 py-8 h-[calc(100vh-72px)] overflow-hidden">
+        <main class="flex-1 px-4 lg:px-6 py-8 h-full overflow-y-auto">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
                 <h1 class="text-3xl font-bold text-[var(--cane-900)] mb-8">Dashboard</h1>
@@ -191,7 +191,7 @@
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-[var(--cane-700)]">Total Submissions</p>
-                                <p class="text-2xl font-semibold text-[var(--cane-900)]">247</p>
+                                <p id="metricTotalSubmissions" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                             </div>
                         </div>
                     </div>
@@ -203,7 +203,7 @@
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-[var(--cane-700)]">Pending Review</p>
-                                <p class="text-2xl font-semibold text-[var(--cane-900)]">32</p>
+                                <p id="metricPendingReview" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                             </div>
                         </div>
                     </div>
@@ -215,7 +215,7 @@
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-[var(--cane-700)]">Reviewed Today</p>
-                                <p class="text-2xl font-semibold text-[var(--cane-900)]">18</p>
+                                <p id="metricReviewedToday" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                             </div>
                         </div>
                     </div>
@@ -227,7 +227,7 @@
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-[var(--cane-700)]">Active Fields</p>
-                                <p class="text-2xl font-semibold text-[var(--cane-900)]">89</p>
+                                <p id="metricActiveFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                             </div>
                         </div>
                     </div>
@@ -236,7 +236,7 @@
                 <!-- Main Dashboard Content -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Recent Field Applications Section -->
-                    <div class="section-card rounded-xl p-6">
+                    <div id="recentFieldApplicationsCard" class="section-card rounded-xl p-6 cursor-pointer">
                         <h3 class="text-xl font-bold text-[var(--cane-900)] mb-4 flex items-center">
                             <i class="fas fa-file-alt text-[var(--cane-500)] mr-3"></i>
                             Recent Field Applications
@@ -263,6 +263,16 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Location Mapping (Active Fields) -->
+                <div class="section-card rounded-xl p-6 mt-8">
+                    <h3 class="text-xl font-bold text-[var(--cane-900)] mb-4 flex items-center">
+                        <i class="fas fa-map text-[var(--cane-500)] mr-3"></i>
+                        Location Mapping — Active Fields
+                    </h3>
+                    <p class="text-sm text-[var(--cane-700)] mb-3">Reviewed/active fields are displayed on the map for SRA officers.</p>
+                    <div id="sraFieldsMap" class="w-full h-[28rem] rounded-xl border border-[var(--cane-200)] bg-white"></div>
+                </div>
             </div>
 
             <!-- Other Content Sections (Hidden by default) -->
@@ -285,6 +295,20 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="sraLogoutModal" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 opacity-0 invisible transition-opacity duration-200 ease-out z-[80]">
+        <div id="sraLogoutDialog" class="bg-white rounded-xl shadow-2xl w-full max-w-sm border border-[var(--cane-200)] transform transition-all duration-200 ease-out translate-y-2 scale-95 opacity-0 pointer-events-none">
+            <div class="px-5 pt-5 pb-3">
+                <h3 class="text-lg font-bold text-[var(--cane-950)]">Confirm Logout</h3>
+                <p class="mt-2 text-[var(--cane-900)]/90 text-sm">Are you sure you want to log out?</p>
+            </div>
+            <div class="px-5 pb-5 flex justify-end gap-2">
+                <button id="sraLogoutCancel" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-900)] bg-white hover:bg-[var(--cane-50)]">No</button>
+                <button id="sraLogoutConfirm" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Yes</button>
+            </div>
+        </div>
     </div>
 
     <!-- SRA Dashboard JavaScript -->
@@ -356,20 +380,172 @@
                             }
                         } catch(_) {}
 
-                        // Load notifications
+                        // Live metrics listeners
+                        try {
+                            const { collection, query, where, onSnapshot, serverTimestamp, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                            // Elements
+                            const elTotal = document.getElementById('metricTotalSubmissions');
+                            const elPending = document.getElementById('metricPendingReview');
+                            const elReviewedToday = document.getElementById('metricReviewedToday');
+                            const elActiveFields = document.getElementById('metricActiveFields');
+
+                            // Total Submissions (field_applications count)
+                            onSnapshot(query(collection(db, 'field_applications')), (snap) => {
+                                if (elTotal) elTotal.textContent = String(snap.size);
+                                // Also recompute Pending from this snapshot to include missing status
+                                if (elPending) {
+                                    let pendingCount = 0;
+                                    snap.forEach(d => {
+                                        const s = (d.data().status == null) ? 'pending' : String(d.data().status).toLowerCase();
+                                        if (s === 'pending') pendingCount += 1;
+                                    });
+                                    elPending.textContent = String(pendingCount);
+                                }
+                            });
+
+                            // Reviewed Today: status==='reviewed' with statusUpdatedAt today
+                            const reviewedQuery = query(collection(db, 'field_applications'), where('status', '==', 'reviewed'));
+                            onSnapshot(reviewedQuery, (snap) => {
+                                if (!elReviewedToday) return;
+                                const today = new Date();
+                                const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+                                const start = new Date(y, m, d, 0, 0, 0, 0);
+                                const end = new Date(y, m, d, 23, 59, 59, 999);
+                                let count = 0;
+                                snap.forEach(docu => {
+                                    const data = docu.data();
+                                    const ts = data.statusUpdatedAt || data.createdAt; // fallback if missing
+                                    const t = ts && ts.seconds ? new Date(ts.seconds * 1000) : (ts ? new Date(ts) : null);
+                                    if (t && t >= start && t <= end) count += 1;
+                                });
+                                elReviewedToday.textContent = String(count);
+                            });
+
+                            // Active Fields: count from 'fields' collection
+                            onSnapshot(query(collection(db, 'fields')), (snap) => {
+                                if (elActiveFields) elActiveFields.textContent = String(snap.size);
+                            });
+                        } catch(_) {}
+
+                        // Initialize SRA Fields map with active fields
+                        try {
+                            const mapBox = document.getElementById('sraFieldsMap');
+                            if (mapBox) {
+                                // ensure Leaflet loaded
+                                async function ensureLeaflet(){
+                                    if (window.L) return;
+                                    const link = document.createElement('link');
+                                    link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                                    document.head.appendChild(link);
+                                    await new Promise((resolve,reject)=>{ const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); });
+                                }
+                                await ensureLeaflet();
+                                const map = L.map(mapBox, { zoomControl: true }).setView([11.0064, 124.6075], 12);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+                                const caneIcon = L.icon({ iconUrl: '../img/PIN.png', iconSize: [32,32], iconAnchor: [16,30], popupAnchor: [0,-28] });
+                                const markers = new Map(); // id => marker
+                                const fieldsQ = query(collection(db, 'fields'));
+                                onSnapshot(fieldsQ, (snap) => {
+                                    // Update markers live
+                                    const seen = new Set();
+                                    snap.forEach(docu => {
+                                        const d = docu.data();
+                                        const id = docu.id;
+                                        seen.add(id);
+                                        const lat = d.lat, lng = d.lng;
+                                        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return;
+                                        const label = (d.applicantName || 'Field') + (d.barangay ? ` — ${d.barangay}` : '');
+                                        if (markers.has(id)) {
+                                            const mk = markers.get(id);
+                                            mk.setLatLng([lat, lng]);
+                                            mk.bindPopup(label);
+                                        } else {
+                                            const mk = L.marker([lat, lng], { icon: caneIcon }).addTo(map).bindPopup(label);
+                                            markers.set(id, mk);
+                                        }
+                                    });
+                                    // Remove markers not present anymore
+                                    for (const [id, mk] of markers.entries()) {
+                                        if (!seen.has(id)) { map.removeLayer(mk); markers.delete(id); }
+                                    }
+                                    // Fit bounds if we have markers
+                                    try {
+                                        const latlngs = Array.from(markers.values()).map(mk => mk.getLatLng());
+                                        if (latlngs.length) {
+                                            const b = L.latLngBounds(latlngs);
+                                            map.fitBounds(b, { padding: [20,20], maxZoom: 15 });
+                                        }
+                                    } catch(_) {}
+                                });
+                                setTimeout(()=>{ map.invalidateSize(); }, 200);
+
+                                // Constrain to Ormoc City vicinity
+                                try {
+                                    // Rough bounding box around Ormoc City, Leyte
+                                    const southWest = L.latLng(10.85, 124.45);
+                                    const northEast = L.latLng(11.20, 124.80);
+                                    const bounds = L.latLngBounds(southWest, northEast);
+                                    map.setMaxBounds(bounds);
+                                    map.on('drag', function() { map.panInsideBounds(bounds, { animate: true }); });
+                                } catch(_) {}
+
+                                // Focus-to-zoom behavior: enable zoom only after clicking the map; disable on outside click
+                                try {
+                                    let zoomActive = false;
+                                    function disableZoom(){
+                                        map.scrollWheelZoom.disable();
+                                        map.doubleClickZoom.disable();
+                                        map.touchZoom.disable();
+                                        zoomActive = false;
+                                        mapBox.classList.remove('ring-2','ring-[var(--cane-500)]');
+                                    }
+                                    function enableZoom(){
+                                        map.scrollWheelZoom.enable();
+                                        map.doubleClickZoom.enable();
+                                        map.touchZoom.enable();
+                                        zoomActive = true;
+                                        mapBox.classList.add('ring-2','ring-[var(--cane-500)]');
+                                    }
+                                    // Start disabled
+                                    disableZoom();
+                                    // Activate on map click
+                                    mapBox.addEventListener('mousedown', function(){ enableZoom(); });
+                                    // Deactivate when clicking outside the map
+                                    document.addEventListener('mousedown', function(e){
+                                        if (!mapBox.contains(e.target)) { disableZoom(); }
+                                    });
+                                    // When not active, ensure wheel scrolling scrolls the page, not the map
+                                    mapBox.addEventListener('wheel', function(e){
+                                        if (!zoomActive) {
+                                            // Do not prevent default; just ensure map doesn't handle it
+                                            e.stopPropagation();
+                                        }
+                                    }, { capture: true });
+                                } catch(_) {}
+                            }
+                        } catch(_) {}
+
+                        // Live notifications (for SRA officer)
                         try {
                             const nList = document.getElementById('notificationsList');
-                            if (nList) {
+                            const badge = document.getElementById('notificationsBadge');
+                            if (nList && badge) {
                                 nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4">Loading notifications…</div>';
                                 const notiRef = collection(db, 'notifications');
-                                const nq = query(notiRef, orderBy('createdAt', 'desc'), limit(5));
-                                const nsnap = await getDocs(nq);
-                                if (nsnap.empty) {
-                                    nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No notifications</div>';
-                                } else {
+                                // Scope: SRA-wide notifications (no userId) or targeted to this officer role
+                                const nq = query(notiRef, orderBy('createdAt', 'desc'));
+                                const { onSnapshot } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                                onSnapshot(nq, (nsnap) => {
+                                    const docs = nsnap.docs
+                                      .map(d => ({ id: d.id, ...d.data() }))
+                                      .filter(n => !n.userId || n.role === 'sra_officer');
+                                    badge.textContent = String(docs.length);
+                                    if (docs.length === 0) {
+                                        nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No notifications</div>';
+                                        return;
+                                    }
                                     nList.innerHTML = '';
-                                    nsnap.forEach(d => {
-                                        const n = d.data();
+                                    docs.slice(0, 8).forEach(n => {
                                         const row = document.createElement('div');
                                         row.className = 'flex items-start space-x-3';
                                         row.innerHTML = '<div class="w-2 h-2 bg-[var(--cane-500)] rounded-full mt-2"></div>'+
@@ -377,7 +553,7 @@
                                             '<p class="text-xs text-[var(--cane-600)]">'+formatRelativeTime(n.createdAt)+'</p></div>';
                                         nList.appendChild(row);
                                     });
-                                }
+                                });
                             }
                         } catch(_) {}
                     } else {
@@ -396,17 +572,22 @@
                         }
                     });
                 }
+                const profileSettingsLink = document.getElementById('profileSettings');
+                if (profileSettingsLink) {
+                    profileSettingsLink.addEventListener('click', function(e){
+                        e.preventDefault();
+                        window.location.href = '../Common/profile-settings.html';
+                    });
+                }
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
-                    logoutBtn.addEventListener('click', async () => {
-                        try { 
-                            await signOut(auth); 
-                            // Clear localStorage
-                            localStorage.removeItem('farmerName');
-                            localStorage.removeItem('userRole');
-                            localStorage.removeItem('userId');
-                            window.location.href = '../Common/farmers_login.html'; 
-                        } catch(_) {}
+                    logoutBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const modal = document.getElementById('sraLogoutModal');
+                        const dialog = document.getElementById('sraLogoutDialog');
+                        if (!modal || !dialog) return;
+                        modal.classList.remove('invisible', 'opacity-0');
+                        dialog.classList.remove('opacity-0', 'scale-95', 'translate-y-2', 'pointer-events-none');
                     });
                 }
             } catch (e) {
@@ -528,6 +709,60 @@
                 if (window.innerWidth >= 1024) {
                     closeSidebar();
                 }
+            });
+
+            // Click-through: Recent Field Applications -> Review Applications section
+            const recentCard = document.getElementById('recentFieldApplicationsCard');
+            if (recentCard) {
+                recentCard.addEventListener('click', async function() {
+                    try {
+                        showSection('field-documents');
+                        const container = document.getElementById('fieldDocsContainer');
+                        if (container && container.childElementCount === 0) {
+                            const html = await fetch('SRA_FieldDocuments.html').then(r => r.text());
+                            container.innerHTML = html;
+                        }
+                        // initialize/refresh review list
+                        const mod = await import('../../backend/SRA/Review.js');
+                        if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                            mod.SRAReview.init();
+                        }
+                        // Ensure sidebar section highlights the Review menu
+                        const activeNavItem = document.querySelector('[data-section="field-documents"]');
+                        if (activeNavItem) {
+                            document.querySelectorAll('.nav-item').forEach(item => {
+                                item.classList.remove('bg-slate-800', 'text-white');
+                                item.classList.add('text-slate-300');
+                            });
+                            activeNavItem.classList.add('bg-slate-800', 'text-white');
+                            activeNavItem.classList.remove('text-slate-300');
+                        }
+                    } catch(_) {}
+                });
+            }
+
+            // Logout modal controls
+            const modal = document.getElementById('sraLogoutModal');
+            const dialog = document.getElementById('sraLogoutDialog');
+            const cancelBtn = document.getElementById('sraLogoutCancel');
+            const confirmBtn = document.getElementById('sraLogoutConfirm');
+            function hideLogoutModal(){
+                if (!modal || !dialog) return;
+                dialog.classList.add('opacity-0','scale-95','translate-y-2','pointer-events-none');
+                modal.classList.add('opacity-0','invisible');
+            }
+            if (cancelBtn) cancelBtn.addEventListener('click', hideLogoutModal);
+            if (modal) modal.addEventListener('click', (e)=>{ if (e.target === modal) hideLogoutModal(); });
+            if (confirmBtn) confirmBtn.addEventListener('click', async ()=>{
+                try {
+                    const { auth } = await import('../../backend/Common/firebase-config.js');
+                    const { signOut } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+                    await signOut(auth);
+                    localStorage.removeItem('farmerName');
+                    localStorage.removeItem('userRole');
+                    localStorage.removeItem('userId');
+                    window.location.href = '../Common/farmers_login.html';
+                } catch(_) { hideLogoutModal(); }
             });
         }
 

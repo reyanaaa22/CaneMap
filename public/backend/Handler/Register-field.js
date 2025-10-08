@@ -30,7 +30,18 @@
           status: 'pending',
           createdAt: serverTimestamp()
         };
-        await addDoc(collection(db, 'field_applications'), payload);
+        const ref = await addDoc(collection(db, 'field_applications'), payload);
+        try {
+          // Notify SRA officers of new field application
+          await addDoc(collection(db, 'notifications'), {
+            type: 'field_application',
+            role: 'sra_officer',
+            title: 'New Field Application',
+            message: `${payload.applicantName} submitted a field for ${barangay}.`,
+            appId: ref.id,
+            createdAt: serverTimestamp()
+          });
+        } catch(_) {}
         // Custom confirmation popup
         const popup = document.createElement('div');
         popup.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
