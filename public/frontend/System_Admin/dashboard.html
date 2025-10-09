@@ -1340,7 +1340,7 @@
         async function viewBadgeDetails(id) {
             try {
                 window._currentBadgeId = id;
-                const ref = window.doc(window.db || db, 'driver_badge_requests', id);
+                const ref = window.doc(window.db || db, 'Drivers_Badge', id);
                 const d = await window.getDoc(ref);
                 if (!d.exists()) return;
                 const r = d.data();

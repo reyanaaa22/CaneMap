@@ -115,15 +115,26 @@ function updateActiveFarmerFilterIndicator(filterType) {
 // Load farmers from Firebase
 async function loadFarmers() {
     try {
-        console.log('🔄 Loading farmers...');
+        console.log('🔄 Loading users from users collection...');
         
-        const farmersQuery = query(
-            collection(db, 'users'),
-            where('role', '==', 'farmer'),
-            orderBy('createdAt', 'desc')
-        );
+        // First try with orderBy, if it fails, try without orderBy
+        let querySnapshot;
+        try {
+            // Try with orderBy first (preferred for sorting)
+            const farmersQuery = query(
+                collection(db, 'users'),
+                orderBy('createdAt', 'desc')
+            );
+            querySnapshot = await getDocs(farmersQuery);
+            console.log('✅ Loaded users with orderBy');
+        } catch (orderByError) {
+            console.log('⚠️ orderBy failed, trying without orderBy:', orderByError.message);
+            // Fallback: get all documents without orderBy
+            const farmersQuery = query(collection(db, 'users'));
+            querySnapshot = await getDocs(farmersQuery);
+            console.log('✅ Loaded users without orderBy');
+        }
         
-        const querySnapshot = await getDocs(farmersQuery);
         farmers = [];
         
         querySnapshot.forEach((doc) => {
@@ -136,15 +147,40 @@ async function loadFarmers() {
             });
         });
         
+        // Sort manually if orderBy failed
+        if (farmers.length > 0 && !farmers[0].createdAt) {
+            farmers.sort((a, b) => {
+                const dateA = a.createdAt || new Date(0);
+                const dateB = b.createdAt || new Date(0);
+                return dateB - dateA; // Descending order
+            });
+        }
+        
         filteredFarmers = [...farmers];
-        console.log(`📊 Loaded ${farmers.length} farmers`);
+        console.log(`📊 Loaded ${farmers.length} users from users collection`);
+        
+        // Debug: Log first few users to see what data we're getting
+        if (farmers.length > 0) {
+            console.log('🔍 Sample user data:', farmers.slice(0, 3));
+        } else {
+            console.log('ℹ️ No users found in users collection');
+            console.log('ℹ️ This could mean:');
+            console.log('   - The collection is empty');
+            console.log('   - Firestore security rules are blocking access');
+            console.log('   - The collection name is different');
+        }
         
         // Render the table
         renderFarmersTable();
         
     } catch (error) {
-        console.error('❌ Error loading farmers:', error);
-        showFarmersError('Failed to load farmers');
+        console.error('❌ Error loading users from users collection:', error);
+        console.error('❌ Error details:', {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+        });
+        showFarmersError(`Failed to load users: ${error.message} (Code: ${error.code || 'Unknown'})`);
     }
 }
 
@@ -161,9 +197,10 @@ function applyFilters() {
             (farmer.email && farmer.email.toLowerCase().includes(searchTerm)) ||
             (farmer.phone && farmer.phone.toLowerCase().includes(searchTerm));
         
-        // Role filter
-        const farmerType = farmer.farmerType || farmer.subRole || farmer.type || 'N/A';
-        const matchesRole = roleFilter === 'all' || farmerType === roleFilter;
+        // Role filter - check both main role and sub-role fields
+        const mainRole = farmer.role || 'N/A';
+        const subRole = farmer.farmerType || farmer.subRole || farmer.type || 'N/A';
+        const matchesRole = roleFilter === 'all' || mainRole === roleFilter || subRole === roleFilter;
         
         // Status filter
         const matchesStatus = statusFilter === 'all' || farmer.status === statusFilter;
@@ -244,13 +281,15 @@ function renderFarmersTable() {
         row.className = 'hover:bg-gray-50';
         
         const statusClass = getFarmerStatusClass(farmer.status);
-        const farmerType = farmer.farmerType || farmer.subRole || farmer.type || 'N/A';
+        const mainRole = farmer.role || 'N/A';
+        const subRole = farmer.farmerType || farmer.subRole || farmer.type || '';
+        const displayRole = subRole && subRole !== 'N/A' ? `${mainRole} (${subRole})` : mainRole;
         
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                     <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center">
-                        <i class="fas fa-seedling text-white text-sm"></i>
+                        <i class="fas fa-user text-white text-sm"></i>
                     </div>
                     <div class="ml-4">
                         <div class="text-sm font-medium text-gray-900">${farmer.name || 'N/A'}</div>
@@ -258,7 +297,7 @@ function renderFarmersTable() {
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${farmerType}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${displayRole}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${farmer.email || 'N/A'}</td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
@@ -270,10 +309,10 @@ function renderFarmersTable() {
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex items-center space-x-2">
-                    <button onclick="editFarmer('${farmer.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]" title="Edit Farmer">
+                    <button onclick="editFarmer('${farmer.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]" title="Edit User">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="deleteFarmer('${farmer.id}')" class="text-red-600 hover:text-red-700" title="Delete Farmer">
+                    <button onclick="deleteFarmer('${farmer.id}')" class="text-red-600 hover:text-red-700" title="Delete User">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -467,6 +506,70 @@ function showFarmersAlert(message, type = 'success') {
     }, 5000);
 }
 
+// Create test users for demonstration (only if collection is empty)
+export async function createTestUsers() {
+    try {
+        console.log('🔄 Creating test users...');
+        
+        const { addDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+        
+        const testUsers = [
+            {
+                name: 'John Farmer',
+                email: 'john.farmer@example.com',
+                phone: '+63 912 345 6789',
+                role: 'farmer',
+                status: 'active',
+                farmerType: 'Field Handler',
+                createdAt: new Date(),
+                lastLogin: new Date()
+            },
+            {
+                name: 'Jane Worker',
+                email: 'jane.worker@example.com',
+                phone: '+63 912 345 6790',
+                role: 'worker',
+                status: 'active',
+                farmerType: 'Field Worker',
+                createdAt: new Date(Date.now() - 86400000), // 1 day ago
+                lastLogin: new Date(Date.now() - 3600000) // 1 hour ago
+            },
+            {
+                name: 'Mike SRA Officer',
+                email: 'mike.sra@example.com',
+                phone: '+63 912 345 6791',
+                role: 'sra_officer',
+                status: 'active',
+                createdAt: new Date(Date.now() - 172800000), // 2 days ago
+                lastLogin: new Date(Date.now() - 7200000) // 2 hours ago
+            },
+            {
+                name: 'Sarah Admin',
+                email: 'sarah.admin@example.com',
+                phone: '+63 912 345 6792',
+                role: 'admin',
+                status: 'active',
+                createdAt: new Date(Date.now() - 259200000), // 3 days ago
+                lastLogin: new Date(Date.now() - 1800000) // 30 minutes ago
+            }
+        ];
+        
+        for (const user of testUsers) {
+            await addDoc(collection(db, 'users'), user);
+        }
+        
+        console.log('✅ Test users created successfully');
+        showFarmersAlert('Test users created successfully', 'success');
+        
+        // Reload the data
+        loadFarmers();
+        
+    } catch (error) {
+        console.error('❌ Error creating test users:', error);
+        showFarmersAlert('Failed to create test users', 'error');
+    }
+}
+
 // Export functions for global access
 window.initializeFarmers = initializeFarmers;
 window.editFarmer = editFarmer;
@@ -475,3 +578,4 @@ window.updateFarmerStatus = updateFarmerStatus;
 window.refreshFarmers = refreshFarmers;
 window.getFarmersStats = getFarmersStats;
 window.searchFarmers = searchFarmers;
+window.createTestUsers = createTestUsers;

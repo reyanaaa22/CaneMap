@@ -683,6 +683,42 @@ async function handleLogin(event) {
         const authResult = await AdminAuth.authenticateAdmin(pinCode);
         
         if (authResult.success) {
+            // Sign in to Firebase Auth as System Admin
+            try {
+                const { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+                
+                const adminEmail = authResult.user.email;
+                const adminPassword = 'SystemAdmin123!'; // Default password for System Admin
+                
+                let firebaseUser = null;
+                try {
+                    // Try to sign in with existing credentials
+                    firebaseUser = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+                } catch (signInError) {
+                    // Create System Admin user if doesn't exist
+                    const adminCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+                    firebaseUser = adminCredential.user;
+                    await updateProfile(firebaseUser, { displayName: authResult.user.name });
+                    
+                    // Save System Admin to Firestore users collection
+                    const { setDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                    await setDoc(doc(db, 'users', firebaseUser.uid), {
+                        name: authResult.user.name,
+                        email: adminEmail,
+                        role: 'system_admin',
+                        status: 'active',
+                        createdAt: serverTimestamp(),
+                        permissions: authResult.user.permissions
+                    });
+                }
+                
+                console.log('✅ System Admin signed in to Firebase Auth:', firebaseUser.uid);
+                
+            } catch (firebaseAuthError) {
+                console.error('❌ Firebase Auth error:', firebaseAuthError);
+                // Continue with session-based auth as fallback
+            }
+            
             // Create session
             const session = SessionManager.createSession(authResult.user);
             

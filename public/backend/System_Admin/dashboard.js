@@ -131,8 +131,8 @@ async function loadDashboardStats() {
         let driverBadges = 0;
         try {
             const driverBadgesQuery = query(
-                collection(db, 'users'),
-                where('driverBadge', '==', 'approved')
+                collection(db, 'Drivers_Badge'),
+                where('status', '==', 'approved')
             );
             const driverBadgesSnapshot = await getDocs(driverBadgesQuery);
             driverBadges = driverBadgesSnapshot.size;

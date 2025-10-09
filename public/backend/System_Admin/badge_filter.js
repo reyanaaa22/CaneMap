@@ -131,10 +131,10 @@ function updateActiveBadgeFilterIndicator(status) {
 // Load badge requests from Firebase
 async function loadBadgeRequests() {
     try {
-        console.log('🔄 Loading badge requests...');
+        console.log('🔄 Loading badge requests from Drivers_Badge collection...');
         
         const badgeQuery = query(
-            collection(db, 'driver_badge_requests'),
+            collection(db, 'Drivers_Badge'),
             orderBy('createdAt', 'desc')
         );
         
@@ -151,14 +151,14 @@ async function loadBadgeRequests() {
         });
         
         filteredBadgeRequests = [...badgeRequests];
-        console.log(`📊 Loaded ${badgeRequests.length} badge requests`);
+        console.log(`📊 Loaded ${badgeRequests.length} badge requests from Drivers_Badge collection`);
         
         // Render the table
         renderBadgeRequestsTable();
         
     } catch (error) {
-        console.error('❌ Error loading badge requests:', error);
-        showBadgeError('Failed to load badge requests');
+        console.error('❌ Error loading badge requests from Drivers_Badge collection:', error);
+        showBadgeError(`Failed to load badge requests: ${error.message}`);
     }
 }
 
@@ -314,7 +314,7 @@ function showBadgeError(message) {
 // Approve badge request
 export async function approveBadgeRequest(requestId) {
     try {
-        await updateDoc(doc(db, 'driver_badge_requests', requestId), {
+        await updateDoc(doc(db, 'Drivers_Badge', requestId), {
             status: 'approved',
             approvedAt: serverTimestamp(),
             approvedBy: 'system_admin'
@@ -332,7 +332,7 @@ export async function approveBadgeRequest(requestId) {
 // Reject badge request
 export async function rejectBadgeRequest(requestId) {
     try {
-        await updateDoc(doc(db, 'driver_badge_requests', requestId), {
+        await updateDoc(doc(db, 'Drivers_Badge', requestId), {
             status: 'rejected',
             rejectedAt: serverTimestamp(),
             rejectedBy: 'system_admin'
