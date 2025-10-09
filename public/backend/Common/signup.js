@@ -204,3 +204,4 @@ inputs.contact.addEventListener('input', () => validateField('contact'));
 inputs.password.addEventListener('input', () => validateField('password'));
 inputs.confirmPassword.addEventListener('input', () => validateField('confirmPassword'));
 inputs.terms.addEventListener('change', () => validateField('terms'));
+
