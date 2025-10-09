@@ -88,9 +88,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const fieldName = form.querySelector("#field_name")?.value.trim() || "";
+    const sugarVariety = form.querySelector("#sugarcane_variety")?.value.trim() || "";
     const barangay = form.querySelector("#barangay")?.value.trim() || "";
+    const street = form.querySelector("#street")?.value.trim() || "";
     const size = form.querySelector("#field_size")?.value.trim() || "";
-    const variety = form.querySelector("#crop_variety")?.value.trim() || "";
+    const terrain = form.querySelector("#terrain_type")?.value.trim() || "";
+
     const lat = parseFloat(form.querySelector("#latitude")?.value || "0");
     const lng = parseFloat(form.querySelector("#longitude")?.value || "0");
 
@@ -98,7 +102,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const validBack = form.querySelector("#valid_id_back")?.value || "";
     const selfie = form.querySelector("#selfie_with_id")?.value || "";
 
-    if (!barangay || !size || !variety || !lat || !lng || !validFront || !validBack || !selfie) {
+    // ✅ Include fieldName in the validation
+    if (
+      !fieldName ||
+      !barangay ||
+      !street ||
+      !size ||
+      !terrain ||
+      !sugarVariety ||
+      !lat ||
+      !lng ||
+      !validFront ||
+      !validBack ||
+      !selfie
+    ) {
       alert("Please fill out all fields and capture all required photos.");
       return;
     }
@@ -112,32 +129,48 @@ document.addEventListener("DOMContentLoaded", () => {
       // 🧩 Duplicate field check – stronger version
       const fieldsRef = collection(db, "field_applications", currentUser.uid, "fields");
 
-      const barangayNorm = barangay.trim().toLowerCase();
-      const sizeNorm = size.trim().toLowerCase();
-      const varietyNorm = variety.trim().toLowerCase();
+      const barangayNorm = barangay.toLowerCase();
+      const streetNorm = street.toLowerCase();
+      const sizeNorm = size.toLowerCase();
+      const terrainNorm = terrain.toLowerCase();
+      const sugarNorm = sugarVariety.toLowerCase();
+      const fieldNameNorm = fieldName.toLowerCase();
       const latNorm = parseFloat(lat.toFixed(5));
       const lngNorm = parseFloat(lng.toFixed(5));
 
       // Query only docs with same barangay (fast + cheap)
-      const q = query(fieldsRef, where("barangay_lower", "==", barangayNorm));
+      const q = query(fieldsRef, where("barangay", "==", barangay));
       const snap = await getDocs(q);
 
       let duplicateFound = false;
 
       snap.forEach((docSnap) => {
         const d = docSnap.data();
-        const s = (d.field_size_lower || d.field_size || "").trim().toLowerCase();
-        const v = (d.crop_variety_lower || d.crop_variety || "").trim().toLowerCase();
+        const fName = (d.field_name || "").trim().toLowerCase();
+        const st = (d.street || "").trim().toLowerCase();
+        const s = (d.field_size || "").trim().toLowerCase();
+        const t = (d.terrain_type || "").trim().toLowerCase();
+        const v = (d.sugarcane_variety || "").trim().toLowerCase();
         const lt = parseFloat((d.latitude || 0).toFixed(5));
         const lg = parseFloat((d.longitude || 0).toFixed(5));
 
-        if (s === sizeNorm && v === varietyNorm && lt === latNorm && lg === lngNorm) {
+        if (
+          fName === fieldNameNorm &&
+          st === streetNorm &&
+          s === sizeNorm &&
+          t === terrainNorm &&
+          v === sugarNorm &&
+          lt === latNorm &&
+          lg === lngNorm
+        ) {
           duplicateFound = true;
         }
       });
 
       if (duplicateFound) {
-        alert("⚠️ You already registered this field with the same barangay, field size, crop variety, and coordinates.");
+        alert(
+          "⚠️ You already registered this field with the same field name, barangay, street, field size, terrain type, variety, and coordinates."
+        );
         submitBtn.disabled = false;
         submitBtn.textContent = "Submit Field Registration";
         submitBtn.classList.remove("opacity-50");
@@ -147,7 +180,10 @@ document.addEventListener("DOMContentLoaded", () => {
       // Upload images
       async function uploadBase64(base64, name) {
         if (!base64.startsWith("data:image")) return "";
-        const refPath = sref(storage, `field_applications/${currentUser.uid}/${name}_${Date.now()}.png`);
+        const refPath = sref(
+          storage,
+          `field_applications/${currentUser.uid}/${name}_${Date.now()}.png`
+        );
         await uploadString(refPath, base64, "data_url");
         return await getDownloadURL(refPath);
       }
@@ -156,32 +192,35 @@ document.addEventListener("DOMContentLoaded", () => {
       const backURL = await uploadBase64(validBack, "valid_back");
       const selfieURL = await uploadBase64(selfie, "selfie");
 
+      // ✅ Clean, ordered, no "_lower" version
       const payload = {
-        fieldName: `${barangay}_${Date.now()}`,
+        field_name: fieldName,
         barangay,
-        barangay_lower: barangay.trim().toLowerCase(),
+        street,
+        sugarcane_variety: sugarVariety,
+        terrain_type: terrain,
         field_size: size,
-        field_size_lower: size.trim().toLowerCase(),
-        crop_variety: variety,
-        crop_variety_lower: variety.trim().toLowerCase(),
         latitude: lat,
         longitude: lng,
-        validFrontUrl: frontURL,
-        validBackUrl: backURL,
-        selfieUrl: selfieURL,
         status: "pending",
+        requestedBy: currentUser.uid,
         submittedAt: serverTimestamp(),
-        requestedBy: currentUser.uid
+        validBackUrl: backURL,
+        validFrontUrl: frontURL,
+        selfieUrl: selfieURL,
       };
 
-      const userFieldsRef = collection(db, "field_applications", currentUser.uid, "fields");
+      const userFieldsRef = collection(
+        db,
+        "field_applications",
+        currentUser.uid,
+        "fields"
+      );
       await addDoc(userFieldsRef, payload);
 
-      alert(
-        "✅ Your field registration has been submitted!\n\n" +
-        "Your field registration will be reviewed by the Sugar Regulatory Administration (SRA).\n\n" +
-        "Status:\nSubmitted – Awaiting SRA Review (5–10 days)."
-      );
+      alert("✅ Field registration submitted successfully! Your request will be reviewed by the SRA within 5–10 working days.");
+        window.location.href = "../Common/lobby.html";
+
 
       form.reset();
     } catch (err) {
