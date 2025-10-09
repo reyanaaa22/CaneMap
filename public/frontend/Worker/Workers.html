@@ -101,6 +101,9 @@
             overflow: hidden;
             font-size: 0.875rem;
         }
+        /* Make FullCalendar auto-height and non-scrollable */
+        .fc { height: auto !important; }
+        .fc .fc-scroller { overflow: visible !important; }
         
         .fc-toolbar {
             background: linear-gradient(135deg, var(--cane-50), white);
@@ -224,14 +227,9 @@
 <body class="bg-gray-100 min-h-screen">
     <!-- Header -->
     <header class="shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600));">
-        <div class="container mx-auto px-6 py-3">
+        <div class="container mx-auto px-6 py-3 lg:pl-64">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="../Common/lobby.html" class="text-white hover:text-gray-200 transition-colors">
-                        <i class="fas fa-arrow-left text-lg"></i>
-                    </a>
-                    <h1 class="text-xl font-bold text-white">CaneMap</h1>
-                </div>
+                <div class="flex items-center space-x-4"></div>
                 <div class="text-center">
                     <div class="flex items-center justify-center space-x-2">
                         <span id="badgeIndicator" class="badge-indicator hidden">Driver Badge</span>
@@ -288,12 +286,12 @@
     </header>
 
     <!-- Main Content with Sidebar -->
-    <div class="flex relative">
+    <div class="flex relative lg:ml-64">
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
         
         <!-- Left Sidebar -->
-        <div id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0">
+        <div id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0">
             <div class="p-6">
                 <!-- Close button for mobile -->
                 <div class="flex justify-end lg:hidden mb-4">
@@ -423,36 +421,22 @@
                 </div>
 
                 <!-- Main Dashboard Content -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                     <!-- Left Column - Map and Fields -->
-                    <div class="lg:col-span-2 space-y-6">
+                    <div class="lg:col-span-1 space-y-6">
                         <!-- Map Section -->
-                        <div class="section-card rounded-xl p-4 lg:p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-bold text-[var(--cane-900)] flex items-center">
-                                    <i class="fas fa-map text-[var(--cane-500)] mr-3"></i>
-                                    Field Locations
-                                </h3>
-                                <button class="btn-primary px-4 py-2 rounded-lg text-sm font-medium">
-                                    <i class="fas fa-plus mr-2"></i>Join New Field
-                                </button>
-                            </div>
-                            <div id="fieldMap" class="w-full h-64 lg:h-80 rounded-lg border-2 border-[var(--cane-300)]"></div>
-                        </div>
-
-
-                    </div>
-
-                    <!-- Right Column - Calendar and Driver Features -->
-                    <div class="space-y-6">
-                        <!-- Calendar Widget -->
                         <div class="section-card rounded-xl p-4 lg:p-6">
                             <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center">
                                 <i class="fas fa-calendar text-[var(--cane-500)] mr-3"></i>
                                 Schedule
-                            </h3>
-                            <div id="calendar" class="w-full min-h-[300px]"></div>
+                                </h3>
+                            <div id="calendar" class="w-full"></div>
                         </div>
+
+                        </div>
+
+                    <!-- Right Column - Calendar and Driver Features -->
+                    <div class="space-y-6">
 
                         <!-- Driver Features (Only visible for workers with driver badge) -->
                         <div id="driverFeatures" class="driver-feature rounded-xl p-4 lg:p-6 hidden">
@@ -512,7 +496,7 @@
             <div id="schedule" class="content-section hidden">
                 <div class="section-card rounded-xl p-6">
                     <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Schedule Management</h2>
-                    <div id="scheduleCalendar" class="w-full h-96"></div>
+                    <div id="scheduleCalendar" class="w-full"></div>
                 </div>
             </div>
 
@@ -557,6 +541,50 @@
     <script src="../backend/Worker/Workers.js"></script>
 
     <script>
+      // Initialize FullCalendar instances
+      document.addEventListener('DOMContentLoaded', function () {
+        if (window.FullCalendar) {
+          const today = new Date();
+          const defaultEvents = [
+            { title: 'Morning Task', start: today },
+          ];
+
+          const calendarEl = document.getElementById('calendar');
+          if (calendarEl) {
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+              initialView: 'dayGridMonth',
+              height: 'auto',
+              contentHeight: 'auto',
+              expandRows: true,
+              headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,dayGridWeek,dayGridDay'
+              },
+              events: defaultEvents,
+            });
+            calendar.render();
+          }
+
+          const scheduleEl = document.getElementById('scheduleCalendar');
+          if (scheduleEl) {
+            const scheduleCal = new FullCalendar.Calendar(scheduleEl, {
+              initialView: 'dayGridMonth',
+              height: 'auto',
+              contentHeight: 'auto',
+              expandRows: true,
+              headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+              },
+              events: defaultEvents,
+            });
+            scheduleCal.render();
+          }
+        }
+      });
+
       // Submenu toggle functionality
       function toggleSubmenu(menuId) {
         const submenu = document.getElementById(menuId + '-submenu');
