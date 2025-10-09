@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAWcIMy6hBF4aP6LTSS1PwtmZogUebAI4A",
   authDomain: "canemap-system.firebaseapp.com",
   projectId: "canemap-system",
-  storageBucket: "canemap-system.appspot.com",
+  storageBucket: "canemap-system.firebasestorage.app",   // ✅ new correct bucket
   messagingSenderId: "624993566775",
   appId: "1:624993566775:web:5b1b72cb58203b46123fb2",
   measurementId: "G-08KFJQ1NEJ"
