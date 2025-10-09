@@ -94,10 +94,17 @@
                 <div class="flex items-center space-x-4">
                     <!-- Notifications -->
                     <div class="relative">
-                        <button class="hover:opacity-90 transition-opacity relative">
+                        <button id="headerBellBtn" class="hover:opacity-90 transition-opacity relative">
                             <i class="fas fa-bell text-xl"></i>
                             <span id="notificationsBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">0</span>
                         </button>
+                        <div id="bellPopup" class="hidden absolute right-0 mt-2 w-80 bg-white text-[var(--cane-900)] rounded-lg shadow-lg ring-1 ring-black/5 py-2 z-50">
+                            <div class="px-4 py-2 border-b border-[var(--cane-200)] font-semibold">Recent Notifications</div>
+                            <div id="bellPopupList" class="max-h-80 overflow-auto"></div>
+                            <div class="px-4 py-2 border-t border-[var(--cane-200)]">
+                                <a id="bellViewAll" href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-medium">View all</a>
+                            </div>
+                        </div>
                     </div>
                     <!-- Profile -->
                     <div class="relative">
@@ -161,6 +168,10 @@
                     <a href="#field-documents" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="field-documents">
                         <i class="fas fa-file-alt"></i>
                         <span>Review Applications</span>
+                    </a>
+                    <a href="#notifications" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
                     </a>
                     
                     <a href="#reports" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="reports">
@@ -250,14 +261,14 @@
                     </div>
 
                     <!-- Notifications Section -->
-                    <div class="section-card rounded-xl p-6">
+                    <div id="notificationsCard" class="section-card rounded-xl p-6 cursor-pointer">
                         <h3 class="text-xl font-bold text-[var(--cane-900)] mb-4 flex items-center">
                             <i class="fas fa-bell text-[var(--cane-500)] mr-3"></i>
                             Notifications
                             </h3>
                         <div id="notificationsList" class="space-y-3 min-h-[160px]"></div>
                         <div class="pt-2">
-                            <a href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-medium">
+                            <a id="viewAllNotificationsLink" href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-medium">
                                 View all notifications
                             </a>
                         </div>
@@ -279,6 +290,24 @@
             <div id="field-documents" class="content-section hidden">
                 <!-- Load the field documents partial -->
                 <div id="fieldDocsContainer"></div>
+            </div>
+
+            <div id="notifications" class="content-section hidden">
+                <div class="section-card rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold text-[var(--cane-900)]">Notifications</h2>
+                        <div class="flex items-center gap-2">
+                            <input id="notifSearch" type="text" placeholder="Search notifications..." class="border border-[var(--cane-200)] rounded-lg px-3 py-2 text-sm w-56"/>
+                            <select id="notifSort" class="border border-[var(--cane-200)] rounded-lg px-2 py-2 text-sm">
+                                <option value="newest">Newest first</option>
+                                <option value="oldest">Oldest first</option>
+                                <option value="type">Type (A–Z)</option>
+                                <option value="title">Title (A–Z)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="notifList" class="divide-y divide-[var(--cane-200)] min-h-[200px]"></div>
+                </div>
             </div>
 
             <div id="reports" class="content-section hidden">
@@ -322,7 +351,7 @@
             try {
                 const { auth, db } = await import('../../backend/Common/firebase-config.js');
                 const { onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
-                const { collection, query, orderBy, limit, getDocs, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                const { collection, collectionGroup, query, orderBy, limit, getDocs, doc, getDoc, onSnapshot, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         // Check if user is verified
@@ -353,36 +382,67 @@
                             const list = document.getElementById('recentAppsList');
                             if (list) {
                                 list.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4">Loading applications…</div>';
-                                const appsRef = collection(db, 'field_applications');
-                                const q = query(appsRef, orderBy('createdAt', 'desc'), limit(5));
-                                const snap = await getDocs(q);
-                                if (snap.empty) {
-                                    list.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No recent applications to display</div>';
-                                } else {
-                                    list.innerHTML = '';
-                                    snap.forEach(d => {
+                                // Fetch recent from both top-level and nested subcollection `field`
+                                async function fetchRecent() {
+                                    // Avoid server-side orderBy to prevent missing-index errors; we'll sort client-side
+                                    let topSnap = { docs: [] };
+                                    let nestedSnap = { docs: [] };
+                                    try {
+                                        topSnap = await getDocs(collection(db, 'field_applications'));
+                                    } catch(_) { topSnap = { docs: [] }; }
+                                    try {
+                                        nestedSnap = await getDocs(collectionGroup(db, 'fields'));
+                                    } catch(_) { nestedSnap = { docs: [] }; }
+                                    const normalize = (d, isNested) => {
                                         const a = d.data();
-                                        const item = document.createElement('div');
-                                        item.className = 'flex items-start justify-between px-4 py-3 border border-[var(--cane-200)] rounded-lg bg-white/60';
-                                        const left = document.createElement('div');
-                                        left.className = 'flex items-start space-x-3';
-                                        left.innerHTML = '<div class="w-8 h-8 bg-[var(--cane-500)] text-white rounded-full flex items-center justify-center">\n  <i class="fas fa-user"></i>\n</div>'+
-                                            '<div><div class="font-medium text-[var(--cane-900)]">'+(a.applicantName||'Applicant')+'</div>'+
-                                            '<div class="text-xs text-[var(--cane-600)]">'+(a.barangay||'')+'</div></div>';
-                                        const badge = document.createElement('span');
-                                        const status = a.status || 'pending';
-                                        badge.className = 'text-xs px-2 py-1 rounded '+(status==='reviewed'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-700');
-                                        badge.textContent = status==='reviewed'?'Reviewed':'Pending Review';
-                                        item.appendChild(left); item.appendChild(badge);
-                                        list.appendChild(item);
+                                        const name = a.applicantName || a.applicant || 'Applicant';
+                                        const brgy = a.barangay || a.location || '';
+                                        const status = (a.status == null ? 'pending' : String(a.status)).toLowerCase();
+                                        const ts = a.submittedAt || a.createdAt || a.statusUpdatedAt || null;
+                                        return { name, brgy, status, ts, _raw: a, _isNested: isNested };
+                                    };
+                                    const items = [
+                                        ...topSnap.docs.map(d => normalize(d, false)),
+                                        ...nestedSnap.docs.map(d => normalize(d, true))
+                                    ];
+                                    // sort desc by timestamp
+                                    items.sort((a,b)=>{
+                                        const toMs = (t)=> t && t.seconds ? t.seconds*1000 : (t ? new Date(t).getTime() : 0);
+                                        return toMs(b.ts) - toMs(a.ts);
                                     });
+                                    return items.slice(0,5);
+                                }
+                                try {
+                                    const items = await fetchRecent();
+                                    if (!items.length) {
+                                        list.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No recent applications to display</div>';
+                                    } else {
+                                        list.innerHTML = '';
+                                        for (const a of items) {
+                                            const item = document.createElement('div');
+                                            item.className = 'flex items-start justify-between px-4 py-3 border border-[var(--cane-200)] rounded-lg bg-white/60';
+                                            const left = document.createElement('div');
+                                            left.className = 'flex items-start space-x-3';
+                                            left.innerHTML = '<div class="w-8 h-8 bg-[var(--cane-500)] text-white rounded-full flex items-center justify-center">\n  <i class="fas fa-user"></i>\n</div>'+
+                                                '<div><div class="font-medium text-[var(--cane-900)]">'+a.name+'</div>'+
+                                                '<div class="text-xs text-[var(--cane-600)]">'+a.brgy+'</div></div>';
+                                            const badge = document.createElement('span');
+                                            const status = a.status || 'pending';
+                                            badge.className = 'text-xs px-2 py-1 rounded '+(status==='reviewed'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-700');
+                                            badge.textContent = status==='reviewed'?'Reviewed':'Pending Review';
+                                            item.appendChild(left); item.appendChild(badge);
+                                            list.appendChild(item);
+                                        }
+                                    }
+                                } catch(e) {
+                                    list.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">Unable to load applications.</div>';
                                 }
                             }
                         } catch(_) {}
 
                         // Live metrics listeners
                         try {
-                            const { collection, query, where, onSnapshot, serverTimestamp, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                            const { collection, collectionGroup, query, where, onSnapshot } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
                             // Elements
                             const elTotal = document.getElementById('metricTotalSubmissions');
                             const elPending = document.getElementById('metricPendingReview');
@@ -390,35 +450,44 @@
                             const elActiveFields = document.getElementById('metricActiveFields');
 
                             // Total Submissions (field_applications count)
-                            onSnapshot(query(collection(db, 'field_applications')), (snap) => {
-                                if (elTotal) elTotal.textContent = String(snap.size);
-                                // Also recompute Pending from this snapshot to include missing status
+                            function recomputeTotals(topSnap, nestedSnap){
+                                const allDocs = [...topSnap.docs, ...nestedSnap.docs];
+                                if (elTotal) elTotal.textContent = String(allDocs.length);
                                 if (elPending) {
                                     let pendingCount = 0;
-                                    snap.forEach(d => {
-                                        const s = (d.data().status == null) ? 'pending' : String(d.data().status).toLowerCase();
+                                    allDocs.forEach(d => {
+                                        const data = d.data();
+                                        const s = (data.status == null) ? 'pending' : String(data.status).toLowerCase();
                                         if (s === 'pending') pendingCount += 1;
                                     });
                                     elPending.textContent = String(pendingCount);
                                 }
-                            });
+                            }
+                            let lastTop = { docs: [] }, lastNested = { docs: [] };
+                            onSnapshot(query(collection(db, 'field_applications')), (snap) => { lastTop = snap; recomputeTotals(lastTop, lastNested); });
+                            onSnapshot(query(collectionGroup(db, 'field')), (snap) => { lastNested = snap; recomputeTotals(lastTop, lastNested); });
 
                             // Reviewed Today: status==='reviewed' with statusUpdatedAt today
-                            const reviewedQuery = query(collection(db, 'field_applications'), where('status', '==', 'reviewed'));
-                            onSnapshot(reviewedQuery, (snap) => {
-                                if (!elReviewedToday) return;
+                            function computeReviewedToday(docs){
                                 const today = new Date();
                                 const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
                                 const start = new Date(y, m, d, 0, 0, 0, 0);
                                 const end = new Date(y, m, d, 23, 59, 59, 999);
                                 let count = 0;
-                                snap.forEach(docu => {
+                                docs.forEach(docu => {
                                     const data = docu.data();
-                                    const ts = data.statusUpdatedAt || data.createdAt; // fallback if missing
+                                    const ts = data.statusUpdatedAt || data.submittedAt || data.createdAt;
                                     const t = ts && ts.seconds ? new Date(ts.seconds * 1000) : (ts ? new Date(ts) : null);
                                     if (t && t >= start && t <= end) count += 1;
                                 });
-                                elReviewedToday.textContent = String(count);
+                                return count;
+                            }
+                            let rTop = { docs: [] }, rNested = { docs: [] };
+                            onSnapshot(query(collection(db, 'field_applications'), where('status', '==', 'reviewed')), (snap) => {
+                                rTop = snap; if (elReviewedToday) elReviewedToday.textContent = String(computeReviewedToday([...rTop.docs, ...rNested.docs]));
+                            });
+                            onSnapshot(query(collectionGroup(db, 'field'), where('status', '==', 'reviewed')), (snap) => {
+                                rNested = snap; if (elReviewedToday) elReviewedToday.textContent = String(computeReviewedToday([...rTop.docs, ...rNested.docs]));
                             });
 
                             // Active Fields: count from 'fields' collection
@@ -529,6 +598,10 @@
                         try {
                             const nList = document.getElementById('notificationsList');
                             const badge = document.getElementById('notificationsBadge');
+                            const bellList = document.getElementById('bellPopupList');
+                            const notifContainer = document.getElementById('notifList');
+                            const notifSearch = document.getElementById('notifSearch');
+                            const notifSort = document.getElementById('notifSort');
                             if (nList && badge) {
                                 nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4">Loading notifications…</div>';
                                 const notiRef = collection(db, 'notifications');
@@ -536,15 +609,18 @@
                                 const nq = query(notiRef, orderBy('createdAt', 'desc'));
                                 const { onSnapshot } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
                                 onSnapshot(nq, (nsnap) => {
-                                    const docs = nsnap.docs
+                                    let docs = nsnap.docs
                                       .map(d => ({ id: d.id, ...d.data() }))
                                       .filter(n => !n.userId || n.role === 'sra_officer');
                                     badge.textContent = String(docs.length);
                                     if (docs.length === 0) {
                                         nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No notifications</div>';
+                                        if (bellList) bellList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-3">No notifications</div>';
+                                        if (notifContainer) notifContainer.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No notifications</div>';
                                         return;
                                     }
                                     nList.innerHTML = '';
+                                    if (bellList) bellList.innerHTML = '';
                                     docs.slice(0, 8).forEach(n => {
                                         const row = document.createElement('div');
                                         row.className = 'flex items-start space-x-3';
@@ -553,6 +629,83 @@
                                             '<p class="text-xs text-[var(--cane-600)]">'+formatRelativeTime(n.createdAt)+'</p></div>';
                                         nList.appendChild(row);
                                     });
+                                    // Bell popup items
+                                    docs.slice(0, 6).forEach(n => {
+                                        if (!bellList) return;
+                                        const row = document.createElement('a');
+                                        row.href = '#';
+                                        row.className = 'block px-4 py-2 hover:bg-[var(--cane-50)]';
+                                        row.innerHTML = '<div class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||'Notification')+'</div>'+
+                                            '<div class="text-xs text-[var(--cane-600)]">'+(n.type||'info')+' · '+formatRelativeTime(n.createdAt)+'</div>';
+                                        row.addEventListener('click', (e)=>{
+                                            e.preventDefault();
+                                            showSection('notifications');
+                                            const popup = document.getElementById('bellPopup'); if (popup) popup.classList.add('hidden');
+                                        });
+                                        bellList.appendChild(row);
+                                    });
+
+                                    // Render full notifications list with search and sort
+                                    function renderNotifications() {
+                                        if (!notifContainer) return;
+                                        let filtered = docs.slice();
+                                        const q = (notifSearch && notifSearch.value ? notifSearch.value.trim().toLowerCase() : '');
+                                        if (q) {
+                                            filtered = filtered.filter(n =>
+                                                String(n.title||'').toLowerCase().includes(q) ||
+                                                String(n.message||'').toLowerCase().includes(q) ||
+                                                String(n.type||'').toLowerCase().includes(q)
+                                            );
+                                        }
+                                        const sort = notifSort ? notifSort.value : 'newest';
+                                        filtered.sort((a,b)=>{
+                                            if (sort === 'oldest') {
+                                                const ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+                                                const tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+                                                return ta - tb;
+                                            }
+                                            if (sort === 'type') {
+                                                return String(a.type||'').localeCompare(String(b.type||''));
+                                            }
+                                            if (sort === 'title') {
+                                                return String(a.title||'').localeCompare(String(b.title||''));
+                                            }
+                                            const ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+                                            const tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+                                            return tb - ta;
+                                        });
+                                        notifContainer.innerHTML = '';
+                                        filtered.forEach(n => {
+                                            const row = document.createElement('div');
+                                            row.className = 'px-4 py-3 hover:bg-[var(--cane-50)] cursor-pointer';
+                                            row.innerHTML = '<div class="flex items-start justify-between">'
+                                                +'<div>'
+                                                +'<div class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||'Notification')+'</div>'
+                                                +'<div class="text-xs text-[var(--cane-600)]">'+(n.type||'info')+' · '+formatRelativeTime(n.createdAt)+'</div>'
+                                                +'</div>'
+                                                +'</div>'
+                                                +'<div class="text-sm text-[var(--cane-700)] mt-1 line-clamp-2">'+(n.message||'')+'</div>';
+                                            row.addEventListener('click', ()=>{
+                                                // Detail modal
+                                                const m = document.createElement('div');
+                                                m.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
+                                                m.innerHTML = '<div class="bg-white rounded-xl p-5 shadow-2xl max-w-md w-[92%]">'
+                                                    +'<div class="flex items-center justify-between mb-2">'
+                                                    +'<div class="text-lg font-semibold">'+(n.title||'Notification')+'</div>'
+                                                    +'<button id="closeNotifModalBtn" class="text-xl">&times;</button>'
+                                                    +'</div>'
+                                                    +'<div class="text-xs text-[var(--cane-600)] mb-3">'+(n.type||'info')+' · '+formatRelativeTime(n.createdAt)+'</div>'
+                                                    +'<div class="text-[var(--cane-900)] text-sm whitespace-pre-wrap">'+(n.message||'')+'</div>'
+                                                    +'</div>';
+                                                document.body.appendChild(m);
+                                                document.getElementById('closeNotifModalBtn').onclick = function(){ m.remove(); };
+                                            });
+                                            notifContainer.appendChild(row);
+                                        });
+                                    }
+                                    if (notifContainer) renderNotifications();
+                                    if (notifSearch) notifSearch.addEventListener('input', renderNotifications);
+                                    if (notifSort) notifSort.addEventListener('change', renderNotifications);
                                 });
                             }
                         } catch(_) {}
@@ -577,6 +730,13 @@
                     profileSettingsLink.addEventListener('click', function(e){
                         e.preventDefault();
                         window.location.href = '../Common/profile-settings.html';
+                    });
+                }
+                const viewAllNotifLink = document.getElementById('viewAllNotificationsLink');
+                if (viewAllNotifLink) {
+                    viewAllNotifLink.addEventListener('click', function(e){
+                        e.preventDefault();
+                        showSection('notifications');
                     });
                 }
                 const logoutBtn = document.getElementById('logoutBtn');
@@ -738,6 +898,38 @@
                             activeNavItem.classList.remove('text-slate-300');
                         }
                     } catch(_) {}
+                });
+            }
+
+            // Notifications card click-through
+            const notificationsCard = document.getElementById('notificationsCard');
+            if (notificationsCard) {
+                notificationsCard.addEventListener('click', function(){
+                    showSection('notifications');
+                });
+            }
+
+            // Bell popup interactions
+            const bellBtn = document.getElementById('headerBellBtn');
+            const bellPopup = document.getElementById('bellPopup');
+            const bellViewAll = document.getElementById('bellViewAll');
+            if (bellBtn && bellPopup) {
+                bellBtn.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    bellPopup.classList.toggle('hidden');
+                });
+                document.addEventListener('click', function(e){
+                    if (!bellPopup.contains(e.target) && e.target !== bellBtn) {
+                        bellPopup.classList.add('hidden');
+                    }
+                });
+            }
+            if (bellViewAll) {
+                bellViewAll.addEventListener('click', function(e){
+                    e.preventDefault();
+                    showSection('notifications');
+                    const popup = document.getElementById('bellPopup');
+                    if (popup) popup.classList.add('hidden');
                 });
             }
 

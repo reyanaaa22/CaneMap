@@ -57,6 +57,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
+    // Nested fields within an application (users can have multiple fields)
+    match /field_applications/{docId}/fields/{fieldId} {
+      // Allow authenticated users and SRA/admins to read applications
+      allow read: if request.auth != null;
+      // Only SRA officers/admins can update review status under nested applications
+      allow update: if request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra_officer', 'admin']
+      );
+      // Owners can create their own nested field applications
+      allow create: if request.auth != null && request.auth.uid == docId;
+    }
 
     // Field workers (join requests) access rules
     match /field_workers/{requestId} {

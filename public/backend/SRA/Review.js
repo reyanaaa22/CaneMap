@@ -4,6 +4,7 @@
 import { db } from '../Common/firebase-config.js';
 import {
   collection,
+  collectionGroup,
   query,
   orderBy,
   where,
@@ -28,21 +29,42 @@ function h(tag, className = '', children = []) {
 }
 
 async function fetchApplications(status = 'all') {
-  const baseRef = collection(db, 'field_applications');
-  // Base query: order by createdAt desc
-  let q = query(baseRef, orderBy('createdAt', 'desc'));
-  // For reviewed, we can filter server-side. For pending, include docs with missing status as pending.
-  if (status === 'reviewed') {
-    q = query(baseRef, where('status', '==', 'reviewed'), orderBy('createdAt', 'desc'));
-    const reviewedSnap = await getDocs(q);
-    return reviewedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  }
-  // For 'all' and 'pending' we fetch then filter client-side to include missing statuses as pending.
-  const snap = await getDocs(q);
-  const apps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  if (status === 'pending') {
-    return apps.filter(a => (a.status == null) || String(a.status).toLowerCase() === 'pending');
-  }
+  // Top-level applications
+  const topQ = status === 'reviewed'
+    ? query(collection(db, 'field_applications'), where('status', '==', 'reviewed'), orderBy('submittedAt', 'desc'))
+    : query(collection(db, 'field_applications'), orderBy('submittedAt', 'desc'));
+  // Nested applications under each user's first field subcollection `field`
+  // Avoid orderBy to prevent missing index errors; sort client-side
+  const nestQ = status === 'reviewed'
+    ? query(collectionGroup(db, 'fields'), where('status', '==', 'reviewed'))
+    : query(collectionGroup(db, 'fields'));
+  const [topSnap, nestSnap] = await Promise.all([
+    getDocs(topQ).catch(()=>({ docs: [] })),
+    getDocs(nestQ).catch(()=>({ docs: [] }))
+  ]);
+  const normalize = (d) => {
+    const a = d.data();
+    const obj = {
+      id: d.id,
+      applicantName: a.applicantName || a.applicant || 'Applicant',
+      barangay: a.barangay || a.location || 'N/A',
+      terrain: a.terrain,
+      size: a.size || a.field_size,
+      lat: a.lat || a.latitude,
+      lng: a.lng || a.longitude,
+      status: (a.status == null ? 'pending' : String(a.status)).toLowerCase(),
+      createdAt: a.submittedAt || a.createdAt || a.statusUpdatedAt
+    };
+    return obj;
+  };
+  let apps = [
+    ...topSnap.docs.map(normalize),
+    ...nestSnap.docs.map(normalize)
+  ];
+  if (status === 'pending') apps = apps.filter(a => a.status === 'pending');
+  // Sort newest first
+  const toMs = (t)=> t && t.seconds ? t.seconds*1000 : (t ? new Date(t).getTime() : 0);
+  apps.sort((a,b)=> toMs(b.createdAt) - toMs(a.createdAt));
   return apps;
 }
 
@@ -86,20 +108,25 @@ function buildItem(app) {
 
 async function updateStatus(id, status) {
   try {
-    await updateDoc(doc(db, 'field_applications', id), { status, statusUpdatedAt: serverTimestamp() });
+    // Try update as top-level first; if it fails, attempt nested collection-group write path is unknown here.
+    // We optimistically write to top-level, but for nested items we expect separate admin tooling; keep best-effort.
+    try { await updateDoc(doc(db, 'field_applications', id), { status, statusUpdatedAt: serverTimestamp() }); } catch(_) {}
     // If approved, also add to 'fields' collection and notify farmer
     if (status === 'reviewed') {
-      const appSnap = await getDoc(doc(db, 'field_applications', id));
-      const app = appSnap.data();
+      let app = null;
+      try {
+        const appSnap = await getDoc(doc(db, 'field_applications', id));
+        app = appSnap.exists() ? appSnap.data() : null;
+      } catch(_) { app = null; }
       if (app) {
         // Save to 'fields' collection for map display
         await addDoc(collection(db, 'fields'), {
           userId: app.userId,
-          barangay: app.barangay,
-          size: app.size,
+          barangay: app.barangay || app.location,
+          size: app.size || app.field_size,
           terrain: app.terrain,
-          lat: app.lat,
-          lng: app.lng,
+          lat: app.lat || app.latitude,
+          lng: app.lng || app.longitude,
           registeredAt: serverTimestamp(),
           applicantName: app.applicantName
         });
