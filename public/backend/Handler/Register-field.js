@@ -1,3 +1,4 @@
+import { collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { auth, db } from "../Common/firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import {
@@ -108,6 +109,41 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.classList.add("opacity-50");
 
     try {
+      // 🧩 Duplicate field check – stronger version
+      const fieldsRef = collection(db, "field_applications", currentUser.uid, "fields");
+
+      const barangayNorm = barangay.trim().toLowerCase();
+      const sizeNorm = size.trim().toLowerCase();
+      const varietyNorm = variety.trim().toLowerCase();
+      const latNorm = parseFloat(lat.toFixed(5));
+      const lngNorm = parseFloat(lng.toFixed(5));
+
+      // Query only docs with same barangay (fast + cheap)
+      const q = query(fieldsRef, where("barangay_lower", "==", barangayNorm));
+      const snap = await getDocs(q);
+
+      let duplicateFound = false;
+
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const s = (d.field_size_lower || d.field_size || "").trim().toLowerCase();
+        const v = (d.crop_variety_lower || d.crop_variety || "").trim().toLowerCase();
+        const lt = parseFloat((d.latitude || 0).toFixed(5));
+        const lg = parseFloat((d.longitude || 0).toFixed(5));
+
+        if (s === sizeNorm && v === varietyNorm && lt === latNorm && lg === lngNorm) {
+          duplicateFound = true;
+        }
+      });
+
+      if (duplicateFound) {
+        alert("⚠️ You already registered this field with the same barangay, field size, crop variety, and coordinates.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Field Registration";
+        submitBtn.classList.remove("opacity-50");
+        return;
+      }
+
       // Upload images
       async function uploadBase64(base64, name) {
         if (!base64.startsWith("data:image")) return "";
@@ -121,23 +157,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const selfieURL = await uploadBase64(selfie, "selfie");
 
       const payload = {
-        applicantName: localStorage.getItem("farmerName") || "Farmer",
-        userId: currentUser.uid,
-        requestedBy: currentUser.uid,   // ✅ Add this line
+        fieldName: `${barangay}_${Date.now()}`,
         barangay,
+        barangay_lower: barangay.trim().toLowerCase(),
         field_size: size,
+        field_size_lower: size.trim().toLowerCase(),
         crop_variety: variety,
+        crop_variety_lower: variety.trim().toLowerCase(),
         latitude: lat,
         longitude: lng,
         validFrontUrl: frontURL,
         validBackUrl: backURL,
         selfieUrl: selfieURL,
         status: "pending",
-        submittedAt: serverTimestamp()
+        submittedAt: serverTimestamp(),
+        requestedBy: currentUser.uid
       };
 
-
-      await setDoc(doc(db, "field_applications", currentUser.uid), payload);
+      const userFieldsRef = collection(db, "field_applications", currentUser.uid, "fields");
+      await addDoc(userFieldsRef, payload);
 
       alert(
         "✅ Your field registration has been submitted!\n\n" +
@@ -155,4 +193,4 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.classList.remove("opacity-50");
     }
   });
-}); 
+});
