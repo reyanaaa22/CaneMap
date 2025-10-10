@@ -225,8 +225,8 @@ function toggleProfileDropdown() {
 function navigateToSection(section) {
     switch(section) {
         case 'fields':
-            showSection('dashboard');
-            console.log('Navigating to fields section');
+            showSection('available-fields');
+            console.log('Navigating to available fields section');
             break;
         case 'assignments':
             showSection('schedule');

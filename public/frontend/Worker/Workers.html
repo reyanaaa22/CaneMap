@@ -323,18 +323,11 @@
                         <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="dashboard-overview">Overview</a>
                     </div>
 
-                    <!-- Fields -->
-                    <div>
-                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('fields')">
-                            <i class="fas fa-map-marked-alt w-5 h-5"></i>
-                            <span>Fields</span>
-                            <i id="fields-arrow" class="fas fa-chevron-down ml-auto text-xs transition-transform"></i>
-                        </div>
-                        <div id="fields-submenu" class="ml-6 mt-2 space-y-1 hidden">
-                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="available-fields">Available Fields</a>
-                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="my-fields">My Fields</a>
-                        </div>
-                    </div>
+                    <!-- Fields (single link) -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors nav-item" data-section="available-fields">
+                        <i class="fas fa-map-marked-alt w-5 h-5"></i>
+                        <span>Fields</span>
+                    </a>
 
                     <!-- Tasks -->
                     <div>
@@ -427,16 +420,37 @@
                         <!-- Map Section -->
                         <div class="section-card rounded-xl p-4 lg:p-6">
                             <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center">
-                                <i class="fas fa-calendar text-[var(--cane-500)] mr-3"></i>
-                                Schedule
+                                <i class="fas fa-bolt text-[var(--cane-500)] mr-3"></i>
+                                Recent Activity
                                 </h3>
-                            <div id="calendar" class="w-full"></div>
+                            <ul class="divide-y divide-[var(--cane-100)] text-sm">
+                                <li class="py-2 flex items-start justify-between">
+                                    <span class="text-[var(--cane-800)]">Checked in to field assignment</span>
+                                    <span class="text-[var(--cane-600)]">2m ago</span>
+                                </li>
+                                <li class="py-2 flex items-start justify-between">
+                                    <span class="text-[var(--cane-800)]">Task completed: Fertilizer application</span>
+                                    <span class="text-[var(--cane-600)]">1h ago</span>
+                                </li>
+                                <li class="py-2 flex items-start justify-between">
+                                    <span class="text-[var(--cane-800)]">New assignment received</span>
+                                    <span class="text-[var(--cane-600)]">Today</span>
+                                </li>
+                            </ul>
                         </div>
 
-                        </div>
+                    </div>
 
                     <!-- Right Column - Calendar and Driver Features -->
                     <div class="space-y-6">
+                        <!-- Calendar Widget (moved to right column) -->
+                        <div class="section-card rounded-xl p-4 lg:p-6">
+                            <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center">
+                                <i class="fas fa-calendar text-[var(--cane-500)] mr-3"></i>
+                                Schedule
+                            </h3>
+                            <div id="calendar" class="w-full"></div>
+                        </div>
 
                         <!-- Driver Features (Only visible for workers with driver badge) -->
                         <div id="driverFeatures" class="driver-feature rounded-xl p-4 lg:p-6 hidden">
@@ -497,6 +511,49 @@
                 <div class="section-card rounded-xl p-6">
                     <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Schedule Management</h2>
                     <div id="scheduleCalendar" class="w-full"></div>
+                </div>
+            </div>
+
+            <!-- Available Fields Section (SPA with Map) -->
+            <div id="available-fields" class="content-section hidden">
+                <div class="section-card rounded-xl mx-2 lg:mx-4">
+                    <div class="p-6 flex items-center justify-between">
+                        <h2 class="text-2xl font-bold text-[var(--cane-900)]">Available Fields</h2>
+                        <p class="text-[var(--cane-600)] text-sm">Explore fields on the map</p>
+                    </div>
+                    <div class="relative px-6 pb-6">
+                        <form id="afSearchForm" class="absolute right-10 top-10 z-[1000] bg-white/90 backdrop-blur rounded-md shadow flex items-center w-72">
+                            <input id="afSearchInput" type="text" class="w-full px-3 py-2 text-sm rounded-l-md focus:outline-none" placeholder="Search place or address" />
+                            <button type="submit" class="px-3 py-2 text-sm bg-gray-900 text-white rounded-r-md hover:bg-gray-800">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                        <div id="availableFieldsMap" class="w-full rounded-xl border border-[var(--cane-200)] overflow-hidden" style="height:60vh;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Fields Section (SPA) -->
+            <div id="my-fields" class="content-section hidden">
+                <div class="section-card rounded-xl p-6">
+                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-4">My Fields</h2>
+                    <p class="text-[var(--cane-600)] mb-4">Fields where you are actively assigned.</p>
+                    <ul class="space-y-3">
+                        <li class="p-4 border border-[var(--cane-200)] rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-[var(--cane-900)]">Field San Jose</p>
+                                <p class="text-sm text-[var(--cane-600)]">Status: Active</p>
+                            </div>
+                            <button class="btn-secondary px-3 py-1.5 rounded">Open</button>
+                        </li>
+                        <li class="p-4 border border-[var(--cane-200)] rounded-lg flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-[var(--cane-900)]">Field Riverside</p>
+                                <p class="text-sm text-[var(--cane-600)]">Status: Pending Tasks</p>
+                            </div>
+                            <button class="btn-secondary px-3 py-1.5 rounded">Open</button>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
@@ -628,6 +685,33 @@
           active.classList.remove('text-gray-300');
           active.classList.add('text-white', 'bg-gray-800');
         }
+        // Initialize available fields map after the section becomes visible
+        if (sectionId === 'available-fields') {
+          // Lazy-load HTML from submenu/available_fields.html on first open
+          const container = document.getElementById('available-fields');
+          if (container && !container.dataset.loaded) {
+            fetch('../Worker/submenu/available_fields.html')
+              .then(r => r.text())
+              .then(html => {
+                container.innerHTML = html;
+                container.dataset.loaded = 'true';
+                initAvailableFieldsMap();
+              });
+          } else {
+            setTimeout(initAvailableFieldsMap, 0);
+          }
+        }
+        if (sectionId === 'my-fields') {
+          const container = document.getElementById('my-fields');
+          if (container && !container.dataset.loaded) {
+            fetch('../Worker/submenu/my_fields.html')
+              .then(r => r.text())
+              .then(html => {
+                container.innerHTML = html;
+                container.dataset.loaded = 'true';
+              });
+          }
+        }
       }
       // Handle main nav items and submenu items
       document.querySelectorAll('.nav-item, [data-section]').forEach(a => {
@@ -637,9 +721,64 @@
             e.preventDefault();
             showSection(section);
           }
+          // Close mobile sidebar if open
+          const sidebar = document.getElementById('sidebar');
+          const overlay = document.getElementById('sidebarOverlay');
+          if (sidebar && overlay) {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+          }
         });
       });
+
+      // Leaflet map for Available Fields (initialized lazily)
+      let availableFieldsMap;
+      function initAvailableFieldsMap() {
+        if (!window.L) return; // Leaflet not loaded
+        const mapEl = document.getElementById('availableFieldsMap');
+        if (!mapEl) return;
+        if (!availableFieldsMap) {
+          availableFieldsMap = L.map('availableFieldsMap');
+          // Focus map on Ormoc City, Leyte
+          const defaultCenter = [11.0064, 124.6075];
+          availableFieldsMap.setView(defaultCenter, 12);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(availableFieldsMap);
+
+          const form = document.getElementById('afSearchForm');
+          const input = document.getElementById('afSearchInput');
+          if (form && input) {
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const q = (input.value || '').trim();
+              if (!q) return;
+              try {
+                const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q), {
+                  headers: { 'Accept-Language': 'en' }
+                });
+                const results = await resp.json();
+                if (Array.isArray(results) && results.length > 0) {
+                  const { lat, lon, display_name } = results[0];
+                  const latNum = parseFloat(lat);
+                  const lonNum = parseFloat(lon);
+                  availableFieldsMap.setView([latNum, lonNum], 14);
+                  L.marker([latNum, lonNum]).addTo(availableFieldsMap).bindPopup(display_name || 'Location').openPopup();
+                }
+              } catch (_) {}
+            });
+          }
+        } else {
+          // Ensure correct sizing after being revealed
+          availableFieldsMap.invalidateSize();
+        }
+      }
     </script>
+
+        
+
+        
 
         
 
