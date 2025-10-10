@@ -510,7 +510,16 @@
                     <div class="flex items-start space-x-3 p-4 bg-white border border-[var(--cane-200)] rounded-lg">
                         <input type="checkbox" id="agree" required class="mt-1 w-5 h-5 text-[var(--cane-600)] border-[var(--cane-300)] rounded focus:ring-[var(--cane-500)]">
                         <label for="agree" class="text-sm text-[var(--cane-700)]">
-                            I agree to the <a href="#" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline">Terms and Conditions</a> and <a href="#" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline">Privacy Policy</a> of CaneMap
+                        I agree to the
+                        <button type="button" id="openTerms" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline inline">
+                        Terms and Conditions
+                        </button>
+                        and
+                        <button type="button" id="openPrivacy" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline inline">
+                        Privacy Policy
+                        </button>
+                        of CaneMap.
+
                         </label>
                 </div>
                     
@@ -534,6 +543,40 @@
             <p class="text-sm text-[var(--cane-200)]">© 2025 CaneMap. All rights reserved. Developed by the CaneMap Team in collaboration with SRA Ormoc Mill District.</p>
         </div>
     </footer>
+
+    <!-- Unified Terms & Privacy Modal (Slim + Professional Version) -->
+    <div id="legalModal" class="hidden fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200">
+    <!-- Dark overlay -->
+    <div id="legalOverlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+    <!-- Modal container -->
+    <div
+        class="relative z-10 w-full max-w-2xl mx-8 bg-white/95 rounded-xl shadow-[0_0_25px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col border border-gray-200"
+        style="max-height: 90vh;"
+    >
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-3 border-b bg-[var(--cane-600)]/90 backdrop-blur-sm text-white">
+        <h2 class="text-base md:text-lg font-semibold tracking-wide">CaneMap Legal Agreement</h2>
+        <button id="closeLegal"
+            class="text-white text-2xl font-light hover:scale-110 transition leading-none"
+            aria-label="Close">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div id="legalContent"
+        class="px-5 py-4 overflow-y-auto text-[var(--cane-800)] text-sm leading-relaxed space-y-4">
+        <!-- Content filled by JS -->
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-3 border-t bg-gray-50/80 flex justify-end">
+        <button id="legalAccept"
+            class="px-3 py-1.5 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded transition text-sm font-medium">
+            I Understand
+        </button>
+        </div>
+    </div>
+    </div>
 
     <script>
         // Initialize the location map
