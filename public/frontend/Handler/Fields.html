@@ -16,43 +16,71 @@
 <body class="bg-gray-100">
   <div class="max-w-7xl mx-auto p-4">
     <div class="flex items-center gap-2 mb-3">
-      <div class="relative flex-1">
-        <input id="searchInput" type="text" placeholder="Search location..." class="w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
-        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
-      </div>
+      <!-- Keep the register button above the map; search will be inside the map overlay -->
+      <div class="flex-1"></div>
       <button id="btnRegisterField" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"><i class="fas fa-plus mr-2"></i>Register New Field</button>
     </div>
-    <div id="map" class="rounded-lg overflow-hidden border border-gray-200"></div>
+    <div id="map" class="rounded-lg overflow-hidden border border-gray-200" style="position:relative;">
+      <!-- Search overlay (top-right inside the map) -->
+      <form id="mapSearchForm" style="position:absolute; right:16px; top:16px; z-index:10010;" class="bg-white rounded-md shadow-lg flex items-center w-80 overflow-hidden">
+        <span class="pl-3 text-gray-500"><i class="fas fa-search"></i></span>
+        <input id="searchInput" type="text" placeholder="Search location..." class="w-full px-3 py-2 text-sm border-l border-transparent focus:outline-none" style="background:transparent;" />
+        <button type="submit" class="px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800">Go</button>
+      </form>
+    </div>
   </div>
 
   <script>
-    // Initialize map
-    const map = L.map('map').setView([10.3157, 123.8854], 12);
+  // Initialize map focused on Ormoc City
+  const ormocCoords = [11.0064, 124.6075];
+  const map = L.map('map').setView(ormocCoords, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Simple search: center map when pressing Enter
+  // Add a marker for Ormoc City with popup that opens Growth Tracker
+  const ormocMarker = L.marker(ormocCoords).addTo(map);
+  ormocMarker.bindPopup(`<div style="min-width:180px"><strong>Ormoc City</strong><br/><button onclick="openGrowthTracker('Ormoc City', ${ormocCoords[0]}, ${ormocCoords[1]})" class="px-2 py-1 mt-2 rounded bg-[var(--cane-700)] text-white">Open Growth Tracker</button></div>`);
+
+  // Simple search: center map when pressing Enter or when the map search form is submitted
     const searchInput = document.getElementById('searchInput');
+    async function performSearch(q) {
+      if (!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data && data[0]) {
+          const { lat, lon } = data[0];
+          map.setView([parseFloat(lat), parseFloat(lon)], 14);
+          L.marker([lat, lon]).addTo(map);
+        } else {
+          alert('Location not found');
+        }
+      } catch (_) { alert('Search failed'); }
+    }
     searchInput.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        const q = searchInput.value.trim();
-        if (!q) return;
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-          const data = await res.json();
-          if (data && data[0]) {
-            const { lat, lon } = data[0];
-            map.setView([parseFloat(lat), parseFloat(lon)], 14);
-            L.marker([lat, lon]).addTo(map);
-          } else {
-            alert('Location not found');
-          }
-        } catch (_) { alert('Search failed'); }
+        await performSearch(searchInput.value.trim());
       }
     });
+    const mapSearchForm = document.getElementById('mapSearchForm');
+    if (mapSearchForm) {
+      mapSearchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await performSearch(searchInput.value.trim());
+      });
+    }
+
+    // Function to open Growth Tracker for a selected place
+    function openGrowthTracker(name, lat, lon) {
+      try {
+        localStorage.setItem('selectedField', JSON.stringify({ name: name, lat: lat, lon: lon }));
+      } catch (_) {}
+      // Navigate to the GrowthTracker.html page in the same folder
+      window.location.href = 'GrowthTracker.html';
+    }
 
     // Register button click handler (placeholder)
     document.getElementById('btnRegisterField').addEventListener('click', () => {

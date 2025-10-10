@@ -46,15 +46,14 @@
     <!-- Header -->
     <header class="shadow-lg" style="background: linear-gradient(to right, #497d00, #5ea500);">
         <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-white/20 border border-white/30 flex items-center justify-center group">
-                    <span class="bar1 absolute w-5 h-0.5 bg-white transition-transform"></span>
-                    <span class="bar2 absolute w-5 h-0.5 bg-white transition-opacity"></span>
-                    <span class="bar3 absolute w-5 h-0.5 bg-white transition-transform"></span>
-                </button>
-                <a href="../lobby.html" class="text-white hover:text-gray-200"><i class="fas fa-arrow-left text-xl"></i></a>
-                <h1 class="text-2xl font-bold text-white">CaneMap</h1>
-            </div>
+        <div class="flex items-center space-x-4">
+        <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-white/20 border border-white/30 flex items-center justify-center group">
+          <span class="bar1 absolute w-5 h-0.5 bg-white transition-transform"></span>
+          <span class="bar2 absolute w-5 h-0.5 bg-white transition-opacity"></span>
+          <span class="bar3 absolute w-5 h-0.5 bg-white transition-transform"></span>
+        </button>
+        <!-- Back button and title removed per request -->
+      </div>
             <div class="flex items-center space-x-3 text-white">
                 <button class="relative text-white hover:text-gray-200"><i class="fas fa-bell text-lg"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
                 
@@ -109,8 +108,8 @@
     </header>
 
     <div class="flex relative">
-        <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 min-h-[calc(100vh-60px)] shadow-lg bg-gray-900">
+  <!-- Sidebar (fixed overlay) -->
+  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-gray-900 z-50">
             <!-- Profile Section -->
             <div class="p-6 border-b border-gray-700">
                 <div class="flex items-center space-x-3 mb-4">
@@ -138,18 +137,13 @@
                     </a>
                     </div>
 
-                    <!-- My Fields -->
-                    <div class="mb-4">
-                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('fields')">
-                            <i class="fas fa-map-marked-alt w-5 h-5"></i>
-                            <span>My Fields</span>
-                            <i class="fas fa-chevron-down ml-auto text-xs transition-transform" id="fields-arrow"></i>
-                        </div>
-                        <div id="fields-submenu" class="ml-6 mt-2 space-y-1 hidden">
-                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="fields">Fields</a>
-                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="growth">Growth Tracker</a>
-                        </div>
-                    </div>
+          <!-- My Fields (single link) -->
+          <div class="mb-4">
+            <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="fields">
+              <i class="fas fa-map-marked-alt w-5 h-5"></i>
+              <span>My Fields</span>
+            </a>
+          </div>
 
                     <!-- Workers -->
                     <div class="mb-4">
@@ -199,7 +193,7 @@
             </div>
         </aside>
 
-        <main class="flex-1 container mx-auto px-4 lg:px-6 py-8">
+  <main class="flex-1 container mx-auto px-4 lg:px-6 py-8 lg:ml-64">
         <div id="dashboard" class="content-section">
         <h2 class="text-3xl font-extrabold mb-6 text-gray-900">Dashboard</h2>
 
@@ -433,10 +427,11 @@
           </div>
         </div>
 
-        <!-- Fields embedded section -->
+        <!-- Fields embedded section (content will be lazy-loaded) -->
         <div id="fields" class="content-section hidden">
-          <div class="section-card rounded-xl overflow-hidden">
-            <iframe src="Fields.html" class="w-full h-[800px]" loading="lazy"></iframe>
+          <div class="section-card rounded-xl overflow-hidden" id="fields-container">
+            <!-- Fields.html will be injected here -->
+            <div class="p-6 text-sm text-gray-600">Loading fields...</div>
           </div>
         </div>
 
@@ -562,6 +557,55 @@
         if (active) {
           active.classList.remove('text-gray-300');
           active.classList.add('text-white', 'bg-gray-800');
+        }
+        // Lazy-load Fields.html into the fields section so the map can initialize inline
+        if (sectionId === 'fields') {
+          const container = document.getElementById('fields');
+          if (container && !container.dataset.loaded) {
+            fetch('Fields.html')
+              .then(r => r.text())
+              .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Inject stylesheets from fetched doc.head
+                doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                  if (!document.querySelector(`link[href="${link.href}"]`)) {
+                    const l = document.createElement('link');
+                    l.rel = 'stylesheet';
+                    l.href = link.href;
+                    document.head.appendChild(l);
+                  }
+                });
+
+                // Inject scripts (external and inline) in order
+                const scripts = Array.from(doc.querySelectorAll('script'));
+                // Insert body content first (without scripts)
+                const bodyHtml = doc.body.innerHTML.replace(/<script[\s\S]*?<\/script>/gi, '');
+                container.innerHTML = bodyHtml;
+
+                // Now append scripts so they execute
+                scripts.forEach(s => {
+                  if (s.src) {
+                    if (!document.querySelector(`script[src="${s.src}"]`)) {
+                      const sc = document.createElement('script');
+                      sc.src = s.src;
+                      sc.async = false;
+                      document.body.appendChild(sc);
+                    }
+                  } else if (s.textContent && s.textContent.trim().length > 0) {
+                    const sc = document.createElement('script');
+                    sc.textContent = s.textContent;
+                    document.body.appendChild(sc);
+                  }
+                });
+
+                container.dataset.loaded = 'true';
+              })
+              .catch(() => {
+                container.innerHTML = '<div class="p-6">Failed to load Fields content.</div>';
+              });
+          }
         }
       }
       // Handle main nav items and submenu items
