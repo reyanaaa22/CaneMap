@@ -1,3 +1,17 @@
+<script>
+// Ensure modal close/cancel buttons use the global closeAddSRA after dynamic load
+document.addEventListener('DOMContentLoaded', function() {
+    function attachSRAOfficerModalHandlers() {
+        var closeBtn = document.querySelector('#addSraModal .absolute.top-3.right-4');
+        var cancelBtn = document.querySelector('#addSraModal button[type="button"]');
+        if (closeBtn) closeBtn.onclick = window.closeAddSRA;
+        if (cancelBtn) cancelBtn.onclick = window.closeAddSRA;
+    }
+    // Try immediately, then again after a short delay for dynamic loads
+    attachSRAOfficerModalHandlers();
+    setTimeout(attachSRAOfficerModalHandlers, 500);
+});
+</script>
 <div class="bg-white rounded-2xl card-shadow p-6">
     <div class="flex items-start sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -5,15 +19,11 @@
             <p class="text-gray-600 text-sm">Manage SRA officers</p>
         </div>
         <div class="flex gap-2">
-            <button onclick="addExistingSRAOfficer()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:scale-[.99] transition-all shadow-sm">
-                <i class="fas fa-database"></i>
-                <span>Load Existing Data</span>
-            </button>
             <button onclick="refreshSRAOfficers()" class="inline-flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 active:scale-[.99] transition-all shadow-sm">
                 <i class="fas fa-sync-alt"></i>
                 <span>Refresh</span>
             </button>
-            <button onclick="openAddSRA()" class="inline-flex items-center gap-2 bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] active:scale-[.99] transition-all shadow-sm">
+            <button onclick="window.openAddSRA()" class="inline-flex items-center gap-2 bg-[var(--cane-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--cane-700)] active:scale-[.99] transition-all shadow-sm">
                 <i class="fas fa-plus"></i>
                 <span>Add SRA Officer</span>
             </button>
@@ -65,7 +75,7 @@
 <!-- Create Admin Officer Account Modal -->
 <div id="addSraModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
     <div class="bg-white rounded-2xl w-[92%] max-w-xl p-6 shadow-2xl relative">
-        <button class="absolute top-3 right-4 text-xl" onclick="closeAddSRA()">×</button>
+    <button id="sraModalCloseBtn" class="absolute top-3 right-4 text-xl">×</button>
         <h3 class="text-xl font-bold text-gray-900 mb-4">Create Admin Officer Account</h3>
         <form id="addSRAForm" class="space-y-4">
             <div>
@@ -112,7 +122,7 @@
                 </label>
             </div>
             <div class="flex justify-end gap-3 pt-2">
-                <button type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200" onclick="closeAddSRA()">Cancel</button>
+                <button id="sraModalCancelBtn" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200">Cancel</button>
                 <button type="submit" class="px-5 py-2 rounded-lg bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white">Create Officer</button>
             </div>
         </form>
@@ -120,35 +130,18 @@
     </div>
 
 <script>
-    // Open/Close modal functions used by the Add SRA button
-    function openAddSRA(){
-        const m = document.getElementById('addSraModal');
-        if (m){ m.classList.remove('hidden'); m.classList.add('flex'); }
-        // generate default password if empty
-        const pw = document.getElementById('sraTempPassword');
-        if (pw && !pw.value) pw.value = generatePassword();
+// Local close function for SRA modal
+function closeAddSRA() {
+    var m = document.getElementById('addSraModal');
+    if (m) {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
     }
-    function closeAddSRA(){
-        const m = document.getElementById('addSraModal');
-        if (m){ m.classList.add('hidden'); m.classList.remove('flex'); }
-    }
-    function generatePassword(){
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%';
-        let out = '';
-        for (let i=0;i<10;i++) out += chars[Math.floor(Math.random()*chars.length)];
-        return out;
-    }
-    (function(){
-        const genBtn = document.getElementById('genTempPass');
-        const pw = document.getElementById('sraTempPassword');
-        if (genBtn && pw){ genBtn.addEventListener('click', () => { pw.value = generatePassword(); }); }
-        const form = document.getElementById('addSRAForm');
-        if (form){
-            form.addEventListener('submit', function(e){
-                e.preventDefault();
-                // This form only handles UI; actual save should be wired in dashboard.js if needed
-                closeAddSRA();
-            });
-        }
-    })();
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var closeBtn = document.getElementById('sraModalCloseBtn');
+    var cancelBtn = document.getElementById('sraModalCancelBtn');
+    if (closeBtn) closeBtn.addEventListener('click', closeAddSRA);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeAddSRA);
+});
 </script>

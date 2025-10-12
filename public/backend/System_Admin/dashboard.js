@@ -963,7 +963,14 @@ function renderSRATable(sraOfficers) {
 
 // Refresh SRA Officers function
 function refreshSRAOfficers() {
+    // Refresh from server/localStorage
     fetchAndRenderSRA();
+    // Also attempt to load any predefined existing data (previously 'Load Existing Data' button)
+    try {
+        addExistingSRAOfficer();
+    } catch (e) {
+        console.warn('Could not run addExistingSRAOfficer during refresh:', e);
+    }
 }
 
 // Debug function to clear SRA Officers data (for testing)
@@ -980,7 +987,8 @@ function addExistingSRAOfficer() {
     const existingEmail = 'almackieandrew.bangalao@evsu.edu.ph';
     
     if (existingData.some(officer => officer.email === existingEmail)) {
-        alert('SRA Officer data already exists in localStorage!');
+        if (typeof showAlert === 'function') showAlert('SRA Officer data already exists in localStorage!', 'info');
+        else alert('SRA Officer data already exists in localStorage!');
         return;
     }
     
@@ -999,7 +1007,8 @@ function addExistingSRAOfficer() {
     localStorage.setItem('sraOfficers', JSON.stringify(existingData));
     
     fetchAndRenderSRA();
-    alert('Existing SRA Officer data loaded successfully!');
+    if (typeof showAlert === 'function') showAlert('Existing SRA Officer data loaded successfully!', 'success');
+    else alert('Existing SRA Officer data loaded successfully!');
     console.log('Existing SRA Officer added to localStorage');
 }
 
@@ -1032,9 +1041,11 @@ function importAllExistingSRAOfficers() {
     if (addedCount > 0) {
         localStorage.setItem('sraOfficers', JSON.stringify(existingData));
         fetchAndRenderSRA();
-        alert(`Imported ${addedCount} existing SRA Officer(s) successfully!`);
+        if (typeof showAlert === 'function') showAlert(`Imported ${addedCount} existing SRA Officer(s) successfully!`, 'success');
+        else alert(`Imported ${addedCount} existing SRA Officer(s) successfully!`);
     } else {
-        alert('All existing SRA Officers are already imported!');
+        if (typeof showAlert === 'function') showAlert('All existing SRA Officers are already imported!', 'info');
+        else alert('All existing SRA Officers are already imported!');
     }
 }
 
@@ -1048,6 +1059,39 @@ window.refreshSRAOfficers = refreshSRAOfficers;
 window.addExistingSRAOfficer = addExistingSRAOfficer;
 window.importAllExistingSRAOfficers = importAllExistingSRAOfficers;
 window.clearSRAOfficersData = clearSRAOfficersData;
+
+// Attach SRA modal close/cancel event listeners after partial is loaded
+document.addEventListener('click', function() {
+    setTimeout(() => {
+        var closeBtn = document.getElementById('sraModalCloseBtn');
+        var cancelBtn = document.getElementById('sraModalCancelBtn');
+        function closeAddSRA() {
+            var m = document.getElementById('addSraModal');
+            if (m) {
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+            }
+        }
+        if (closeBtn) closeBtn.addEventListener('click', closeAddSRA);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeAddSRA);
+    }, 200);
+});
+// Attach SRA modal close/cancel event listeners after modal HTML is loaded
+function attachSraModalListeners() {
+    var closeBtn = document.getElementById('sraModalCloseBtn');
+    var cancelBtn = document.getElementById('sraModalCancelBtn');
+    function closeAddSRA() {
+        var m = document.getElementById('addSraModal');
+        if (m) {
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+    }
+    if (closeBtn) closeBtn.addEventListener('click', closeAddSRA);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeAddSRA);
+}
+
+// Example usage: After inserting modal HTML, call attachSraModalListeners()
 
 // Add sample data for demonstration
 async function addSampleData() {

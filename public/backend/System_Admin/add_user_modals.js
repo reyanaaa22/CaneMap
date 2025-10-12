@@ -188,6 +188,18 @@ window.wireAddUserModal = () => { wireGenerators(); wireSubmitAugment(); };
 window.wireSRAAddForm = () => { try{ wireSRAAddForm(); }catch(_){ } };
 // eslint-disable-next-line no-undef
 window.closeAddSRAModal = closeAddSRAModal;
+// Ensure modal open/close functions for SRA modal are globally accessible for partial HTML
+window.openAddSRA = function(){
+  const m = document.getElementById('addSraModal');
+  if (m){ m.classList.remove('hidden'); m.classList.add('flex'); }
+  // generate default password if empty
+  const pw = document.getElementById('sraTempPassword');
+  if (pw && !pw.value) pw.value = (typeof generateTempPassword === 'function' ? generateTempPassword() : '');
+}
+window.closeAddSRA = function(){
+  const m = document.getElementById('addSraModal');
+  if (m){ m.classList.add('hidden'); m.classList.remove('flex'); }
+}
 
 async function showSRASuccessPopup({ name, email, temp }){
   return new Promise((resolve) => {
