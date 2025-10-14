@@ -1151,8 +1151,57 @@ async function addSampleData() {
 }
 
 // Export functions for global access
+
 window.initializeDashboard = initializeDashboard;
 window.addSampleData = addSampleData;
+
+// Fetch feedback and render table for admin
+window.showFeedbackReports = async function() {
+    const mainContent = document.querySelector('main');
+    mainContent.style.height = '100vh';
+    mainContent.style.overflow = 'auto';
+    mainContent.innerHTML = `<div class="bg-white rounded-xl shadow-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">User Feedback Reports</h2>
+        <div id="feedbackTableContainer">
+            <div class="text-gray-600 mb-4">Loading feedback...</div>
+        </div>
+    </div>`;
+    try {
+        const { db, collection, getDocs, orderBy, query } = await import('../Common/firebase-config.js');
+        const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        const rows = snap.docs.map(doc => doc.data());
+        const tableHtml = `<table class="min-w-full border rounded-lg overflow-hidden">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Email</th>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Type</th>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Message</th>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">No feedback found.</td></tr>` : rows.map(f => {
+                    const dateStr = f.createdAt && f.createdAt.toDate ? f.createdAt.toDate().toLocaleString() : '';
+                    let typeLabel = '';
+                    if (f.type === 'like') typeLabel = 'I like something';
+                    else if (f.type === 'dislike') typeLabel = "I don't like something";
+                    else if (f.type === 'idea') typeLabel = 'I have an idea';
+                    else typeLabel = f.type || '';
+                    return `<tr>
+                        <td class="border-t px-4 py-2 text-sm">${f.email || '-'}</td>
+                        <td class="border-t px-4 py-2 text-sm">${typeLabel}</td>
+                        <td class="border-t px-4 py-2 text-sm">${f.message || '-'}</td>
+                        <td class="border-t px-4 py-2 text-xs text-gray-500">${dateStr}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+        document.getElementById('feedbackTableContainer').innerHTML = tableHtml;
+    } catch (e) {
+        document.getElementById('feedbackTableContainer').innerHTML = `<div class="text-red-600">Failed to load feedback.</div>`;
+    }
+};
 
 // Handle Change PIN
 async function handleChangePin(form){

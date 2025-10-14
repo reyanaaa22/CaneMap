@@ -710,6 +710,12 @@
             const closeBtn = document.getElementById('feedbackClose');
             const form = document.getElementById('feedbackForm');
             const message = document.getElementById('feedbackMessage');
+            const emailInput = document.getElementById('feedbackEmail');
+            let feedbackType = '';
+            // Feedback type buttons
+            const optLike = document.getElementById('optLike');
+            const optDislike = document.getElementById('optDislike');
+            const optIdea = document.getElementById('optIdea');
             if (!fab || !modal || !dialog) return;
             // hover label
             fab.addEventListener('mouseenter', function(){
@@ -737,20 +743,62 @@
             closeBtn && closeBtn.addEventListener('click', closeModal);
             modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
             document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+
+            // Feedback type selection
+            function setType(type) {
+                feedbackType = type;
+                [optLike, optDislike, optIdea].forEach(btn => btn.classList.remove('bg-[var(--cane-50)]'));
+                if (type === 'like') optLike.classList.add('bg-[var(--cane-50)]');
+                if (type === 'dislike') optDislike.classList.add('bg-[var(--cane-50)]');
+                if (type === 'idea') optIdea.classList.add('bg-[var(--cane-50)]');
+            }
+            optLike && optLike.addEventListener('click', () => setType('like'));
+            optDislike && optDislike.addEventListener('click', () => setType('dislike'));
+            optIdea && optIdea.addEventListener('click', () => setType('idea'));
+
+            // Auto-fill email from Firebase Auth
+            if (window.auth && emailInput) {
+                window.auth.onAuthStateChanged(function(user) {
+                    if (user && user.email) {
+                        emailInput.value = user.email;
+                        emailInput.readOnly = true;
+                    } else {
+                        emailInput.value = '';
+                        emailInput.readOnly = false;
+                    }
+                });
+            }
+
             // submit
             if (form) {
-                form.addEventListener('submit', function(e){
+                form.addEventListener('submit', async function(e){
                     e.preventDefault();
-                    const entries = JSON.parse(localStorage.getItem('feedbackEntries') || '[]');
-                    entries.push({
-                        at: new Date().toISOString(),
-                        user: localStorage.getItem('userId') || localStorage.getItem('farmerName') || 'anonymous',
-                        message: message ? message.value : ''
-                    });
-                    localStorage.setItem('feedbackEntries', JSON.stringify(entries));
-                    closeModal();
-                    alert('Thanks for your feedback!');
-                    try { form.reset(); } catch(_) {}
+                    if (!feedbackType) {
+                        alert('Please select a feedback type.');
+                        return;
+                    }
+                    const feedbackMsg = message ? message.value.trim() : '';
+                    const feedbackEmail = emailInput ? emailInput.value.trim() : '';
+                    if (!feedbackMsg) {
+                        alert('Please enter your feedback.');
+                        return;
+                    }
+                    try {
+                        const { db } = await import('./firebase-config.js');
+                        const { collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                        await addDoc(collection(db, 'feedback'), {
+                            type: feedbackType,
+                            email: feedbackEmail,
+                            message: feedbackMsg,
+                            createdAt: serverTimestamp()
+                        });
+                        closeModal();
+                        alert('Thanks for your feedback!');
+                        form.reset();
+                        setType('');
+                    } catch (err) {
+                        alert('Failed to send feedback. Try again later.');
+                    }
                 });
             }
         })();
