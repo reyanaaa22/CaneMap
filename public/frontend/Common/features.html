@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaneMap - Features</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      :root {
+        --cane-50: #f7fee7;
+        --cane-100: #ecfcca;
+        --cane-200: #d8f999;
+        --cane-300: #bbf451;
+        --cane-400: #9ae600;
+        --cane-500: #7ccf00;
+        --cane-600: #5ea500;
+        --cane-700: #497d00;
+        --cane-800: #3c6300;
+        --cane-900: #35530e;
+        --cane-950: #192e03;
+      }
+      .section-card { background: #ffffff; border: 1px solid var(--cane-200); transition: all 0.3s ease; }
+      .section-card:hover { box-shadow: 0 8px 25px rgba(94,165,0,0.15); transform: translateY(-2px); }
+      .btn-primary { background: linear-gradient(135deg, var(--cane-500), var(--cane-600)); color: white; transition: all 0.3s ease; }
+      .btn-primary:hover { background: linear-gradient(135deg, var(--cane-600), var(--cane-700)); transform: translateY(-1px); }
+    </style>
+</head>
+<body class="bg-[#F5F5F0] min-h-screen">
+  <header class="bg-gradient-to-r from-[var(--cane-800)] to-[var(--cane-700)] shadow-lg">
+    <div class="max-w-7xl mx-auto px-6 py-4 text-white">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="./lobby.html" class="hover:opacity-90 transition-opacity"><i class="fas fa-arrow-left text-xl"></i></a>
+          <h1 class="text-2xl font-bold tracking-tight">CaneMap Features</h1>
+        </div>
+        <div class="text-sm opacity-90">Explore what CaneMap can do</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <div class="mb-6">
+      <h2 class="text-3xl font-extrabold text-[var(--cane-950)]">Powerful tools for sugarcane management</h2>
+      <p class="text-[var(--cane-700)] mt-1">Everything you need from field registration to task logging and SRA coordination.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="section-card rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-lg flex items-center justify-center"><i class="fas fa-map-marked-alt"></i></div>
+          <h3 class="text-lg font-bold text-[var(--cane-900)]">Field Registration & Mapping</h3>
+        </div>
+        <p class="text-[var(--cane-700)] text-sm mb-4">Register fields with precise coordinates using Leaflet.js and OpenStreetMap. Upload required documents and track SRA review.</p>
+        <a href="../Handler/Register-field.html" class="inline-block btn-primary px-4 py-2 rounded-lg text-sm">Register a Field</a>
+      </div>
+
+      <div class="section-card rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-lg flex items-center justify-center"><i class="fas fa-users"></i></div>
+          <h3 class="text-lg font-bold text-[var(--cane-900)]">Workers & Join Requests</h3>
+        </div>
+        <p class="text-[var(--cane-700)] text-sm mb-4">Workers can request to join fields. Field owners approve or reject with clear status tracking and notifications.</p>
+        <a href="../Worker/Workers.html" class="inline-block btn-primary px-4 py-2 rounded-lg text-sm">Open Worker Dashboard</a>
+      </div>
+
+      <div class="section-card rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-lg flex items-center justify-center"><i class="fas fa-clipboard-list"></i></div>
+        <h3 class="text-lg font-bold text-[var(--cane-900)]">Task Logging</h3>
+        </div>
+        <p class="text-[var(--cane-700)] text-sm mb-4">Log daily tasks with photos and statuses. See a chronological history and field-based task summaries.</p>
+        <a href="../Worker/task-logging.html" class="inline-block btn-primary px-4 py-2 rounded-lg text-sm">Log a Task</a>
+      </div>
+
+      <div class="section-card rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-lg flex items-center justify-center"><i class="fas fa-file-alt"></i></div>
+          <h3 class="text-lg font-bold text-[var(--cane-900)]">SRA Review & Compliance</h3>
+        </div>
+        <p class="text-[var(--cane-700)] text-sm mb-4">Submit field documents and reports for SRA review. Officers can mark applications and documents as reviewed.</p>
+        <a href="../SRA/SRA_Dashboard.html" class="inline-block btn-primary px-4 py-2 rounded-lg text-sm">Open SRA Dashboard</a>
+      </div>
+
+      <div class="section-card rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-lg flex items-center justify-center"><i class="fas fa-truck"></i></div>
+          <h3 class="text-lg font-bold text-[var(--cane-900)]">Driver Badge & Transport</h3>
+        </div>
+        <p class="text-[var(--cane-700)] text-sm mb-4">Apply for a Driver Badge to access transport features like assignments, routes, and logs.</p>
+        <a href="../Driver/Driver_Badge.html" class="inline-block btn-primary px-4 py-2 rounded-lg text-sm">Apply Driver Badge</a>
+      </div>
+
+      <div class="section-card rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-lg flex items-center justify-center"><i class="fas fa-bell"></i></div>
+          <h3 class="text-lg font-bold text-[var(--cane-900)]">Notifications & Activity</h3>
+        </div>
+        <p class="text-[var(--cane-700)] text-sm mb-4">Stay updated with real-time system notifications and your own activity log synced with Firebase.</p>
+        <a href="./activity-log.html" class="inline-block btn-primary px-4 py-2 rounded-lg text-sm">View Activity Log</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
