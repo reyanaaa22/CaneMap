@@ -1,7 +1,3 @@
-// public/backend/Driver/Driver_Badge.js
-// (replace the current file contents with this)
-// uses ES modules -> requires <script type="module" ...> in HTML
-
 import { auth, db } from "../Common/firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -218,12 +214,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // Save driver badge request (document id = user.uid so it's easy to look up)
         await setDoc(doc(db, "Drivers_Badge", user.uid), payload);
 
-        // Create or update the user's role to "Driver"
-        await setDoc(doc(db, "users", user.uid), { role: "Driver" }, { merge: true });
+        // Save driver badge request (document id = user.uid)
+        await setDoc(doc(db, "Drivers_Badge", user.uid), {
+          ...payload,
+          status: "pending" // 🕐 start as pending
+        });
 
-        alert("Driver Badge application submitted. Your role has been set to Driver.");
-        // redirect to an existing page
+        // 🚫 Don't auto-promote the user yet
+        alert("Driver Badge application submitted. Your request is now pending officer review.");
         window.location.href = "../Common/lobby.html";
+
       } catch (err) {
         console.error("Driver badge submission error:", err);
         alert("Error submitting Driver Badge: " + (err.message || err));
