@@ -1,4 +1,10 @@
 // Scroll animations (define early and run immediately to avoid hidden content if later errors occur)
+// Devtrace: identify when the updated lobby.js is actually loaded/executed in the browser
+try { console.info('LOBBY.JS loaded — build ts:', new Date().toISOString()); } catch(_) {}
+// Global runtime error catcher to assist debugging in the browser
+window.addEventListener('error', function (ev) {
+    try { console.error('Global runtime error:', ev.message, ev.filename, ev.lineno, ev.colno, ev.error); } catch(_) {}
+});
         function animateOnScroll() {
             const elements = document.querySelectorAll('.fade-in-up, .fade-in-left, .fade-in-right, .scale-in, .slide-in-bottom');
             elements.forEach(element => {
@@ -17,6 +23,7 @@
         // Weather API integration
         async function getWeather() {
             try {
+                console.info('getWeather() start');
                 const apiKey = '2d59a2816a02c3178386f3d51233b2ea';
                 const lat = 11.0064; // Ormoc City latitude
                 const lon = 124.6075; // Ormoc City longitude
@@ -194,6 +201,7 @@
 
         function initMap() {
             try {
+                console.info('initMap() start');
                 if (map) return;
                 const mapContainer = document.getElementById('map');
                 if (!mapContainer) return;
@@ -367,6 +375,7 @@
                 const userId = localStorage.getItem('userId') || fullName; // fallback to name if no uid
                 async function loadNotifications() {
                     try {
+                        console.info('loadNotifications() start for user', userId);
                         const { db } = await import('./firebase-config.js');
                         const { collection, getDocs, query, where, orderBy } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
                         const q = query(collection(db, 'notifications'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
@@ -458,17 +467,8 @@
                     closeBtn && closeBtn.addEventListener('click', close);
                     modal.addEventListener('click', function(e){ if (e.target === modal) close(); });
                     document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
-                    if (form) {
-                        form.addEventListener('submit', function(e){
-                            e.preventDefault();
-                            const entries = JSON.parse(localStorage.getItem('feedbackEntries') || '[]');
-                            entries.push({ at: new Date().toISOString(), user: localStorage.getItem('userId') || localStorage.getItem('farmerName') || 'anonymous', message: message ? message.value : '' });
-                            localStorage.setItem('feedbackEntries', JSON.stringify(entries));
-                            close();
-                            alert('Thanks for your feedback!');
-                            try { form.reset(); } catch(_) {}
-                        });
-                    }
+                    // Feedback form submission is handled in the fallback binding below (to centralize logic).
+                    // Keep this block intentionally empty to avoid duplicate handlers when scripts re-run.
                 }
             } catch(_) {}
 
@@ -501,25 +501,26 @@
                 }
                 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeLogout(); });
                 if (btnNo) btnNo.addEventListener('click', function(){ closeLogout(); });
-                if (btnYes) btnYes.addEventListener('click', async function(){
-                    try {
-                        if (window.signOut && window.auth) {
-                            await window.signOut(window.auth);
-                        }
-                    } catch (err) {
-                        console.error('Error during sign out:', err);
-                    } finally {
-                        // Clean up local data regardless, then redirect
-                        try {
-                            localStorage.removeItem('userId');
-                            localStorage.removeItem('userRole');
-                            localStorage.removeItem('farmerName');
-                        } catch(_) {}
-                        window.location.href = '../Common/farmers_login.html';
-                    }
-                });
-            } catch(_) {}
-        });
+                  if (btnYes) btnYes.addEventListener('click', async function(){
+                      console.info('Logout confirm clicked');
+                      try {
+                          if (window.signOut && window.auth) {
+                              await window.signOut(window.auth);
+                          }
+                      } catch (err) {
+                          console.error('Error during sign out:', err);
+                      } finally {
+                          // Clean up local data regardless, then redirect
+                          try {
+                              localStorage.removeItem('userId');
+                              localStorage.removeItem('userRole');
+                              localStorage.removeItem('farmerName');
+                          } catch(_) {}
+                          window.location.href = '../Common/farmers_login.html';
+                      }
+                  });
+              } catch(_) {}
+          });
 
         // Initialize Swiper with enhanced functionality
         let swiper;
@@ -756,49 +757,106 @@
             optDislike && optDislike.addEventListener('click', () => setType('dislike'));
             optIdea && optIdea.addEventListener('click', () => setType('idea'));
 
-            // Auto-fill email from Firebase Auth
-            if (window.auth && emailInput) {
-                window.auth.onAuthStateChanged(function(user) {
-                    if (user && user.email) {
-                        emailInput.value = user.email;
-                        emailInput.readOnly = true;
-                    } else {
-                        emailInput.value = '';
-                        emailInput.readOnly = false;
-                    }
-                });
+            // Auto-fill email from Firebase Auth (if available).
+            // Be resilient to load-order: wait a short time for `window.auth` to appear.
+            async function ensureAuthReady(timeout = 2000) {
+                const start = Date.now();
+                while (!window.auth && (Date.now() - start) < timeout) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                return !!window.auth;
             }
 
+            (async function attachAuthListener(){
+                if (!emailInput) return;
+                const ready = await ensureAuthReady(2000);
+                try {
+                    if (ready && window.auth && typeof window.auth.onAuthStateChanged === 'function') {
+                        window.auth.onAuthStateChanged(function(user) {
+                            if (user && user.email) {
+                                emailInput.value = user.email;
+                                emailInput.readOnly = true;
+                            } else {
+                                emailInput.value = '';
+                                emailInput.readOnly = false;
+                            }
+                        });
+                    } else {
+                        // fallback: leave input editable
+                        emailInput.readOnly = false;
+                    }
+                } catch (_) {
+                    emailInput.readOnly = false;
+                }
+            })();
+
             // submit
-            if (form) {
+                    if (form) {
                 form.addEventListener('submit', async function(e){
+                    console.info('Feedback form submit attempted. type=', feedbackType);
                     e.preventDefault();
                     if (!feedbackType) {
-                        alert('Please select a feedback type.');
+                        showInlineError('Please select a feedback type.');
                         return;
                     }
                     const feedbackMsg = message ? message.value.trim() : '';
                     const feedbackEmail = emailInput ? emailInput.value.trim() : '';
                     if (!feedbackMsg) {
-                        alert('Please enter your feedback.');
+                        showInlineError('Please enter your feedback.');
                         return;
                     }
                     try {
                         const { db } = await import('./firebase-config.js');
                         const { collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-                        await addDoc(collection(db, 'feedback'), {
+                        await addDoc(collection(db, 'feedbacks'), {
                             type: feedbackType,
-                            email: feedbackEmail,
+                            email: feedbackEmail || null,
                             message: feedbackMsg,
                             createdAt: serverTimestamp()
                         });
-                        closeModal();
-                        alert('Thanks for your feedback!');
+                        // show styled confirmation popup
+                        showConfirmationPopup();
                         form.reset();
                         setType('');
                     } catch (err) {
-                        alert('Failed to send feedback. Try again later.');
+                        console.error('Feedback submit error', err);
+                        showInlineError('Failed to send feedback. Try again later.');
                     }
                 });
             }
         })();
+
+        // small UI helpers for feedback modal
+        function showInlineError(msg) {
+            // temporary place the message in feedbackHint
+            try {
+                const hint = document.getElementById('feedbackHint');
+                if (!hint) return alert(msg);
+                hint.textContent = msg;
+                hint.classList.add('text-red-600');
+                setTimeout(() => { hint.textContent = "This pops up above the smile icon. Your input helps improve CaneMap."; hint.classList.remove('text-red-600'); }, 3500);
+            } catch (_) { alert(msg); }
+        }
+
+        function showConfirmationPopup(){
+            // Create a lightweight custom popup overlay
+            try {
+                const popup = document.createElement('div');
+                popup.id = 'feedbackConfirmPopup';
+                popup.className = 'fixed bottom-6 right-6 bg-white border border-gray-200 rounded-lg shadow-lg p-4 flex items-start gap-3 z-80';
+                popup.innerHTML = '<div class="flex-shrink-0 text-2xl">✅</div><div class="text-sm text-[var(--cane-900)]">Your feedback has been successfully sent to the System Admin. Thank you for your response!</div>';
+                document.body.appendChild(popup);
+                // close modal and remove popup after 3s
+                setTimeout(() => {
+                    const modal = document.getElementById('feedbackModal');
+                    const dialog = document.getElementById('feedbackDialog');
+                    if (modal && dialog) {
+                        modal.classList.add('opacity-0', 'invisible');
+                        modal.classList.remove('opacity-100', 'visible');
+                        dialog.classList.add('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                        dialog.classList.remove('translate-y-0', 'scale-100', 'opacity-100');
+                    }
+                    try { popup.remove(); } catch(_){}
+                }, 3000);
+            } catch (e) { console.error(e); }
+        }

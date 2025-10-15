@@ -1015,8 +1015,9 @@ header nav .flex.items-center.justify-between > .relative {
         </div>
     </div>
     <!-- Backend Common scripts -->
-    <script type="module" src="../../backend/Common/firebase-config.js"></script>
-    <script src="../../backend/Common/lobby.js"></script>
+            <script type="module" src="../../backend/Common/firebase-config.js"></script>
+            <!-- Load lobby.js after firebase-config; cache-bust for development -->
+            <script src="../../backend/Common/lobby.js?v=20251015.1"></script>
     <script>
       // Background swapper based on today's condition only
       (function(){

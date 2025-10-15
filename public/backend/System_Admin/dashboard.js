@@ -1160,45 +1160,244 @@ window.showFeedbackReports = async function() {
     const mainContent = document.querySelector('main');
     mainContent.style.height = '100vh';
     mainContent.style.overflow = 'auto';
-    mainContent.innerHTML = `<div class="bg-white rounded-xl shadow-lg p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">User Feedback Reports</h2>
+    mainContent.innerHTML = `<div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">User Feedback Reports</h2>
+            <div class="flex items-center gap-3">
+                <label class="text-sm text-gray-600">Sort by:</label>
+                <select id="feedbackSort" class="px-3 py-1 border rounded-md text-sm">
+                    <option value="date_desc">Date (newest)</option>
+                    <option value="date_asc">Date (oldest)</option>
+                    <option value="email_asc">Email (A → Z)</option>
+                    <option value="email_desc">Email (Z → A)</option>
+                    <option value="type_asc">Category (A → Z)</option>
+                    <option value="type_desc">Category (Z → A)</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex items-center justify-between mb-4">
+            <div class="text-sm text-gray-600">Only users with role <strong>system_admin</strong> can view feedback here.</div>
+            <div class="flex items-center gap-3">
+                <button id="feedbackRefresh" class="px-3 py-1 text-sm bg-[var(--cane-100)] border rounded-md">Refresh</button>
+                <div id="feedbackStatus" class="text-xs text-gray-500">&nbsp;</div>
+            </div>
+        </div>
         <div id="feedbackTableContainer">
             <div class="text-gray-600 mb-4">Loading feedback...</div>
         </div>
     </div>`;
     try {
-        const { db, collection, getDocs, orderBy, query } = await import('../Common/firebase-config.js');
-        const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
-        const snap = await getDocs(q);
-        const rows = snap.docs.map(doc => doc.data());
-        const tableHtml = `<table class="min-w-full border rounded-lg overflow-hidden">
+        const { db } = await import('../Common/firebase-config.js');
+        const { collection, query, orderBy, onSnapshot } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+        // Clean up previous listener if any
+        if (window.__feedbackListener && typeof window.__feedbackListener === 'function') {
+            try { window.__feedbackListener(); } catch(_) {}
+            window.__feedbackListener = null;
+        }
+
+        // Base query: listen for feedbacks ordered by createdAt desc
+        const baseQ = query(collection(db, 'feedbacks'), orderBy('createdAt', 'desc'));
+
+        // render skeleton table
+        const skeleton = `<table class="min-w-full border rounded-lg overflow-hidden">
             <thead class="bg-gray-100">
                 <tr>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Email</th>
-                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Type</th>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Category</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Message</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Date</th>
                 </tr>
             </thead>
-            <tbody>
-                ${rows.length === 0 ? `<tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">No feedback found.</td></tr>` : rows.map(f => {
-                    const dateStr = f.createdAt && f.createdAt.toDate ? f.createdAt.toDate().toLocaleString() : '';
-                    let typeLabel = '';
-                    if (f.type === 'like') typeLabel = 'I like something';
-                    else if (f.type === 'dislike') typeLabel = "I don't like something";
-                    else if (f.type === 'idea') typeLabel = 'I have an idea';
-                    else typeLabel = f.type || '';
-                    return `<tr>
-                        <td class="border-t px-4 py-2 text-sm">${f.email || '-'}</td>
-                        <td class="border-t px-4 py-2 text-sm">${typeLabel}</td>
-                        <td class="border-t px-4 py-2 text-sm">${f.message || '-'}</td>
-                        <td class="border-t px-4 py-2 text-xs text-gray-500">${dateStr}</td>
-                    </tr>`;
-                }).join('')}
+            <tbody id="feedbackTableBody">
+                <tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">Loading...</td></tr>
             </tbody>
         </table>`;
-        document.getElementById('feedbackTableContainer').innerHTML = tableHtml;
+        document.getElementById('feedbackTableContainer').innerHTML = skeleton;
+
+        // Append modal container (hidden) used to show full feedback details
+        if (!document.getElementById('feedbackDetailModal')) {
+            const modalWrap = document.createElement('div');
+            modalWrap.id = 'feedbackDetailModal';
+            modalWrap.className = 'hidden';
+            document.body.appendChild(modalWrap);
+        }
+
+        // Helper to format date
+        function formatDateField(ts) {
+            if (!ts) return '';
+            try {
+                if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString();
+                if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString();
+                return new Date(ts).toLocaleString();
+            } catch(_) { return '' }
+        }
+
+        // Map a type to a friendly label
+        function typeLabel(t) {
+            if (!t) return '';
+            if (t === 'like') return 'I like something';
+            if (t === 'dislike') return "I don't like something";
+            if (t === 'idea') return 'I have an idea';
+            return t;
+        }
+
+        // Client-side sorting function
+        function sortRows(rows, mode) {
+            const copy = [...rows];
+            switch(mode) {
+                case 'date_asc':
+                    return copy.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
+                case 'date_desc':
+                    return copy.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+                case 'email_asc':
+                    return copy.sort((a,b) => String(a.email||'').localeCompare(String(b.email||'')));
+                case 'email_desc':
+                    return copy.sort((a,b) => String(b.email||'').localeCompare(String(a.email||'')));
+                case 'type_asc':
+                    return copy.sort((a,b) => String(a.type||'').localeCompare(String(b.type||'')));
+                case 'type_desc':
+                    return copy.sort((a,b) => String(b.type||'').localeCompare(String(a.type||'')));
+                default:
+                    return copy;
+            }
+        }
+
+        // Render rows into table body
+        function renderTable(rows, sortMode) {
+            const tbody = document.getElementById('feedbackTableBody');
+            if (!tbody) return;
+            const sorted = sortRows(rows, sortMode || (document.getElementById('feedbackSort')?.value || 'date_desc'));
+            if (!sorted.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-3 text-center text-gray-500">No feedback found.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sorted.map(f => {
+                return `<tr data-id="${escapeHtml(f.id)}" class="cursor-pointer hover:bg-gray-50">
+                    <td class="border-t px-4 py-2 text-sm">${escapeHtml(f.email) || '-'}</td>
+                    <td class="border-t px-4 py-2 text-sm">${escapeHtml(typeLabel(f.type))}</td>
+                    <td class="border-t px-4 py-2 text-sm truncate max-w-[36ch]">${escapeHtml(f.message || '-')}</td>
+                    <td class="border-t px-4 py-2 text-xs text-gray-500">${escapeHtml(formatDateField(f.createdAt))}</td>
+                </tr>`;
+            }).join('');
+
+            // Attach click handler to table body to open modal with details
+            tbody.addEventListener('click', function onRowClick(e){
+                const tr = e.target.closest('tr[data-id]');
+                if (!tr) return;
+                const id = tr.getAttribute('data-id');
+                const item = (window.__cachedFeedbackRows || []).find(r => r.id === id);
+                if (item) openFeedbackModal(item);
+            });
+        }
+
+        // Basic HTML escape utility
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+                // Modal rendering for full feedback details
+                function openFeedbackModal(item) {
+                        try {
+                                // Remove existing modal markup if present
+                                const existing = document.getElementById('feedbackDetailModal');
+                                let modalRoot = existing;
+                                if (!modalRoot) {
+                                        modalRoot = document.createElement('div');
+                                        modalRoot.id = 'feedbackDetailModal';
+                                        document.body.appendChild(modalRoot);
+                                }
+                                // Build modal content
+                                const html = `
+                                <div class="fixed inset-0 bg-black/40 z-90 flex items-center justify-center p-4">
+                                    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative">
+                                        <button id="feedbackDetailClose" class="absolute top-3 right-3 w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center"><i class="fas fa-times text-gray-700"></i></button>
+                                        <h3 class="text-xl font-bold text-gray-900 mb-2">Feedback Details</h3>
+                                        <div class="mt-4 grid grid-cols-1 gap-3">
+                                            <div class="text-sm text-gray-700"><strong>Email:</strong> ${escapeHtml(item.email || '-')}</div>
+                                            <div class="text-sm text-gray-700"><strong>Category:</strong> ${escapeHtml(typeLabel(item.type))}</div>
+                                            <div class="text-sm text-gray-700"><strong>Date:</strong> ${escapeHtml(formatDateField(item.createdAt))}</div>
+                                            <div class="pt-4">
+                                                <label class="block text-xs text-gray-500 mb-1">Full message</label>
+                                                <div class="p-4 bg-gray-50 border border-gray-100 rounded-md text-sm text-gray-800 whitespace-pre-wrap">${escapeHtml(item.message || '-')}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                                modalRoot.innerHTML = html;
+                                modalRoot.classList.remove('hidden');
+                                // Close handlers
+                                const closeBtn = document.getElementById('feedbackDetailClose');
+                                function closeModal(){ try{ modalRoot.innerHTML = ''; modalRoot.classList.add('hidden'); } catch(_){} }
+                                closeBtn && closeBtn.addEventListener('click', closeModal);
+                                modalRoot.addEventListener('click', function(e){ if (e.target === modalRoot) closeModal(); });
+                        } catch (err) { console.error('Failed to open feedback modal', err); }
+                }
+
+        // Listen for sort changes
+        const sortEl = document.getElementById('feedbackSort');
+        if (sortEl) {
+            sortEl.addEventListener('change', function(){
+                // if we have cachedRows, re-render
+                if (window.__cachedFeedbackRows) renderTable(window.__cachedFeedbackRows, sortEl.value);
+            });
+        }
+
+        // Attach real-time listener
+        const feedbackStatusEl = document.getElementById('feedbackStatus');
+        const unsubscribe = onSnapshot(baseQ, snap => {
+            const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // cache for client-side sorting rerenders
+            window.__cachedFeedbackRows = rows;
+            renderTable(rows);
+            if (feedbackStatusEl) feedbackStatusEl.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+        }, err => {
+            console.error('Feedback snapshot error', err);
+            // Show a helpful diagnostic UI so admins know why reads are blocked
+            const container = document.getElementById('feedbackTableContainer');
+            let infoHtml = `<div class="text-red-600">Failed to load feedback: ${escapeHtml(err.message || String(err))}</div>`;
+            infoHtml += `<div class="mt-3 text-sm text-gray-700">Possible causes: insufficient Firestore rules or your user is not a <strong>system_admin</strong>.</div>`;
+            container.innerHTML = infoHtml;
+            if (feedbackStatusEl) feedbackStatusEl.textContent = 'Failed to update';
+
+            // Try to detect current user role and show it
+            (async function showRoleHint(){
+                try {
+                    // attempt to get current auth user
+                    const { auth, db } = await import('../Common/firebase-config.js');
+                    if (auth && typeof auth.currentUser !== 'undefined') {
+                        const user = auth.currentUser;
+                        if (user && user.uid) {
+                            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                            const userDoc = await getDoc(doc(db, 'users', user.uid));
+                            const role = userDoc.exists() ? (userDoc.data().role || 'unknown') : 'not found';
+                            const el = document.createElement('div');
+                            el.className = 'mt-2 text-sm text-gray-700';
+                            el.innerHTML = `<strong>Current signed-in user:</strong> ${escapeHtml(user.email || user.uid)}<br/><strong>Detected role:</strong> ${escapeHtml(role)}<br/>If the role is not <code>system_admin</code>, update the user's document in Firestore or use an account with the correct role.`;
+                            container.appendChild(el);
+                        }
+                    }
+                } catch (e2) {
+                    console.warn('Could not fetch user role for diagnostics', e2);
+                }
+            })();
+        });
+
+        // store unsubscribe so subsequent calls can clean up
+        window.__feedbackListener = unsubscribe;
+
+        // Refresh button wiring
+        const refreshBtn = document.getElementById('feedbackRefresh');
+        if (refreshBtn) {
+            refreshBtn.onclick = function(){
+                // Re-run the reports loader which will cleanup previous listener
+                try { window.showFeedbackReports(); } catch(_) {}
+            };
+        }
+
     } catch (e) {
+        console.error('Error in showFeedbackReports', e);
         document.getElementById('feedbackTableContainer').innerHTML = `<div class="text-red-600">Failed to load feedback.</div>`;
     }
 };

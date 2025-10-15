@@ -37,6 +37,16 @@ service cloud.firestore {
     match /email_queue/{emailId} {
       allow create, read, update, delete: if request.auth != null;
     }
+
+    // Allow public submission of feedbacks; only system_admin can read/manage them
+    match /feedbacks/{feedbackId} {
+      // Allow anyone (even unauthenticated) to create feedback entries so users can send quick feedback.
+      allow create: if true;
+
+      // Only system_admin users can read, update or delete feedback entries
+      allow read, update, delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'system_admin';
+    }
     
     // Fields access rules
     match /fields/{fieldId} {
