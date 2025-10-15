@@ -265,12 +265,6 @@ function renderUsersTable() {
                     ${user.status || 'inactive'}
                 </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">
-                    ${user.driverBadge === 'approved' ? 'Badge Holder' : 
-                      user.driverBadge === 'pending' ? 'Pending' : 'No Badge'}
-                </span>
-            </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 ${user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
             </td>
