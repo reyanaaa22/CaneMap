@@ -951,29 +951,32 @@
             `;
         }
         
-        function showBadgeRequestsContent() {
-            const mainContent = document.querySelector('main');
-            mainContent.style.height = '100vh';
-            mainContent.style.overflow = 'auto';
-            fetch('partials/badge_requests.html')
-                .then(r => r.text())
-                .then(html => {
-                    mainContent.innerHTML = html;
-                    // Initialize the badge filter system
-                    if (window.initializeBadgeFilter) {
-                        window.initializeBadgeFilter();
-                    }
-                })
-                .catch(() => {
-                    const mainContent = document.querySelector('main');
-                    mainContent.style.height = '100vh';
-                    mainContent.style.overflow = 'auto';
-                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load section.</p></div>';
-                });
-        }
+async function showBadgeRequestsContent() {
+  const mainContent = document.querySelector('main');
+  mainContent.style.height = '100vh';
+  mainContent.style.overflow = 'auto';
 
+  try {
+    // Load the HTML content
+    const response = await fetch('partials/badge_requests.html');
+    const html = await response.text();
+    mainContent.innerHTML = html;
 
-        
+    // Dynamically import the badge requests script
+    await import('../../backend/System_Admin/badge_requests.js');
+
+    console.log('✅ Badge Requests page loaded and script executed');
+  } catch (err) {
+    console.error('❌ Failed to load Badge Requests content:', err);
+    mainContent.innerHTML = `
+      <div class="p-6 bg-red-50 text-red-600 rounded-lg">
+        Failed to load Driver Badge Requests.
+      </div>
+    `;
+  }
+}
+
+      
         function showApprovedBadgesContent() {
             const mainContent = document.querySelector('main');
             mainContent.style.height = '100vh';
