@@ -279,7 +279,7 @@ window.addEventListener('error', function (ev) {
             // Role gating for Dashboard
             const dashboardLink = document.getElementById('dashboardLink');
             const role = (localStorage.getItem('userRole') || '').toLowerCase();
-            const approvedRoles = ['handler', 'worker', 'worker_driver', 'sra_officer'];
+            const approvedRoles = ['handler', 'worker', 'driver', 'sra'];
             const isApproved = approvedRoles.includes(role);
             const userId = localStorage.getItem('userId') || fullName;
             async function checkHandlerAccess() {
@@ -352,10 +352,10 @@ window.addEventListener('error', function (ev) {
                         case 'worker':
                             dashboardLink.href = '../Worker/Workers.html';
                             break;
-                        case 'worker_driver':
+                        case 'driver':
                             dashboardLink.href = '../Driver/Driver_Badge.html';
                             break;
-                        case 'sra_officer':
+                        case 'sra':
                             dashboardLink.href = '../SRA/SRA_Dashboard.html';
                             break;
                         default:

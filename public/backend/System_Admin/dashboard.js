@@ -273,7 +273,7 @@ function renderUsersTable() {
                     <button onclick="editUser('${user.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="deleteUser('${user.id}')" class="text-red-600 hover:text-red-700">
+                    <button onclick="deleteUser('${user.id}', this)" class="text-red-600 hover:text-red-700">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -523,20 +523,30 @@ function editUser(userId) {
 }
 
 // Delete user function
-async function deleteUser(userId) {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        return;
-    }
-    
-    try {
-        await deleteDoc(doc(db, 'users', userId));
-        showAlert('User deleted successfully', 'success');
-        loadUsers();
-        
-    } catch (error) {
-        console.error('❌ Error deleting user:', error);
-        showAlert('Failed to delete user', 'error');
-    }
+async function deleteUser(userId, el) {
+    openConfirmDialog({
+        title: 'Delete User',
+        message: 'Are you sure you want to delete this user? This action cannot be undone.',
+        confirmText: 'Delete',
+        confirmType: 'danger',
+        onConfirm: async () => {
+            try {
+                await deleteDoc(doc(db, 'users', userId));
+                showAlert('User deleted successfully', 'success');
+                // Remove the row from the table immediately without full reload
+                try {
+                    if (el && el.closest) {
+                        const tr = el.closest('tr');
+                        if (tr && tr.parentElement) tr.parentElement.removeChild(tr);
+                    }
+                } catch (_) {}
+                // Let realtime listeners update other parts if present
+            } catch (error) {
+                console.error('❌ Error deleting user:', error);
+                showAlert('Failed to delete user', 'error');
+            }
+        }
+    });
 }
 
 // Utility functions
@@ -790,104 +800,190 @@ function createUserRoleChart(users) {
     });
 }
 
-// Fetch and render SRA officers
+// Fetch and render SRA officers directly from Firestore
 async function fetchAndRenderSRA() {
-    try {
-        // First, try to get from localStorage
-        const sraOfficersData = localStorage.getItem('sraOfficers');
-        let sraOfficers = [];
-        
-        if (sraOfficersData) {
-            sraOfficers = JSON.parse(sraOfficersData);
-        }
-        
-        // If no localStorage data, try to create a temporary admin user to fetch from Firestore
-        if (sraOfficers.length === 0) {
-            try {
-                // Create a temporary admin user for fetching data
-                const tempAdminEmail = 'temp-admin@canemap.com';
-                const tempAdminPassword = 'TempAdmin123!';
-                
-                // Try to sign in as temp admin
-                let tempAdmin = null;
-                try {
-                    const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
-                    tempAdmin = await signInWithEmailAndPassword(auth, tempAdminEmail, tempAdminPassword);
-                } catch (signInError) {
-                    // Create temp admin if doesn't exist
-                    const { createUserWithEmailAndPassword, updateProfile } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
-                    const adminCredential = await createUserWithEmailAndPassword(auth, tempAdminEmail, tempAdminPassword);
-                    tempAdmin = adminCredential.user;
-                    await updateProfile(tempAdmin, { displayName: 'Temp Admin' });
-                    
-                    // Save admin to Firestore
-                    await setDoc(doc(db, 'users', tempAdmin.uid), {
-                        name: 'Temp Admin',
-                        email: tempAdminEmail,
-                        role: 'admin',
-                        status: 'active',
-                        createdAt: serverTimestamp(),
-                    });
-                }
-                
-                // Now fetch SRA officers
-                const usersQuery = query(
-                    collection(db, 'users'),
-                    orderBy('createdAt', 'desc')
-                );
-                
-                const querySnapshot = await getDocs(usersQuery);
-                const firestoreSRAOfficers = [];
-                
-                querySnapshot.forEach((doc) => {
-                    const userData = doc.data();
-                    if (userData.role === 'sra_officer') {
-                        firestoreSRAOfficers.push({
-                            id: doc.id,
-                            ...userData,
-                            createdAt: userData.createdAt?.toDate() || new Date(),
-                            lastLogin: userData.lastLogin?.toDate() || null
-                        });
-                    }
-                });
-                
-                // Sign out temp admin
-                const { signOut } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
-                await signOut(auth);
-                
-                sraOfficers = firestoreSRAOfficers;
-                
-                // Store in localStorage for future use
-                localStorage.setItem('sraOfficers', JSON.stringify(sraOfficers));
-                
-            } catch (firestoreError) {
-                console.log('Could not fetch from Firestore:', firestoreError.message);
-            }
-        }
-        
-        // Sort by creation date (newest first)
-        sraOfficers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        renderSRATable(sraOfficers);
-        
-    } catch (error) {
-        console.error('❌ Error loading SRA officers:', error);
-        const tableBody = document.getElementById('sraTableBody');
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="px-6 py-10">
-                        <div class="text-center text-red-500">
-                            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                            <p>Failed to load SRA officers</p>
-                            <p class="text-sm mt-2">Error: ${error.message}</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
+  const tableBody = document.getElementById("sraTableBody");
+  if (!tableBody) return;
+
+  tableBody.innerHTML = `
+    <tr>
+      <td colspan="4" class="px-6 py-10">
+        <div class="flex flex-col items-center justify-center text-center text-gray-500">
+          <i class="fas fa-spinner fa-spin text-2xl mb-2 text-gray-400"></i>
+          <p>Loading SRA officers...</p>
+        </div>
+      </td>
+    </tr>
+  `;
+
+  try {
+    // Query only users with role = 'sra'
+    const q = query(collection(db, "users"), where("role", "==", "sra"));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="4" class="px-6 py-10 text-center text-gray-400">
+            <i class="fas fa-user-tie text-3xl mb-2"></i>
+            <p>No SRA officers found.</p>
+          </td>
+        </tr>
+      `;
+      return;
     }
+
+    let html = "";
+    snap.forEach((doc) => {
+      const data = doc.data();
+      const statusColor =
+        data.status === "active"
+          ? "bg-green-100 text-green-700"
+          : data.status === "pending"
+          ? "bg-yellow-100 text-yellow-700"
+          : "bg-gray-100 text-gray-700";
+
+      const verifiedText = data.emailVerified ? "Verified" : "Pending";
+      const verifiedColor = data.emailVerified
+        ? "text-green-600"
+        : "text-yellow-600";
+
+      html += `
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-[var(--cane-500)] text-white rounded-full flex items-center justify-center font-semibold uppercase">
+                ${data.name ? data.name[0] : "?"}
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">${data.name || "N/A"}</p>
+                <p class="text-gray-500 text-sm">${data.email || ""}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-sm">
+            <span class="${verifiedColor}">${verifiedText}</span>
+          </td>
+          <td class="px-6 py-4 text-sm">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
+              ${data.status || "inactive"}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-600">
+            <button class="text-[var(--cane-600)] hover:text-[var(--cane-700)] mx-2">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="text-red-500 hover:text-red-700 mx-2" onclick="confirmDeleteSRA('${doc.id}', '${data.name}', '${data.email}')">
+            <i class="fas fa-trash-alt"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tableBody.innerHTML = html;
+  } catch (err) {
+    console.error("Error fetching SRA officers:", err);
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="px-6 py-10 text-center text-red-600">
+          Failed to load data. Please check your Firebase rules or network.
+        </td>
+      </tr>
+    `;
+  }
 }
+
+
+// ================================
+// 🧾 Delete Confirmation + Firestore Delete
+// ================================
+async function confirmDeleteSRA(id, name, email) {
+  // Remove existing modal if open
+  const existing = document.getElementById("confirmDeleteModal");
+  if (existing) existing.remove();
+
+  // Create overlay modal
+  const overlay = document.createElement("div");
+  overlay.id = "confirmDeleteModal";
+  overlay.className =
+    "fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50";
+
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg p-8 text-gray-800 animate-fadeIn relative">
+      <h2 class="text-2xl font-bold mb-3 text-center text-gray-900">Confirm Deletion</h2>
+      <p class="text-gray-600 text-sm mb-6 text-justify leading-relaxed">
+        You are about to <b>permanently remove</b> the SRA Officer <b>${name}</b> 
+        (<i>${email}</i>) from the CaneMap system. This action cannot be undone.
+        <br><br>
+        <b>Legal Notice:</b> Deleting a registered officer’s data constitutes 
+        an irreversible administrative action under CaneMap’s Data Protection 
+        and Retention Policy. All associated records (including system access 
+        credentials, pending verifications, and activity logs) will be 
+        permanently removed. Please ensure that you have obtained any required 
+        authorization before confirming this deletion.
+        <br><br>
+        By proceeding, you acknowledge that this action is intentional, compliant 
+        with internal data governance procedures, and will remove the officer 
+        from all CaneMap administrative systems.
+      </p>
+      <div class="flex items-start gap-2 mb-6">
+        <input type="checkbox" id="confirmPolicyCheck" class="mt-1 accent-[var(--cane-600)]" />
+        <label for="confirmPolicyCheck" class="text-gray-600 text-sm leading-snug">
+          I understand and agree to the terms above, and confirm that the deletion 
+          of this account complies with CaneMap’s official administrative protocols.
+        </label>
+      </div>
+      <div class="flex justify-center gap-4">
+        <button id="cancelDeleteBtn" class="px-5 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium shadow-sm transition">Cancel</button>
+        <button id="confirmDeleteBtn" class="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-md transition">Delete Permanently</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("cancelDeleteBtn").addEventListener("click", () => overlay.remove());
+
+  document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+    const checked = document.getElementById("confirmPolicyCheck").checked;
+    if (!checked) {
+      alert("Please confirm that you agree to the data policy before proceeding.");
+      return;
+    }
+
+    overlay.remove();
+
+    // 🔄 Show loading popup
+    showPopup({
+      title: "Processing Deletion...",
+      message: "Please wait while we remove this officer from the system.",
+      type: "info"
+    });
+
+    try {
+      await deleteDoc(doc(db, "users", id));
+
+      showPopup({
+        title: "Officer Deleted Successfully",
+        message: `The officer <b>${name}</b> has been permanently removed from the CaneMap system.`,
+        type: "success"
+      });
+
+      // Refresh table
+      await fetchAndRenderSRA();
+    } catch (err) {
+      console.error("Error deleting officer:", err);
+      showPopup({
+        title: "Deletion Failed",
+        message:
+          "An unexpected error occurred while deleting this record. Please try again later or contact system support.",
+        type: "error"
+      });
+    }
+  });
+}
+
 
 // Render SRA officers table
 function renderSRATable(sraOfficers) {
@@ -944,7 +1040,7 @@ function renderSRATable(sraOfficers) {
                     <button onclick="editUser('${officer.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="deleteUser('${officer.id}')" class="text-red-600 hover:text-red-700">
+                    <button onclick="deleteUser('${officer.id}', this)" class="text-red-600 hover:text-red-700">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -990,7 +1086,7 @@ function addExistingSRAOfficer() {
         id: 'existing-sra-001', // You can use the actual UID from Firestore
         name: 'Almackie Bangalao',
         email: 'almackieandrew.bangalao@evsu.edu.ph',
-        role: 'sra_officer',
+        role: 'sra',
         status: 'active',
         emailVerified: false,
         createdAt: new Date('2025-09-27T05:52:58.000Z').toISOString(), // Convert Firestore timestamp
@@ -1013,7 +1109,7 @@ function importAllExistingSRAOfficers() {
             id: 'existing-sra-001',
             name: 'Almackie Bangalao',
             email: 'almackieandrew.bangalao@evsu.edu.ph',
-            role: 'sra_officer',
+            role: 'sra',
             status: 'active',
             emailVerified: false,
             createdAt: new Date('2025-09-27T05:52:58.000Z').toISOString(),
@@ -1148,6 +1244,35 @@ async function addSampleData() {
 
 window.initializeDashboard = initializeDashboard;
 window.addSampleData = addSampleData;
+
+// Custom confirmation dialog
+function openConfirmDialog({ title, message, confirmText, cancelText, onConfirm, onCancel, confirmType }) {
+    const root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/50';
+    root.innerHTML = `
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900">${title || 'Confirm'}</h3>
+                <button class="text-gray-400 hover:text-gray-600" data-close>
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 text-gray-700">${message || ''}</div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100" data-cancel>${cancelText || 'Cancel'}</button>
+                <button class="px-4 py-2 rounded-lg text-white ${confirmType==='danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-[var(--cane-600)] hover:bg-[var(--cane-700)]'}" data-confirm>${confirmText || 'Confirm'}</button>
+            </div>
+        </div>
+    `;
+    function cleanup(){ try { document.body.removeChild(root); } catch(_){} }
+    root.addEventListener('click', (e) => { if (e.target === root) cleanup(); });
+    root.querySelector('[data-close]')?.addEventListener('click', cleanup);
+    root.querySelector('[data-cancel]')?.addEventListener('click', () => { cleanup(); try{ onCancel && onCancel(); }catch(_){} });
+    root.querySelector('[data-confirm]')?.addEventListener('click', async () => {
+        try { await (onConfirm && onConfirm()); } finally { cleanup(); }
+    });
+    document.body.appendChild(root);
+}
 
 // Fetch feedback and render table for admin
 window.showFeedbackReports = async function() {
@@ -1426,3 +1551,5 @@ async function handleChangePin(form){
         showAlert('Failed to update PIN','error');
     }
 }
+
+document.addEventListener("DOMContentLoaded", fetchAndRenderSRA);

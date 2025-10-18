@@ -1,268 +1,283 @@
-// Handles Add User modal variations for Farmers vs SRA Officers
-// Splits logic out of dashboard.html
+// ================================
+// CaneMap - Add SRA Officer Module
+// ================================
 
-import { auth, db } from '../Common/firebase-config.js';
+import { db } from '../Common/firebase-config.js';
 import { 
   addDoc, 
   collection, 
-  serverTimestamp,
-  setDoc,
-  doc
+  serverTimestamp, 
+  query, 
+  where, 
+  getDocs 
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-import { 
-  createUserWithEmailAndPassword as createUser,
-  sendEmailVerification as sendVerification,
-  updateProfile as updateUserProfile
-} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 
-function generateTempPassword(){
+// --------------------
+// Helper: Generate temp password
+// --------------------
+function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%';
   let out = '';
-  for (let i=0;i<10;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
-// Custom alert function to replace browser alerts
-function showCustomAlert(message, type = 'info') {
-  // Remove existing alerts
-  const existingAlert = document.getElementById('customAlert');
-  if (existingAlert) {
-    existingAlert.remove();
-  }
+// --------------------
+// UI: Reusable popup alert
+// --------------------
+function showPopup({ title, message, type = 'success' }) {
+  const existing = document.getElementById('popupAlert');
+  if (existing) existing.remove();
 
-  const alertDiv = document.createElement('div');
-  alertDiv.id = 'customAlert';
-  alertDiv.className = 'fixed top-4 right-4 z-50 max-w-md';
+  const overlay = document.createElement('div');
+  overlay.id = 'popupAlert';
+  overlay.className =
+    'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40 backdrop-blur-sm';
   
-  const bgColor = type === 'error' ? 'bg-red-500' : 
-                  type === 'warning' ? 'bg-yellow-500' : 
-                  type === 'success' ? 'bg-green-500' : 'bg-blue-500';
-  
-  alertDiv.innerHTML = `
-    <div class="${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3">
-      <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 
-                     type === 'warning' ? 'fa-exclamation-triangle' : 
-                     type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
-      <span class="flex-1">${message}</span>
-      <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
-        <i class="fas fa-times"></i>
+  const colors = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    warning: 'bg-yellow-500',
+    info: 'bg-blue-600'
+  };
+
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md w-full mx-4 animate-fadeIn">
+      <div class="text-5xl mb-4">
+        ${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}
+      </div>
+      <h2 class="text-xl font-semibold text-gray-800 mb-3">${title}</h2>
+      <p class="text-gray-500 mb-6">${message}</p>
+      <button id="closePopupBtn" class="px-6 py-2 rounded-lg text-white font-medium ${colors[type]} hover:opacity-90 transition">
+        Close
       </button>
     </div>
   `;
-  
-  document.body.appendChild(alertDiv);
-  
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    if (alertDiv.parentElement) {
-      alertDiv.remove();
-    }
-  }, 5000);
+
+  document.body.appendChild(overlay);
+  document.getElementById('closePopupBtn').addEventListener('click', () => overlay.remove());
 }
 
+// --------------------
+// Input Validation Helpers
+// --------------------
+function isValidFullName(name) {
+  return name.trim().split(/\s+/).length >= 2;
+}
 
-export function openAddSRAModal(){
-  try{
-    const modal = document.getElementById('addSraModal');
-    if (modal){
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      const pw = document.getElementById('sraTempPassword');
-      if (pw && !pw.value) pw.value = generateTempPassword();
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+function markInvalid(input, message) {
+  input.classList.add('border-red-500', 'focus:ring-red-400');
+  let note = input.nextElementSibling;
+  if (!note || !note.classList.contains('error-text')) {
+    note = document.createElement('p');
+    note.className = 'error-text text-red-500 text-sm mt-1';
+    input.insertAdjacentElement('afterend', note);
+  }
+  note.textContent = message;
+}
+
+function clearInvalid(input) {
+  input.classList.remove('border-red-500', 'focus:ring-red-400');
+  const note = input.nextElementSibling;
+  if (note && note.classList.contains('error-text')) note.remove();
+}
+
+// --------------------
+// Confirmation Modal (Policy Agreement)
+// --------------------
+function showConfirmationModal({ name, email, temp, onConfirm }) {
+  const existing = document.getElementById('confirmModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'confirmModal';
+  overlay.className =
+    'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40 backdrop-blur-sm';
+
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 animate-fadeIn">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4 text-center">Confirm Officer Details</h2>
+      <p class="text-gray-600 mb-3 text-sm text-center">
+        Please review the information below carefully before proceeding.
+      </p>
+
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200 text-left">
+        <p><b>Full Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Temporary Password:</b> ${temp}</p>
+      </div>
+
+      <div class="flex items-start space-x-2 mb-6">
+        <input type="checkbox" id="policyCheck" class="mt-1 accent-green-600" />
+        <label for="policyCheck" class="text-gray-600 text-sm leading-snug">
+          I confirm that all details entered are accurate and comply with <b>CaneMap’s Data Protection Policy</b>.
+          I understand that inaccurate or unauthorized data entry is subject to administrative review.
+        </label>
+      </div>
+
+      <div class="flex justify-center space-x-4">
+        <button id="cancelConfirm" class="px-5 py-2 rounded-lg bg-gray-300 text-gray-700 font-medium hover:bg-gray-400 transition">Cancel</button>
+        <button id="proceedConfirm" class="px-5 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition">Confirm & Submit</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('cancelConfirm').addEventListener('click', () => overlay.remove());
+
+  document.getElementById('proceedConfirm').addEventListener('click', () => {
+    const checked = document.getElementById('policyCheck').checked;
+    if (!checked) {
+      alert('Please check the confirmation box before proceeding.');
       return;
     }
-  }catch(_){ }
-  console.warn('Add SRA modal not found in DOM. Ensure SRA Officers section is loaded.');
-}
-
-function closeAddSRAModal(){
-  try{
-    const modal = document.getElementById('addSraModal');
-    if (modal){
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-  }catch(_){ }
-}
-
-function toggleSRAFields(show){
-  ['tempPasswordRow','statusRow','forceChangeRow'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.display = show ? '' : 'none';
+    overlay.remove();
+    onConfirm(); // proceed to submit after confirm
   });
 }
 
-// Hook generators
-export function wireGenerators(){
-  const genBtn = document.getElementById('genUserTempPassword');
-  const pw = document.getElementById('userTempPassword');
-  if (genBtn && pw){
-    genBtn.addEventListener('click', () => { pw.value = generateTempPassword(); });
+// --------------------
+// Modal open/close handlers
+// --------------------
+export function openAddSRAModal() {
+  const modal = document.getElementById('addSraModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    const pw = document.getElementById('sraTempPassword');
+    if (pw && !pw.value) pw.value = generateTempPassword();
   }
 }
 
-// Optional: override submit to inject temp password storage
-export function wireSubmitAugment(){
-  const form = document.getElementById('addUserForm');
-  if (!form) return;
-  form.addEventListener('submit', async () => {
-    try{
-      const email = (document.getElementById('userEmail')||{}).value || '';
-      const role = (document.getElementById('userRole')||{}).value || '';
-      const temp = (document.getElementById('userTempPassword')||{}).value || '';
-      if (role === 'sra' && email && temp){
-        await addDoc(collection(db,'temp_passwords'), {
-          email, tempPassword: temp, role, createdAt: serverTimestamp()
-        });
-      }
-    }catch(_){}
-  }, { once: true });
+function closeAddSRAModal() {
+  const modal = document.getElementById('addSraModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
 }
 
-// Wire up the SRA Officer add modal that lives inside the sra_officers.html partial
-export function wireSRAAddForm(){
-  // Generate temp password button inside SRA modal
+// --------------------
+// Wire form and buttons
+// --------------------
+export function wireSRAAddForm() {
+  const form = document.getElementById('addSRAForm');
   const genBtn = document.getElementById('genTempPass');
   const pw = document.getElementById('sraTempPassword');
-  if (genBtn && pw){
-    genBtn.addEventListener('click', () => { pw.value = generateTempPassword(); });
+
+  if (genBtn && pw) {
+    genBtn.addEventListener('click', () => {
+      pw.value = generateTempPassword();
+      pw.classList.add('ring', 'ring-green-400');
+      setTimeout(() => pw.classList.remove('ring', 'ring-green-400'), 600);
+    });
   }
 
-  const form = document.getElementById('addSRAForm');
   if (!form) return;
-  form.addEventListener('submit', async function(e){
+
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
-    try{
-      const name = (document.getElementById('sraName')||{}).value || '';
-      const email = (document.getElementById('sraEmail')||{}).value || '';
-      const temp = (document.getElementById('sraTempPassword')||{}).value || '';
-      if (!name || !email || !temp){
-        showCustomAlert('Please fill in name, email, and temporary password.', 'warning');
-        return;
+
+    const nameInput = document.getElementById('sraName');
+    const emailInput = document.getElementById('sraEmail');
+    const tempInput = document.getElementById('sraTempPassword');
+
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
+    const temp = tempInput.value.trim();
+
+    let valid = true;
+
+    if (!isValidFullName(name)) {
+      markInvalid(nameInput, 'Please enter your full name (first and last name).');
+      valid = false;
+    } else clearInvalid(nameInput);
+
+    if (!isValidEmail(email)) {
+      markInvalid(emailInput, 'Please enter a valid email address.');
+      valid = false;
+    } else clearInvalid(emailInput);
+
+    if (!temp) {
+      markInvalid(tempInput, 'Temporary password is required.');
+      valid = false;
+    } else clearInvalid(tempInput);
+
+    if (!valid) return;
+
+    // ✅ Show confirmation modal first
+    showConfirmationModal({
+      name,
+      email,
+      temp,
+      onConfirm: async () => {
+        try {
+          const q = query(collection(db, 'users'), where('email', '==', email));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            showPopup({
+              title: 'This email is already registered under another account!',
+              message: 'Please use a different email address.',
+              type: 'error'
+            });
+            return;
+          }
+
+          const payload = {
+            name,
+            email,
+            role: 'sra',
+            status: 'pending',
+            emailVerified: false,
+            createdAt: serverTimestamp(),
+            lastLogin: null
+          };
+          await addDoc(collection(db, 'users'), payload);
+
+          const verificationLink = `https://canemap-system.web.app/verify.html?email=${encodeURIComponent(email)}`;
+          const ej = window.emailjs;
+          if (!ej) throw new Error('EmailJS not loaded. Make sure script tag is in your HTML.');
+
+          ej.init('fugIuCmCmUNG7-aXj');
+
+          const params = { email, name, verification_link: verificationLink, temp_password: temp };
+          await ej.send('service_wjr7a3q', 'template_q2h4txg', params);
+
+          showPopup({
+            title: 'SRA Officer Added Successfully!',
+            message: `A verification email and the temporary password have been sent to <b>${email}</b>.`,
+            type: 'success'
+          });
+
+          closeAddSRAModal();
+          form.reset();
+
+          if (typeof window.fetchAndRenderSRA === 'function') {
+            await window.fetchAndRenderSRA();
+          }
+
+        } catch (err) {
+          console.error('Error adding SRA officer:', err);
+          showPopup({
+            title: 'Failed to Add Officer',
+            message: 'An unexpected error occurred. Please try again later.',
+            type: 'error'
+          });
+        }
       }
-
-      // Persist a user document for visibility in the table
-      // Note: Creating Auth users from client admin is not supported without Admin SDK
-      const payload = {
-        name,
-        email,
-        role: 'sra',
-        status: 'pending',
-        emailVerified: false,
-        createdAt: serverTimestamp(),
-        lastLogin: null
-      };
-      await addDoc(collection(db, 'users'), payload);
-
-      // Store the temp password in a separate collection
-      await addDoc(collection(db, 'temp_passwords'), {
-        email,
-        tempPassword: temp,
-        role: 'sra',
-        createdAt: serverTimestamp()
-      });
-
-      closeAddSRAModal();
-      if (typeof showSRASuccessPopup === 'function'){
-        try{ await showSRASuccessPopup({ name, email, temp }); }catch(_){ }
-      }
-      if (typeof window.fetchAndRenderSRA === 'function'){
-        try{ await window.fetchAndRenderSRA(); }catch(_){ }
-      }
-      showCustomAlert('SRA Officer added to records.', 'success');
-      form.reset();
-    }catch(err){
-      console.error(err);
-      showCustomAlert('Failed to add SRA Officer. Check console for details.', 'error');
-    }
-  }, { once: true });
-}
-
-// Expose to window for inline usage
-// eslint-disable-next-line no-undef
-window.openAddSRAModal = openAddSRAModal;
-// eslint-disable-next-line no-undef
-window.wireAddUserModal = () => { wireGenerators(); wireSubmitAugment(); };
-// eslint-disable-next-line no-undef
-window.wireSRAAddForm = () => { try{ wireSRAAddForm(); }catch(_){ } };
-// eslint-disable-next-line no-undef
-window.closeAddSRAModal = closeAddSRAModal;
-// Ensure modal open/close functions for SRA modal are globally accessible for partial HTML
-window.openAddSRA = function(){
-  const m = document.getElementById('addSraModal');
-  if (m){ m.classList.remove('hidden'); m.classList.add('flex'); }
-  // generate default password if empty
-  const pw = document.getElementById('sraTempPassword');
-  if (pw && !pw.value) pw.value = (typeof generateTempPassword === 'function' ? generateTempPassword() : '');
-}
-window.closeAddSRA = function(){
-  const m = document.getElementById('addSraModal');
-  if (m){ m.classList.add('hidden'); m.classList.remove('flex'); }
-}
-
-async function showSRASuccessPopup({ name, email, temp }){
-  return new Promise((resolve) => {
-    let modal = document.getElementById('sraAccountPopup');
-    if (!modal){
-      modal = document.createElement('div');
-      modal.id = 'sraAccountPopup';
-      modal.className = 'fixed inset-0 bg-black/40 hidden items-center justify-center z-50';
-      document.body.appendChild(modal);
-    }
-    modal.innerHTML = '';
-    const card = document.createElement('div');
-    card.className = 'bg-white rounded-2xl w-[92%] max-w-xl p-6 shadow-2xl relative space-y-3';
-    const close = document.createElement('button');
-    close.className = 'absolute top-3 right-4 text-xl';
-    close.textContent = '×';
-    close.onclick = () => { modal.classList.add('hidden'); resolve(); };
-    const title = document.createElement('h3');
-    title.className = 'text-xl font-semibold text-green-600';
-    title.textContent = 'SRA Officer Account Created Successfully';
-    const body = document.createElement('div');
-    body.className = 'text-sm text-gray-700 space-y-3';
-    const link = window.location.origin + '/frontend/Common/farmers_login.html';
-    body.innerHTML = `
-      <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-        <div class="flex items-center mb-2">
-          <i class="fas fa-check-circle text-green-500 mr-2"></i>
-          <span class="font-semibold text-green-800">Account Created & Verification Email Sent</span>
-        </div>
-        <p class="text-green-700">The SRA Officer account has been created and a verification email has been sent to:</p>
-        <p class="font-mono text-sm bg-white px-2 py-1 rounded border mt-1">${email}</p>
-      </div>
-      
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 class="font-semibold text-blue-800 mb-2">Next Steps:</h4>
-        <ol class="list-decimal list-inside space-y-1 text-blue-700 text-sm">
-          <li>The officer will receive a verification email</li>
-          <li>They must click the verification link in the email</li>
-          <li>After verification, they can login with:</li>
-        </ol>
-        <div class="mt-2 bg-white px-3 py-2 rounded border text-sm">
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Temporary Password:</strong> ${temp}</p>
-        </div>
-        <p class="text-xs text-blue-600 mt-2">Login URL: <a href="${link}" class="underline" target="_blank">${link}</a></p>
-      </div>
-      
-      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-        <p class="text-yellow-800 text-sm">
-          <i class="fas fa-exclamation-triangle mr-1"></i>
-          <strong>Important:</strong> The officer must verify their email before they can access the SRA dashboard.
-        </p>
-      </div>
-    `;
-    const footer = document.createElement('div');
-    footer.className = 'pt-2 text-right';
-    const ok = document.createElement('button');
-    ok.className = 'px-5 py-2 rounded-lg bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white';
-    ok.textContent = 'Close';
-    ok.onclick = () => { modal.classList.add('hidden'); resolve(); };
-    card.appendChild(close); card.appendChild(title); card.appendChild(body); footer.appendChild(ok); card.appendChild(footer); modal.appendChild(card);
-    modal.classList.remove('hidden'); modal.classList.add('flex');
+    });
   });
 }
 
-
+// --------------------
+// Expose global helpers
+// --------------------
+window.openAddSRA = openAddSRAModal;
+window.closeAddSRA = closeAddSRAModal;
+window.wireSRAAddForm = wireSRAAddForm;

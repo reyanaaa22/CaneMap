@@ -169,7 +169,7 @@ async function login() {
     showAlert("Login successful!", "success");
 
     setTimeout(() => {
-      if (userRole === "sra_officer") {
+      if (userRole === "sra") {
         window.location.href = "../../frontend/SRA/SRA_Dashboard.html";
       } else {
         window.location.href = "../../frontend/Common/lobby.html";

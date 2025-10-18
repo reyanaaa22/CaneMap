@@ -538,7 +538,7 @@ export async function createTestUsers() {
                 name: 'Mike SRA Officer',
                 email: 'mike.sra@example.com',
                 phone: '+63 912 345 6791',
-                role: 'sra_officer',
+                role: 'sra',
                 status: 'active',
                 createdAt: new Date(Date.now() - 172800000), // 2 days ago
                 lastLogin: new Date(Date.now() - 7200000) // 2 hours ago

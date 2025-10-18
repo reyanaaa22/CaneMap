@@ -14,6 +14,9 @@
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- EmailJS library -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="../img/cane.png">
     
@@ -359,7 +362,7 @@
                 <div class="ml-6 mt-3 space-y-1 hidden" id="users-submenu">
                     <a href="#" onclick="showSection('farmers')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-seedling text-white text-sm"></i>
-                        <span>Farmers</span>
+                        <span>Users</span>
                     </a>
                     <a href="#" onclick="showSection('sra-officers')" class="flex items-center px-4 py-2 text-white hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal relative">
                         <i class="fas fa-user-tie text-white text-sm"></i>
@@ -1470,5 +1473,6 @@ async function showBadgeRequestsContent() {
 
         // Sidebar profile dropdown (footer) removed - footer is static now
     </script>
+
 </body>
 </html>

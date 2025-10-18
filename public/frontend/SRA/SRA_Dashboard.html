@@ -366,7 +366,7 @@
                         const userSnap = await getDoc(userRef);
                         const userRole = userSnap.exists() ? userSnap.data().role : 'farmer';
                         
-                        if (userRole !== 'sra_officer') {
+                        if (userRole !== 'sra') {
                             alert('Access denied. This dashboard is only for SRA Officers.');
                             window.location.href = '../Common/lobby.html';
                             return;
@@ -611,7 +611,7 @@
                                 onSnapshot(nq, (nsnap) => {
                                     let docs = nsnap.docs
                                       .map(d => ({ id: d.id, ...d.data() }))
-                                      .filter(n => !n.userId || n.role === 'sra_officer');
+                                      .filter(n => !n.userId || n.role === 'sra');
                                     badge.textContent = String(docs.length);
                                     if (docs.length === 0) {
                                         nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No notifications</div>';

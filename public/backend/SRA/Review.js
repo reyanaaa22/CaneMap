@@ -166,7 +166,7 @@ async function updateStatus(id, status) {
     try {
       await addDoc(collection(db, 'notifications'), {
         type: 'application_status',
-        role: 'sra_officer',
+        role: 'sra',
         title: `Application ${status === 'reviewed' ? 'Reviewed' : 'Pending'}`,
         message: `An application status was set to ${status}.`,
         appId: id,
