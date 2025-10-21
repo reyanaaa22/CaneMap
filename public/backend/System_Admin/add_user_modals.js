@@ -58,6 +58,9 @@ function showPopup({ title, message, type = 'success' }) {
   document.getElementById('closePopupBtn').addEventListener('click', () => overlay.remove());
 }
 
+// Expose showPopup globally so other modules can reuse the same popup UI
+window.showPopup = showPopup;
+
 // --------------------
 // Input Validation Helpers
 // --------------------

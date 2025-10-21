@@ -61,10 +61,10 @@ async function updateStatus(id, newStatus) {
     displayRequests(allRequests);
     modal.classList.remove("active");
 
-    alert(`✅ Request ${newStatus} successfully! Notification sent to driver.`);
+    showPopupLocal({ title: 'Request Updated', message: `Request ${newStatus} successfully! Notification sent to driver.`, type: 'success', closeText: 'OK' });
   } catch (error) {
     console.error("Error updating status or sending notification:", error);
-    alert("❌ Something went wrong while updating status or sending notification.");
+    showPopupLocal({ title: 'Update Failed', message: 'Something went wrong while updating status or sending notification.', type: 'error', closeText: 'OK' });
   }
 }
 
@@ -306,3 +306,10 @@ document.addEventListener("click", (e) => {
     }
   });
 });
+
+// Expose functions globally so other modules can refresh or invoke deletes
+window.fetchBadgeRequests = fetchBadgeRequests;
+window.deleteBadgeRequest = deleteRequest;
+// expose popup and confirm helper for reuse
+window.showPopupLocal = showPopupLocal;
+window.confirmDeleteRequest = confirmDeleteRequest;

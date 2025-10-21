@@ -31,6 +31,30 @@ let filteredUsers = [];
 async function initializeDashboard() {
     try {
         console.log('🔄 Initializing dashboard...');
+        // DIAGNOSTIC: Log auth state and attempt to fetch user doc for debugging permission errors
+        try {
+            console.log('Auth object (auth.currentUser):', auth && auth.currentUser);
+            if (auth && auth.currentUser && auth.currentUser.uid) {
+                try {
+                    const userDocRef = doc(db, 'users', auth.currentUser.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        console.log('Firestore user doc for current user:', userDocSnap.data());
+                    } else {
+                        console.warn('No users/{uid} document found for current auth user.');
+                    }
+                } catch (err) {
+                    console.error('Error reading users/{uid} doc during init:', err);
+                    if (err && err.code === 'permission-denied') {
+                        showAlert('Permission denied when reading user data. Check Firestore rules and ensure you are signed in with a system_admin account.', 'error');
+                    }
+                }
+            } else {
+                console.warn('No authenticated Firebase user found at initialization (auth.currentUser is null).');
+            }
+        } catch (e) {
+            console.warn('Auth diagnostics failed:', e);
+        }
         
         // Check if user is logged in
         const adminUser = sessionStorage.getItem('admin_user');
@@ -273,7 +297,7 @@ function renderUsersTable() {
                     <button onclick="editUser('${user.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="deleteUser('${user.id}', this)" class="text-red-600 hover:text-red-700">
+                        <button onclick="confirmDeleteUser('${user.id}', this)" class="text-red-600 hover:text-red-700">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -285,6 +309,81 @@ function renderUsersTable() {
     
     updatePagination();
 }
+
+// Custom confirmation modal for deleting a user (matches driver badge style)
+async function confirmDeleteUser(userId, el) {
+    const existing = document.getElementById('confirmDeleteUserModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirmDeleteUserModal';
+    overlay.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50';
+
+    overlay.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg p-6 text-gray-800 animate-fadeIn">
+            <h2 class="text-xl font-bold mb-2 text-gray-900">Delete User</h2>
+            <p class="text-sm text-gray-600 mb-4">You are about to permanently delete this user. This action cannot be undone.</p>
+            <div class="flex items-start gap-2 mb-4">
+                <input type="checkbox" id="userConfirmCheck" class="mt-1 accent-[var(--cane-600)]" />
+                <label for="userConfirmCheck" class="text-gray-600 text-sm leading-snug">I understand this action is permanent and I want to proceed.</label>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="userCancelBtn" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancel</button>
+                <button id="userConfirmBtn" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Delete Permanently</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('userCancelBtn').addEventListener('click', () => overlay.remove());
+
+    document.getElementById('userConfirmBtn').addEventListener('click', async () => {
+        const checked = document.getElementById('userConfirmCheck').checked;
+        if (!checked) {
+            if (typeof window.showPopup === 'function') {
+                window.showPopup({ title: 'Confirmation required', message: 'Please confirm the checkbox to proceed.', type: 'warning' });
+            } else {
+                alert('Please confirm the checkbox to proceed.');
+            }
+            return;
+        }
+
+        overlay.remove();
+
+        // show processing popup
+        if (typeof window.showPopup === 'function') {
+            window.showPopup({ title: 'Processing Deletion...', message: 'Deleting user. Please wait...', type: 'info' });
+        }
+
+        try {
+            await deleteDoc(doc(db, 'users', userId));
+
+            if (typeof window.showPopup === 'function') {
+                window.showPopup({ title: 'User Deleted', message: 'User deleted successfully.', type: 'success' });
+            }
+
+            // remove row from DOM if provided
+            try {
+                if (el && el.closest) {
+                    const tr = el.closest('tr');
+                    if (tr && tr.parentElement) tr.parentElement.removeChild(tr);
+                }
+            } catch (_) {}
+
+        } catch (err) {
+            console.error('Error deleting user:', err);
+            if (typeof window.showPopup === 'function') {
+                window.showPopup({ title: 'Deletion Failed', message: 'Failed to delete user. Please try again later.', type: 'error' });
+            } else {
+                showAlert('Failed to delete user', 'error');
+            }
+        }
+    });
+}
+
+// Expose confirmDeleteUser globally
+window.confirmDeleteUser = confirmDeleteUser;
 
 // Load activity logs
 async function loadActivityLogs() {
@@ -946,11 +1045,16 @@ async function confirmDeleteSRA(id, name, email) {
   document.getElementById("cancelDeleteBtn").addEventListener("click", () => overlay.remove());
 
   document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
-    const checked = document.getElementById("confirmPolicyCheck").checked;
-    if (!checked) {
-      alert("Please confirm that you agree to the data policy before proceeding.");
-      return;
-    }
+        const checked = document.getElementById("confirmPolicyCheck").checked;
+        if (!checked) {
+            // Use global custom popup if available
+            if (typeof window.showPopup === 'function') {
+                window.showPopup({ title: 'Confirmation required', message: 'Please confirm that you agree to the data policy before proceeding.', type: 'warning' });
+            } else {
+                alert('Please confirm that you agree to the data policy before proceeding.');
+            }
+            return;
+        }
 
     overlay.remove();
 
@@ -974,15 +1078,22 @@ async function confirmDeleteSRA(id, name, email) {
       await fetchAndRenderSRA();
     } catch (err) {
       console.error("Error deleting officer:", err);
-      showPopup({
-        title: "Deletion Failed",
-        message:
-          "An unexpected error occurred while deleting this record. Please try again later or contact system support.",
-        type: "error"
-      });
+                if (typeof window.showPopup === 'function') {
+                    window.showPopup({ title: 'Deletion Failed', message: 'An unexpected error occurred while deleting this record. Please try again later or contact system support.', type: 'error' });
+                } else {
+                    showPopup({
+                        title: "Deletion Failed",
+                        message:
+                            "An unexpected error occurred while deleting this record. Please try again later or contact system support.",
+                        type: "error"
+                    });
+                }
     }
   });
 }
+
+// Expose SRA delete helper globally so inline onclick handlers in HTML can call it
+window.confirmDeleteSRA = confirmDeleteSRA;
 
 // Confirm and delete a Driver Badge document
 async function confirmDeleteBadge(id, name) {
@@ -1014,7 +1125,11 @@ async function confirmDeleteBadge(id, name) {
     document.getElementById('badgeConfirmBtnGlobal').addEventListener('click', async () => {
         const checked = document.getElementById('badgeConfirmCheckGlobal').checked;
         if (!checked) {
-            alert('Please confirm the checkbox to proceed.');
+            if (typeof window.showPopup === 'function') {
+                window.showPopup({ title: 'Confirmation required', message: 'Please confirm the checkbox to proceed.', type: 'warning' });
+            } else {
+                alert('Please confirm the checkbox to proceed.');
+            }
             return;
         }
         overlay.remove();
