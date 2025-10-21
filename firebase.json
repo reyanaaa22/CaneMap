@@ -34,7 +34,7 @@
   ],
   "emulators": {
     "functions": {
-      "port": 5002
+      "port": 0
     },
     "firestore": {
       "port": 8080
@@ -43,7 +43,7 @@
       "port": 9000
     },
     "hosting": {
-      "port": 5009
+      "port": 0
     },
     "storage": {
       "port": 9199
