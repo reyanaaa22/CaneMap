@@ -46,7 +46,9 @@ async function updateStatus(id, newStatus) {
       title: "Driver Badge Application Update",
       message:
         newStatus === "approved"
-          ? "Congratulations! Your Driver Badge has been approved by the System Admin."
+          ? `Congratulations! Your Driver Badge has been approved by the System Admin. 
+            You can now <a href='../../frontend/Driver/Driver_Dashboard.html' 
+            style='color: var(--cane-700); text-decoration: underline;'>check your dashboard</a>.`
           : "We’re sorry, but your Driver Badge request was rejected. Please check your documents and try again.",
       status: "unread",
       timestamp: serverTimestamp(),

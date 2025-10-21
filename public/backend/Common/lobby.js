@@ -300,9 +300,65 @@ window.addEventListener('error', function (ev) {
                     }
                 } catch(_){}
             }
+            // ==================== 🔄 LIVE ROLE LISTENER ====================
+            (async () => {
+            try {
+                const { db } = await import('./firebase-config.js');
+                const { doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                const userId = localStorage.getItem('userId');
+                if (!userId) return;
+
+                const userRef = doc(db, 'users', userId);
+                onSnapshot(userRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                const role = (data.role || '').toLowerCase();
+                const approvedRoles = ['handler', 'worker', 'driver', 'sra'];
+                const isApproved = approvedRoles.includes(role);
+                localStorage.setItem('userRole', role);
+                console.log('🧭 Live role update detected:', role);
+
+                // 🔁 Update dashboard button instantly
+                const dashboardLink = document.getElementById('dashboardLink');
+                if (!dashboardLink) return;
+
+                if (!isApproved) {
+                    // 🔒 Lock dashboard
+                    dashboardLink.classList.add('opacity-60', 'cursor-not-allowed');
+                    dashboardLink.href = 'javascript:void(0)';
+                } else {
+                    // ✅ Unlock dashboard according to role
+                    dashboardLink.classList.remove('opacity-60', 'cursor-not-allowed');
+                    switch (role) {
+                    case 'handler': dashboardLink.href = '../Handler/dashboard.html'; break;
+                    case 'worker':  dashboardLink.href = '../Worker/Workers.html'; break;
+                    case 'driver':  dashboardLink.href = '../Driver/Driver_Dashboard.html'; break;
+                    case 'sra':     dashboardLink.href = '../SRA/SRA_Dashboard.html'; break;
+                    default:        dashboardLink.href = '../Worker/Workers.html';
+                    }
+                }
+
+                // Optional toast message
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-6 right-6 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-sm text-[var(--cane-900)] z-[9999]';
+                toast.textContent = `Your role is now "${role.toUpperCase()}"`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 4000);
+                });
+            } catch (err) {
+                console.error('🔥 Error setting up live role listener:', err);
+            }
+            })();
+
             checkHandlerAccess();
             if (dashboardLink) {
+                // Get role & mark approved roles
+                const role = (localStorage.getItem('userRole') || '').toLowerCase();
+                const approvedRoles = ['handler', 'worker', 'driver', 'sra'];
+                const isApproved = approvedRoles.includes(role);
+
                 if (!isApproved) {
+                    // 🔒 Not approved — lock dashboard and show tutorial modal
                     dashboardLink.classList.add('opacity-60', 'cursor-not-allowed');
                     dashboardLink.href = 'javascript:void(0)';
                     dashboardLink.addEventListener('click', function(e){
@@ -318,7 +374,15 @@ window.addEventListener('error', function (ev) {
                             const counter = document.getElementById('lockedCounter');
                             let idx = 0;
                             function render(){
-                                slides.forEach((el,i)=>{ if (i===idx){ el.classList.remove('hidden'); el.classList.add('animate'); } else { el.classList.add('hidden'); el.classList.remove('animate'); } });
+                                slides.forEach((el,i)=>{ 
+                                    if (i===idx){ 
+                                        el.classList.remove('hidden'); 
+                                        el.classList.add('animate'); 
+                                    } else { 
+                                        el.classList.add('hidden'); 
+                                        el.classList.remove('animate'); 
+                                    } 
+                                });
                                 if (counter) counter.textContent = (idx+1) + ' / ' + slides.length;
                                 if (prev) prev.disabled = (idx===0);
                                 if (next) next.disabled = (idx===slides.length-1);
@@ -326,13 +390,15 @@ window.addEventListener('error', function (ev) {
                             function open(){
                                 if (!modal || !dialog) return;
                                 idx = 0; render();
-                                modal.classList.remove('opacity-0','invisible'); modal.classList.add('opacity-100','visible');
+                                modal.classList.remove('opacity-0','invisible'); 
+                                modal.classList.add('opacity-100','visible');
                                 dialog.classList.remove('translate-y-2','scale-95','opacity-0','pointer-events-none');
                                 dialog.classList.add('translate-y-0','scale-100','opacity-100');
                             }
                             function close(){
                                 if (!modal || !dialog) return;
-                                modal.classList.add('opacity-0','invisible'); modal.classList.remove('opacity-100','visible');
+                                modal.classList.add('opacity-0','invisible'); 
+                                modal.classList.remove('opacity-100','visible');
                                 dialog.classList.add('translate-y-2','scale-95','opacity-0','pointer-events-none');
                                 dialog.classList.remove('translate-y-0','scale-100','opacity-100');
                             }
@@ -345,8 +411,8 @@ window.addEventListener('error', function (ev) {
                         } catch(_) {}
                     });
                 } else {
+                    // ✅ Approved roles — unlocked dashboard access
                     dashboardLink.classList.remove('opacity-60', 'cursor-not-allowed');
-                    // Route to dashboard based on role
                     switch (role) {
                         case 'handler':
                             dashboardLink.href = '../Handler/dashboard.html';
@@ -355,7 +421,7 @@ window.addEventListener('error', function (ev) {
                             dashboardLink.href = '../Worker/Workers.html';
                             break;
                         case 'driver':
-                            dashboardLink.href = '../Driver/Driver_Badge.html';
+                            dashboardLink.href = '../Driver/Driver_Dashboard.html';
                             break;
                         case 'sra':
                             dashboardLink.href = '../SRA/SRA_Dashboard.html';
@@ -365,6 +431,7 @@ window.addEventListener('error', function (ev) {
                     }
                 }
             }
+
             // Wire buttons to absolute paths within frontend
             const regBtn = document.getElementById('btnRegisterField');
             if (regBtn) regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
