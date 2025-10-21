@@ -69,17 +69,97 @@ async function updateStatus(id, newStatus) {
 }
 
 // 🔴 DELETE REQUEST
+// Local popup helper (keeps behavior self-contained in this module)
+function showPopupLocal({ title = 'Notice', message = '', type = 'info', closeText = 'Close' } = {}) {
+  const existing = document.getElementById('badgePopupAlert');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'badgePopupAlert';
+  overlay.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40 backdrop-blur-sm';
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', warning: 'bg-yellow-500', info: 'bg-blue-600' };
+
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-md w-full mx-4 animate-fadeIn">
+      <div class="text-4xl mb-3">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">${title}</h3>
+      <div class="text-gray-600 mb-4 text-sm">${message}</div>
+      <button id="badgePopupCloseBtn" class="px-5 py-2 rounded-lg text-white font-medium ${colors[type]}">${closeText}</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.getElementById('badgePopupCloseBtn').addEventListener('click', () => overlay.remove());
+}
+
+// Custom confirmation modal for deleting badge requests
+function confirmDeleteRequest(id, name = '') {
+  const existing = document.getElementById('confirmDeleteBadgeModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'confirmDeleteBadgeModal';
+  overlay.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50';
+
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg p-6 text-gray-800 animate-fadeIn">
+      <h2 class="text-xl font-bold mb-2 text-gray-900">Delete Driver Badge Request</h2>
+      <p class="text-sm text-gray-600 mb-4">You are about to permanently delete the driver badge request ${name ? '<b>' + name + '</b>' : ''}. This action cannot be undone.</p>
+      <div class="flex items-start gap-2 mb-4">
+        <input type="checkbox" id="badgeConfirmCheck" class="mt-1 accent-[var(--cane-600)]" />
+        <label for="badgeConfirmCheck" class="text-gray-600 text-sm leading-snug">I understand this action is permanent and I want to proceed.</label>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button id="badgeCancelBtn" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancel</button>
+        <button id="badgeConfirmBtn" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Delete Permanently</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('badgeCancelBtn').addEventListener('click', () => overlay.remove());
+
+  document.getElementById('badgeConfirmBtn').addEventListener('click', async () => {
+    const checked = document.getElementById('badgeConfirmCheck').checked;
+    if (!checked) {
+      // small inline warning
+      const warn = document.createElement('div');
+      warn.className = 'text-sm text-red-600 mt-3';
+      warn.textContent = 'Please confirm the checkbox to proceed.';
+      overlay.querySelector('div').appendChild(warn);
+      setTimeout(() => warn.remove(), 2500);
+      return;
+    }
+
+    // close modal
+    overlay.remove();
+
+    // show processing popup
+    showPopupLocal({ title: 'Processing Deletion...', message: 'Deleting driver badge request. Please wait...', type: 'info', closeText: 'Close' });
+
+    try {
+      await deleteDoc(doc(db, 'Drivers_Badge', id));
+      // update local cache and UI
+      allRequests = allRequests.filter(r => r.id !== id);
+      displayRequests(allRequests);
+
+      // replace processing popup with success
+      const p = document.getElementById('badgePopupAlert'); if (p) p.remove();
+      showPopupLocal({ title: 'Deleted', message: 'Driver Badge request deleted successfully.', type: 'success', closeText: 'OK' });
+    } catch (err) {
+      console.error('Error deleting badge request:', err);
+      const p = document.getElementById('badgePopupAlert'); if (p) p.remove();
+      showPopupLocal({ title: 'Deletion Failed', message: 'Failed to delete the request. Please try again later.', type: 'error', closeText: 'OK' });
+    }
+  });
+}
+
+// Replace deleteRequest to show our custom modal
 async function deleteRequest(id) {
-  if (!confirm("⚠️ Are you sure you want to permanently delete this Driver Badge request?")) return;
-  try {
-    await deleteDoc(doc(db, "Drivers_Badge", id));
-    allRequests = allRequests.filter(r => r.id !== id);
-    displayRequests(allRequests);
-    alert("🗑️ Driver Badge request deleted successfully.");
-  } catch (error) {
-    console.error("Error deleting document:", error);
-    alert("❌ Failed to delete document.");
-  }
+  // find name for UI context
+  const req = allRequests.find(r => r.id === id) || {};
+  confirmDeleteRequest(id, req.fullname || req.email || '');
 }
 
 // 🧱 DISPLAY REQUEST CARDS

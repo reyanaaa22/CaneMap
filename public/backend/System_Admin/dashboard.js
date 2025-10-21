@@ -984,6 +984,55 @@ async function confirmDeleteSRA(id, name, email) {
   });
 }
 
+// Confirm and delete a Driver Badge document
+async function confirmDeleteBadge(id, name) {
+    const existing = document.getElementById('confirmDeleteBadgeModal_global');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirmDeleteBadgeModal_global';
+    overlay.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50';
+
+    overlay.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg p-6 text-gray-800 animate-fadeIn">
+            <h2 class="text-xl font-bold mb-2 text-gray-900">Delete Driver Badge</h2>
+            <p class="text-sm text-gray-600 mb-4">You are about to permanently delete the driver badge ${name ? '<b>' + name + '</b>' : ''}. This action cannot be undone.</p>
+            <div class="flex items-start gap-2 mb-4">
+                <input type="checkbox" id="badgeConfirmCheckGlobal" class="mt-1 accent-[var(--cane-600)]" />
+                <label for="badgeConfirmCheckGlobal" class="text-gray-600 text-sm leading-snug">I understand this action is permanent and I want to proceed.</label>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="badgeCancelBtnGlobal" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancel</button>
+                <button id="badgeConfirmBtnGlobal" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Delete Permanently</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.getElementById('badgeCancelBtnGlobal').addEventListener('click', () => overlay.remove());
+
+    document.getElementById('badgeConfirmBtnGlobal').addEventListener('click', async () => {
+        const checked = document.getElementById('badgeConfirmCheckGlobal').checked;
+        if (!checked) {
+            alert('Please confirm the checkbox to proceed.');
+            return;
+        }
+        overlay.remove();
+        // show popup
+        try {
+            await deleteDoc(doc(db, 'Drivers_Badge', id));
+            showPopup({ title: 'Driver Badge Deleted', message: `${name || 'Badge'} deleted successfully`, type: 'success' });
+            // If there's a badge list UI, try to refresh
+            if (typeof window.fetchBadgeRequests === 'function') {
+                try { window.fetchBadgeRequests(); } catch(_){}
+            }
+        } catch (err) {
+            console.error('Error deleting driver badge:', err);
+            showPopup({ title: 'Deletion Failed', message: 'Failed to delete driver badge.', type: 'error' });
+        }
+    });
+}
+
 
 // Render SRA officers table
 function renderSRATable(sraOfficers) {
@@ -1244,6 +1293,9 @@ async function addSampleData() {
 
 window.initializeDashboard = initializeDashboard;
 window.addSampleData = addSampleData;
+
+// expose badge delete helper globally
+window.confirmDeleteBadge = confirmDeleteBadge;
 
 // Custom confirmation dialog
 function openConfirmDialog({ title, message, confirmText, cancelText, onConfirm, onCancel, confirmType }) {
