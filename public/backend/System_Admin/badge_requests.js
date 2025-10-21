@@ -1,5 +1,6 @@
 import { auth, db } from '../Common/firebase-config.js';
 import { getDocs, collection, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const requestsContainer = document.getElementById("requestsContainer");
 const loading = document.getElementById("loading");
@@ -24,25 +25,44 @@ async function fetchBadgeRequests() {
   }
 }
 
-// 🟡 UPDATE STATUS + ROLE
 async function updateStatus(id, newStatus) {
   try {
     const badgeRef = doc(db, "Drivers_Badge", id);
     await updateDoc(badgeRef, { status: newStatus });
 
+    // 🔹 Get driver info for notification (we already have it in allRequests)
+    const req = allRequests.find(r => r.id === id);
+    const driverUID = req?.uid || req?.id; // use req.uid if you store it, else req.id
+
+    // 🔹 Update role based on status
     const userRef = doc(db, "users", id);
     if (newStatus === "approved") await updateDoc(userRef, { role: "driver" });
     if (newStatus === "rejected") await updateDoc(userRef, { role: "farmer" });
 
+    // 📨 Create Notification
+    const notifId = crypto.randomUUID();
+    await setDoc(doc(db, "notifications", notifId), {
+      userId: driverUID,
+      title: "Driver Badge Application Update",
+      message:
+        newStatus === "approved"
+          ? "Congratulations! Your Driver Badge has been approved by the System Admin."
+          : "We’re sorry, but your Driver Badge request was rejected. Please check your documents and try again.",
+      status: "unread",
+      timestamp: serverTimestamp(),
+    });
+
+    // 🔹 Update UI locally
     allRequests = allRequests.map(r =>
       r.id === id ? { ...r, status: newStatus } : r
     );
     displayRequests(allRequests);
     modal.classList.remove("active");
-    alert(`✅ Request ${newStatus} successfully!`);
+
+    alert(`✅ Request ${newStatus} successfully! Notification sent to driver.`);
   } catch (error) {
-    console.error("Error updating status:", error);
-    alert("❌ Something went wrong!");
+    console.error("Error updating status or sending notification:", error);
+    alert("❌ Something went wrong while updating status or sending notification.");
   }
 }
 

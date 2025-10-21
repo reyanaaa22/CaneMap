@@ -1,3 +1,5 @@
+
+
 // Scroll animations (define early and run immediately to avoid hidden content if later errors occur)
 // Devtrace: identify when the updated lobby.js is actually loaded/executed in the browser
 try { console.info('LOBBY.JS loaded — build ts:', new Date().toISOString()); } catch(_) {}
@@ -369,73 +371,7 @@ window.addEventListener('error', function (ev) {
             const applyBtn = document.getElementById('btnApplyDriver');
             if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
 
-            // Render user-specific notifications from Firestore and localStorage (merged)
-            try {
-                const notificationsList = document.getElementById('notificationsList');
-                const userId = localStorage.getItem('userId') || fullName; // fallback to name if no uid
-                async function loadNotifications() {
-                    try {
-                        console.info('loadNotifications() start for user', userId);
-                        const { db } = await import('./firebase-config.js');
-                        const { collection, getDocs, query, where, orderBy } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-                        const q = query(collection(db, 'notifications'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
-                        const snap = await getDocs(q);
-                        const serverItems = snap.docs.map(d => ({ id: d.id, ...d.data(), source: 'server' }));
-                        const all = JSON.parse(localStorage.getItem('notifications') || '{}');
-                        const localItems = (Array.isArray(all[userId]) ? all[userId] : []).map(x => ({ ...x, source: 'local' }));
-                        // Merge (server first)
-                        const items = [...serverItems, ...localItems];
-                        if (notificationsList) {
-                            if (!items.length) {
-                                notificationsList.innerHTML = '<div class="p-3 rounded-lg border border-[var(--cane-200)] bg-[var(--cane-50)] text-[var(--cane-900)]/90 text-sm">No new notifications.</div>';
-                            } else {
-                                notificationsList.innerHTML = items.map(function(n){
-                                    const type = n.type || 'info';
-                                    const icon = type === 'approved' ? 'fa-check' : (type === 'task' ? 'fa-clipboard' : (type === 'remark' ? 'fa-comment-dots' : 'fa-info-circle'));
-                                    return (
-                                        '<div class="flex items-start space-x-3 p-3 bg-[var(--cane-50)] rounded-lg border border-[var(--cane-200)]">' +
-                                          '<div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-md">' +
-                                            '<i class="fas ' + icon + ' text-white text-base"></i>' +
-                                          '</div>' +
-                                          '<div>' +
-                                            '<h4 class="font-semibold text-[var(--cane-950)]">' + (n.title || 'Notification') + '</h4>' +
-                                            '<p class="text-[var(--cane-900)]/90 text-sm font-medium">' + (n.message || '') + '</p>' +
-                                          '</div>' +
-                                        '</div>'
-                                    );
-                                }).join('');
-                            }
-                        }
-                    } catch (err) {
-                        // fallback to local only
-                        try {
-                            const all = JSON.parse(localStorage.getItem('notifications') || '{}');
-                            const items = Array.isArray(all[userId]) ? all[userId] : [];
-                            if (notificationsList) {
-                                if (!items.length) {
-                                    notificationsList.innerHTML = '<div class="p-3 rounded-lg border border-[var(--cane-200)] bg-[var(--cane-50)] text-[var(--cane-900)]/90 text-sm">No new notifications.</div>';
-                                } else {
-                                    notificationsList.innerHTML = items.map(function(n){
-                                        const icon = n.type === 'approved' ? 'fa-check' : (n.type === 'task' ? 'fa-clipboard' : (n.type === 'remark' ? 'fa-comment-dots' : 'fa-info-circle'));
-                                        return (
-                                            '<div class="flex items-start space-x-3 p-3 bg-[var(--cane-50)] rounded-lg border border-[var(--cane-200)]">' +
-                                              '<div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-md">' +
-                                                '<i class="fas ' + icon + ' text-white text-base"></i>' +
-                                              '</div>' +
-                                              '<div>' +
-                                                '<h4 class="font-semibold text-[var(--cane-950)]">' + (n.title || 'Notification') + '</h4>' +
-                                                '<p class="text-[var(--cane-900)]/90 text-sm font-medium">' + (n.message || '') + '</p>' +
-                                              '</div>' +
-                                            '</div>'
-                                        );
-                                    }).join('');
-                                }
-                            }
-                        } catch(_) {}
-                    }
-                }
-                loadNotifications();
-            } catch(_) {}
+
 
             // Feedback FAB bindings (ensure after DOM is ready)
             try {
@@ -860,3 +796,223 @@ window.addEventListener('error', function (ev) {
                 }, 3000);
             } catch (e) { console.error(e); }
         }
+
+// ==================== LIVE NOTIFICATION SYSTEM ====================
+setTimeout(() => {
+  console.log("🔔 [Notifications] Real-time system starting...");
+
+  const openNotifModal = document.getElementById("openNotifModal");
+  const closeNotifModal = document.getElementById("closeNotifModal");
+  const notifModal = document.getElementById("notifModal");
+  const notifList = document.getElementById("notificationsList");
+  const allNotifList = document.getElementById("allNotificationsList");
+  const notifBadgeCount = document.getElementById("notifBadgeCount");
+  const markAllBtn = document.getElementById("markAllReadBtn");
+
+  if (!openNotifModal || !notifModal || !notifList) {
+    console.warn("⚠️ Missing notification elements!");
+    return;
+  }
+
+  let cachedData = [];
+
+  // Wait for userId (since login is async)
+  async function getUserIdReady() {
+    let userId = localStorage.getItem("userId");
+    let tries = 0;
+    while (!userId && tries < 20) {
+      await new Promise((r) => setTimeout(r, 100));
+      userId = localStorage.getItem("userId");
+      tries++;
+    }
+    return userId;
+  }
+
+  // --- Real-time Firestore listener ---
+  async function listenNotifications(userId) {
+    try {
+      const { db } = await import("./firebase-config.js");
+      const {
+        collection,
+        query,
+        where,
+        orderBy,
+        onSnapshot,
+        doc,
+        updateDoc,
+        deleteDoc,
+      } = await import(
+        "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"
+      );
+
+      const notifRef = collection(db, "notifications");
+      const q = query(
+        notifRef,
+        where("userId", "==", userId),
+        orderBy("timestamp", "desc")
+      );
+
+      onSnapshot(q, async (snap) => {
+        cachedData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        updateUI();
+        await autoDeleteOldNotifications(db, cachedData);
+      });
+
+      // --- Update UI for both modal + preview ---
+      function updateUI() {
+        const unread = cachedData.filter((n) => n.status === "unread").length;
+
+        // 🔢 Badge update
+        if (notifBadgeCount) {
+          if (unread > 0) {
+            notifBadgeCount.textContent = unread;
+            notifBadgeCount.dataset.countLength = String(unread).length;
+            notifBadgeCount.classList.remove("hidden");
+          } else {
+            notifBadgeCount.classList.add("hidden");
+          }
+        }
+
+        // 🪶 Outside preview (top of lobby)
+        notifList.innerHTML =
+          cachedData.length === 0
+            ? `<div class="p-3 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
+            : cachedData
+                .slice(0, 3)
+                .map(
+                  (n) => `
+                    <div class="preview-notif-card ${n.status}" data-id="${n.id}">
+                      <div class="notif-icon">
+                        <i class="fas ${
+                          n.status === "unread"
+                            ? "fa-envelope"
+                            : "fa-envelope-open-text"
+                        } text-white text-base"></i>
+                      </div>
+                      <div>
+                        <h4 class="font-semibold">${n.title || "Notification"}</h4>
+                        <p class="text-sm text-gray-700">${n.message || ""}</p>
+                      </div>
+                    </div>`
+                )
+                .join("");
+
+        // 📬 Modal list
+        allNotifList.innerHTML =
+          cachedData.length === 0
+            ? `<div class="p-6 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
+            : cachedData
+                .map(
+                  (n) => `
+            <div class="notification-card ${n.status} flex items-start space-x-3 p-3 mb-2 border border-[var(--cane-200)] rounded-lg" data-id="${n.id}">
+              <div class="notif-icon">
+                <i class="fas ${
+                  n.status === "unread" ? "fa-envelope" : "fa-envelope-open-text"
+                } text-white text-base"></i>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-semibold">${n.title}</h4>
+                <p class="text-sm text-[var(--cane-800)]">${n.message}</p>
+                <p class="text-xs text-gray-400 mt-1">${
+                  n.timestamp?.toDate?.()
+                    ? new Date(n.timestamp.toDate()).toLocaleString("en-US", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })
+                    : ""
+                }</p>
+              </div>
+            </div>`
+                )
+                .join("");
+
+        attachClickHandlers();
+      }
+
+      // --- Click any notification (mark as read) ---
+      function attachClickHandlers() {
+        document
+          .querySelectorAll(".preview-notif-card.unread, .notification-card.unread")
+          .forEach((card) => {
+            card.onclick = async () => {
+              const notifId = card.dataset.id;
+              if (!notifId) return;
+              try {
+                await updateDoc(doc(db, "notifications", notifId), {
+                  status: "read",
+                });
+              } catch (err) {
+                console.error("⚠️ Failed to update read status:", err);
+              }
+            };
+          });
+      }
+
+      // --- Auto-delete (older than 30 days) ---
+      async function autoDeleteOldNotifications(db, notifications) {
+        const now = Date.now();
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+        const oldOnes = notifications.filter((n) => {
+          const t = n.timestamp?.toDate?.()?.getTime?.() || 0;
+          return now - t > THIRTY_DAYS;
+        });
+        if (oldOnes.length > 0) {
+          console.log(`🧹 Cleaning ${oldOnes.length} old notifications...`);
+          await Promise.all(
+            oldOnes.map((n) => deleteDoc(doc(db, "notifications", n.id)))
+          );
+        }
+      }
+
+      // --- Open Modal ---
+      openNotifModal.addEventListener("click", () => {
+        notifModal.classList.remove("hidden");
+        notifModal.classList.add("flex");
+        allNotifList.scrollTo({ top: 0, behavior: "auto" });
+      });
+
+      // --- Close Modal ---
+      closeNotifModal.addEventListener("click", () => {
+        notifModal.classList.add("hidden");
+        notifModal.classList.remove("flex");
+      });
+      notifModal.addEventListener("click", (e) => {
+        if (e.target === notifModal) closeNotifModal.click();
+      });
+
+      // --- Mark all as read ---
+      if (markAllBtn) {
+        markAllBtn.onclick = async () => {
+          try {
+            const unread = cachedData.filter((n) => n.status === "unread");
+            if (unread.length === 0) {
+              alert("All notifications are already read.");
+              return;
+            }
+
+            await Promise.all(
+              unread.map((n) =>
+                updateDoc(doc(db, "notifications", n.id), { status: "read" })
+              )
+            );
+
+            // Instantly refresh both UI sections
+            cachedData = cachedData.map((n) => ({ ...n, status: "read" }));
+            updateUI();
+
+            console.log("✅ All notifications marked as read.");
+          } catch (err) {
+            console.error("⚠️ Error marking all read:", err);
+          }
+        };
+      }
+    } catch (err) {
+      console.error("🔥 Error in notification system:", err);
+    }
+  }
+
+  (async () => {
+    const uid = await getUserIdReady();
+    if (uid) listenNotifications(uid);
+  })();
+}, 1000);

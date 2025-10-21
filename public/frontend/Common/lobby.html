@@ -354,6 +354,111 @@ header nav .flex.items-center.justify-between > .relative {
   #weatherForecast #wxTemp { font-size: 2.75rem; }
   #weatherForecast .glass { padding: 0.5rem 0.6rem; }
 }
+
+#notifBadgeCount {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  color: #dc2626; 
+  font-weight: 900;
+  font-size: 0.85rem; 
+  background: transparent !important;
+  line-height: 1;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+  transform: scale(1);
+  transition: transform 0.25s ease, color 0.25s ease;
+  z-index: 30;
+}
+
+
+#notifBadgeCount.updated {
+  transform: scale(1.3);
+}
+
+
+#notifBadgeCount[data-count-length="2"] {
+  font-size: 0.75rem;
+  right: -9px;
+}
+#notifBadgeCount[data-count-length="3"] {
+  font-size: 0.7rem;
+  right: -11px;
+}
+
+
+.notif-icon {
+  background-color: var(--cane-600); 
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.notification-card.unread {
+  background-color: rgba(160, 160, 160, 0.25);
+  border-left: 4px solid var(--cane-600);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-card.read {
+  background-color: #ffffff;
+  border-left: 4px solid transparent;
+}
+
+.notification-card:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.notification-card h4 {
+  font-weight: 600;
+  color: var(--cane-950);
+}
+.notification-card p {
+  color: var(--cane-800);
+}
+
+.notification-card.unread {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.preview-notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--cane-200);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+
+.preview-notif-card.unread {
+  background-color: rgba(150, 150, 150, 0.35);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--cane-600);
+}
+
+.preview-notif-card.read {
+  background-color: #ffffff;
+}
+
+.notif-icon {
+  background-color: var(--cane-600);
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 </style>
 </head>
     <body class="bg-[#F5F5F0] min-h-screen antialiased">
@@ -460,14 +565,59 @@ header nav .flex.items-center.justify-between > .relative {
             </div>
             <!-- Right Panel -->
             <div id="sidePanel" class="w-full lg:w-96 space-y-3 fade-in-right">
-                                 <!-- Notifications -->
-                                  <div class="bg-white rounded-xl p-5 shadow-[0_8px_18px_rgba(94,165,0,0.14)] border border-[var(--cane-200)]">
-                      <h3 class="text-lg font-bold text-[var(--cane-950)] mb-6 flex items-center">
-                          <i class="fas fa-bell text-[var(--cane-500)] mr-3 text-xl"></i>
-                          Notifications
-                      </h3>
-                     <div id="notificationsList" class="space-y-3"></div>
-                 </div>
+<!-- 🔔 Notifications (Dashboard Card) -->
+<div class="bg-white rounded-xl p-5 shadow-[0_8px_18px_rgba(94,165,0,0.14)] border border-[var(--cane-200)]">
+  <h3 class="text-lg font-bold text-[var(--cane-950)] mb-6 flex items-center relative">
+    <i class="fas fa-bell text-[var(--cane-500)] mr-3 text-xl relative">
+      <span id="notifBadgeCount"
+        class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+        0
+      </span>
+    </i>
+    Notifications
+  </h3>
+
+  <!-- Short preview list -->
+  <div id="notificationsList" class="space-y-3"></div>
+
+  <!-- See all button -->
+  <div class="mt-4 text-center">
+    <button id="openNotifModal"
+      class="text-[var(--cane-600)] hover:text-[var(--cane-800)] text-sm font-medium">
+      See all notifications →
+    </button>
+  </div>
+</div>
+
+<!-- 🔔 Notifications Modal -->
+
+<div id="notifModal"
+
+  class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
+  <div class="bg-white rounded-xl shadow-xl w-11/12 max-w-md p-6 relative">
+    <button id="closeNotifModal"
+      class="absolute top-3 right-4 text-gray-500 hover:text-gray-800 text-2xl font-bold">
+      &times;
+    </button>
+    <h2 class="text-xl font-bold text-[var(--cane-950)] mb-4 flex items-center">
+      <i class="fas fa-bell text-[var(--cane-500)] mr-2"></i>
+      All Notifications
+    </h2>
+    <div class="flex justify-between items-center mb-3">
+    <h3 class="text-lg font-semibold text-[var(--cane-900)]">Notifications</h3>
+    <div class="flex items-center gap-2">
+        <button id="markAllReadBtn" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-semibold">
+        Mark all as read
+        </button>
+    </div>
+    </div>
+    <div id="allNotificationsList" class="space-y-3 max-h-[70vh] overflow-y-auto">
+      <p class="text-gray-500 text-sm text-center">Loading notifications...</p>
+    </div>
+  </div>
+</div>
+
+
                                  <!-- Weather Now (glassy dark) -->
                   <div id="weatherForecast" class="weather-card p-5 text-white">
                       <div class="relative z-[1]">
@@ -1164,5 +1314,6 @@ header nav .flex.items-center.justify-between > .relative {
         mo.observe(container, { childList: true, subtree: true });
       })();
     </script>
+
 </body>
 </html>
