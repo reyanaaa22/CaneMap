@@ -29,8 +29,18 @@ import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-f
 */
 
 onAuthStateChanged(auth, async (user) => {
+  // 🟢 1️⃣ Add instant blur overlay before anything else loads
+  const preBlur = document.createElement("div");
+  preBlur.id = "preBlurOverlay";
+  preBlur.className = "fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998] flex items-center justify-center";
+  preBlur.innerHTML = `
+    <div class="bg-white text-center rounded-2xl shadow-2xl p-6 max-w-sm w-[85%] animate-fadeIn">
+      <div class="text-[var(--cane-700)] text-lg font-semibold">Verifying Access...</div>
+    </div>
+  `;
+  document.body.appendChild(preBlur);
+
   if (!user) {
-    // 🚪 Redirect if not logged in
     window.location.href = "../../frontend/Common/farmers_login.html";
     return;
   }
@@ -41,29 +51,55 @@ onAuthStateChanged(auth, async (user) => {
 
     if (!userSnap.exists()) {
       console.warn("⚠️ Firestore document not found for:", user.uid);
+      window.location.href = "../../frontend/Common/farmers_login.html";
       return;
     }
 
     const data = userSnap.data();
-    const fullName = (data.fullname || data.name || data.email || "Worker").trim();
-    const firstName = fullName.split(" ")[0];
-    const role = data.role || "Worker";
+    const role = (data.role || "").toLowerCase();
 
-    // 🧩 Get DOM elements
+    // 🚫 Restrict access if not a driver
+    if (role !== "driver") {
+      preBlur.remove(); // remove loading blur before showing restriction
+      const overlay = document.createElement("div");
+      overlay.className =
+        "fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]";
+      overlay.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-md w-[90%] animate-fadeIn">
+          <div class="text-5xl mb-3">🚫</div>
+          <h2 class="text-lg font-bold text-[var(--cane-800)] mb-2">Access Restricted</h2>
+          <p class="text-gray-600 mb-4 text-sm">
+            You cannot access the Driver Dashboard because your role is <b>${role}</b>.<br>
+            Only verified <b>Driver</b> accounts can access this page.
+          </p>
+          <button class="mt-2 px-5 py-2 rounded-lg bg-[var(--cane-700)] text-white font-medium shadow-md hover:bg-[var(--cane-800)]">
+            Back to Lobby
+          </button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector("button").onclick = () => {
+        window.location.href = "../../frontend/Common/lobby.html";
+      };
+      return;
+    }
+
+    // ✅ Role is driver — continue as normal
+    preBlur.remove(); // remove blur when authorized
+    const fullName = (data.fullname || data.name || data.email || "Driver").trim();
+    const firstName = fullName.split(" ")[0];
     const headerNameEl = document.getElementById("userName");
     const dropdownNameEl = document.getElementById("dropdownUserName");
     const sidebarNameEl = document.getElementById("sidebarUserName");
     const workerNameEl = document.getElementById("workerName");
     const dropdownTypeEl = document.getElementById("dropdownUserType");
 
-    // 🖋️ Update content
     if (headerNameEl) headerNameEl.textContent = firstName;
     if (dropdownNameEl) dropdownNameEl.textContent = fullName;
     if (sidebarNameEl) sidebarNameEl.textContent = fullName;
     if (workerNameEl) workerNameEl.textContent = fullName;
-    if (dropdownTypeEl) dropdownTypeEl.textContent = role;
+    if (dropdownTypeEl) dropdownTypeEl.textContent = data.role;
 
-    // 💾 Save to localStorage
     localStorage.setItem("userFullName", fullName);
     localStorage.setItem("userRole", role);
     localStorage.setItem("userId", user.uid);
@@ -73,7 +109,7 @@ onAuthStateChanged(auth, async (user) => {
     // 🔔 Load notifications after user data loads
     loadDriverNotifications(user.uid);
   } catch (error) {
-    console.error("❌ Error loading user info:", error);
+    console.error("❌ Error verifying role:", error);
   }
 });
 
@@ -147,7 +183,13 @@ onSnapshot(q, (snapshot) => {
       if (!read) {
         await updateDoc(doc(db, "notifications", docSnap.id), { status: "read" });
       }
+
+      // 🟢 If notification message contains a "click here" keyword → go to Driver_Badge page
+      if (notif.message && notif.message.toLowerCase().includes("click here")) {
+        window.location.href = "../../frontend/Driver/Driver_Badge.html";
+      }
     });
+
   });
 
   updateNotifBadge(badge, unreadCount);

@@ -1,6 +1,30 @@
 import { auth, db } from '../Common/firebase-config.js';
-import { getDocs, collection, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getDocs, collection, doc, updateDoc, deleteDoc, onSnapshot } 
+  from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+// 🔔 Handle role revert + notification when driver badge is deleted
+async function handleDriverBadgeDeletion(deletedUserId) {
+  try {
+    const adminName = localStorage.getItem("adminName") || "System Admin";
+
+    // 1️⃣ Revert role to farmer
+    await updateDoc(doc(db, "users", deletedUserId), { role: "farmer" });
+
+    // 2️⃣ Send notification to user
+    await addDoc(collection(db, "notifications"), {
+      userId: deletedUserId,
+      title: "Driver Badge Deleted",
+      message: `Your Driver Badge has been deleted by ${adminName}. Your role has been reverted to Farmer.`,
+      status: "unread",
+      timestamp: serverTimestamp(),
+    });
+
+    console.log(`✅ Role reverted & notification sent to user ${deletedUserId}`);
+  } catch (err) {
+    console.error("⚠️ Error handling badge deletion:", err);
+  }
+}
 
 const requestsContainer = document.getElementById("requestsContainer");
 const loading = document.getElementById("loading");
@@ -9,21 +33,24 @@ const modalBody = document.getElementById("modalBody");
 const filterButtons = document.querySelectorAll(".filter-btn");
 let allRequests = [];
 
-// FETCH DRIVER BADGE REQUESTS
-async function fetchBadgeRequests() {
-  try {
-    const querySnapshot = await getDocs(collection(db, "Drivers_Badge"));
-    allRequests = [];
-    querySnapshot.forEach(docSnap => {
-      allRequests.push({ id: docSnap.id, ...docSnap.data() });
-    });
+// FETCH DRIVER BADGE REQUESTS (REAL-TIME)
+function fetchBadgeRequestsRealtime() {
+  const q = collection(db, "Drivers_Badge");
+
+  // Listen to all live changes — resubmits, new requests, updates
+  onSnapshot(q, (snapshot) => {
+    allRequests = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }));
+
     displayRequests(allRequests);
-  } catch (error) {
-    console.error("Error fetching badge requests:", error);
-  } finally {
     loading.style.display = "none";
-  }
+  }, (error) => {
+    console.error("Error fetching badge requests:", error);
+  });
 }
+
 
 async function updateStatus(id, newStatus) {
   try {
@@ -49,7 +76,9 @@ async function updateStatus(id, newStatus) {
           ? `Congratulations! Your Driver Badge has been approved by the System Admin. 
             You can now <a href='../../frontend/Driver/Driver_Dashboard.html' 
             style='color: var(--cane-700); text-decoration: underline;'>check your dashboard</a>.`
-          : "We’re sorry, but your Driver Badge request was rejected. Please check your documents and try again.",
+          : `We’re sorry, but your Driver Badge request was rejected. Please review your information and resubmit your application. 
+              Click <a href='../../frontend/Driver/Driver_Badge.html' 
+              style='color: var(--cane-700); font-weight: 500; text-decoration: underline;'>here</a> to update your Driver Badge form.`,
       status: "unread",
       timestamp: serverTimestamp(),
     });
@@ -140,6 +169,7 @@ function confirmDeleteRequest(id, name = '') {
 
     try {
       await deleteDoc(doc(db, 'Drivers_Badge', id));
+      await handleDriverBadgeDeletion(id);
       // update local cache and UI
       allRequests = allRequests.filter(r => r.id !== id);
       displayRequests(allRequests);
@@ -283,9 +313,6 @@ filterButtons.forEach(btn => {
   });
 });
 
-// 🟢 FETCH ON LOAD
-fetchBadgeRequests();
-
 
 document.addEventListener("click", (e) => {
   const img = e.target.closest(".clickable-image");
@@ -307,8 +334,11 @@ document.addEventListener("click", (e) => {
   });
 });
 
+// 🟢 FETCH ON LOAD (REAL-TIME LISTENER)
+fetchBadgeRequestsRealtime();
+
 // Expose functions globally so other modules can refresh or invoke deletes
-window.fetchBadgeRequests = fetchBadgeRequests;
+window.fetchBadgeRequests = fetchBadgeRequestsRealtime;
 window.deleteBadgeRequest = deleteRequest;
 // expose popup and confirm helper for reuse
 window.showPopupLocal = showPopupLocal;

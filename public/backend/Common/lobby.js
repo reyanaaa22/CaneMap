@@ -201,71 +201,209 @@ window.addEventListener('error', function (ev) {
             });
         }
 
-        function initMap() {
+        const barangays = [
+            { name: "Airport", coords: [11.0583, 124.5541] },
+            { name: "Alegria", coords: [11.0130, 124.6300] },
+            { name: "Alta Vista", coords: [11.0174, 124.6260] },
+            { name: "Bagong", coords: [11.0230, 124.6000] },
+            { name: "Bagong Buhay", coords: [11.0300, 124.5900] },
+            { name: "Bantigue", coords: [11.0200, 124.5800] },
+            { name: "Batuan", coords: [11.0100, 124.5800] },
+            { name: "Bayog", coords: [11.0400, 124.5900] },
+            { name: "Biliboy", coords: [11.0565, 124.5792] },
+            { name: "Cabaon-an", coords: [11.0333, 124.5458] },
+            { name: "Cabintan", coords: [11.1372, 124.7777] },
+            { name: "Cabulihan", coords: [11.0094, 124.5700] },
+            { name: "Cagbuhangin", coords: [11.0180, 124.5700] },
+            { name: "Camp Downes", coords: [11.0300, 124.6500] },
+            { name: "Can-adieng", coords: [11.0240, 124.5940] },
+            { name: "Can-untog", coords: [11.0320, 124.5880] },
+            { name: "Catmon", coords: [11.0110, 124.6000] },
+            { name: "Cogon Combado", coords: [11.0125, 124.6035] },
+            { name: "Concepcion", coords: [11.0140, 124.6130] },
+            { name: "Curva", coords: [10.9940, 124.6240] },
+            { name: "Danao", coords: [11.072680, 124.701324] },
+            { name: "Danhug", coords: [10.961806, 124.648155] },
+            { name: "Dayhagan", coords: [11.0090, 124.5560] },
+            { name: "Dolores", coords: [11.073484, 124.625336] },
+            { name: "Domonar", coords: [11.063030, 124.533590] },
+            { name: "Don Felipe Larrazabal", coords: [11.0250, 124.6100] },
+            { name: "Don Potenciano Larrazabal", coords: [11.0150, 124.6100] },
+            { name: "Doña Feliza Z. Mejia", coords: [11.0210, 124.6080] },
+            { name: "Don Carlos B. Rivilla Sr. (Boroc)", coords: [11.0400, 124.6050] },
+            { name: "Donghol", coords: [11.0064, 124.6075] },
+            { name: "East (Poblacion)", coords: [11.0110, 124.6075] },
+            { name: "Esperanza", coords: [10.9780, 124.6210] },
+            { name: "Gaas", coords: [11.0750, 124.7000] },
+            { name: "Green Valley", coords: [11.0320, 124.6350] },
+            { name: "Guintigui-an", coords: [11.0010, 124.6210] },
+            { name: "Hibunawon", coords: [11.116922, 124.634636] },
+            { name: "Hugpa", coords: [11.017476, 124.663765] },
+            { name: "Ipil", coords: [11.0190, 124.6220] },
+            { name: "Juaton", coords: [11.073599, 124.593590] },
+            { name: "Kadaohan", coords: [11.110463, 124.573050] },
+            { name: "Labrador", coords: [11.069711, 124.548433] },
+            { name: "Lao", coords: [11.014082, 124.565109] },
+            { name: "Leondoni", coords: [11.093463, 124.525435] },
+            { name: "Libertad", coords: [11.0290, 124.5700] },
+            { name: "Liberty", coords: [11.025092, 124.704627] },
+            { name: "Licuma", coords: [11.039680, 124.528900] },
+            { name: "Liloan", coords: [11.040502, 124.549866] },
+            { name: "Linao", coords: [11.0160, 124.5900] },
+            { name: "Luna", coords: [11.0080, 124.5800] },
+            { name: "Mabato", coords: [11.039920, 124.535580] },
+            { name: "Mabini", coords: [10.993786, 124.678680] },
+            { name: "Macabug", coords: [11.0500, 124.5800] },
+            { name: "Magaswi", coords: [11.048665, 124.612040] },
+            { name: "Mahayag", coords: [11.0400, 124.5700] },
+            { name: "Mahayahay", coords: [10.976500, 124.688850] },
+            { name: "Manlilinao", coords: [11.105776, 124.499760] },
+            { name: "Margen", coords: [11.015798, 124.529884] },
+            { name: "Mas-in", coords: [11.062307, 124.515160] },
+            { name: "Matica-a", coords: [11.0300, 124.5600] },
+            { name: "Milagro", coords: [11.0250, 124.6300] },
+            { name: "Monterico", coords: [11.119205, 124.514590] },
+            { name: "Nasunogan", coords: [11.0100, 124.5800] },
+            { name: "Naungan", coords: [11.0200, 124.6200] },
+            { name: "Nueva Sociedad", coords: [11.0180, 124.6320] },
+            { name: "Nueva Vista", coords: [11.093860, 124.619290] },
+            { name: "Patag", coords: [11.0280, 124.5700] },
+            { name: "Punta", coords: [11.0150, 124.5700] },
+            { name: "Quezon Jr.", coords: [11.005818, 124.667200] },
+            { name: "Rufina M. Tan", coords: [11.085495, 124.525894] },
+            { name: "Sabang Bao", coords: [11.0100, 124.6400] },
+            { name: "Salvacion", coords: [11.059892, 124.583080] },
+            { name: "San Antonio", coords: [10.966187, 124.647060] },
+            { name: "San Isidro", coords: [11.022854, 124.585710] },
+            { name: "San Jose", coords: [11.0064, 124.6075] },
+            { name: "San Juan", coords: [11.0090, 124.6070] },
+            { name: "San Pablo", coords: [11.047495, 124.606026] },
+            { name: "San Vicente", coords: [11.0120, 124.6100] },
+            { name: "Santo Niño", coords: [11.0140, 124.6050] },
+            { name: "South (Poblacion)", coords: [11.0000, 124.6075] },
+            { name: "Sumangga", coords: [10.9900, 124.5600] },
+            { name: "Tambulilid", coords: [11.0470, 124.5960] },
+            { name: "Tongonan", coords: [11.1240, 124.7810] },
+            { name: "Valencia", coords: [11.0140, 124.6250] },
+            { name: "West (Poblacion)", coords: [11.0064, 124.6000] },
+            { name: "Barangay 1", coords: [null, null] },
+            { name: "Barangay 2", coords: [null, null] },
+            { name: "Barangay 3", coords: [null, null] },
+            { name: "Barangay 4", coords: [null, null] },
+            { name: "Barangay 5", coords: [null, null] },
+            { name: "Barangay 6", coords: [null, null] },
+            { name: "Barangay 7", coords: [null, null] },
+            { name: "Barangay 8", coords: [null, null] },
+            { name: "Barangay 9", coords: [null, null] },
+            { name: "Barangay 10", coords: [null, null] },
+            { name: "Barangay 11", coords: [null, null] },
+            { name: "Barangay 12", coords: [null, null] },
+            { name: "Barangay 13", coords: [null, null] },
+            { name: "Barangay 14", coords: [null, null] },
+            { name: "Barangay 15", coords: [null, null] },
+            { name: "Barangay 16", coords: [null, null] },
+            { name: "Barangay 17", coords: [null, null] },
+            { name: "Barangay 18", coords: [null, null] },
+            { name: "Barangay 19", coords: [null, null] },
+            { name: "Barangay 20", coords: [null, null] },
+            { name: "Barangay 21", coords: [null, null] },
+            { name: "Barangay 22", coords: [null, null] },
+            { name: "Barangay 23", coords: [null, null] },
+            { name: "Barangay 24", coords: [null, null] },
+            { name: "Barangay 25", coords: [null, null] },
+            { name: "Barangay 26", coords: [null, null] },
+            { name: "Barangay 27", coords: [null, null] },
+            { name: "Barangay 28", coords: [null, null] },
+            { name: "Barangay 29", coords: [null, null] }
+            ];
+            function initMap() {
             try {
                 console.info('initMap() start');
                 if (map) return;
                 const mapContainer = document.getElementById('map');
                 if (!mapContainer) return;
                 mapContainer.innerHTML = '';
-                map = L.map('map').setView([11.0064, 124.6075], 12);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+
+                // 🗺️ Limit map inside Ormoc City bounds
+                const ormocBounds = L.latLngBounds(
+                [10.95, 124.50], // southwest
+                [11.20, 124.80]  // northeast
+                );
+
+                map = L.map('map', {
+                maxBounds: ormocBounds,
+                maxBoundsViscosity: 1.0,
+                minZoom: 11,
+                maxZoom: 18
+                }).setView([11.0064, 124.6075], 12);
+
+                // 🧭 Base layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                // 📍 Show approved fields from Firestore
                 showApprovedFieldsOnMap(map);
-                // Seed any pending fields from Register-field
-                try {
-                  const pending = JSON.parse(localStorage.getItem('pendingFields')||'[]');
-                  pending.forEach(f => {
-                    const m = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(map);
-                    const parts = [];
-                    parts.push(`<b>${f.barangay || 'Field'}</b>`);
-                    const meta = [];
-                    if (f.size) meta.push(`${f.size} ha`);
-                    if (f.terrain) meta.push(`${f.terrain}`);
-                    meta.push('Under Review');
-                    const label = parts.join('<br/>') + '<br/>' + meta.join(' · ');
-                    m.bindPopup(label);
-                  });
-                } catch(_) {}
-                window.map = map;
-                // Search wiring (Nominatim)
-                try {
-                    const input = document.getElementById('mapSearchInput');
-                    const btn = document.getElementById('mapSearchBtn');
-                    async function runSearch() {
-                        if (!input || !input.value.trim()) return;
-                        const q = encodeURIComponent(input.value.trim());
-                        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${q}`;
-                        const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-                        const results = await res.json();
-                        if (!Array.isArray(results) || results.length === 0) {
-                            alert('Place not found. Try a different search.');
-                            return;
-                        }
-                        const first = results[0];
-                        const lat = parseFloat(first.lat);
-                        const lon = parseFloat(first.lon);
-                        map.setView([lat, lon], 14);
-                        L.marker([lat, lon], { icon: caneIcon }).addTo(map).bindPopup(first.display_name).openPopup();
+
+                // 📍 Barangay search only
+                const input = document.getElementById('mapSearchInput');
+                const btn = document.getElementById('mapSearchBtn');
+                if (btn && input) {
+                btn.addEventListener('click', searchBarangay);
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchBarangay();
                     }
-                    if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); runSearch(); });
-                    if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
-                } catch(_) {}
+                });
+                }
+
+                function searchBarangay() {
+                const query = input.value.trim().toLowerCase();
+                if (!query) return;
+
+                const match = barangays.find(b => b.name.toLowerCase() === query);
+                if (!match) {
+                    alert('Barangay not found or outside Ormoc City.');
+                    return;
+                }
+
+                const caneIcon = L.icon({
+                    iconUrl: '../img/PIN.png',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 38],
+                    popupAnchor: [0, -32]
+                });
+
+                map.setView(match.coords, 14);
+                L.marker(match.coords, { icon: caneIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>${match.name}</b>`)
+                    .openPopup();
+                }
+
+                // 📌 Prevent map from leaving Ormoc bounds
+                map.on('drag', function() {
+                map.panInsideBounds(ormocBounds, { animate: false });
+                });
+
+                window.map = map;
             } catch (error) {
                 console.error('Error initializing map:', error);
                 const el = document.getElementById('map');
                 if (el) {
-                    el.innerHTML = `
-                        <div class="flex items-center justify-center h-full bg-red-50 text-red-600">
-                            <div class="text-center">
-                                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                                <p>Error loading map</p>
-                                <p class="text-sm">${error.message}</p>
-                            </div>
-                        </div>
-                    `;
+                el.innerHTML = `
+                    <div class="flex items-center justify-center h-full bg-red-50 text-red-600">
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>Error loading map</p>
+                        <p class="text-sm">${error.message}</p>
+                    </div>
+                    </div>
+                `;
                 }
             }
-        }
+            }
 
         // Initialize everything when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -996,24 +1134,92 @@ setTimeout(() => {
         attachClickHandlers();
       }
 
-      // --- Click any notification (mark as read) ---
-      function attachClickHandlers() {
-        document
-          .querySelectorAll(".preview-notif-card.unread, .notification-card.unread")
-          .forEach((card) => {
-            card.onclick = async () => {
-              const notifId = card.dataset.id;
-              if (!notifId) return;
-              try {
-                await updateDoc(doc(db, "notifications", notifId), {
-                  status: "read",
-                });
-              } catch (err) {
-                console.error("⚠️ Failed to update read status:", err);
-              }
+        // --- Click any notification (mark as read + handle embedded links) ---
+        function attachClickHandlers() {
+        document.querySelectorAll(".preview-notif-card, .notification-card").forEach((card) => {
+            const notifId = card.dataset.id;
+            const notif = cachedData.find((n) => n.id === notifId);
+            if (!notif) return;
+
+            // 1️⃣ Handle whole card click (normal redirect logic)
+            card.onclick = async (e) => {
+            // Prevent conflict if the user clicks an <a> inside
+            if (e.target.tagName === "A") return;
+
+            try {
+                if (notif.status === "unread") {
+                await updateDoc(doc(db, "notifications", notifId), { status: "read" });
+                notif.status = "read";
+                }
+
+                const msg = (notif.message || "").toLowerCase();
+                if (msg.includes("click here")) {
+                window.location.href = "../../frontend/Driver/Driver_Badge.html";
+                return;
+                }
+                if (msg.includes("successfully approved") || msg.includes("success")) {
+                try {
+                    const { db } = await import("./firebase-config.js");
+                    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
+
+                    const userId = localStorage.getItem("userId");
+                    const userRef = doc(db, "users", userId);
+                    const userSnap = await getDoc(userRef);
+
+                    if (userSnap.exists() && (userSnap.data().role || "").toLowerCase() === "driver") {
+                    // ✅ Role verified — go to dashboard
+                    window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
+                    } else {
+                    // ❌ Not yet driver — show styled alert popup
+                    const overlay = document.createElement("div");
+                    overlay.className = "fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]";
+                    overlay.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-md w-[90%] animate-fadeIn">
+                        <div class="text-5xl mb-3">⚠️</div>
+                        <h2 class="text-lg font-bold text-[var(--cane-800)] mb-2">Access Restricted</h2>
+                        <p class="text-gray-600 mb-4 text-sm">
+                            You are not yet verified as a <strong>Driver</strong>.<br>
+                            Please wait for your application to be approved before accessing your dashboard.
+                        </p>
+                        <button class="mt-2 px-5 py-2 rounded-lg bg-[var(--cane-700)] text-white font-medium shadow-md hover:bg-[var(--cane-800)]">
+                            Got it
+                        </button>
+                        </div>
+                    `;
+                    document.body.appendChild(overlay);
+                    overlay.querySelector("button").onclick = () => overlay.remove();
+                    }
+                } catch (err) {
+                    console.error("⚠️ Role verification failed:", err);
+                }
+                return;
+                }
+            } catch (err) {
+                console.error("⚠️ Failed to handle notification click:", err);
+            }
             };
-          });
-      }
+
+            // 2️⃣ Handle direct link clicks (like <a href="...">here</a>)
+            const links = card.querySelectorAll("a");
+            links.forEach((link) => {
+            link.addEventListener("click", async (ev) => {
+                ev.preventDefault();
+                try {
+                // Mark as read
+                if (notif.status === "unread") {
+                    await updateDoc(doc(db, "notifications", notifId), { status: "read" });
+                    notif.status = "read";
+                }
+                } catch (err) {
+                console.error("⚠️ Failed to mark notification link as read:", err);
+                }
+
+                // Then redirect
+                window.location.href = link.href;
+            });
+            });
+        });
+        }
 
       // --- Auto-delete (older than 30 days) ---
       async function autoDeleteOldNotifications(db, notifications) {

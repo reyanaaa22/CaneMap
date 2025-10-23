@@ -5,6 +5,78 @@ import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://ww
 
 console.log("Driver_Badge.js loaded");
 
+function showPopupLocal({ title = 'Notice', message = '', type = 'info', closeText = 'Close' } = {}) {
+  const existing = document.getElementById('localPopupAlert');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'localPopupAlert';
+  overlay.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-40 backdrop-blur-sm';
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', warning: 'bg-yellow-500', info: 'bg-blue-600' };
+
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-md w-[90%] animate-fadeIn">
+      <div class="text-4xl mb-3">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">${title}</h3>
+      <div class="text-gray-600 mb-4 text-sm">${message}</div>
+      <button class="px-5 py-2 rounded-lg text-white font-medium ${colors[type]}">${closeText}</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("button").addEventListener("click", () => overlay.remove());
+}
+
+// === CaneMap Styled Alert System ===
+function showAlert(message, type = "success") {
+  let container = document.getElementById("alertContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "alertContainer";
+    container.className = "fixed top-5 right-5 z-[9999] flex flex-col gap-3";
+    document.body.appendChild(container);
+  }
+
+  const alert = document.createElement("div");
+  const bgColor = type === "success" ? "bg-[var(--cane-700)]" : "bg-red-600";
+  const icon = type === "success" ? "✅" : "⚠️";
+
+  alert.className = `text-white px-4 py-3 rounded-2xl shadow-lg shadow-gray-400/30 animate-fade-in transform transition-all duration-300`;
+  alert.style.backgroundColor = "var(--cane-700)";
+  if (type === "error") alert.style.backgroundColor = "#dc2626";
+
+  alert.innerHTML = `
+    <div class="flex items-start justify-between gap-3">
+      <span class="font-medium flex items-center gap-2">${icon} ${message}</span>
+      <button class="text-white/80 hover:text-white text-lg leading-none">&times;</button>
+    </div>
+  `;
+
+  // Close button
+  alert.querySelector("button").onclick = () => alert.remove();
+  container.appendChild(alert);
+
+  // Auto fade-out after 4s
+  setTimeout(() => {
+    alert.style.opacity = "0";
+    alert.style.transform = "translateY(-10px)";
+    setTimeout(() => alert.remove(), 400);
+  }, 4000);
+}
+
+// Tailwind-style fade animation
+const style = document.createElement("style");
+style.innerHTML = `
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+`;
+document.head.appendChild(style);
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("driverBadgeForm");
   if (!form) return; // safety
@@ -83,17 +155,46 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.plate_number && f["plate_number"]) f["plate_number"].value = data.plate_number;
           if (data.other_vehicle_type && f["other_vehicle_type"]) f["other_vehicle_type"].value = data.other_vehicle_type;
 
-          // Gate edits to once every 30 days
-          const submitBtn = form.querySelector('button[type="submit"]');
-          const lastEdit = data.lastEdit?.toDate ? data.lastEdit.toDate() : (data.lastEdit ? new Date(data.lastEdit) : null);
-          const now = new Date();
-          if (lastEdit) {
-            const daysSince = (now - lastEdit) / (1000*60*60*24);
-            if (daysSince < 30 && submitBtn) {
-              submitBtn.disabled = true;
-              submitBtn.textContent = `Next edit available in ${Math.ceil(30 - daysSince)} day(s)`;
-            }
+      // Gate edits to once every 30 days — with "rejected" override
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const lastEdit = data.lastEdit?.toDate ? data.lastEdit.toDate() : (data.lastEdit ? new Date(data.lastEdit) : null);
+      const now = new Date();
+
+      if (data.status === "rejected") {
+        // Allow full editing and resubmission
+        showAlert("Your last application was rejected. Please review and resubmit your information.", "error");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Resubmit Application";
+
+        [...form.querySelectorAll("input, select, textarea, button")].forEach(el => {
+          if (el.type !== "button" && el.type !== "submit") {
+            el.disabled = false;
+            el.classList.remove("opacity-60", "cursor-not-allowed");
           }
+        });
+      } else if (lastEdit) {
+        // Enforce 30-day edit restriction for all other statuses
+        const daysSince = (now - lastEdit) / (1000 * 60 * 60 * 24);
+        if (daysSince < 30) {
+          const daysLeft = Math.ceil(30 - daysSince);
+          submitBtn.disabled = true;
+          submitBtn.textContent = `Next edit available in ${daysLeft} day(s)`;
+
+          [...form.querySelectorAll("input, select, textarea, button")].forEach(el => {
+            if (el.type !== "button" && el.type !== "submit") {
+              el.disabled = true;
+              el.classList.add("opacity-60", "cursor-not-allowed");
+            }
+          });
+
+          // Still allow document previews
+          document.querySelectorAll("#preview_license_front, #preview_license_back, #preview_photo, #preview_vehicle_orcr")
+            .forEach(preview => {
+              preview.style.pointerEvents = "auto";
+              preview.style.opacity = "1";
+            });
+        }
+      }
 
           // Show previews if URLs exist
           function renderPreview(containerId, url){
@@ -141,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // basic required validation (add more as needed)
       if (!payload.fullname || !payload.contact_number || !payload.license_number) {
-        alert("Please fill in required fields (Full name, Contact, License Number).");
+        showAlert("Please fill in required fields.", "error");
         return;
       }
 
@@ -211,22 +312,113 @@ document.addEventListener("DOMContentLoaded", () => {
         if (photoURL) payload.photo_url = photoURL;
         if (vehicleOrcrURL) payload.vehicle_orcr_url = vehicleOrcrURL;
 
-        // Save driver badge request (document id = user.uid so it's easy to look up)
-        await setDoc(doc(db, "Drivers_Badge", user.uid), payload);
+        // Determine current status — if rejected, reset to pending
+        let newStatus = "pending";
+        try {
+          const existingSnap = await getDoc(doc(db, "Drivers_Badge", user.uid));
+          if (existingSnap.exists()) {
+            const existing = existingSnap.data();
+            if (existing.status === "rejected") {
+              newStatus = "pending"; // resubmission after rejection
+            } else if (existing.status) {
+              newStatus = existing.status; // keep old status if not rejected
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch existing status:", err);
+        }
 
-        // Save driver badge request (document id = user.uid)
-        await setDoc(doc(db, "Drivers_Badge", user.uid), {
-          ...payload,
-          status: "pending" // 🕐 start as pending
+        const badgeRef = doc(db, "Drivers_Badge", user.uid);
+        const existingSnap = await getDoc(badgeRef);
+
+        if (existingSnap.exists()) {
+          const existing = existingSnap.data();
+
+          // 🔍 1️⃣ Compare old vs new — shallow compare for all fields
+          const fieldsToCompare = [
+            "fullname","contact_number","address","birth_date","email",
+            "license_number","license_expiry","vehicle_model","vehicle_year",
+            "vehicle_color","vehicle_types","plate_number","other_vehicle_type"
+          ];
+          let isSame = true;
+          for (const key of fieldsToCompare) {
+            const oldVal = Array.isArray(existing[key]) ? existing[key].join(",") : (existing[key] || "");
+            const newVal = Array.isArray(payload[key]) ? payload[key].join(",") : (payload[key] || "");
+            if (oldVal !== newVal) { isSame = false; break; }
+          }
+
+          // 🔍 Check also if images were changed (files uploaded)
+          const hasNewFiles =
+            (f["license_front"]?.files?.length > 0) ||
+            (f["license_back"]?.files?.length > 0) ||
+            (f["photo"]?.files?.length > 0) ||
+            (f["vehicle_orcr"]?.files?.length > 0);
+
+          if (isSame && !hasNewFiles) {
+            showPopupLocal({
+              title: "No Changes Detected",
+              message: "Your resubmission looks identical to your previous one. Please modify your information or upload updated documents before resubmitting.",
+              type: "warning",
+              closeText: "Got it"
+            });
+            return; // 🚫 stop submission
+          }
+        }
+
+        // 🟢 2️⃣ Confirmation popup before submitting
+        const confirmed = await new Promise((resolve) => {
+          const overlay = document.createElement("div");
+          overlay.className = "fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-[9999]";
+          overlay.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl p-6 w-[90%] max-w-md text-center animate-fadeIn">
+              <h2 class="text-xl font-bold text-[var(--cane-800)] mb-3">Confirm Resubmission</h2>
+              <p class="text-gray-600 mb-5">Are you sure you want to submit these changes for review?</p>
+              <div class="flex justify-center gap-3">
+                <button id="cancelBtn" class="px-5 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium">Cancel</button>
+                <button id="confirmBtn" class="px-5 py-2 rounded-lg text-white font-medium bg-[var(--cane-700)] hover:bg-[var(--cane-800)] shadow-md shadow-gray-400/40">Yes, Submit</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(overlay);
+          overlay.querySelector("#cancelBtn").onclick = () => { overlay.remove(); resolve(false); };
+          overlay.querySelector("#confirmBtn").onclick = () => { overlay.remove(); resolve(true); };
         });
+        if (!confirmed) return;
 
-        // 🚫 Don't auto-promote the user yet
-        alert("Driver Badge application submitted. Your request is now pending officer review.");
-        window.location.href = "../Common/lobby.html";
+        // 📝 3️⃣ Proceed to Firestore update or create
+        if (existingSnap.exists()) {
+          await updateDoc(badgeRef, {
+            ...payload,
+            status: "pending"
+          });
+        } else {
+          await setDoc(badgeRef, {
+            ...payload,
+            status: "pending"
+          });
+        }
+
+        // 🌟 4️⃣ Success popup — center, theme green, stays longer
+        const successOverlay = document.createElement("div");
+        successOverlay.className = "fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-30 backdrop-blur-sm";
+        successOverlay.innerHTML = `
+          <div class="bg-white text-center rounded-2xl shadow-2xl p-8 max-w-md w-[90%] animate-fadeIn">
+            <div class="text-5xl mb-3">✅</div>
+            <h2 class="text-xl font-semibold text-[var(--cane-800)] mb-2">Submission Successful</h2>
+            <p class="text-gray-600 mb-5">Your Driver Badge application has been resubmitted and is now pending review.</p>
+          </div>
+        `;
+        document.body.appendChild(successOverlay);
+
+        // Wait a few seconds before redirecting
+        setTimeout(() => {
+          successOverlay.remove();
+          window.location.href = "../Common/lobby.html";
+        }, 2000);
 
       } catch (err) {
         console.error("Driver badge submission error:", err);
-        alert("Error submitting Driver Badge: " + (err.message || err));
+        showAlert("Error submitting Driver Badge: " + (err.message || err), "error");
       }
     });
   });

@@ -578,85 +578,197 @@
     </div>
     </div>
 
-    <script>
-        // Initialize the location map
-        let locationMap, locationMarker;
-        
-        function initLocationMap() {
-            try {
-                // Initialize map centered on Ormoc City
-                locationMap = L.map('locationMap').setView([11.0064, 124.6075], 12);
-                
-                // Add OpenStreetMap tiles
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(locationMap);
+<script>
+let locationMap, locationMarker;
 
-                // Add click event to set location
-                locationMap.on('click', function(e) {
-                    const lat = e.latlng.lat;
-                    const lng = e.latlng.lng;
-                    
-                    // Update coordinates
-                    document.getElementById('latitude').value = lat.toFixed(6);
-                    document.getElementById('longitude').value = lng.toFixed(6);
-                    
-                    // Update marker
-                    if (locationMarker) {
-                        locationMarker.remove();
-                    }
-                    const caneIcon = L.icon({ iconUrl: '../img/PIN.png', iconSize: [40,40], iconAnchor: [20,38], popupAnchor: [0,-32] });
-                    locationMarker = L.marker([lat, lng], { icon: caneIcon })
-                        .addTo(locationMap)
-                        .bindPopup('<b>Field Location</b><br>Click to set new location')
-                        .openPopup();
-                });
-                
-                console.log('Location map initialized successfully');
-                // Wire search (Nominatim)
-                try {
-                    const input = document.getElementById('rfSearchInput');
-                    const btn = document.getElementById('rfSearchBtn');
-                    async function runSearchRF(){
-                        if (!input || !input.value.trim()) return;
-                        const q = encodeURIComponent(input.value.trim());
-                        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${q}`;
-                        const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-                        const results = await res.json();
-                        if (!Array.isArray(results) || results.length === 0) { alert('Place not found.'); return; }
-                        const r = results[0];
-                        const lat = parseFloat(r.lat); const lng = parseFloat(r.lon);
-                        locationMap.setView([lat, lng], 14);
-                        if (locationMarker) locationMarker.remove();
-                        const caneIcon2 = L.icon({ iconUrl: '../img/PIN.png', iconSize: [40,40], iconAnchor: [20,38], popupAnchor: [0,-32] });
-                        locationMarker = L.marker([lat, lng], { icon: caneIcon2 }).addTo(locationMap).bindPopup(r.display_name).openPopup();
-                        document.getElementById('latitude').value = lat.toFixed(6);
-                        document.getElementById('longitude').value = lng.toFixed(6);
-                    }
-                    if (btn) btn.addEventListener('click', function(){ runSearchRF(); });
-                    if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); runSearchRF(); }});
-                } catch(_) {}
-            } catch (error) {
-                console.error('Error initializing location map:', error);
-                document.getElementById('locationMap').innerHTML = `
-                    <div class="flex items-center justify-center h-full bg-red-50 text-red-600">
-                        <div class="text-center">
-                            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                            <p>Error loading map</p>
-                            <p class="text-sm">${error.message}</p>
-        </div>
-    </div>
-                `;
-            }
-        }
+// 🗺️ Barangays of Ormoc City with sample coordinates (approximate)
+const barangays = [
+            { name: "Airport", coords: [11.0583, 124.5541] },
+            { name: "Alegria", coords: [11.0130, 124.6300] },
+            { name: "Alta Vista", coords: [11.0174, 124.6260] },
+            { name: "Bagong", coords: [11.0230, 124.6000] },
+            { name: "Bagong Buhay", coords: [11.0300, 124.5900] },
+            { name: "Bantigue", coords: [11.0200, 124.5800] },
+            { name: "Batuan", coords: [11.0100, 124.5800] },
+            { name: "Bayog", coords: [11.0400, 124.5900] },
+            { name: "Biliboy", coords: [11.0565, 124.5792] },
+            { name: "Cabaon-an", coords: [11.0333, 124.5458] },
+            { name: "Cabintan", coords: [11.1372, 124.7777] },
+            { name: "Cabulihan", coords: [11.0094, 124.5700] },
+            { name: "Cagbuhangin", coords: [11.0180, 124.5700] },
+            { name: "Camp Downes", coords: [11.0300, 124.6500] },
+            { name: "Can-adieng", coords: [11.0240, 124.5940] },
+            { name: "Can-untog", coords: [11.0320, 124.5880] },
+            { name: "Catmon", coords: [11.0110, 124.6000] },
+            { name: "Cogon Combado", coords: [11.0125, 124.6035] },
+            { name: "Concepcion", coords: [11.0140, 124.6130] },
+            { name: "Curva", coords: [10.9940, 124.6240] },
+            { name: "Danao", coords: [11.072680, 124.701324] },
+            { name: "Danhug", coords: [10.961806, 124.648155] },
+            { name: "Dayhagan", coords: [11.0090, 124.5560] },
+            { name: "Dolores", coords: [11.073484, 124.625336] },
+            { name: "Domonar", coords: [11.063030, 124.533590] },
+            { name: "Don Felipe Larrazabal", coords: [11.0250, 124.6100] },
+            { name: "Don Potenciano Larrazabal", coords: [11.0150, 124.6100] },
+            { name: "Doña Feliza Z. Mejia", coords: [11.0210, 124.6080] },
+            { name: "Don Carlos B. Rivilla Sr. (Boroc)", coords: [11.0400, 124.6050] },
+            { name: "Donghol", coords: [11.0064, 124.6075] },
+            { name: "East (Poblacion)", coords: [11.0110, 124.6075] },
+            { name: "Esperanza", coords: [10.9780, 124.6210] },
+            { name: "Gaas", coords: [11.0750, 124.7000] },
+            { name: "Green Valley", coords: [11.0320, 124.6350] },
+            { name: "Guintigui-an", coords: [11.0010, 124.6210] },
+            { name: "Hibunawon", coords: [11.116922, 124.634636] },
+            { name: "Hugpa", coords: [11.017476, 124.663765] },
+            { name: "Ipil", coords: [11.0190, 124.6220] },
+            { name: "Juaton", coords: [11.073599, 124.593590] },
+            { name: "Kadaohan", coords: [11.110463, 124.573050] },
+            { name: "Labrador", coords: [11.069711, 124.548433] },
+            { name: "Lao", coords: [11.014082, 124.565109] },
+            { name: "Leondoni", coords: [11.093463, 124.525435] },
+            { name: "Libertad", coords: [11.0290, 124.5700] },
+            { name: "Liberty", coords: [11.025092, 124.704627] },
+            { name: "Licuma", coords: [11.039680, 124.528900] },
+            { name: "Liloan", coords: [11.040502, 124.549866] },
+            { name: "Linao", coords: [11.0160, 124.5900] },
+            { name: "Luna", coords: [11.0080, 124.5800] },
+            { name: "Mabato", coords: [11.039920, 124.535580] },
+            { name: "Mabini", coords: [10.993786, 124.678680] },
+            { name: "Macabug", coords: [11.0500, 124.5800] },
+            { name: "Magaswi", coords: [11.048665, 124.612040] },
+            { name: "Mahayag", coords: [11.0400, 124.5700] },
+            { name: "Mahayahay", coords: [10.976500, 124.688850] },
+            { name: "Manlilinao", coords: [11.105776, 124.499760] },
+            { name: "Margen", coords: [11.015798, 124.529884] },
+            { name: "Mas-in", coords: [11.062307, 124.515160] },
+            { name: "Matica-a", coords: [11.0300, 124.5600] },
+            { name: "Milagro", coords: [11.0250, 124.6300] },
+            { name: "Monterico", coords: [11.119205, 124.514590] },
+            { name: "Nasunogan", coords: [11.0100, 124.5800] },
+            { name: "Naungan", coords: [11.0200, 124.6200] },
+            { name: "Nueva Sociedad", coords: [11.0180, 124.6320] },
+            { name: "Nueva Vista", coords: [11.093860, 124.619290] },
+            { name: "Patag", coords: [11.0280, 124.5700] },
+            { name: "Punta", coords: [11.0150, 124.5700] },
+            { name: "Quezon Jr.", coords: [11.005818, 124.667200] },
+            { name: "Rufina M. Tan", coords: [11.085495, 124.525894] },
+            { name: "Sabang Bao", coords: [11.0100, 124.6400] },
+            { name: "Salvacion", coords: [11.059892, 124.583080] },
+            { name: "San Antonio", coords: [10.966187, 124.647060] },
+            { name: "San Isidro", coords: [11.022854, 124.585710] },
+            { name: "San Jose", coords: [11.0064, 124.6075] },
+            { name: "San Juan", coords: [11.0090, 124.6070] },
+            { name: "San Pablo", coords: [11.047495, 124.606026] },
+            { name: "San Vicente", coords: [11.0120, 124.6100] },
+            { name: "Santo Niño", coords: [11.0140, 124.6050] },
+            { name: "South (Poblacion)", coords: [11.0000, 124.6075] },
+            { name: "Sumangga", coords: [10.9900, 124.5600] },
+            { name: "Tambulilid", coords: [11.0470, 124.5960] },
+            { name: "Tongonan", coords: [11.1240, 124.7810] },
+            { name: "Valencia", coords: [11.0140, 124.6250] },
+            { name: "West (Poblacion)", coords: [11.0064, 124.6000] }
+];
 
-        // Initialize map when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                initLocationMap();
-            }, 100);
-        });
-    </script>
+function initLocationMap() {
+  try {
+    const ormocCenter = [11.0064, 124.6075];
+    const ormocBounds = L.latLngBounds([10.9500, 124.5300], [11.0500, 124.6700]);
+
+    // Initialize restricted map
+    locationMap = L.map('locationMap', {
+      center: ormocCenter,
+      zoom: 12,
+      minZoom: 12,
+      maxZoom: 16,
+      maxBounds: ormocBounds,
+      maxBoundsViscosity: 1.0
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(locationMap);
+
+    // 🧷 Cane-style pin icon (same as in lobby.js)
+    const caneIcon = L.icon({
+    iconUrl: '../img/PIN.png',
+    iconSize: [40, 40],
+    iconAnchor: [20, 38],
+    popupAnchor: [0, -32]
+    });
+
+    // 🖱️ Click to set location (Ormoc only)
+    locationMap.on('click', e => {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      if (!ormocBounds.contains([lat, lng])) {
+        alert("Only fields within Ormoc City are allowed.");
+        return;
+      }
+      document.getElementById('latitude').value = lat.toFixed(6);
+      document.getElementById('longitude').value = lng.toFixed(6);
+      if (locationMarker) locationMarker.remove();
+        locationMarker = L.marker([lat, lng], { icon: caneIcon })
+        .addTo(locationMap)
+        .bindPopup('Your Field Location (Ormoc City)')
+        .openPopup();
+    });
+
+    // 🔍 Local barangay search (no API)
+    const input = document.getElementById('rfSearchInput');
+    const btn = document.getElementById('rfSearchBtn');
+
+    function searchBarangay() {
+    const q = input.value.trim().toLowerCase();
+    if (!q) return;
+
+    const match = barangays.find(b => b.name.toLowerCase().includes(q));
+    if (!match) {
+        alert("Barangay not found in Ormoc City.");
+        return;
+    }
+
+    // 🟢 Skip barangays with missing coordinates
+    if (!match.coords || match.coords[0] == null || match.coords[1] == null) {
+        alert(`Found ${match.name}, but it has no coordinates. Please click the map to pin manually.`);
+        return;
+    }
+
+    const [lat, lng] = match.coords;
+    locationMap.setView([lat, lng], 15);
+
+    // Remove any previous marker
+    if (locationMarker) locationMarker.remove();
+
+    // ✅ Use cane-style pin icon — exactly like lobby.js
+    locationMarker = L.marker([lat, lng], { icon: caneIcon })
+        .addTo(locationMap)
+        .bindPopup(`<b>${match.name}</b>`)
+        .openPopup();
+
+    // Auto-fill lat/lng fields
+    document.getElementById('latitude').value = lat.toFixed(6);
+    document.getElementById('longitude').value = lng.toFixed(6);
+    }
+
+    btn?.addEventListener('click', searchBarangay);
+    input?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchBarangay();
+      }
+    });
+
+    console.log("✅ Ormoc City map with barangays loaded");
+  } catch (err) {
+    console.error("Map error:", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => initLocationMap(), 100);
+});
+</script>
+
     <script type="module" src="../../backend/Handler/Register-field.js"></script>
 </body>
 </html>
