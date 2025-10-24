@@ -56,6 +56,37 @@ async function initializeDashboard() {
             console.warn('Auth diagnostics failed:', e);
         }
         
+        // ✅ Ensure system admin Firestore doc exists (auto-create if missing)
+try {
+    const adminUid = auth.currentUser.uid;
+    const adminEmail = auth.currentUser.email;
+
+    const adminRef = doc(db, "users", adminUid);
+    const adminSnap = await getDoc(adminRef);
+
+    if (!adminSnap.exists()) {
+        await setDoc(adminRef, {
+            name: "CaneMap System Admin",
+            email: adminEmail,
+            role: "system_admin",
+            status: "verified",
+            emailVerified: true,
+            createdAt: serverTimestamp()
+        });
+        console.log("✅ System admin Firestore document created automatically.");
+    } else {
+        const data = adminSnap.data();
+        if (data.role !== "system_admin") {
+            await updateDoc(adminRef, { role: "system_admin" });
+            console.log("⚙️ Updated role to system_admin for existing admin record.");
+        } else {
+            console.log("✅ System admin Firestore document already exists.");
+        }
+    }
+} catch (e) {
+    console.error("❌ Failed to verify/create system admin doc:", e);
+}
+
         // Check if user is logged in
         const adminUser = sessionStorage.getItem('admin_user');
         if (!adminUser) {

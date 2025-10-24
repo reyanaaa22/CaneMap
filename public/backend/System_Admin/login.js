@@ -3,6 +3,13 @@
 // Import Firebase configuration and auth/db instances
 import { auth, db } from '../Common/firebase-config.js';
 import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+import { 
     collection, 
     addDoc, 
     query, 
@@ -15,6 +22,8 @@ import {
     updateDoc,
     getDoc
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+
+import { setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // Security Configuration
 const SECURITY_CONFIG = {
@@ -682,64 +691,86 @@ async function handleLogin(event) {
         // Authenticate admin
         const authResult = await AdminAuth.authenticateAdmin(pinCode);
         
-        if (authResult.success) {
-            // Sign in to Firebase Auth as System Admin
-            try {
-                const { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
-                
-                const adminEmail = authResult.user.email;
-                const adminPassword = 'SystemAdmin123!'; // Default password for System Admin
-                
-                let firebaseUser = null;
-                try {
-                    // Try to sign in with existing credentials
-                    firebaseUser = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-                } catch (signInError) {
-                    // Create System Admin user if doesn't exist
-                    const adminCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
-                    firebaseUser = adminCredential.user;
-                    await updateProfile(firebaseUser, { displayName: authResult.user.name });
-                    
-                    // Save System Admin to Firestore users collection
-                    const { setDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-                    await setDoc(doc(db, 'users', firebaseUser.uid), {
-                        name: authResult.user.name,
-                        email: adminEmail,
-                        role: 'system_admin',
-                        status: 'active',
-                        createdAt: serverTimestamp(),
-                        permissions: authResult.user.permissions
-                    });
-                }
-                
-                console.log('✅ System Admin signed in to Firebase Auth:', firebaseUser.uid);
-                
-            } catch (firebaseAuthError) {
-                console.error('❌ Firebase Auth error:', firebaseAuthError);
-                // Continue with session-based auth as fallback
-            }
-            
-            // Create session
-            const session = SessionManager.createSession(authResult.user);
-            
-            // Log successful login
-            await SecurityLogger.logEvent('admin_session_started', {
-                pinCode: pinCode,
-                role: authResult.user.role,
-                sessionId: session.id,
-                adminName: authResult.user.name
-            });
-            
-            LoginUI.showSuccess('Authentication successful! Redirecting...');
-            LoginUI.updateSecurityStatus('Authenticated');
-            
-            // Store user data
-            sessionStorage.setItem('admin_user', JSON.stringify(authResult.user));
-            
-            // Redirect to admin dashboard
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1500);
+if (authResult.success) {
+  try {
+    const { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } =
+      await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+
+    const adminEmail = "canemapteam@gmail.com";
+    const adminPassword = "123456"; // 🔑 Use fixed PIN 123456 as password
+
+    // ✅ Make sure System Admin stays logged in across pages
+    await setPersistence(auth, browserLocalPersistence);
+    console.log("✅ Auth persistence set to local storage (so dashboard stays logged in).");
+
+    let userCredential;
+    try {
+      // Try to sign in first
+      userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      console.log("✅ Signed in as system admin:", userCredential.user.email);
+    } catch (err) {
+      // If user doesn’t exist, create it
+      if (err.code === "auth/user-not-found") {
+        console.log("Creating default system admin account...");
+        const newAdmin = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+        await updateProfile(newAdmin.user, { displayName: "CaneMap System Admin" });
+        const { setDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+        await setDoc(doc(db, "users", newAdmin.user.uid), {
+          name: "CaneMap System Admin",
+          email: adminEmail,
+          role: "system_admin",
+          status: "verified",
+          emailVerified: true,
+          createdAt: serverTimestamp()
+        });
+        console.log("✅ Default system admin created & signed in.");
+      } else if (err.code === "auth/wrong-password") {
+        console.warn("⚠️ Wrong password for admin account — please set Firebase password = 123456.");
+        alert("Please open Firebase → Authentication → canemapteam@gmail.com → set password to 123456");
+        throw err;
+      } else {
+        console.error("Auth error:", err);
+        throw err;
+      }
+    }
+
+    // Wait until Firebase Auth is ready
+    await new Promise((resolve) => {
+      const unsub = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          console.log("🔥 Auth confirmed as:", user.email);
+          resolve();
+          unsub();
+        }
+      });
+    });
+
+    
+    // Force refresh of ID token
+    await auth.currentUser.getIdToken(true);
+    console.log("✅ ID token ready for Cloud Functions.");
+
+  } catch (firebaseAuthError) {
+    console.error("❌ Firebase Auth initialization error:", firebaseAuthError);
+  }
+
+  // Continue as before
+  const session = SessionManager.createSession(authResult.user);
+  await SecurityLogger.logEvent("admin_session_started", {
+    pinCode,
+    role: authResult.user.role,
+    sessionId: session.id,
+    adminName: authResult.user.name
+  });
+
+  LoginUI.showSuccess("Authentication successful! Redirecting...");
+  LoginUI.updateSecurityStatus("Authenticated");
+  sessionStorage.setItem("admin_user", JSON.stringify(authResult.user));
+
+  // 🔁 Redirect after 1.5s
+  setTimeout(() => {
+    window.location.href = "dashboard.html";
+  }, 1500);
             
         } else {
             throw new Error('Authentication failed');
@@ -809,10 +840,10 @@ function initializeSession() {
         }
     }
     
-    // Set up activity tracking
-    document.addEventListener('click', SessionManager.updateActivity);
-    document.addEventListener('keypress', SessionManager.updateActivity);
-    document.addEventListener('scroll', SessionManager.updateActivity);
+// Set up activity tracking — bind ensures "this" stays the SessionManager class
+document.addEventListener('click', () => SessionManager.updateActivity());
+document.addEventListener('keypress', () => SessionManager.updateActivity());
+document.addEventListener('scroll', () => SessionManager.updateActivity());
 }
 
 // Security Monitoring

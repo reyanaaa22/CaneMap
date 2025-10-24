@@ -1,0 +1,122 @@
+{"users": [
+{
+  "localId": "2bW7RlJeJzSxydrrHtdKeDjkOgo1",
+  "email": "reynamarie.boyboy22@gmail.com",
+  "emailVerified": true,
+  "passwordHash": "EZ2qro6QaS416dZFo65OpFnH8ytWtvQhheGYcLNGX2preFMO9aD6pvjyO25cJWh4j2FLld9ooAJM3I46B3tK4w==",
+  "salt": "ox9Tmc/CcgxDfw==",
+  "displayName": "Reyna Marie",
+  "lastSignedInAt": "1758967888807",
+  "createdAt": "1758967888807",
+  "providerUserInfo": []
+},
+{
+  "localId": "AD0AK2XQ5eVW0Lo8x9QTcCWGmP92",
+  "email": "geraldynboholsttt@gmail.com",
+  "emailVerified": true,
+  "passwordHash": "f4MC5mOzKiCl671apnptDPnGx8KbSEm4qBONkIzp9OHLRftpuTbLaHO+Kk/VIbDwNeRD2bRZUQhhJvJ9mDsvTg==",
+  "salt": "rxHLKmm1LgSCIw==",
+  "displayName": "geraldyn",
+  "lastSignedInAt": "1760726045654",
+  "createdAt": "1760726045654",
+  "providerUserInfo": []
+},
+{
+  "localId": "AOJhFiQS17N1tSYqX02WDkOl1mq2",
+  "email": "reynamarie.boyboy@evsu.edu.ph",
+  "emailVerified": true,
+  "passwordHash": "mbFSzvMy+O61qoHKh8lwBVb12ZySiUNONJGWrQ0sTjQ//TVSgTbD0aZkolsM9q+4kX3LgiD9kSN7PKVc/vTTLQ==",
+  "salt": "AbnVsELJKpDsAw==",
+  "displayName": "Reyna Marie",
+  "lastSignedInAt": "1760181982575",
+  "createdAt": "1758967921768",
+  "providerUserInfo": []
+},
+{
+  "localId": "MnQv5xkfSpUPuUsjc8qcNgsDRzg1",
+  "email": "boyboyreynamarie03@gmail.com",
+  "emailVerified": true,
+  "passwordHash": "gHSrM0EANW1P87yP93V/K5K5nIOfQW6XGnhjcD/RH/UWzAuL3WEq1ckmmVKmMSun49N9in5t5uJiMZVx/DpRvw==",
+  "salt": "caEijMSGtzIZ2g==",
+  "displayName": "Reyna Marie Garciano boyboy",
+  "lastSignedInAt": "1761290277578",
+  "createdAt": "1756110861344",
+  "providerUserInfo": []
+},
+{
+  "localId": "OqL2OUkCdwYk4avUO9fQD9rz5Pi1",
+  "email": "almackie2227@gmail.com",
+  "emailVerified": true,
+  "passwordHash": "k7gh37X0siM9NifU2QhAEGdqXr3hZKh5tdA+egmde/kqmxOLNnAw5ir6qI2ewZ+kDl3iVWEHTN+dHAZoA84Ayg==",
+  "salt": "h4li4SMiss5m8w==",
+  "displayName": "Almackie Bangalao",
+  "lastSignedInAt": "1760623743869",
+  "createdAt": "1758951515777",
+  "providerUserInfo": []
+},
+{
+  "localId": "PBYS9xzhF3fvtS1VKkwJoHRmMtH3",
+  "email": "admin@canemap.com",
+  "emailVerified": false,
+  "passwordHash": "l56tVIfbQHw0yvyAb0cNL+f0Hp4mecF4BeNMg5VKOMutCqC+Hf642W1WkI4V4LCxJ4+6J9EjQhW2cQk9R4NoEA==",
+  "salt": "6Znq6q7ccuTvew==",
+  "displayName": "System Administrator",
+  "lastSignedInAt": "1761295471073",
+  "createdAt": "1760107426749",
+  "providerUserInfo": []
+},
+{
+  "localId": "aeZrBw71EKPjkKn9AYKfpTtpTPA2",
+  "email": "almackie101@gmail.com",
+  "emailVerified": true,
+  "passwordHash": "OJ442qXkthRXKMrW8DUls/Oa6n4a3mZPmi/u8fBU/3Kh68IhVTq7DGapOjp93og6k5mo5+nRWw3OU+bTEWFNgw==",
+  "salt": "Cot9qnA2VNJ9Yg==",
+  "displayName": "Almackie J. Bangalao",
+  "lastSignedInAt": "1759933016931",
+  "createdAt": "1758723896504",
+  "providerUserInfo": []
+},
+{
+  "localId": "fbs8tSKg4POFLad2G7tp7Vbbjfl2",
+  "email": "canemapteam@gmail.com",
+  "emailVerified": false,
+  "passwordHash": "PvkU19wiitStOhscrKSY/2CQ6A9axKB/cJR3Z5q4o82ZjKeWkTCi+9R3FedmrTY4036JxydrD8SyTkiEooMTlA==",
+  "salt": "yilSXQCxlgmz/g==",
+  "lastSignedInAt": "1761298505706",
+  "createdAt": "1761295764271",
+  "disabled": false,
+  "providerUserInfo": []
+},
+{
+  "localId": "fzenX4THQIMQY2ECVsI2tU50yWG3",
+  "email": "geraldyn.boholst@evsu.edu.ph",
+  "emailVerified": true,
+  "passwordHash": "vnGUm+w3uxsM94NuACv/DGao0ZBVXuMwgdfg5W+EdsR5a9CXVham49cdIjMEe2B2/Xs3ivpGkxDigJ5WhpuEkA==",
+  "salt": "Xf/YyAAztdx93w==",
+  "displayName": "dyn",
+  "lastSignedInAt": "1761209418840",
+  "createdAt": "1759932865008",
+  "providerUserInfo": []
+},
+{
+  "localId": "s08CHl5bkgNAeOYvEDV1grruBtg2",
+  "email": "temp-admin@canemap.com",
+  "emailVerified": false,
+  "passwordHash": "rZo4NRgb4GnNojy8WMLPDqkR1b6ALJ88dfOwVzhNsMDWudBBPHj4PNJ4o+l3Drj6I8YW+4NRrevJBWLYYgBoQw==",
+  "salt": "8sDzN+/wcXjAGQ==",
+  "displayName": "Temp Admin",
+  "lastSignedInAt": "1760631120917",
+  "createdAt": "1758953816387",
+  "providerUserInfo": []
+},
+{
+  "localId": "szxikzDsOzanhHiMlwuJjGWVNY73",
+  "email": "almackieandrew.bangalao@evsu.edu.ph",
+  "emailVerified": true,
+  "passwordHash": "wOEdfXCmrQ8h/K5a1ZsnPpOgg6Fmws7SANKy/ogx3hU7r/6KmoTWgCYwE8ug/Di+kD2xCmguc6c6ZDe6sTXycQ==",
+  "salt": "W66GfmMg8IVzSQ==",
+  "displayName": "Andrew Bangalao",
+  "lastSignedInAt": "1760623991033",
+  "createdAt": "1758968714797",
+  "providerUserInfo": []
+}]}
