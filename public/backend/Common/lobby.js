@@ -482,6 +482,14 @@ window.addEventListener('error', function (ev) {
                 toast.textContent = `Your role is now "${role.toUpperCase()}"`;
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 4000);
+                // Also hide/show Register Field button dynamically
+                try {
+                    const regBtn = document.getElementById('btnRegisterField');
+                    if (regBtn) {
+                        if (role === 'sra') regBtn.style.display = 'none';
+                        else regBtn.style.display = '';
+                    }
+                } catch(_) {}
                 });
             } catch (err) {
                 console.error('🔥 Error setting up live role listener:', err);
@@ -572,7 +580,19 @@ window.addEventListener('error', function (ev) {
 
             // Wire buttons to absolute paths within frontend
             const regBtn = document.getElementById('btnRegisterField');
-            if (regBtn) regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
+            if (regBtn) {
+                // Hide Register Field button for SRA officers
+                try {
+                    const role = (localStorage.getItem('userRole') || '').toLowerCase();
+                    if (role === 'sra') {
+                        regBtn.style.display = 'none';
+                    } else {
+                        regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
+                    }
+                } catch(_) {
+                    regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
+                }
+            }
             const applyBtn = document.getElementById('btnApplyDriver');
             if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
 

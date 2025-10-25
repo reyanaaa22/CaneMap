@@ -101,7 +101,20 @@ exports.createSRA = functions.https.onRequest(async (req, res) => {
       lastLogin: null
     };
 
-    const docRef = await db.collection('users').add(payload);
+    // Use UID as document ID so client code can read users/{uid}
+    const docRef = db.collection('users').doc(user.uid);
+    await docRef.set({
+      fullname: name,
+      name: name,
+      email: email,
+      role: 'sra',
+      status: 'pending',
+      emailVerified: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastLogin: null,
+      failedLogins: 0,
+      uid: user.uid
+    });
 
     return res.status(200).json({ ok: true, uid: user.uid, docId: docRef.id });
   } catch (err) {

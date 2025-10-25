@@ -129,18 +129,51 @@ async function login() {
     // --- Save in Firestore ONLY after email verification ---
     const userRef = doc(db, "users", user.uid);
     const docSnap = await getDoc(userRef);
-
+    let resolvedDoc = docSnap;
     if (!docSnap.exists()) {
-      await setDoc(userRef, {
-        fullname: user.displayName,
-        name: user.displayName,
-        email: user.email,
-        role: "farmer",
-        status: "verified",
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp(),
-        failedLogins: 0
-      });
+      // Fallback: try to find a users doc by email (some older records used random IDs)
+      try {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('email', '==', user.email));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          // use the first matching doc
+          resolvedDoc = snapshot.docs[0];
+          // also copy/merge this doc into users/{uid} so future lookups are consistent
+          try {
+            await setDoc(userRef, { ...resolvedDoc.data(), uid: user.uid, lastLogin: serverTimestamp(), status: 'verified' }, { merge: true });
+          } catch (e) { console.warn('Could not copy existing user doc into users/{uid}:', e); }
+        } else {
+          // No existing doc by email — create a fresh farmer doc
+          await setDoc(userRef, {
+            fullname: user.displayName,
+            name: user.displayName,
+            email: user.email,
+            role: 'farmer',
+            status: 'verified',
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+            failedLogins: 0,
+            uid: user.uid
+          });
+          resolvedDoc = await getDoc(userRef);
+        }
+      } catch (err) {
+        console.warn('Fallback user lookup by email failed:', err);
+        // create minimal doc so app can proceed
+        await setDoc(userRef, {
+          fullname: user.displayName,
+          name: user.displayName,
+          email: user.email,
+          role: 'farmer',
+          status: 'verified',
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+          failedLogins: 0,
+          uid: user.uid
+        });
+        resolvedDoc = await getDoc(userRef);
+      }
     } else {
       await setDoc(userRef, { 
         lastLogin: serverTimestamp(), 
@@ -149,10 +182,12 @@ async function login() {
       }, { merge: true });
     }
 
-    let userRole = docSnap.exists() ? docSnap.data().role || "farmer" : "farmer";
-    let userName = docSnap.exists() 
-      ? docSnap.data().fullname || docSnap.data().name || user.displayName || "User"
-      : user.displayName || "User";
+  let userRole = resolvedDoc && resolvedDoc.exists() ? (resolvedDoc.data().role || 'farmer') : 'farmer';
+  // normalize role to lowercase for consistent checks
+  if (typeof userRole === 'string') userRole = userRole.toLowerCase();
+    let userName = resolvedDoc && resolvedDoc.exists()
+      ? (resolvedDoc.data().fullname || resolvedDoc.data().name || user.displayName || 'User')
+      : (user.displayName || 'User');
 
     localStorage.setItem("farmerName", userName);
     localStorage.setItem("userRole", userRole);
