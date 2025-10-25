@@ -21,6 +21,17 @@ exports.verifyEmailLink = functions.https.onRequest(async (req, res) => {
       verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    // Also mark the Firebase Auth user as emailVerified so they can log in
+    try {
+      const authUser = await admin.auth().getUserByEmail(email);
+      if (authUser && !authUser.emailVerified) {
+        await admin.auth().updateUser(authUser.uid, { emailVerified: true });
+      }
+    } catch (e) {
+      // If the auth user doesn't exist yet or update fails, log and continue.
+      console.warn('Could not mark auth user as verified:', e.message || e);
+    }
+
     // ✅ Show success and auto-redirect to login page
     const redirectURL = "https://canemap-system.web.app/frontend/Common/farmers_login.html";
     res.status(200).send(`
@@ -47,5 +58,54 @@ exports.verifyEmailLink = functions.https.onRequest(async (req, res) => {
   } catch (err) {
     console.error("Verification error:", err);
     res.status(500).send("Server error: " + err.message);
+  }
+});
+
+// Create SRA account (called by System Admin front-end)
+exports.createSRA = functions.https.onRequest(async (req, res) => {
+  // Allow simple CORS for browser requests from the frontend
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  try {
+    const { name, email, password } = req.method === 'POST' ? req.body : req.query;
+    if (!name || !email || !password) return res.status(400).json({ error: 'Missing name/email/password' });
+
+    // Check if Auth user already exists
+    try {
+      const existing = await admin.auth().getUserByEmail(email);
+      if (existing) return res.status(409).json({ error: 'Auth user already exists' });
+    } catch (e) {
+      // getUserByEmail throws if not found - that's OK, continue
+    }
+
+    // Create the auth user
+    const user = await admin.auth().createUser({
+      email: email,
+      password: password,
+      displayName: name,
+      emailVerified: false,
+    });
+
+    // Create Firestore user document with uid so both are linked
+    const payload = {
+      uid: user.uid,
+      name,
+      email,
+      role: 'sra',
+      status: 'pending',
+      emailVerified: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastLogin: null
+    };
+
+    const docRef = await db.collection('users').add(payload);
+
+    return res.status(200).json({ ok: true, uid: user.uid, docId: docRef.id });
+  } catch (err) {
+    console.error('createSRA error:', err);
+    return res.status(500).json({ error: err.message || String(err) });
   }
 });

@@ -221,15 +221,23 @@ export function wireSRAAddForm() {
       temp,
       onConfirm: async () => {
         try {
-          const q = query(collection(db, 'users'), where('email', '==', email));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            showPopup({
-              title: 'This email is already registered under another account!',
-              message: 'Please use a different email address.',
-              type: 'error'
-            });
-            return;
+          // Try a client-side existence check, but if security rules prevent this read
+          // (missing/insufficient permissions), skip it and rely on the server-side
+          // `createSRA` function which will return a conflict if the user/email exists.
+          try {
+            const q = query(collection(db, 'users'), where('email', '==', email));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              showPopup({
+                title: 'This email is already registered under another account!',
+                message: 'Please use a different email address.',
+                type: 'error'
+              });
+              return;
+            }
+          } catch (readErr) {
+            console.warn('Client-side users query failed, continuing to server create (this may be due to security rules):', readErr && readErr.message ? readErr.message : readErr);
+            // proceed to call the server function which has admin privileges
           }
 
           const payload = {
@@ -238,10 +246,22 @@ export function wireSRAAddForm() {
             role: 'sra',
             status: 'pending',
             emailVerified: false,
-            createdAt: serverTimestamp(),
+            // createdAt will be set server-side by the cloud function
             lastLogin: null
           };
-          await addDoc(collection(db, 'users'), payload);
+
+          // Call Cloud Function to create the Auth user + Firestore doc so the account exists in Firebase Auth
+          const createUrl = 'https://us-central1-canemap-system.cloudfunctions.net/createSRA';
+          const resp = await fetch(createUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password: temp })
+          });
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err && err.error ? err.error : 'Failed to create Auth user');
+          }
 
           const verificationLink = `https://canemap-system.web.app/verify.html?email=${encodeURIComponent(email)}`;
           const ej = window.emailjs;
