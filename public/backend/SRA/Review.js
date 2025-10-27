@@ -300,7 +300,7 @@ sendRemarksBtn.addEventListener('click', async () => {
 
   const confirm = makeConfirmModal(
     'Send Remarks?',
-    'Are you sure you want to send these remarks and mark this field as "To Edit"?',
+    'The remarks will be submitted, and this field will be updated as "To Edit".',
     async () => {
       try {
         // ✅ FIXED: Correct path for subcollection
