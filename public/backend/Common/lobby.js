@@ -1,5 +1,3 @@
-
-
 // Scroll animations (define early and run immediately to avoid hidden content if later errors occur)
 // Devtrace: identify when the updated lobby.js is actually loaded/executed in the browser
 try { console.info('LOBBY.JS loaded — build ts:', new Date().toISOString()); } catch(_) {}
@@ -180,25 +178,150 @@ window.addEventListener('error', function (ev) {
 
         // Initialize map
         let map;
-        async function fetchApprovedFields() {
-            try {
-                const { db } = await import('./firebase-config.js');
-                const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-                const snap = await getDocs(collection(db, 'fields'));
-                return snap.docs.map(d => d.data());
-            } catch(e) { return []; }
+        // ---------- Utility: safely pick first existing key ----------
+        function pickFirst(obj, keys = []) {
+        for (const k of keys) {
+            if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] != null && obj[k] !== '') {
+            return obj[k];
+            }
+        }
+        return null;
         }
 
-        async function showApprovedFieldsOnMap(map) {
+        // ---------- Fetch reviewed/approved fields (same style as Review.js) ----------
+        async function fetchApprovedFields() {
+        try {
+            const { db } = await import('./firebase-config.js');
+            const {
+            collectionGroup,
+            getDocs,
+            query,
+            where
+            } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+            // ✅ Fetch from nested field_applications/{uid}/fields
+            const q = query(collectionGroup(db, 'fields'), where('status', '==', 'reviewed'));
+            const snap = await getDocs(q);
+            if (snap.empty) {
+            console.warn('⚠️ No reviewed fields found.');
+            return [];
+            }
+
+        let fields = snap.docs.map(d => {
+        const data = d.data();
+        const lat = pickFirst(data, ['lat', 'latitude']);
+        const lng = pickFirst(data, ['lng', 'longitude']);
+        return {
+            id: d.id,
+            path: d.ref.path,
+            raw: data,
+            lat: typeof lat === 'string' ? parseFloat(lat) : lat,
+            lng: typeof lng === 'string' ? parseFloat(lng) : lng,
+            barangay: pickFirst(data, ['barangay', 'location']) || '—',
+            fieldName: pickFirst(data, ['field_name', 'fieldName']) || '—',
+            street: pickFirst(data, ['street', 'sitio']) || '—',
+            size: pickFirst(data, ['field_size', 'size', 'fieldSize']) || '—',
+            terrain: pickFirst(data, ['terrain_type', 'terrain']) || '—',
+            applicantName: pickFirst(data, ['applicantName', 'requestedBy', 'userId', 'requester']) || '—',
+            status: pickFirst(data, ['status']) || 'pending'
+        };
+        });
+
+        // 🟢 Enrich applicantName like in Review.js
+        const userCache = {};
+        for (const f of fields) {
+        const pathParts = f.path.split('/');
+        const uidFromPath = pathParts.length >= 2 ? pathParts[1] : null;
+        let possibleUid = null;
+
+        if (f.applicantName && f.applicantName.length < 25 && !f.applicantName.includes(' ')) {
+            possibleUid = f.applicantName;
+        } else if (uidFromPath) {
+            possibleUid = uidFromPath;
+        }
+
+        if (possibleUid) {
+            if (userCache[possibleUid]) {
+            f.applicantName = userCache[possibleUid];
+            continue;
+            }
+            try {
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+            const userSnap = await getDoc(doc(db, 'users', possibleUid));
+            if (userSnap.exists()) {
+                const u = userSnap.data();
+                const displayName =
+                u.name || u.fullName || u.displayName || u.email || possibleUid;
+                f.applicantName = displayName;
+                userCache[possibleUid] = displayName;
+            }
+            } catch (err) {
+            console.warn('User lookup failed for', possibleUid, err);
+            }
+        }
+        }
+            console.info(`✅ fetched ${fields.length} reviewed fields from nested field_applications/*/fields`);
+            return fields;
+        } catch (e) {
+            console.error('fetchApprovedFields() failed:', e);
+            return [];
+        }
+        }
+
+    async function showApprovedFieldsOnMap(map) {
+        try {
             const caneIcon = L.icon({
-                iconUrl: '../img/PIN.png', iconSize: [40, 40], iconAnchor: [20, 38], popupAnchor: [0, -32]
+            iconUrl: '../../frontend/img/PIN.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 30],
+            popupAnchor: [0, -28]
             });
+
+            const markerGroup = L.layerGroup().addTo(map);
             const fields = await fetchApprovedFields();
+            if (!Array.isArray(fields) || fields.length === 0) {
+            console.warn('⚠️ No reviewed fields to display.');
+            return;
+            }
+
+            window.__caneMarkers = []; // store markers for searching later
+
             fields.forEach(f => {
-                const m = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(map);
-                const label = `<b>${f.barangay || 'Field'}</b><br/>${f.size || ''} ha · ${f.terrain || ''}`;
-                m.bindPopup(label);
+            if (!f.lat || !f.lng) return;
+
+            const marker = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(markerGroup);
+
+            // ✨ Tooltip content
+const tooltipHtml = `
+  <div style="font-size:12px; line-height:1.4; max-width:250px; width:max-content; color:#14532d;">
+    <b style="font-size:14px; color:#166534;">${f.fieldName}</b>
+    <br><span style="font-size:10px; color:#15803d;">🏠︎ <i>${f.street}, Brgy. ${f.barangay},<br>Ormoc City, Leyte 6541</i></span>
+    <br><a href="#" class="seeFieldDetails" 
+       style="font-size:10px; color:gray; font-weight:500; display:inline-block; margin-top:3px;">
+       Click to see more details.
+    </a>
+  </div>
+`;
+
+
+            marker.bindTooltip(tooltipHtml, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -25],
+                opacity: 0.9
             });
+
+            marker.on('mouseover', () => marker.openTooltip());
+            marker.on('mouseout', () => marker.closeTooltip());
+            marker.on('click', () => openFieldDetailsModal(f));
+
+            window.__caneMarkers.push({ marker, data: f });
+            });
+
+            console.info(`✅ Displayed ${fields.length} reviewed field markers on map.`);
+        } catch (err) {
+            console.error('showApprovedFieldsOnMap() failed:', err);
+        }
         }
 
         const barangays = [
@@ -316,7 +439,7 @@ window.addEventListener('error', function (ev) {
             { name: "Barangay 28", coords: [null, null] },
             { name: "Barangay 29", coords: [null, null] }
             ];
-            function initMap() {
+        function initMap() {
             try {
                 console.info('initMap() start');
                 if (map) return;
@@ -337,23 +460,77 @@ window.addEventListener('error', function (ev) {
                 maxZoom: 18
                 }).setView([11.0064, 124.6075], 12);
 
-                // 🧭 Base layer
+                // Base layer
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
 
-                // 📍 Show approved fields from Firestore
+                // Show approved fields from Firestore
                 showApprovedFieldsOnMap(map);
 
-                // 📍 Barangay search only
+                // 🌾 Unified Search (Field + Barangay + Street + LatLng)
                 const input = document.getElementById('mapSearchInput');
                 const btn = document.getElementById('mapSearchBtn');
+
                 if (btn && input) {
-                btn.addEventListener('click', searchBarangay);
-                input.addEventListener('keydown', function(e) {
+                const handleSearch = () => {
+                    const val = input.value.trim().toLowerCase();
+                    if (!val) return;
+
+                    // 🔹 1. Try to match partial fields
+                    const matchedFields = (window.__caneMarkers || []).filter(m => {
+                    const d = m.data;
+                    return (
+                        (d.fieldName && d.fieldName.toLowerCase().includes(val)) ||
+                        (d.barangay && d.barangay.toLowerCase().includes(val)) ||
+                        (d.street && d.street.toLowerCase().includes(val)) ||
+                        (String(d.lat).toLowerCase().includes(val)) ||
+                        (String(d.lng).toLowerCase().includes(val))
+                    );
+                    });
+
+                    // 🔹 2. If at least one field matches
+                    if (matchedFields.length > 0) {
+                    const { marker, data } = matchedFields[0]; // focus on the first one
+                    map.setView([data.lat, data.lng], 15);
+                    marker.openTooltip();
+
+                    // Optional — bounce animation to draw attention
+                    marker._icon.classList.add('leaflet-marker-bounce');
+                    setTimeout(() => marker._icon.classList.remove('leaflet-marker-bounce'), 1200);
+
+                    showToast(`📍 Found: ${data.fieldName} (${data.barangay})`, 'green');
+                    return;
+                    }
+
+                    // 🔹 3. Fallback: Try matching Barangay list
+                    const brgyMatch = barangays.find(b => b.name.toLowerCase().includes(val));
+                    if (brgyMatch && brgyMatch.coords[0] && brgyMatch.coords[1]) {
+                    const caneIcon = L.icon({
+                        iconUrl: '../../frontend/img/PIN.png',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 34],
+                        popupAnchor: [0, -28]
+                    });
+                    map.setView(brgyMatch.coords, 14);
+                    L.marker(brgyMatch.coords, { icon: caneIcon })
+                        .addTo(map)
+                        .bindPopup(`<b>${brgyMatch.name}</b>`)
+                        .openPopup();
+
+                    showToast(`📍 Barangay: ${brgyMatch.name}`, 'green');
+                    return;
+                    }
+
+                    // 🔹 4. If no results found
+                    showToast('❌ No matching field or barangay found.', 'gray');
+                };
+
+                btn.addEventListener('click', handleSearch);
+                input.addEventListener('keydown', e => {
                     if (e.key === 'Enter') {
                     e.preventDefault();
-                    searchBarangay();
+                    handleSearch();
                     }
                 });
                 }
@@ -366,6 +543,26 @@ window.addEventListener('error', function (ev) {
                 if (!match) {
                     alert('Barangay not found or outside Ormoc City.');
                     return;
+                }
+
+                // 🔍 Field name search
+                async function searchFieldByName() {
+                const input = document.getElementById('mapSearchInput');
+                const query = input.value.trim().toLowerCase();
+                if (!query || !window.__caneMarkers) return;
+
+                const found = window.__caneMarkers.find(m =>
+                    m.data.fieldName && m.data.fieldName.toLowerCase() === query
+                );
+
+                if (!found) {
+                    alert('❌ Field not found. Please type the exact Field Name.');
+                    return;
+                }
+
+                const { marker, data } = found;
+                map.setView([data.lat, data.lng], 15);
+                marker.openTooltip();
                 }
 
                 const caneIcon = L.icon({
@@ -404,6 +601,439 @@ window.addEventListener('error', function (ev) {
                 }
             }
             }
+
+        // ---------- Check if user already joined this field ----------
+        async function checkIfAlreadyJoined(fieldId, userId) {
+        const { db } = await import('./firebase-config.js');
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+        try {
+            const joinDocRef = doc(db, `field_joins/${userId}/join_fields/${fieldId}`);
+            const snap = await getDoc(joinDocRef);
+            if (!snap.exists()) return false; // never joined
+            const data = snap.data();
+            return data.status === 'pending' || data.status === 'approved';
+        } catch (err) {
+            console.error('Error checking join status:', err);
+            return false;
+        }
+        }
+
+        // ---------- Field Details Modal ----------
+        function openFieldDetailsModal(field) {
+        const old = document.getElementById('fieldDetailsModal');
+        if (old) old.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'fieldDetailsModal';
+        modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]';
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl p-5 w-[90%] max-w-sm relative text-[var(--cane-900)] border border-[var(--cane-200)] shadow-md">
+            <button id="closeFieldModal" class="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-xl font-bold transition">&times;</button>
+
+            <div class="flex items-center justify-center mb-3">
+                <div class="w-11 h-11 bg-[var(--cane-100)] text-[var(--cane-700)] rounded-full flex items-center justify-center border border-[var(--cane-200)]">
+                <i class="fas fa-map-marker-alt text-lg"></i>
+                </div>
+            </div>
+
+            <h2 class="text-lg font-bold text-center text-[var(--cane-900)] mb-2">${field.fieldName}</h2>
+
+            <p class="text-sm text-center mb-3 text-[var(--cane-700)]">
+                <span class="font-semibold">Owner:</span> ${field.applicantName}
+            </p>
+
+            <div class="text-[13px] text-[var(--cane-800)] bg-[var(--cane-50)] p-3 rounded-md border border-[var(--cane-200)] leading-relaxed mb-2 text-center">
+                🏠︎ ${field.street}, Brgy. ${field.barangay}, Ormoc City, Leyte 6541
+            </div>
+
+            <div class="text-[11px] text-[var(--cane-600)] italic text-center mb-4">
+                ⟟ Lat: ${field.lat.toFixed(5)} | Lng: ${field.lng.toFixed(5)}
+            </div>
+
+            <button id="joinBtn" class="w-full py-2.5 rounded-md bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)] transition">
+                Join Field
+            </button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('closeFieldModal').onclick = () => modal.remove();
+
+        const joinBtn = document.getElementById('joinBtn');
+        const userId = localStorage.getItem('userId');
+
+        // 🔍 Check if already joined
+        checkIfAlreadyJoined(field.id, userId).then((alreadyJoined) => {
+            if (alreadyJoined) {
+            joinBtn.disabled = true;
+            joinBtn.textContent = 'Request Pending';
+            joinBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            joinBtn.style.backgroundColor = '#9ca3af'; // gray tone
+            } else {
+            joinBtn.onclick = () => openJoinModal(field);
+            }
+        });
+        }
+
+
+        // ---------- Check for conflicting pending roles ----------
+        async function checkPendingRoles(userId) {
+        const { db } = await import('./firebase-config.js');
+        const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+        let hasPendingWorker = false;
+        let hasPendingDriver = false;
+
+        try {
+            // 🔹 Check field_joins for pending worker
+            const joinsSnap = await getDocs(collection(db, `field_joins/${userId}/join_fields`));
+            joinsSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'pending' && data.role === 'worker') hasPendingWorker = true;
+            if (data.status === 'pending' && data.role === 'driver') hasPendingDriver = true;
+            });
+
+            // 🔹 Check Drivers_Badge for pending driver badge
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+            const badgeSnap = await getDoc(doc(db, 'Drivers_Badge', userId));
+            if (badgeSnap.exists()) {
+            const badge = badgeSnap.data();
+            if (badge.status === 'pending') hasPendingDriver = true;
+            }
+        } catch (err) {
+            console.warn('⚠️ Error checking pending roles:', err);
+        }
+
+        return { hasPendingWorker, hasPendingDriver };
+        }
+
+        // ---------- Join Modal ----------
+        function openJoinModal(field) {
+        const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+
+        if (userRole === 'worker' || userRole === 'driver') {
+            openConfirmJoinModal(field, userRole);
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[10000] backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl p-6 w-[90%] max-w-xs relative text-center border border-[var(--cane-200)] shadow-md">
+                <button id="closeJoinModal" class="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-lg font-bold">&times;</button>
+                <h3 class="text-base font-semibold text-[var(--cane-900)] mb-5">Join as:</h3>
+                <div class="flex justify-center gap-3 mb-4">
+                    <button id="joinWorker" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white text-sm font-medium hover:bg-[var(--cane-800)] transition">Worker</button>
+                    <button id="joinDriver" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white text-sm font-medium hover:bg-[var(--cane-800)] transition">Driver</button>
+                </div>
+                <p id="pendingNotice" class="text-xs text-[var(--cane-700)] italic hidden"></p>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#closeJoinModal').onclick = () => modal.remove();
+
+        const userId = localStorage.getItem('userId');
+        checkPendingRoles(userId).then(({ hasPendingWorker, hasPendingDriver }) => {
+            const joinWorker = modal.querySelector('#joinWorker');
+            const joinDriver = modal.querySelector('#joinDriver');
+            const notice = modal.querySelector('#pendingNotice');
+
+            // 🔹 CASE 1: Has pending DRIVER badge → both disabled
+            if (hasPendingDriver && !hasPendingWorker) {
+            joinWorker.disabled = true;
+            joinDriver.disabled = true;
+            joinWorker.classList.add('opacity-60', 'cursor-not-allowed');
+            joinDriver.classList.add('opacity-60', 'cursor-not-allowed');
+            notice.textContent = "You can’t join as a worker because you already have a pending driver's badge request. Please wait until it’s approved.";
+            notice.classList.remove('hidden');
+            return;
+            }
+
+            // 🔹 CASE 2: Has pending WORKER join → only disable Driver
+            if (hasPendingWorker && !hasPendingDriver) {
+            joinDriver.disabled = true;
+            joinDriver.classList.add('opacity-60', 'cursor-not-allowed');
+            notice.textContent = "You can’t join as a driver because you already have a pending join request. You can only join as a worker.";
+            notice.classList.remove('hidden');
+            joinWorker.onclick = () => {
+                modal.remove();
+                openConfirmJoinModal(field, 'worker');
+            };
+            return;
+            }
+
+            // 🔹 CASE 3: No conflicts → both open normally
+            joinWorker.onclick = () => {
+            modal.remove();
+            openConfirmJoinModal(field, 'worker');
+            };
+            joinDriver.onclick = () => {
+            modal.remove();
+            openDriverBadgeModal();
+            };
+        });
+        }
+
+        // ---------- Transparent conflict message modal ----------
+        function showConflictMessage(message) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[11000]';
+
+        modal.innerHTML = `
+            <div class="relative bg-transparent text-center max-w-xs w-[90%] text-white">
+            <button id="closeConflict" class="absolute top-[-10px] right-[-10px] text-white text-2xl font-bold">&times;</button>
+            <div class="backdrop-blur-sm bg-black/40 rounded-xl p-4 border border-white/20 text-sm leading-relaxed">
+                ${message}
+            </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeAll = () => {
+            document.querySelectorAll('.fixed.inset-0').forEach(m => m.remove());
+        };
+
+        modal.querySelector('#closeConflict').onclick = closeAll;
+        }
+
+
+        // ---------- If Farmer chooses "Join as Driver" ----------
+        function openDriverBadgeModal() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[10000] backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-[var(--cane-200)] shadow-md">
+                    <h3 class="text-lg font-semibold text-[var(--cane-900)] mb-3">Driver Badge Required</h3>
+                    <p class="text-[var(--cane-700)] text-sm mb-5 leading-relaxed">
+                        You need to apply for a <b>Driver’s Badge</b> before joining as a driver.
+                    </p>
+                    <div class="flex justify-center gap-3">
+                        <button id="cancelBadge" class="px-4 py-2 rounded-md border border-[var(--cane-300)] text-[var(--cane-700)] text-sm hover:bg-[var(--cane-100)] transition">Cancel</button>
+                        <button id="goBadge" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white text-sm font-semibold hover:bg-[var(--cane-800)] transition">Apply Now</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.querySelector('#cancelBadge').onclick = () => modal.remove();
+            modal.querySelector('#goBadge').onclick = () => {
+                modal.remove();
+                window.location.href = "../../frontend/Driver/Driver_Badge.html";
+            };
+        }
+
+        // ---------- Confirm Join Modal ----------
+        function openConfirmJoinModal(field, role) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[10000] backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-[var(--cane-200)] shadow-md animate-fadeIn">
+                    <h3 class="text-lg font-semibold text-[var(--cane-900)] mb-3">Confirm Join</h3>
+                    <p class="text-[var(--cane-700)] text-sm mb-5">
+                        Are you sure you want to join <b>${field.fieldName}</b>?
+                    </p>
+                    <div class="flex justify-center gap-3">
+                        <button id="cancelJoin" class="px-4 py-2 rounded-md border border-[var(--cane-300)] text-[var(--cane-700)] text-sm hover:bg-[var(--cane-100)] transition">Cancel</button>
+                        <button id="confirmJoin" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white text-sm font-semibold hover:bg-[var(--cane-800)] transition">Yes</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            modal.querySelector('#cancelJoin').onclick = () => modal.remove();
+            modal.querySelector('#confirmJoin').onclick = () => {
+                modal.remove();
+                confirmJoin(field, role);
+            };
+        }
+
+        // ---------- Confirm Join (save in Firestore) ----------
+        async function confirmJoin(field, role) {
+        try {
+            const { db } = await import('./firebase-config.js');
+            const { doc, setDoc, getDoc, serverTimestamp } =
+            await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+            alert('⚠️ Please log in first.');
+            return;
+            }
+
+            // 🔹 Directly target subcollection document (no parent data write)
+            const joinRef = doc(db, `field_joins/${userId}/join_fields/${field.id}`);
+            const joinSnap = await getDoc(joinRef);
+
+            if (joinSnap.exists()) {
+            const data = joinSnap.data();
+            if (data.status === 'pending' || data.status === 'approved') {
+                showToast('⚠️ You already have a pending or approved request for this field.', 'gray');
+                return;
+            }
+            }
+
+            // ✅ Save only inside join_fields/{fieldId}
+            await setDoc(joinRef, {
+            fieldId: field.id,
+            fieldName: field.fieldName,
+            street: field.street || '—',
+            role: role,
+            status: 'pending',
+            userId: userId,
+            requestedAt: serverTimestamp()
+            });
+
+            showToast(`✅ Join request sent as ${role.toUpperCase()} for "${field.fieldName}".`, 'green');
+
+            const joinBtn = document.getElementById('joinBtn');
+            if (joinBtn) {
+            joinBtn.disabled = true;
+            joinBtn.textContent = 'Request Pending';
+            joinBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            joinBtn.style.backgroundColor = '#9ca3af';
+            }
+        } catch (err) {
+            console.error('❌ Error confirming join:', err);
+            alert('Failed to send join request. Please try again.');
+        }
+        }
+
+        function showToast(msg, color = 'green') {
+        // Create container once
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            Object.assign(container.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            zIndex: 99999
+            });
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.innerHTML = msg;
+        Object.assign(toast.style, {
+            background: color === 'green' ? '#166534' : (color === 'gray' ? '#6b7280' : '#b91c1c'),
+            color: 'white',
+            padding: '12px 18px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: '500',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            opacity: '0',
+            transform: 'translateY(-10px)',
+            transition: 'opacity 0.3s ease, transform 0.3s ease'
+        });
+
+        container.appendChild(toast);
+        // Fade in
+        setTimeout(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        }, 50);
+
+        // Auto remove
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+        }
+
+        // ---------- Watch Join Approvals & Auto-update Role ----------
+        async function watchJoinApprovals(userId) {
+        const { db } = await import('./firebase-config.js');
+        const { collection, onSnapshot, doc, updateDoc } =
+            await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+        const joinsRef = collection(db, `field_joins/${userId}/join_fields`);
+
+        onSnapshot(joinsRef, async (snapshot) => {
+            for (const change of snapshot.docChanges()) {
+            if (change.type === 'modified') {
+                const data = change.doc.data();
+                if (data.status === 'approved') {
+                const userRef = doc(db, 'users', userId);
+                await updateDoc(userRef, { role: data.role });
+                localStorage.setItem('userRole', data.role);
+
+                console.log(`✅ Role updated to ${data.role}`);
+
+                // Optional toast notification
+                const toast = document.createElement('div');
+                toast.textContent = `✅ Approved! Your role is now ${data.role.toUpperCase()}.`;
+                Object.assign(toast.style, {
+                    position: 'fixed',
+                    bottom: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#14532d',
+                    color: 'white',
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    zIndex: 99999,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    opacity: '0',
+                    transition: 'opacity 0.3s ease'
+                });
+                document.body.appendChild(toast);
+                setTimeout(() => toast.style.opacity = '1', 50);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+
+                // 🔁 Instantly unlock Dashboard without refresh
+                const dashboardLink = document.getElementById('dashboardLink');
+                if (dashboardLink) {
+                    dashboardLink.classList.remove('opacity-60', 'cursor-not-allowed');
+                    dashboardLink.href =
+                    data.role === 'driver'
+                        ? '../Driver/dashboard.html'
+                        : '../Handler/dashboard.html';
+                }
+                }
+            }
+            }
+        });
+        }
+
+        async function watchPendingConflicts(userId) {
+        const { db } = await import('./firebase-config.js');
+        const { collection, doc, onSnapshot } =
+            await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+        // Worker/Driver join requests
+        onSnapshot(collection(db, `field_joins/${userId}/join_fields`), snap => {
+            let hasPendingWorker = false, hasPendingDriver = false;
+            snap.forEach(d => {
+            const data = d.data();
+            if (data.status === 'pending' && data.role === 'worker') hasPendingWorker = true;
+            if (data.status === 'pending' && data.role === 'driver') hasPendingDriver = true;
+            });
+            localStorage.setItem('pendingWorker', hasPendingWorker);
+            localStorage.setItem('pendingDriver', hasPendingDriver);
+        });
+
+        // Driver badge
+        onSnapshot(doc(db, 'Drivers_Badge', userId), d => {
+            if (!d.exists()) return;
+            const badge = d.data();
+            const hasPendingBadge = badge.status === 'pending';
+            localStorage.setItem('pendingDriver', hasPendingBadge);
+        });
+        }
+
+        // Call this on load
+        watchPendingConflicts(localStorage.getItem('userId'));
 
         // Initialize everything when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -497,6 +1127,12 @@ window.addEventListener('error', function (ev) {
             })();
 
             checkHandlerAccess();
+            
+            // 🟢 Start watching for join approvals in real-time
+            if (userId) {
+                watchJoinApprovals(userId);
+            }
+
             if (dashboardLink) {
                 // Get role & mark approved roles
                 const role = (localStorage.getItem('userRole') || '').toLowerCase();
@@ -966,22 +1602,46 @@ window.addEventListener('error', function (ev) {
                         showInlineError('Please enter your feedback.');
                         return;
                     }
+
                     try {
-                        const { db } = await import('./firebase-config.js');
-                        const { collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-                        await addDoc(collection(db, 'feedbacks'), {
-                            type: feedbackType,
-                            email: feedbackEmail || null,
-                            message: feedbackMsg,
-                            createdAt: serverTimestamp()
-                        });
-                        // show styled confirmation popup
-                        showConfirmationPopup();
-                        form.reset();
-                        setType('');
+                    // simple duplicate check by sourcePath
+                    if (docRefToUpdate?.path) {
+                        const { query, collection, where, getDocs } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                        const existingQ = query(collection(db, 'fields'), where('sourcePath', '==', docRefToUpdate.path));
+                        const existingSnap = await getDocs(existingQ);
+                        if (!existingSnap.empty) {
+                        console.info('Top-level fields doc already exists for', docRefToUpdate.path);
+                        // skip addDoc - but still send notification
+                        skipAddToFields = true;
+                        }
+                    }
                     } catch (err) {
-                        console.error('Feedback submit error', err);
-                        showInlineError('Failed to send feedback. Try again later.');
+                    console.warn('Dedupe check failed (continuing):', err);
+                    }
+
+                    try {
+                    // Build clean numeric coordinates (if available)
+                    const latNum = appData.latitude ?? appData.lat ?? null;
+                    const lngNum = appData.longitude ?? appData.lng ?? null;
+
+                    // Create a top-level 'fields' doc with explicit 'status' so lobby can filter
+                    await addDoc(collection(db, 'fields'), {
+                        userId: appData.requestedBy || appData.userId || appData.requester || null,
+                        barangay: appData.barangay || appData.location || null,
+                        size: appData.field_size || appData.size || appData.fieldSize || null,
+                        terrain: appData.terrain_type || appData.terrain || null,
+                        lat: typeof latNum === 'string' ? parseFloat(latNum) : latNum,
+                        lng: typeof lngNum === 'string' ? parseFloat(lngNum) : lngNum,
+                        registeredAt: serverTimestamp(),
+                        applicantName: appData.applicantName || appData.requester || appData.requestedBy || null,
+
+                        // NEW: status + dedupe info
+                        status: 'reviewed',
+                        sourcePath: docRefToUpdate?.path || null,   // e.g. field_applications/{uid}/fields/{fieldId}
+                        sourceDocId: docRefToUpdate?.id || null
+                    });
+                    } catch (e) {
+                    console.warn('Adding to top-level fields collection failed (best-effort):', e);
                     }
                 });
             }

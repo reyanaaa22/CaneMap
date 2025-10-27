@@ -394,19 +394,22 @@ sendRemarksBtn.addEventListener('click', async () => {
         popupAnchor: [0, -28]
       });
 
-    // ✅ Build professional dynamic popup text
-    const barangayText = app.barangay && app.barangay !== '—' ? app.barangay : '';
-    const fieldNameText = app.fieldName && app.fieldName !== '—' ? ` (${app.fieldName})` : '';
+    // ✅ Build professional dynamic popup text (Field Name first, then Barangay)
+    const fieldNameText = app.fieldName && app.fieldName !== '—' ? app.fieldName : 'Registered Field';
+    const barangayText = app.barangay && app.barangay !== '—' ? ` (${app.barangay})` : '';
     const streetText = app.street && app.street !== '—' ? `<br>🏠︎ <i>${app.street}</i>` : '';
     const coordText =
       typeof app.lat === 'number' && typeof app.lng === 'number'
         ? `<br>⟟ <i>Lat: ${app.lat.toFixed(5)}, Lng: ${app.lng.toFixed(5)}</i>`
         : '';
 
-    const popupText =
-      barangayText || fieldNameText
-        ? `<b>${barangayText}${fieldNameText}</b>${streetText}${coordText}`
-        : `<b>Registered Field</b>${streetText}${coordText}`;
+    const popupText = `
+      <div style="font-size:13px; line-height:1.4">
+        <b>${fieldNameText}${barangayText}</b>
+        ${streetText}
+        ${coordText}
+      </div>
+    `;
 
     L.marker([app.lat, app.lng], { icon: caneIcon })
       .addTo(map)
