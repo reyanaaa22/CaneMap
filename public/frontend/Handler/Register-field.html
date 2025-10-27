@@ -165,104 +165,16 @@
         placeholder="Enter your field name...">
     </div>
 
-    <!-- Barangay -->
-    <div>
-        <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-        <i class="fas fa-building text-[var(--cane-500)] mr-2"></i>
-        Barangay *
-        </label>
-        <input list="barangay-list" id="barangay" name="barangay" required
-        class="form-input w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300"
-        placeholder="Select your barangay...">
-        <datalist id="barangay-list">
-        <option value="Airport">
-        <option value="Alegria">
-        <option value="Alta Vista">
-        <option value="Bagongbong">
-        <option value="Bagong Buhay">
-        <option value="Bantigue">
-        <option value="Batuan">
-        <option value="Bayog">
-        <option value="Biliboy">
-        <option value="Cabaon-an">
-        <option value="Cabintan">
-        <option value="Cabulihan">
-        <option value="Cagbuhangin">
-        <option value="Camp Downes">
-        <option value="Can-adieng">
-        <option value="Can-untog">
-        <option value="Catmon">
-        <option value="Cogon Combado">
-        <option value="Concepcion">
-        <option value="Curva">
-        <option value="Danhug (Lili-on)">
-        <option value="Dayhagan">
-        <option value="Dolores">
-        <option value="Domonar">
-        <option value="Don Carlos B. Rivilla Sr. (Boroc)">
-        <option value="Don Felipe Larrazabal">
-        <option value="Don Potenciano Larrazabal">
-        <option value="Doña Feliza Z. Mejia">
-        <option value="Donghol">
-                                <option value="East (Poblacion)">
-        <option value="Esperanza">
-        <option value="Gaas">
-        <option value="Green Valley">
-        <option value="Guintigui-an">
-        <option value="Hibunawon">
-        <option value="Hugpa">
-        <option value="Ipil">
-        <option value="Juaton">
-        <option value="Kadaohan">
-        <option value="Labrador (Balion)">
-        <option value="Lake Danao">
-        <option value="Lao">
-        <option value="Leondoni">
-        <option value="Libertad">
-        <option value="Liberty">
-        <option value="Licuma">
-        <option value="Liloan">
-        <option value="Linao">
-        <option value="Luna">
-        <option value="Mabato">
-        <option value="Mabini">
-        <option value="Macabug">
-        <option value="Magaswi">
-        <option value="Mahayag">
-        <option value="Mahayahay">
-        <option value="Manlilinao">
-        <option value="Margen">
-        <option value="Mas-in">
-        <option value="Matica-a">
-        <option value="Milagro">
-        <option value="Monterico">
-        <option value="Nasunogan">
-        <option value="Naungan">
-                                <option value="North (Poblacion)">
-        <option value="Nueva Sociedad">
-        <option value="Nueva Vista">
-        <option value="Patag">
-        <option value="Punta">
-        <option value="Quezon, Jr.">
-        <option value="Rufina M. Tan (Rawis)">
-        <option value="Sabang Bao">
-        <option value="Salvacion">
-        <option value="San Antonio">
-        <option value="San Isidro">
-        <option value="San Jose">
-        <option value="San Juan">
-        <option value="San Pablo (Simangan)">
-        <option value="San Vicente">
-        <option value="Santo Niño">
-                                <option value="South (Poblacion)">
-        <option value="Sumangga">
-        <option value="Tambulilid">
-        <option value="Tongonan">
-        <option value="Valencia">
-                                <option value="West (Poblacion)">
-    </datalist>
-</div>
-         
+<!-- City -->
+  <div>
+    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+      <i class="fas fa-city text-[var(--cane-500)] mr-2"></i>
+      City/Municipality *
+    </label>
+    <input type="text" id="city" name="city" value="Ormoc City" readonly
+      class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg bg-[var(--cane-100)] text-[var(--cane-700)] font-medium">
+  </div>
+
 <!-- Street / Sitio -->
 <div>
   <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
@@ -273,16 +185,6 @@
     class="form-input w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300"
     placeholder="Enter your street or sitio...">
 </div>
-
-<!-- City -->
-  <div>
-    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-      <i class="fas fa-city text-[var(--cane-500)] mr-2"></i>
-      City/Municipality *
-    </label>
-    <input type="text" id="city" name="city" value="Ormoc City" readonly
-      class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg bg-[var(--cane-100)] text-[var(--cane-700)] font-medium">
-  </div>
 
   <!-- Terrain Type -->
   <div>
@@ -393,144 +295,182 @@
                         </div>
                     </div>
 
-                <!-- Required Documents Section -->
-                <div class="section-card rounded-xl p-8">
-                    <div class="flex items-center space-x-3 mb-6">
-                        <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-lg flex items-center justify-center">
-                            <i class="fas fa-file-alt text-white text-lg"></i>
-                </div>
-                <div>
-                            <h3 class="text-xl font-bold text-[var(--cane-900)]">Required Documents</h3>
-                            <p class="text-[var(--cane-600)]">Upload necessary documents for verification</p>
-                        </div>
-                </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                        <div>
-                                <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-                                    <i class="fas fa-certificate text-[var(--cane-500)] mr-2"></i>
-                                    Barangay Certificate *
-                                </label>
-                            <input type="file" id="barangay_certification" name="barangay_certification" accept=".pdf,.jpg,.jpeg,.png" required
-                                       class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
-                                <p class="text-xs text-[var(--cane-600)] mt-2">PDF or image file (max 5MB)</p>
-                        </div>
-                            
-                        <div>
-                                <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-                                    <i class="fas fa-home text-[var(--cane-500)] mr-2"></i>
-                                    Land Title *
-                                </label>
-                            <input type="file" id="land_title" name="land_title" accept=".pdf,.jpg,.jpeg,.png" required
-                                       class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
-                                <p class="text-xs text-[var(--cane-600)] mt-2">PDF or image file (max 5MB)</p>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-4">
-                        <div>
-                                <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-                                    <i class="fas fa-id-card text-[var(--cane-500)] mr-2"></i>
-                                    Valid ID (Front) *
-                                </label>
-                                <div id="camera-front" class="mb-3"></div>
-                                <button type="button" id="takePhotoFront" class="btn-secondary px-4 py-2 rounded-lg font-medium">
-                                    <i class="fas fa-camera mr-2"></i>Take Photo
-                                </button>
-                            <input type="hidden" id="valid_id_front" name="valid_id_front" required>
-                                <p class="text-xs text-[var(--cane-600)] mt-2">Live photo of your ID front</p>
-                        </div>
-                            
-                        <div>
-                                <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-                                    <i class="fas fa-id-card text-[var(--cane-500)] mr-2"></i>
-                                    Valid ID (Back) *
-                                </label>
-                                <div id="camera-back" class="mb-3"></div>
-                                <button type="button" id="takePhotoBack" class="btn-secondary px-4 py-2 rounded-lg font-medium">
-                                    <i class="fas fa-camera mr-2"></i>Take Photo
-                                </button>
-                            <input type="hidden" id="valid_id_back" name="valid_id_back" required>
-                                <p class="text-xs text-[var(--cane-600)] mt-2">Live photo of your ID back</p>
-                        </div>
-                    </div>
-                </div>
-                    
-                    <div class="mt-6">
-                        <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
-                            <i class="fas fa-user text-[var(--cane-500)] mr-2"></i>
-                            Selfie Holding Your ID *
-                        </label>
-                        <div id="camera-selfie" class="mb-3"></div>
-                        <button type="button" id="takePhotoSelfie" class="btn-secondary px-4 py-2 rounded-lg font-medium">
-                            <i class="fas fa-camera mr-2"></i>Take Selfie
-                        </button>
-                        <input type="hidden" id="selfie_with_id" name="selfie_with_id" required>
-                        <p class="text-xs text-[var(--cane-600)] mt-2">Selfie holding your valid ID for verification</p>
-                    </div>
-                </div>
+<!-- ✅ Required Documents Section -->
+<div class="section-card rounded-xl p-8">
+  <div class="flex items-center space-x-3 mb-6">
+    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-lg flex items-center justify-center">
+      <i class="fas fa-file-alt text-white text-lg"></i>
+    </div>
+    <div>
+      <h3 class="text-xl font-bold text-[var(--cane-900)]">Required Documents</h3>
+      <p class="text-[var(--cane-600)]">Upload necessary documents for verification</p>
+    </div>
+  </div>
 
-                <!-- Information Section -->
-                <div class="bg-gradient-to-r from-[var(--cane-50)] to-[var(--cane-100)] border border-[var(--cane-300)] rounded-xl p-6">
-                    <div class="flex items-start space-x-4">
-                        <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-lg flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-info text-white text-lg"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-lg font-semibold text-[var(--cane-800)] mb-3">What happens after submission?</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <ul class="text-sm text-[var(--cane-700)] space-y-2">
-                                    <li class="flex items-start space-x-2">
-                                        <i class="fas fa-check-circle text-[var(--cane-500)] mt-1"></i>
-                                        <span>Your field registration will be reviewed by SRA officers</span>
-                                    </li>
-                                    <li class="flex items-start space-x-2">
-                                        <i class="fas fa-clock text-[var(--cane-500)] mt-1"></i>
-                                        <span>Review process takes 5-10 working days</span>
-                                    </li>
-                                </ul>
-                                <ul class="text-sm text-[var(--cane-700)] space-y-2">
-                                    <li class="flex items-start space-x-2">
-                                        <i class="fas fa-map-marked-alt text-[var(--cane-500)] mt-1"></i>
-                                        <span>Once approved, your field will appear on the map</span>
-                                    </li>
-                                    <li class="flex items-start space-x-2">
-                                        <i class="fas fa-users text-[var(--cane-500)] mt-1"></i>
-                                        <span>You can then add workers and submit reports</span>
-                                    </li>
-                    </ul>
-                </div>
-                        </div>
-                    </div>
-                </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Barangay Certificate -->
+    <div>
+      <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+        <i class="fas fa-certificate text-[var(--cane-500)] mr-2"></i>
+        Barangay Certificate *
+      </label>
+      <input type="file" id="barangay_certification" name="barangay_certification"
+        accept=".pdf,.jpg,.jpeg,.png" required
+        class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg">
+      <input type="hidden" id="barangay_certification_base64">
+      <p id="barangay_certification_name" class="text-sm text-[var(--cane-700)] mt-2 italic"></p>
+      <p class="text-xs text-[var(--cane-600)]">PDF or image file (max 5MB)</p>
+    </div>
 
-                <!-- Terms and Submit -->
-                <div class="space-y-6">
-                    <div class="flex items-start space-x-3 p-4 bg-white border border-[var(--cane-200)] rounded-lg">
-                        <input type="checkbox" id="agree" required class="mt-1 w-5 h-5 text-[var(--cane-600)] border-[var(--cane-300)] rounded focus:ring-[var(--cane-500)]">
-                        <label for="agree" class="text-sm text-[var(--cane-700)]">
-                        I agree to the
-                        <button type="button" id="openTerms" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline inline">
-                        Terms and Conditions
-                        </button>
-                        and
-                        <button type="button" id="openPrivacy" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline inline">
-                        Privacy Policy
-                        </button>
-                        of CaneMap.
+    <!-- Land Title -->
+    <div>
+      <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+        <i class="fas fa-home text-[var(--cane-500)] mr-2"></i>
+        Land Title *
+      </label>
+      <input type="file" id="land_title" name="land_title"
+        accept=".pdf,.jpg,.jpeg,.png" required
+        class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg">
+      <input type="hidden" id="land_title_base64">
+      <p id="land_title_name" class="text-sm text-[var(--cane-700)] mt-2 italic"></p>
+      <p class="text-xs text-[var(--cane-600)]">PDF or image file (max 5MB)</p>
+    </div>
+  </div>
 
-                        </label>
-                </div>
-                    
-                    <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
-                        <a href="../Common/lobby.html" class="btn-secondary px-8 py-3 rounded-lg font-semibold text-center">
-                            <i class="fas fa-times mr-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn-primary px-8 py-3 rounded-lg font-semibold text-white">
-                            <i class="fas fa-paper-plane mr-2"></i>Submit Field Registration
-                    </button>
-                    </div>
+  <!-- ID Uploads -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <!-- Valid ID (Front) -->
+    <div>
+      <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+        <i class="fas fa-id-card text-[var(--cane-500)] mr-2"></i>
+        Valid ID (Front) *
+      </label>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="takePhotoFront"
+          class="btn-secondary px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <i class="fas fa-camera"></i> Take Photo
+        </button>
+        <label for="uploadFrontFile"
+          class="btn-secondary px-4 py-2 rounded-lg font-medium cursor-pointer flex items-center gap-2">
+          <i class="fas fa-upload"></i> Upload File
+        </label>
+        <input type="file" id="uploadFrontFile" accept="image/*" class="hidden">
+      </div>
+      <p id="valid_id_front_name" class="text-sm text-[var(--cane-700)] mt-2 italic"></p>
+      <input type="hidden" id="valid_id_front" name="valid_id_front" required>
+    </div>
+
+    <!-- Valid ID (Back) -->
+    <div>
+      <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+        <i class="fas fa-id-card text-[var(--cane-500)] mr-2"></i>
+        Valid ID (Back) *
+      </label>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="takePhotoBack"
+          class="btn-secondary px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <i class="fas fa-camera"></i> Take Photo
+        </button>
+        <label for="uploadBackFile"
+          class="btn-secondary px-4 py-2 rounded-lg font-medium cursor-pointer flex items-center gap-2">
+          <i class="fas fa-upload"></i> Upload File
+        </label>
+        <input type="file" id="uploadBackFile" accept="image/*" class="hidden">
+      </div>
+      <p id="valid_id_back_name" class="text-sm text-[var(--cane-700)] mt-2 italic"></p>
+      <input type="hidden" id="valid_id_back" name="valid_id_back" required>
+    </div>
+
+    <!-- Selfie -->
+    <div>
+      <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+        <i class="fas fa-user text-[var(--cane-500)] mr-2"></i>
+        Selfie Holding Your ID *
+      </label>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="takePhotoSelfie"
+          class="btn-secondary px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <i class="fas fa-camera"></i> Take Selfie
+        </button>
+        <label for="uploadSelfieFile"
+          class="btn-secondary px-4 py-2 rounded-lg font-medium cursor-pointer flex items-center gap-2">
+          <i class="fas fa-upload"></i> Upload File
+        </label>
+        <input type="file" id="uploadSelfieFile" accept="image/*" class="hidden">
+      </div>
+      <p id="selfie_with_id_name" class="text-sm text-[var(--cane-700)] mt-2 italic"></p>
+      <input type="hidden" id="selfie_with_id" name="selfie_with_id" required>
+    </div>
+  </div>
+</div>
+
+<!-- 🟩 Information Section -->
+<div class="bg-[var(--cane-100)] border border-[var(--cane-300)] rounded-lg p-6 mt-6">
+  <div class="flex items-start space-x-4">
+    <div class="w-8 h-8 bg-[var(--cane-600)] rounded-md flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-info text-white text-base"></i>
+    </div>
+    <div class="flex-1">
+      <h4 class="text-lg font-semibold text-[var(--cane-800)] mb-2">What happens after submission?</h4>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <ul class="text-sm text-[var(--cane-800)] space-y-1">
+          <li class="flex items-start space-x-2">
+            <i class="fas fa-check-circle text-[var(--cane-600)] mt-1"></i>
+            <span>Your field registration will be reviewed by SRA officers</span>
+          </li>
+          <li class="flex items-start space-x-2">
+            <i class="fas fa-clock text-[var(--cane-600)] mt-1"></i>
+            <span>Review process takes 5–10 working days</span>
+          </li>
+        </ul>
+        <ul class="text-sm text-[var(--cane-800)] space-y-1">
+          <li class="flex items-start space-x-2">
+            <i class="fas fa-map-marked-alt text-[var(--cane-600)] mt-1"></i>
+            <span>Once approved, your field will appear on the map</span>
+          </li>
+          <li class="flex items-start space-x-2">
+            <i class="fas fa-users text-[var(--cane-600)] mt-1"></i>
+            <span>You can then add workers and submit reports</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🧾 Terms and Agreement Section -->
+<div class="bg-white border border-[var(--cane-200)] rounded-lg p-5 mt-6">
+  <div class="flex items-start space-x-3">
+    <input type="checkbox" id="agree" required
+      class="mt-1 w-5 h-5 text-[var(--cane-600)] border-[var(--cane-300)] rounded focus:ring-[var(--cane-500)]">
+    <label for="agree" class="text-sm text-[var(--cane-700)]">
+      I agree to the
+      <button type="button" id="openTerms"
+        class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline inline">
+        Terms and Conditions
+      </button>
+      and
+      <button type="button" id="openPrivacy"
+        class="text-[var(--cane-600)] hover:text-[var(--cane-700)] underline inline">
+        Privacy Policy
+      </button>
+      of CaneMap.
+    </label>
+  </div>
+</div>
+
+<!-- 🟢 Submit Buttons (outside cards, right aligned) -->
+<div class="flex justify-end mt-6 space-x-4">
+  <a href="../Common/lobby.html"
+    class="btn-secondary px-8 py-3 rounded-lg font-semibold text-center">
+    <i class="fas fa-times mr-2"></i>Cancel
+  </a>
+  <button type="submit"
+    class="btn-primary px-8 py-3 rounded-lg font-semibold text-white">
+    <i class="fas fa-paper-plane mr-2"></i>Submit Field Registration
+  </button>
+</div>
+
                 </div>
                 
             </form>
@@ -706,6 +646,22 @@ function initLocationMap() {
       }
       document.getElementById('latitude').value = lat.toFixed(6);
       document.getElementById('longitude').value = lng.toFixed(6);
+      // 🟢 Auto-detect nearest barangay when clicking on the map
+        let nearestBarangay = "";
+        let nearestDist = Infinity;
+        barangays.forEach(b => {
+        if (!b.coords) return;
+        const dist = Math.sqrt(
+            Math.pow(b.coords[0] - lat, 2) + Math.pow(b.coords[1] - lng, 2)
+        );
+        if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestBarangay = b.name;
+        }
+        });
+        selectedBarangay = nearestBarangay || "Unknown";
+        console.log("📍 Auto-detected barangay:", selectedBarangay);
+
       if (locationMarker) locationMarker.remove();
         locationMarker = L.marker([lat, lng], { icon: caneIcon })
         .addTo(locationMap)
@@ -748,6 +704,11 @@ function initLocationMap() {
     // Auto-fill lat/lng fields
     document.getElementById('latitude').value = lat.toFixed(6);
     document.getElementById('longitude').value = lng.toFixed(6);
+
+    // 🟢 Store barangay name globally for Firestore
+    selectedBarangay = match.name;
+    console.log("Barangay selected via search:", selectedBarangay);
+
     }
 
     btn?.addEventListener('click', searchBarangay);
@@ -767,6 +728,9 @@ function initLocationMap() {
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => initLocationMap(), 100);
 });
+// 🟩 Global variable to hold selected barangay name from the map or search
+window.selectedBarangay = "";
+
 </script>
 
     <script type="module" src="../../backend/Handler/Register-field.js"></script>

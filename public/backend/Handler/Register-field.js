@@ -15,141 +15,163 @@ import {
 
 console.log("Register-field.js loaded ✅");
 
-// ----------------------------
-// 📸 CAMERA CAPTURE LOGIC
-// ----------------------------
-function setupCamera(buttonId, cameraDivId, inputId, facingMode = "environment") {
-  const button = document.getElementById(buttonId);
-  const cameraDiv = document.getElementById(cameraDivId);
-  if (!button || !cameraDiv) return;
+// ---------------------------------------------
+// 🧾 Barangay Certificate & Land Title Upload Fix
+// ---------------------------------------------
+function setupDocUpload(fileInputId, base64InputId, nameDisplayId) {
+  const fileInput = document.getElementById(fileInputId);
+  const base64Holder = document.getElementById(base64InputId);
+  const nameDisplay = document.getElementById(nameDisplayId);
 
-  button.addEventListener("click", async () => {
-    cameraDiv.innerHTML = "";
+  if (!fileInput) return;
 
-    // 🎥 Create live video
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File too large. Max 5MB allowed.");
+      fileInput.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      base64Holder.value = e.target.result;
+      if (nameDisplay) nameDisplay.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ✅ Attach handlers for Barangay Certificate & Land Title
+setupDocUpload("barangay_certification", "barangay_certification_base64", "barangay_certification_name");
+setupDocUpload("land_title", "land_title_base64", "land_title_name");
+
+// ----------------------------
+// 📸 CAMERA CAPTURE + FILE UPLOAD (Unified)
+// ----------------------------
+function setupCameraAndUpload(config) {
+  const { takeBtnId, fileInputId, base64Id, nameDisplayId, facingMode = "environment" } = config;
+
+  const takeBtn = document.getElementById(takeBtnId);
+  const fileInput = document.getElementById(fileInputId);
+  const base64Holder = document.getElementById(base64Id);
+  const nameDisplay = document.getElementById(nameDisplayId);
+
+  if (!takeBtn || !fileInput || !base64Holder) return;
+
+  // 🟢 Take Live Photo
+  takeBtn.addEventListener("click", async () => {
+    const cameraDiv = document.createElement("div");
+    cameraDiv.className = "fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-50";
+    document.body.appendChild(cameraDiv);
+
     const video = document.createElement("video");
     video.autoplay = true;
     video.playsInline = true;
-    video.className =
-      "rounded-lg shadow-md w-full max-h-[400px] object-contain bg-black";
+    video.className = "w-full h-full object-contain";
     cameraDiv.appendChild(video);
 
-    let stream;
+    const controls = document.createElement("div");
+    controls.className = "absolute bottom-10 flex gap-4";
+    cameraDiv.appendChild(controls);
+
+    const captureBtn = document.createElement("button");
+    captureBtn.textContent = "Capture";
+    captureBtn.className =
+      "px-6 py-3 bg-green-600 text-white rounded-full font-semibold hover:bg-green-700 transition";
+    controls.appendChild(captureBtn);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.className =
+      "px-6 py-3 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition";
+    controls.appendChild(cancelBtn);
+
+    // Start camera
+    let stream = null;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
       video.srcObject = stream;
     } catch (err) {
-      alert("Camera access denied or not available.");
+      alert("Camera not accessible. Please allow camera permission or upload a file instead.");
+      cameraDiv.remove();
       return;
     }
 
-    // 🎛️ Controls container
-    const controls = document.createElement("div");
-    controls.className = "flex gap-3 mt-3 justify-center";
-    cameraDiv.appendChild(controls);
-
-    // 📸 Capture button
-    const snapBtn = document.createElement("button");
-    snapBtn.textContent = "Capture";
-    snapBtn.className =
-      "px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800 transition font-medium";
-    controls.appendChild(snapBtn);
-
-    // 🟢 Fullscreen button (lighter green)
-    const fullBtn = document.createElement("button");
-    fullBtn.textContent = "Fullscreen";
-    fullBtn.className =
-      "px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition font-medium";
-    controls.appendChild(fullBtn);
-
-    // 📸 Function to capture and show image
-    const capturePhoto = (srcVideo, closeOverlay = false) => {
+    // Capture image
+    captureBtn.onclick = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = srcVideo.videoWidth;
-      canvas.height = srcVideo.videoHeight;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
-      ctx.drawImage(srcVideo, 0, 0);
+      ctx.drawImage(video, 0, 0);
       const dataUrl = canvas.toDataURL("image/png");
 
-      const inputEl = document.getElementById(inputId);
-      if (inputEl) inputEl.value = dataUrl;
+      // Save dataURL
+      base64Holder.value = dataUrl;
 
-      // Clean UI
-      cameraDiv.innerHTML = `<img src="${dataUrl}" class="rounded shadow mt-2 w-full max-w-sm mx-auto">`;
+      // Display filename only
+      const fileName = `${takeBtnId}_${Date.now()}.png`;
+      if (nameDisplay) nameDisplay.textContent = fileName;
 
-      // Stop the stream safely
-      if (stream) stream.getTracks().forEach((t) => t.stop());
+      // Stop camera and close
+      stream.getTracks().forEach((t) => t.stop());
+      cameraDiv.remove();
 
-      // Remove overlay cleanly if capture from fullscreen
-      if (closeOverlay && document.getElementById("cameraOverlay")) {
-        document.getElementById("cameraOverlay").remove();
-      }
+      // Reset file input (so the camera photo is the one that counts)
+      fileInput.value = "";
     };
 
-    // 🖼️ Capture button (normal)
-    snapBtn.onclick = () => capturePhoto(video);
-
-    // ⛶ Fullscreen overlay
-    fullBtn.onclick = async () => {
-      // Create overlay container
-      const overlay = document.createElement("div");
-      overlay.id = "cameraOverlay";
-      overlay.className =
-        "fixed inset-0 bg-black flex flex-col items-center justify-center z-50";
-      document.body.appendChild(overlay);
-
-      // Clone video feed (reuse stream)
-      const fullVideo = document.createElement("video");
-      fullVideo.autoplay = true;
-      fullVideo.playsInline = true;
-      fullVideo.srcObject = stream;
-      fullVideo.className = "w-full h-full object-contain";
-      overlay.appendChild(fullVideo);
-
-      // 📸 Capture button (fullscreen)
-      const fullCaptureBtn = document.createElement("button");
-      fullCaptureBtn.textContent = "Capture";
-      fullCaptureBtn.className =
-        "absolute bottom-10 px-6 py-3 bg-green-600 text-white text-lg rounded-full shadow-lg hover:bg-green-700 transition";
-      overlay.appendChild(fullCaptureBtn);
-
-      // ❌ Exit icon button
-      const exitBtn = document.createElement("button");
-      exitBtn.innerHTML = "&times;"; // ✕ symbol
-      exitBtn.className =
-        "absolute top-5 right-6 text-white text-4xl font-light hover:scale-110 transition transform";
-      overlay.appendChild(exitBtn);
-
-      // 🟩 Capture photo while fullscreen
-      fullCaptureBtn.onclick = () => {
-        capturePhoto(fullVideo, true);
-      };
-
-      // ❌ Exit overlay
-      exitBtn.onclick = () => {
-        overlay.remove();
-      };
-
-      // ✅ Cleanup if user presses ESC
-      document.addEventListener(
-        "keydown",
-        function escListener(e) {
-          if (e.key === "Escape" && document.getElementById("cameraOverlay")) {
-            overlay.remove();
-            document.removeEventListener("keydown", escListener);
-          }
-        },
-        { once: true }
-      );
+    // Cancel camera
+    cancelBtn.onclick = () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      cameraDiv.remove();
     };
   });
+
+  // 🖼️ Upload File
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File too large. Max 5MB allowed.");
+      fileInput.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      base64Holder.value = e.target.result;
+      const fileName = file.name;
+      if (nameDisplay) nameDisplay.textContent = fileName;
+    };
+    reader.readAsDataURL(file);
+  });
 }
+setupCameraAndUpload({
+  takeBtnId: "takePhotoFront",
+  fileInputId: "uploadFrontFile",
+  base64Id: "valid_id_front",
+  nameDisplayId: "valid_id_front_name",
+  facingMode: "environment",
+});
 
+setupCameraAndUpload({
+  takeBtnId: "takePhotoBack",
+  fileInputId: "uploadBackFile",
+  base64Id: "valid_id_back",
+  nameDisplayId: "valid_id_back_name",
+  facingMode: "environment",
+});
 
-// Initialize all cameras
-setupCamera("takePhotoFront", "camera-front", "valid_id_front", "environment");
-setupCamera("takePhotoBack", "camera-back", "valid_id_back", "environment");
-setupCamera("takePhotoSelfie", "camera-selfie", "selfie_with_id", "user");
+setupCameraAndUpload({
+  takeBtnId: "takePhotoSelfie",
+  fileInputId: "uploadSelfieFile",
+  base64Id: "selfie_with_id",
+  nameDisplayId: "selfie_with_id_name",
+  facingMode: "user",
+});
 
 // ----------------------------
 // 📂 FIELD FORM SUBMISSION
@@ -173,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fieldName = form.querySelector("#field_name")?.value.trim() || "";
     const sugarVariety = form.querySelector("#sugarcane_variety")?.value.trim() || "";
-    const barangay = form.querySelector("#barangay")?.value.trim() || "";
+    const barangay = window.selectedBarangay?.trim() || "";
     const street = form.querySelector("#street")?.value.trim() || "";
     const size = form.querySelector("#field_size")?.value.trim() || "";
     const terrain = form.querySelector("#terrain_type")?.value.trim() || "";
@@ -184,6 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const validFront = form.querySelector("#valid_id_front")?.value || "";
     const validBack = form.querySelector("#valid_id_back")?.value || "";
     const selfie = form.querySelector("#selfie_with_id")?.value || "";
+
+    const barangayCert = form.querySelector("#barangay_certification_base64")?.value || "";
+    const landTitle = form.querySelector("#land_title_base64")?.value || "";
 
     // ✅ Include fieldName in the validation
     if (
@@ -199,6 +224,19 @@ document.addEventListener("DOMContentLoaded", () => {
       !validBack ||
       !selfie
     ) {
+      console.log("DEBUG CHECK:", {
+        fieldName,
+        barangay,
+        street,
+        size,
+        terrain,
+        sugarVariety,
+        lat,
+        lng,
+        validFront,
+        validBack,
+        selfie
+      });
       alert("Please fill out all fields and capture all required photos.");
       return;
     }
@@ -262,18 +300,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Upload images
       async function uploadBase64(base64, name) {
-        if (!base64.startsWith("data:image")) return "";
-        const refPath = sref(
-          storage,
-          `field_applications/${currentUser.uid}/${name}_${Date.now()}.png`
-        );
+        if (!base64.startsWith("data:")) return "";
+        const fileType = base64.includes("pdf") ? "pdf" : "png";
+        const refPath = sref(storage, `field_applications/${currentUser.uid}/${name}_${Date.now()}.${fileType}`);
         await uploadString(refPath, base64, "data_url");
         return await getDownloadURL(refPath);
+      }
+
+
+      function toBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (error) => reject(error);
+        });
       }
 
       const frontURL = await uploadBase64(validFront, "valid_front");
       const backURL = await uploadBase64(validBack, "valid_back");
       const selfieURL = await uploadBase64(selfie, "selfie");
+      const barangayURL = barangayCert ? await uploadBase64(barangayCert, "barangay_certificate") : "";
+      const landTitleURL = landTitle ? await uploadBase64(landTitle, "land_title") : "";
+
 
       // ✅ Clean, ordered, no "_lower" version
       const payload = {
@@ -291,7 +340,10 @@ document.addEventListener("DOMContentLoaded", () => {
         validBackUrl: backURL,
         validFrontUrl: frontURL,
         selfieUrl: selfieURL,
+        barangayCertUrl: barangayURL,
+        landTitleUrl: landTitleURL
       };
+
 
       const userFieldsRef = collection(
         db,
