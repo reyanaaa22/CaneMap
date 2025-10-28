@@ -16,6 +16,9 @@ import {
 
 const form = document.getElementById('signup-form');
 const messageDiv = document.getElementById('message');
+const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+const buttonLabelEl = submitButton ? submitButton.querySelector('.btn-text') : null;
+const alertOverlay = document.getElementById('successModal');
 
 const errors = {
   fullname: document.getElementById('error-fullname'),
@@ -30,6 +33,37 @@ const errors = {
 const successModal = document.getElementById('successModal');
 const modalOkBtn = document.getElementById('modalOkBtn');
 
+function setButtonLabel(label) {
+  if (!submitButton) return;
+  if (buttonLabelEl) {
+    buttonLabelEl.textContent = label;
+  } else {
+    submitButton.textContent = label;
+  }
+}
+
+function setButtonState({ loading = false, label = 'Sign up', disabled }) {
+  if (!submitButton) return;
+  submitButton.classList.toggle('loading', loading);
+  if (disabled !== undefined) {
+    submitButton.disabled = disabled;
+  } else {
+    submitButton.disabled = loading;
+  }
+  setButtonLabel(label);
+}
+
+function showMessage(text, type = 'success', autoHide = true) {
+  if (!messageDiv) return;
+  messageDiv.style.color = type === 'error' ? '#dc2626' : '#16a34a';
+  messageDiv.textContent = text;
+  if (autoHide) {
+    setTimeout(() => {
+      if (messageDiv.textContent === text) messageDiv.textContent = '';
+    }, 4000);
+  }
+}
+
 function clearErrors() {
   for (const key in errors) {
     errors[key].textContent = '';
@@ -41,6 +75,7 @@ function clearErrors() {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearErrors();
+  setButtonState({ loading: true, label: 'Creating account...' });
 
   const fullName = form.fullname.value.trim();
   const email = form.email.value.trim();
@@ -86,7 +121,10 @@ form.addEventListener('submit', async (e) => {
     errors.terms.textContent = 'You must agree to the Terms of Service and Privacy Policy.'; valid = false;
   }
 
-  if (!valid) return;
+  if (!valid) {
+    setButtonState({ loading: false, label: 'Sign up', disabled: false });
+    return;
+  }
 
   try {
     const signInMethods = await fetchSignInMethodsForEmail(auth, email);
@@ -128,6 +166,7 @@ form.addEventListener('submit', async (e) => {
     localStorage.setItem('farmerName', fullName);
     localStorage.setItem('farmerContact', contact);
 
+    setButtonState({ loading: false, label: 'Sign up', disabled: false });
     successModal.style.display = 'flex';
     modalOkBtn.onclick = () => {
       successModal.style.display = 'none';
@@ -135,11 +174,11 @@ form.addEventListener('submit', async (e) => {
     };
 
     form.reset();
+    showMessage('Sign-up successful! Please verify your email.', 'success');
 
   } catch (error) {
-    messageDiv.style.color = '#dc2626';
-    messageDiv.textContent = error.message;
-    setTimeout(() => { messageDiv.textContent = ''; }, 4000);
+    setButtonState({ loading: false, label: 'Sign up', disabled: false });
+    showMessage(error.message || 'Sign up failed. Please try again.', 'error');
   }
 });
 
