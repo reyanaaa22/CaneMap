@@ -475,8 +475,34 @@ const tooltipHtml = `
                 if (btn && input) {
                 const handleSearch = () => {
                     const val = input.value.trim().toLowerCase();
-                    if (!val) return;
+                    if (!val) {
+                    map.setView([11.0064, 124.6075], 12);
+                    showApprovedFieldsOnMap(map);
+                    return;
+                    }
 
+                   // Reset map when searching "black"
+                    if (val === "black") {
+                    console.info("🔁 Resetting map view to default...");
+
+                    // Clear dynamically added markers (if any)
+                    if (window.__tempSearchMarkers) {
+                        window.__tempSearchMarkers.forEach(m => map.removeLayer(m));
+                        window.__tempSearchMarkers = [];
+                    }
+
+                    // Reset map view to default Ormoc position
+                    map.setView([11.0064, 124.6075], 12);
+
+                    // Refresh default approved field markers
+                    if (typeof showApprovedFieldsOnMap === "function") {
+                        showApprovedFieldsOnMap(map);
+                    }
+
+                    showToast("🗺️ Map reset to default view.", "green");
+                    return;
+                    }
+ 
                     // 🔹 1. Try to match partial fields
                     const matchedFields = (window.__caneMarkers || []).filter(m => {
                     const d = m.data;
@@ -1107,6 +1133,8 @@ const tooltipHtml = `
                 const isApproved = approvedRoles.includes(role);
                 localStorage.setItem('userRole', role);
                 console.log('🧭 Live role update detected:', role);
+                // inside your onSnapshot(userRef, ...) after you set localStorage userRole:
+                updatePendingFieldMenu();
 
                 // 🔁 Update dashboard button instantly
                 const dashboardLink = document.getElementById('dashboardLink');
@@ -1259,30 +1287,92 @@ const tooltipHtml = `
             if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
 
 
-            // Hide Join Field button for SRA and Handler roles
-            const joinBtnMain = document.getElementById('btnJoinField');
-            if (joinBtnMain) {
-                try {
-                    const role = (localStorage.getItem('userRole') || '').toLowerCase();
-                    if (role === 'sra' || role === 'handler') {
-                        // 🔹 Hide the Join Field button completely
-                        joinBtnMain.style.display = 'none';
-                    } else {
-                        // 🔹 Allow normal behavior (e.g. open join modal)
-                        joinBtnMain.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            // openJoinModal() already exists above in your code
-                            try {
-                                openJoinModal();
-                            } catch (err) {
-                                console.warn('⚠️ openJoinModal() not found or failed:', err);
-                            }
-                        });
-                    }
-                } catch (err) {
-                    console.error('Error initializing Join Field button:', err);
-                }
+            // ---------------------- Real-time Pending Field menu control ----------------------
+            let unsubscribeFieldWatcher = null;
+            let unsubscribeUserWatcher = null;
+
+            async function initPendingFieldWatcher() {
+            try {
+                const pendingLink = document.getElementById("pendingFieldLink");
+                if (!pendingLink) return;
+
+                const userId = localStorage.getItem("userId");
+                if (!userId) return;
+
+                // import Firestore tools
+                const { db } = await import("./firebase-config.js");
+                const {
+                collection,
+                doc,
+                onSnapshot,
+                query,
+                where,
+                getDocs,
+                } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
+
+                // --- listen to user role changes in realtime ---
+                const userRef = doc(db, "users", userId);
+                if (unsubscribeUserWatcher) unsubscribeUserWatcher();
+                unsubscribeUserWatcher = onSnapshot(userRef, (snap) => {
+                const role = (snap.data()?.role || "").toLowerCase();
+                localStorage.setItem("userRole", role);
+                refreshPendingFieldMenu(pendingLink, db, userId, role);
+                });
+
+                // --- listen to field_applications changes in realtime ---
+                const fieldsRef = collection(db, `field_applications/${userId}/fields`);
+                const q = query(fieldsRef, where("status", "in", ["pending", "to edit"]));
+                if (unsubscribeFieldWatcher) unsubscribeFieldWatcher();
+                unsubscribeFieldWatcher = onSnapshot(q, (snap) => {
+                const role = (localStorage.getItem("userRole") || "").toLowerCase();
+                const hasPendingOrToEdit = !snap.empty;
+                togglePendingFieldLink(pendingLink, role, hasPendingOrToEdit);
+                });
+            } catch (err) {
+                console.error("initPendingFieldWatcher error:", err);
             }
+            }
+
+            // Helper: re-check pending fields when role changes
+            function refreshPendingFieldMenu(pendingLink, db, userId, role) {
+            (async () => {
+                try {
+                const { collection, getDocs, query, where } =
+                    await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
+                const { db } = await import("./firebase-config.js");
+                const q = query(
+                    collection(db, `field_applications/${userId}/fields`),
+                    where("status", "in", ["pending", "to edit"])
+                );
+                const snap = await getDocs(q);
+                togglePendingFieldLink(pendingLink, role, !snap.empty);
+                } catch (err) {
+                console.warn("refreshPendingFieldMenu failed:", err);
+                }
+            })();
+            }
+
+            // Helper: show or hide link
+            function togglePendingFieldLink(pendingLink, role, hasPendingOrToEdit) {
+            if (!pendingLink) return;
+            if (role === "handler" || hasPendingOrToEdit) {
+                pendingLink.classList.remove("hidden");
+                pendingLink.onclick = (e) => {
+                e.preventDefault();
+                window.location.href = "./Handler/Field Form.html";
+                };
+            } else {
+                pendingLink.classList.add("hidden");
+                pendingLink.onclick = null;
+            }
+            }
+
+            // 🔄 Start watchers when DOM ready
+            document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                initPendingFieldWatcher();
+            }, 400);
+            });
 
 
             // Feedback FAB bindings (ensure after DOM is ready)
@@ -1790,6 +1880,61 @@ const tooltipHtml = `
             }
         })();
 
+        // ---------------------- Pending Field menu control ----------------------
+        // Shows "Pending Field Registration" only for:
+        // - users with role 'handler'
+        // - users with field application status 'pending' or 'to edit'
+        async function updatePendingFieldMenu() {
+        try {
+            const pendingLink = document.getElementById('pendingFieldLink');
+            if (!pendingLink) return;
+
+            const userId = localStorage.getItem('userId');
+            const role = (localStorage.getItem('userRole') || '').toLowerCase();
+
+            let hasPendingOrToEdit = false;
+            if (userId) {
+            try {
+                const { db } = await import('./firebase-config.js');
+                const { collection, getDocs, query, where } =
+                await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+                // 🟢 Match both 'pending' and 'to edit' statuses
+                const q = query(
+                collection(db, `field_applications/${userId}/fields`),
+                where('status', 'in', ['pending', 'to edit'])
+                );
+
+                const snap = await getDocs(q);
+                hasPendingOrToEdit = !snap.empty;
+            } catch (err) {
+                console.warn('⚠️ Failed to check pending/to edit fields:', err);
+            }
+            }
+
+            // 🟢 Show if role = handler OR has pending/to edit field
+            if (role === 'handler' || hasPendingOrToEdit) {
+            pendingLink.classList.remove('hidden');
+            pendingLink.onclick = (e) => {
+                e.preventDefault();
+                window.location.href = '../../frontend/Handler/field_form.html';
+            };
+            } else {
+            pendingLink.classList.add('hidden');
+            pendingLink.onclick = null;
+            }
+        } catch (err) {
+            console.error('updatePendingFieldMenu error:', err);
+        }
+        }
+
+        // 🧠 Call it when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            try { updatePendingFieldMenu(); } catch (_) {}
+        }, 200);
+        });
+
         // small UI helpers for feedback modal
         function showInlineError(msg) {
             // temporary place the message in feedbackHint
@@ -2099,13 +2244,16 @@ setTimeout(() => {
             });
             } catch (_) { /* ignore individual query failures */ }
 
-            // field_applications pending
+            // field_applications pending OR to edit
             try {
             const fieldSnap = await getDocs(
-                query(collection(db, `field_applications/${userId}/fields`), where('status', '==', 'pending'))
+                query(
+                collection(db, `field_applications/${userId}/fields`),
+                where('status', 'in', ['pending', 'to edit'])
+                )
             );
             if (!fieldSnap.empty) hasPendingField = true;
-            } catch(_) {}
+            } catch (_) {}
 
             if (hasPendingJoin || hasPendingField) {
             const reason = hasPendingJoin ? 'a pending field join request' : 'a pending field application';

@@ -425,6 +425,17 @@ header nav .flex.items-center.justify-between > .relative {
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
+.notif-link {
+  color: var(--cane-700);
+  font-weight: 600;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.notif-link:hover {
+  color: var(--cane-800);
+}
+
 .preview-notif-card {
   display: flex;
   align-items: flex-start;
@@ -528,6 +539,11 @@ header nav .flex.items-center.justify-between > .relative {
                                      <i class="fas fa-tachometer-alt mr-3 text-[var(--cane-500)]"></i>
                                      Dashboard
                                  </a>
+                                 <!-- Pending Field Registration (visible only to handler OR user with pending field application) -->
+                                <a id="pendingFieldLink" href="javascript:void(0)" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium hidden">
+                                <i class="fas fa-hourglass-half mr-3 text-[var(--cane-500)]"></i>
+                                Field Form
+                                </a>
                                  <div class="border-t border-[var(--cane-100)] mt-2">
                                     <a href="activity-log.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium">
                                          <i class="fas fa-clipboard-list mr-3 text-[var(--cane-500)]"></i>

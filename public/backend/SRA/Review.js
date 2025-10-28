@@ -315,13 +315,13 @@ sendRemarksBtn.addEventListener('click', async () => {
           status: 'to edit'
         });
 
-        await addDoc(collection(db, 'notifications'), {
-          userId: app.raw.requestedBy || app.raw.userId || app.applicantName,
-          type: 'remark',
-          title: 'Remarks from SRA',
-          message: text,
-          createdAt: serverTimestamp()
-        });
+      await addDoc(collection(db, 'notifications'), {
+        userId: app.raw.requestedBy || app.raw.userId || app.applicantName,
+        title: 'Remarks from Ormoc Mill District SRA Officer',
+        message: 'Change the document. <a href="../../frontend/Handler/Field Form.html" target="_blank" class="notif-link">Open Form</a>',
+        status: 'unread',
+        timestamp: serverTimestamp()
+      });
 
         confirm.remove();
         showSuccessPopup('Remarks Sent', 'Status updated to "To Edit".');
@@ -527,13 +527,13 @@ async function updateStatus(appOrId, status) {
 
         // 🟢 Notify applicant
         try {
-          await addDoc(collection(db, 'notifications'), {
-            userId: applicantUid,
-            type: 'approved',
-            title: 'Field Approved!',
-            message: 'Your field has been reviewed and you are now registered as a Handler.',
-            createdAt: serverTimestamp()
-          });
+        await addDoc(collection(db, 'notifications'), {
+          userId: applicantUid,
+          title: 'Field Registration Approved!',
+          message: 'Your field has been reviewed by the Ormoc Mill District SRA Officer. You can now check your dashboard <a href="../../frontend/Handler/dashboard.html" target="_blank" class="notif-link">here</a>.',
+          status: 'unread',
+          timestamp: serverTimestamp()
+        });
         } catch (e) {
           console.warn('Notification creation failed:', e);
         }
