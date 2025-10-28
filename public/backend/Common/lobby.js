@@ -662,16 +662,38 @@ const tooltipHtml = `
 
         const joinBtn = document.getElementById('joinBtn');
         const userId = localStorage.getItem('userId');
+        const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
 
-        // 🔍 Check if already joined
+        // 🟢 If SRA → hide button entirely
+        if (userRole === 'sra') {
+            joinBtn.style.display = 'none';
+            return;
+        }
+
+        // 🟢 If Handler
+        if (userRole === 'handler') {
+            // If the field belongs to this handler
+            if (field.raw?.userId === userId || field.applicantName === localStorage.getItem('farmerName')) {
+                joinBtn.textContent = 'Check My Field';
+                joinBtn.onclick = () => {
+                    window.location.href = '../Handler/your_field_path.html';
+                };
+            } else {
+                // If handler but not owner → hide
+                joinBtn.style.display = 'none';
+            }
+            return;
+        }
+
+        // 🟢 For all other roles, check join status
         checkIfAlreadyJoined(field.id, userId).then((alreadyJoined) => {
             if (alreadyJoined) {
-            joinBtn.disabled = true;
-            joinBtn.textContent = 'Request Pending';
-            joinBtn.classList.add('opacity-60', 'cursor-not-allowed');
-            joinBtn.style.backgroundColor = '#9ca3af'; // gray tone
+                joinBtn.disabled = true;
+                joinBtn.textContent = 'Request Pending';
+                joinBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                joinBtn.style.backgroundColor = '#9ca3af'; // gray tone
             } else {
-            joinBtn.onclick = () => openJoinModal(field);
+                joinBtn.onclick = () => openJoinModal(field);
             }
         });
         }
@@ -1128,6 +1150,10 @@ const tooltipHtml = `
 
             checkHandlerAccess();
             
+            // 🔁 Watch for join approvals + recheck badge eligibility
+            watchJoinApprovals(localStorage.getItem('userId'));
+            checkDriverBadgeEligibility();
+
             // 🟢 Start watching for join approvals in real-time
             if (userId) {
                 watchJoinApprovals(userId);
@@ -1233,6 +1259,31 @@ const tooltipHtml = `
             if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
 
 
+            // Hide Join Field button for SRA and Handler roles
+            const joinBtnMain = document.getElementById('btnJoinField');
+            if (joinBtnMain) {
+                try {
+                    const role = (localStorage.getItem('userRole') || '').toLowerCase();
+                    if (role === 'sra' || role === 'handler') {
+                        // 🔹 Hide the Join Field button completely
+                        joinBtnMain.style.display = 'none';
+                    } else {
+                        // 🔹 Allow normal behavior (e.g. open join modal)
+                        joinBtnMain.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            // openJoinModal() already exists above in your code
+                            try {
+                                openJoinModal();
+                            } catch (err) {
+                                console.warn('⚠️ openJoinModal() not found or failed:', err);
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error initializing Join Field button:', err);
+                }
+            }
+
 
             // Feedback FAB bindings (ensure after DOM is ready)
             try {
@@ -1298,26 +1349,112 @@ const tooltipHtml = `
                 }
                 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeLogout(); });
                 if (btnNo) btnNo.addEventListener('click', function(){ closeLogout(); });
-                  if (btnYes) btnYes.addEventListener('click', async function(){
-                      console.info('Logout confirm clicked');
-                      try {
-                          if (window.signOut && window.auth) {
-                              await window.signOut(window.auth);
-                          }
-                      } catch (err) {
-                          console.error('Error during sign out:', err);
-                      } finally {
-                          // Clean up local data regardless, then redirect
-                          try {
-                              localStorage.removeItem('userId');
-                              localStorage.removeItem('userRole');
-                              localStorage.removeItem('farmerName');
-                          } catch(_) {}
-                          window.location.href = '../Common/farmers_login.html';
-                      }
-                  });
+                if (btnYes) {
+                btnYes.addEventListener('click', async function () {
+                    console.info('Logout confirm clicked');
+                    try {
+                    await signOut(auth);
+                    console.log('✅ Firebase signOut success');
+                    } catch (err) {
+                    console.error('Error during Firebase sign out:', err);
+                    } finally {
+                    // 🧹 Clear local/session storage
+                    try {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                    } catch (_) {}
+
+                    // Optional fade effect before redirect
+                    if (modal && dialog) {
+                        dialog.classList.add('opacity-0', 'scale-95');
+                        modal.classList.add('opacity-0');
+                    }
+
+                    setTimeout(() => {
+                        window.location.href = '../Common/farmers_login.html';
+                    }, 300);
+                    }
+                });
+                }
               } catch(_) {}
           });
+
+          // ✅ Logout confirmation modal wiring (must be inside DOMContentLoaded)
+            try {
+            const logoutTrigger = document.getElementById('logoutLink');
+            const modal = document.getElementById('logoutModal');
+            const dialog = document.getElementById('logoutDialog');
+            const btnYes = document.getElementById('logoutConfirm');
+            const btnNo = document.getElementById('logoutCancel');
+
+            function openLogout() {
+                if (!modal || !dialog) return;
+                modal.classList.remove('opacity-0', 'invisible');
+                modal.classList.add('opacity-100', 'visible');
+                dialog.classList.remove('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                dialog.classList.add('translate-y-0', 'scale-100', 'opacity-100');
+            }
+
+            function closeLogout() {
+                if (!modal || !dialog) return;
+                modal.classList.add('opacity-0', 'invisible');
+                modal.classList.remove('opacity-100', 'visible');
+                dialog.classList.add('translate-y-2', 'scale-95', 'opacity-0', 'pointer-events-none');
+                dialog.classList.remove('translate-y-0', 'scale-100', 'opacity-100');
+            }
+
+            if (logoutTrigger) {
+                logoutTrigger.addEventListener('click', function (e) {
+                e.preventDefault(); // Prevent anchor scroll
+                openLogout();
+                });
+            }
+
+            if (modal) {
+                modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeLogout();
+                });
+            }
+
+            if (btnNo) {
+                btnNo.addEventListener('click', function () {
+                closeLogout();
+                });
+            }
+
+            if (btnYes) {
+                btnYes.addEventListener('click', async function () {
+                console.info('Logout confirm clicked');
+                try {
+                    // Attempt Firebase logout if available
+                    if (window.auth && window.signOut) {
+                    await window.signOut(window.auth);
+                    }
+                } catch (err) {
+                    console.error('Error during Firebase sign out:', err);
+                } finally {
+                    try {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    } catch (_) {}
+
+                    // Small fade animation before redirect
+                    modal.classList.add('opacity-0');
+                    dialog.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => {
+                    window.location.href = '../Common/farmers_login.html';
+                    }, 300);
+                }
+                });
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeLogout();
+            });
+
+            } catch (err) {
+            console.error('Logout modal init failed:', err);
+            }
 
         // Initialize Swiper with enhanced functionality
         let swiper;
@@ -1447,15 +1584,21 @@ const tooltipHtml = `
             }, 500);
         }
 
-        // Smooth scroll for navigation links
+        // Smooth scroll for navigation links (ignore href="#" to prevent errors)
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
+        anchor.addEventListener('click', function (e) {
+            const href = this.getAttribute('href');
+            if (href === '#' || href === '' || href === null) return; // ✅ ignore empty anchors
+            e.preventDefault();
+            try {
+            const target = document.querySelector(href);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            } catch (err) {
+            console.warn('Smooth scroll skipped invalid selector:', href);
+            }
+        });
         });
 
         // Profile dropdown functionality
@@ -1916,6 +2059,311 @@ setTimeout(() => {
           );
         }
       }
+
+        // =========================
+        // Driver badge eligibility + UX improvements
+        // =========================
+        async function checkDriverBadgeEligibility() {
+        try {
+            const userId = localStorage.getItem('userId');
+            const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+
+            // try two selectors: the hero anchor and the explicit apply button (robust)
+            const driverAnchor = document.querySelector('#driver-badge a[href*="Driver_Badge.html"]');
+            const applyBtn = document.getElementById('btnApplyDriver');
+            const candidates = [driverAnchor, applyBtn].filter(Boolean);
+            if (!candidates.length || !userId) return;
+
+            // Roles not allowed
+            const blockedRoles = ['sra', 'handler', 'worker'];
+            if (blockedRoles.includes(userRole)) {
+            const message = `You cannot apply for a Driver’s Badge with your current role: “${userRole}”. Only Drivers or Farmers are eligible.`;
+            candidates.forEach(btn => disableDriverBtn(btn, message));
+            return;
+            }
+
+            // Check pending field joins / field applications
+            const { db } = await import('./firebase-config.js');
+            const { collection, getDocs, query, where } =
+            await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+            let hasPendingJoin = false;
+            let hasPendingField = false;
+
+            // field_joins subcollection pending
+            try {
+            const joinsSnap = await getDocs(collection(db, `field_joins/${userId}/join_fields`));
+            joinsSnap.forEach(d => {
+                const data = d.data();
+                if (data.status?.toLowerCase() === 'pending') hasPendingJoin = true;
+            });
+            } catch (_) { /* ignore individual query failures */ }
+
+            // field_applications pending
+            try {
+            const fieldSnap = await getDocs(
+                query(collection(db, `field_applications/${userId}/fields`), where('status', '==', 'pending'))
+            );
+            if (!fieldSnap.empty) hasPendingField = true;
+            } catch(_) {}
+
+            if (hasPendingJoin || hasPendingField) {
+            const reason = hasPendingJoin ? 'a pending field join request' : 'a pending field application';
+            const message = `You can’t apply for a Driver’s Badge while you have ${reason}. Please wait for approval.`;
+            candidates.forEach(btn => disableDriverBtn(btn, message));
+            return;
+            }
+
+            // eligible -> enable all candidates
+            candidates.forEach(btn => enableDriverBtn(btn));
+        } catch (err) {
+            console.error('checkDriverBadgeEligibility() failed:', err);
+        }
+        }
+
+        function disableDriverBtn(btn, message) {
+        try {
+            // visually disable
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.style.backgroundColor = '#9ca3af';
+
+            // add accessibility + hover tooltip
+            btn.setAttribute('aria-disabled', 'true');
+            btn.setAttribute('title', message);
+            btn.setAttribute('data-disabled-reason', message);
+
+            // ✅ Important: keep pointer events ON so hover tooltip works!
+            // So remove this line if you had it before:
+            // btn.style.pointerEvents = 'none';
+
+            // Prevent clicks (but allow hover)
+            const guardName = '__driver_btn_guard';
+            if (!btn[guardName]) {
+            const onAttempt = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // show user-friendly toast or alert when they click
+                showToast(`⚠️ ${message}`, 'gray');
+            };
+            btn.addEventListener('click', onAttempt);
+            btn[guardName] = onAttempt;
+            }
+        } catch (err) {
+            console.warn('disableDriverBtn error', err);
+        }
+        }
+
+
+        function enableDriverBtn(btn) {
+        try {
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.style.pointerEvents = '';
+            btn.style.backgroundColor = '';
+            btn.removeAttribute('aria-disabled');
+            btn.removeAttribute('title');
+            btn.removeAttribute('data-disabled-reason');
+
+            const guardName = '__driver_btn_guard';
+            if (btn[guardName]) {
+            btn.removeEventListener('click', btn[guardName]);
+            delete btn[guardName];
+            }
+        } catch (err) { console.warn('enableDriverBtn error', err); }
+        }
+
+        // Ensure realtime watchers re-check eligibility (watchPendingConflicts already exists)
+        (function ensureRealtimeBadgeRecheck() {
+        // if you have watchPendingConflicts(), make it call this when it updates localStorage, but also attach a mutation observer
+        try {
+            // Re-run check on load
+            document.addEventListener('DOMContentLoaded', () => checkDriverBadgeEligibility());
+
+            // Listen for localStorage updates (some of your watchers write pending flags there)
+            window.addEventListener('storage', (ev) => {
+            if (ev.key === 'pendingWorker' || ev.key === 'pendingDriver' || ev.key === 'userRole') {
+                checkDriverBadgeEligibility();
+            }
+            });
+
+            // If your watchPendingConflicts() updates values in code (not via localStorage storage event), call checkDriverBadgeEligibility() at the end of that watcher.
+            // In your watchPendingConflicts() implementation you already set localStorage; that triggers the storage event in other windows, but not same window.
+            // Therefore, call it once more (somewhere inside watchPendingConflicts after the localStorage.setItem calls):
+            //    checkDriverBadgeEligibility();
+            //
+            // I left that line commented to avoid duplication here — but below I call it once after a brief timeout so everything has initialized.
+            setTimeout(() => checkDriverBadgeEligibility(), 400);
+        } catch (_) {}
+        })();
+
+
+        // -----------------------------
+        // Register Field button gating
+        // -----------------------------
+        function disableRegisterBtn(btn, message) {
+            try {
+                // Make button visibly disabled (gray background)
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.style.backgroundColor = '#9ca3af';
+                btn.style.pointerEvents = 'auto'; // allow hover for tooltip
+
+                // Accessibility and tooltip
+                btn.setAttribute('aria-disabled', 'true');
+                btn.setAttribute('title', message);
+                btn.setAttribute('data-disabled-reason', message);
+
+                // Prevent onclick/redirect
+                const guardName = '__register_btn_guard';
+                if (!btn[guardName]) {
+                    const onAttempt = (e) => {
+                        e.preventDefault();
+                        e.stopImmediatePropagation(); // stops inline onclick
+                        e.stopPropagation();
+                        btn.blur();
+
+                        // Prefix message with ⚠️ and show same gray toast style
+                        const toastMsg = `⚠️ ${message}`;
+                        if (typeof showToast === 'function') {
+                            // Same look as Driver Badge: gray bg, top position
+                            showToast(toastMsg, 'gray'); 
+                        } else {
+                            alert(toastMsg);
+                        }
+                    };
+                    // Capture phase ensures this runs before inline onclick
+                    btn.addEventListener('click', onAttempt, true);
+                    btn[guardName] = onAttempt;
+                }
+            } catch (err) {
+                console.warn('disableRegisterBtn error', err);
+            }
+        }
+
+
+        function enableRegisterBtn(btn) {
+            try {
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.style.pointerEvents = '';
+                btn.style.backgroundColor = '';
+                btn.removeAttribute('aria-disabled');
+                btn.removeAttribute('title');
+                btn.removeAttribute('data-disabled-reason');
+                const guardName = '__register_btn_guard';
+                if (btn[guardName]) {
+                    btn.removeEventListener('click', btn[guardName]);
+                    delete btn[guardName];
+                }
+            } catch (err) {
+                console.warn('enableRegisterBtn error', err);
+            }
+        }
+
+        // Main check function: run on load and when role/pending flags change.
+        // Rules:
+        // - driver/sra/worker => DISABLE (can't register field)
+        // - farmer + pendingWorker/join => DISABLE
+        // - farmer + pendingDriver badge => DISABLE
+        // - farmer (no pending) => ENABLE
+        // - handler => ENABLE
+        async function checkRegisterFieldButton() {
+            try {
+                const btn = document.getElementById('btnRegisterField');
+                if (!btn) return; // element not present
+
+                // read role and pending flags (your watchers set these in localStorage / watchers exist)
+                const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+                // the watchPendingConflicts() in your file writes these keys; they may be boolean string or boolean
+                const pendingWorker = localStorage.getItem('pendingWorker') === 'true' || localStorage.getItem('pendingWorker') === true;
+                const pendingDriver = localStorage.getItem('pendingDriver') === 'true' || localStorage.getItem('pendingDriver') === true;
+
+                // Normalize role to expected values
+                const normalizedRole = userRole || '';
+
+                // 1) Roles that must be blocked (drivers, sra, worker)
+                const blockedRoles = ['driver', 'sra', 'worker'];
+                if (blockedRoles.includes(normalizedRole)) {
+                    const message = `You cannot register a field with your current role: “${userRole}”. Only Handlers or Farmers are eligible.`;
+                    disableRegisterBtn(btn, message);
+                    return;
+                }
+
+                // 2) Handler -> allowed
+                if (normalizedRole === 'handler') {
+                    enableRegisterBtn(btn);
+                    return;
+                }
+
+                // 3) Farmer cases (default to farmer if not other roles)
+                // Farmer with pending join
+                if (normalizedRole === 'farmer' && pendingWorker) {
+                    const message = 'You have a pending field join request. Please wait for approval before registering a field.';
+                    disableRegisterBtn(btn, message);
+                    return;
+                }
+
+                // Farmer with pending driver badge (block if pendingDriver true)
+                if (normalizedRole === 'farmer' && pendingDriver) {
+                    const message = 'You have a pending Driver’s Badge application. Please wait for approval before registering a field.';
+                    disableRegisterBtn(btn, message);
+                    return;
+                }
+
+                // Default: allow (Farmer without pendings or any other allowed role)
+                enableRegisterBtn(btn);
+            } catch (err) {
+                console.error('checkRegisterFieldButton() failed:', err);
+            }
+        }
+
+        // Hook it into lifecycle: run on DOMContentLoaded and when pending flags/role change in localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            // run a bit after your other startup checks to allow watchers to populate localStorage
+            setTimeout(() => checkRegisterFieldButton(), 250);
+        });
+
+        // Watch for storage changes from your Firestore watchers (they write pendingDriver/pendingWorker/userRole)
+        window.addEventListener('storage', (ev) => {
+            if (ev.key === 'pendingWorker' || ev.key === 'pendingDriver' || ev.key === 'userRole') {
+                checkRegisterFieldButton();
+            }
+        });
+
+        // Also call it at the end of watchPendingConflicts() or where you set localStorage so same-window updates recheck.
+        // For example, where you currently call localStorage.setItem('pendingWorker', hasPendingWorker)
+        // and localStorage.setItem('pendingDriver', hasPendingDriver') — after those lines ensure you call checkRegisterFieldButton()
+        // If you cannot edit the watcher, this next call ensures re-check in same-window after a short timeout:
+        setTimeout(() => checkRegisterFieldButton(), 600);
+
+        // ------------------------------------------
+        // AUTO-REFRESH BUTTON STATES WHEN ROLE CHANGES
+        // ------------------------------------------
+        function autoRefreshAllButtons() {
+            const recheckAll = () => {
+                checkDriverBadgeEligibility();
+                checkRegisterFieldButton();
+                checkJoinFieldButton();
+            };
+
+            // Run on page load
+            document.addEventListener('DOMContentLoaded', () => setTimeout(recheckAll, 400));
+
+            // Run when localStorage changes (cross-tab or watcher)
+            window.addEventListener('storage', (ev) => {
+                if (['userRole', 'pendingWorker', 'pendingDriver'].includes(ev.key)) {
+                    recheckAll();
+                }
+            });
+
+            // Same-tab live watcher
+            setInterval(() => {
+                const currentRole = (localStorage.getItem('userRole') || '').toLowerCase();
+                if (autoRefreshAllButtons._lastRole !== currentRole) {
+                    autoRefreshAllButtons._lastRole = currentRole;
+                    recheckAll();
+                }
+            }, 1000);
+        }
+        autoRefreshAllButtons();
+
 
       // --- Open Modal ---
       openNotifModal.addEventListener("click", () => {

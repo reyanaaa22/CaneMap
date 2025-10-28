@@ -488,7 +488,6 @@ async function updateStatus(appOrId, status) {
 
     // If we changed to 'reviewed', do the same side effects you already had:
     if (status === 'reviewed') {
-      // Attempt to read the document to extract fields for adding to top-level 'fields' collection
       let appData = null;
       try {
         const snap = await getDoc(docRefToUpdate);
@@ -496,31 +495,48 @@ async function updateStatus(appOrId, status) {
       } catch (e) { appData = null; }
 
       if (appData) {
+        const applicantUid =
+          appData.requestedBy || appData.userId || appData.requester || appData.applicantName;
+
+        // 🟢 Add to top-level "fields" collection
         try {
           await addDoc(collection(db, 'fields'), {
-            userId: appData.requestedBy || appData.userId || appData.requester,
+            userId: applicantUid,
             barangay: appData.barangay || appData.location,
             size: appData.field_size || appData.size || appData.fieldSize,
             terrain: appData.terrain_type || appData.terrain,
             lat: appData.latitude || appData.lat,
             lng: appData.longitude || appData.lng,
             registeredAt: serverTimestamp(),
-            applicantName: appData.applicantName || appData.requester || appData.requestedBy
+            applicantName: appData.applicantName || 'Unknown'
           });
         } catch (e) {
-          console.warn('Adding to top-level fields collection failed (best-effort):', e);
+          console.warn('Adding to top-level fields collection failed:', e);
         }
 
-        // notify applicant
+        // 🟢 Update applicant’s role → "handler"
+        try {
+          if (applicantUid) {
+            const userRef = doc(db, 'users', applicantUid);
+            await updateDoc(userRef, { role: 'handler' });
+            console.log(`✅ User ${applicantUid} role updated to handler`);
+          }
+        } catch (err) {
+          console.warn('Failed to update user role:', err);
+        }
+
+        // 🟢 Notify applicant
         try {
           await addDoc(collection(db, 'notifications'), {
-            userId: appData.requestedBy || appData.userId || appData.requester || appData.applicantName,
+            userId: applicantUid,
             type: 'approved',
             title: 'Field Approved!',
-            message: 'Your field has been reviewed and is now registered on CaneMap.',
+            message: 'Your field has been reviewed and you are now registered as a Handler.',
             createdAt: serverTimestamp()
           });
-        } catch (_) { /* best-effort */ }
+        } catch (e) {
+          console.warn('Notification creation failed:', e);
+        }
       }
     }
 
