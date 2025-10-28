@@ -69,9 +69,10 @@
             <div class="text-[var(--cane-800)] mb-1">Location:</div>
             <div class="inner-box rounded px-3 py-1.5">Block 7, Section A</div>
           </div>
-          <div>
-            <div class="text-[var(--cane-800)] mb-1">Date Planted:</div>
-            <div class="inner-box rounded px-3 py-1.5" id="uiPlanted">—</div>
+          <div class="text-[var(--cane-800)] mb-1">Date Planted:</div>
+          <div class="inner-box rounded px-3 py-1.5 flex items-center gap-2">
+            <input type="date" id="gtPlanted" class="border border-[var(--cane-200)] rounded px-2 py-1 text-sm">
+            <span id="uiPlanted">—</span>
           </div>
           <div>
             <div class="text-[var(--cane-800)] mb-1">Current Growth Stage:</div>
@@ -172,12 +173,11 @@
       e.target.reset();
     });
 
-    // -------- Growth Tracker Logic --------
-    const plantedInput = document.getElementById('gtPlanted');
-    const daysEl = document.getElementById('gtDays');
-    const stageEl = document.getElementById('gtStage');
-    const harvestEl = document.getElementById('gtHarvest');
-    const timelineEl = document.getElementById('timeline');
+    const plantedInput = document.getElementById('gtPlanted'); // added above
+    const daysEl = document.getElementById('uiDays');
+    const stageEl = document.getElementById('uiStage');
+    const harvestEl = document.getElementById('uiHarvest');
+    const timelineEl = document.createElement('div'); // fallback container for timeline
 
     const stages = [
       {key:'planting', title:'Planting', desc:'Field preparation, planting setts/cuttings.', start:0, end:0},
