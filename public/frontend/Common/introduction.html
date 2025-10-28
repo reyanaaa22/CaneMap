@@ -51,7 +51,7 @@
                 rgba(255, 255, 255, 0.06) 50%, 
                 rgba(255, 255, 255, 0.10) 100%
             );
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(6px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .onboarding-content {
@@ -68,6 +68,99 @@
             padding: 28px 28px 32px;
             position: relative;
             overflow: hidden;
+        }
+        .onboarding-content.standard-body {
+            max-width: 720px;
+        }
+        .floating-shapes {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .floating-shapes span {
+            position: absolute;
+            display: block;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle at 30% 30%, rgba(124, 207, 0, 0.55), rgba(73, 125, 0, 0.22) 65%, rgba(25, 46, 3, 0.0) 100%);
+            border-radius: 9999px;
+            mix-blend-mode: multiply;
+            opacity: 0.6;
+            animation: floating 14s ease-in-out infinite;
+        }
+        .floating-shapes .shape-1 {
+            top: -6%;
+            left: -6%;
+            animation-duration: 16s;
+        }
+        .floating-shapes .shape-2 {
+            top: 6%;
+            right: -12%;
+            width: 160px;
+            height: 160px;
+            animation-duration: 18s;
+            animation-delay: -3s;
+        }
+        .floating-shapes .shape-3 {
+            bottom: -14%;
+            left: 14%;
+            width: 140px;
+            height: 140px;
+            animation-duration: 20s;
+            animation-delay: -6s;
+        }
+        .floating-shapes .shape-4 {
+            bottom: 18%;
+            right: 6%;
+            width: 100px;
+            height: 100px;
+            animation-duration: 17s;
+            animation-delay: -9s;
+        }
+        .floating-shapes .shape-5 {
+            top: 38%;
+            left: -14%;
+            width: 130px;
+            height: 130px;
+            border-radius: 34% 66% 54% 46% / 42% 39% 61% 58%;
+            background: radial-gradient(circle at 70% 30%, rgba(94, 165, 0, 0.6), rgba(53, 83, 14, 0.28) 60%, rgba(25, 46, 3, 0.0) 100%);
+            animation-duration: 19s;
+            animation-delay: -4s;
+        }
+        .floating-shapes .shape-6 {
+            top: 10%;
+            left: 56%;
+            width: 95px;
+            height: 95px;
+            border-radius: 28% 72% 64% 36% / 39% 52% 48% 61%;
+            background: linear-gradient(135deg, rgba(94, 165, 0, 0.65), rgba(25, 46, 3, 0.18));
+            animation-duration: 15s;
+            animation-delay: -11s;
+        }
+        .floating-shapes .shape-7 {
+            bottom: -18%;
+            right: -12%;
+            width: 180px;
+            height: 180px;
+            clip-path: polygon(50% 0%, 90% 20%, 100% 60%, 68% 100%, 28% 100%, 0% 60%, 10% 20%);
+            background: radial-gradient(circle at 40% 40%, rgba(73, 125, 0, 0.6), rgba(25, 46, 3, 0.22) 70%, rgba(25, 46, 3, 0));
+            animation-duration: 21s;
+            animation-delay: -7s;
+        }
+        @keyframes floating {
+            0%, 100% {
+                transform: translate3d(0, 0, 0) scale(1);
+                opacity: 0.6;
+            }
+            40% {
+                transform: translate3d(15px, -12px, 0) scale(1.08);
+                opacity: 0.75;
+            }
+            70% {
+                transform: translate3d(-12px, 10px, 0) scale(0.96);
+                opacity: 0.5;
+            }
         }
         .onboarding-content.map-bg::before {
             content: "";
@@ -154,13 +247,14 @@
         }
         .float-in { animation: floatIn 560ms ease forwards; }
         .skip-btn {
-            color: rgba(107, 114, 128, 0.8);
+            color: rgba(17, 24, 39, 0.92);
             transition: all 0.3s ease;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: 600;
         }
         .skip-btn:hover {
-            color: rgba(55, 65, 81, 1);
+            color: rgba(17, 24, 39, 1);
             transform: translateY(-1px);
         }
         .feature-icon {
@@ -174,8 +268,11 @@
             background-clip: text;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
             font-weight: 800;
-            font-size: clamp(22px, 3vw, 34px);
+            font-size: clamp(20px, 2.4vw, 30px);
             line-height: 1.2;
+        }
+        .title-text.welcome-title {
+            font-size: clamp(24px, 3.2vw, 36px);
         }
         .description-text {
             color: rgba(53, 83, 14, 0.85);
@@ -192,10 +289,6 @@
             
             <!-- Screen 1: Welcome -->
             <div id="screen-1" class="onboarding-screen active max-w-2xl w-full onboarding-content map-bg p-8 lg:p-12 text-center relative">
-                <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
-                    Skip
-                </button>
-                
                 <div class="mb-6">
                     <!-- Placeholder Image -->
                     <div class="w-32 h-32 mx-auto mb-5 flex items-center justify-center float-in" style="animation-delay: 50ms;">
@@ -204,7 +297,7 @@
                     
                     <div class="flex items-center justify-center mb-3">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 120ms;"></span>
-                        <h1 class="title-text">
+                        <h1 class="title-text welcome-title">
                             Welcome to CaneMap
                         </h1>
                     </div>
@@ -229,7 +322,13 @@
             </div>
 
             <!-- Screen 2: Smart Field Monitoring -->
-            <div id="screen-2" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-2" class="onboarding-screen hidden max-w-2xl w-full onboarding-content standard-body p-8 lg:p-12 text-center relative">
+                <div class="floating-shapes">
+                    <span class="shape-2"></span>
+                    <span class="shape-4"></span>
+                    <span class="shape-5"></span>
+                    <span class="shape-7"></span>
+                </div>
                 <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
                     Skip
                 </button>
@@ -241,9 +340,9 @@
                             Track and Manage Sugarcane Fields
                         </h1>
                     </div>
-                    <img src="../img/Track.png" alt="Track and manage sugarcane fields" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <img src="../img/Track.png" alt="Track and manage sugarcane fields" class="mx-auto mb-5 max-h-56 object-contain float-in" style="animation-delay: 120ms;">
                     <p class="description-text max-w-2xl mx-auto">
-                        Farmers can log daily activities with time-in/out photos, while landowners and MAOs view summaries in real time.
+                        Farmers can log daily activities with time-in/out photos, while landowners and SRAs view summaries in real time.
                     </p>
                 </div>
                 
@@ -262,7 +361,13 @@
             </div>
 
             <!-- Screen 3: Digital Reporting Made Easy -->
-            <div id="screen-3" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-3" class="onboarding-screen hidden max-w-2xl w-full onboarding-content standard-body p-8 lg:p-12 text-center relative">
+                <div class="floating-shapes">
+                    <span class="shape-1"></span>
+                    <span class="shape-3"></span>
+                    <span class="shape-5"></span>
+                    <span class="shape-6"></span>
+                </div>
                 <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
                     Skip
                 </button>
@@ -274,9 +379,9 @@
                             Submit Reports Without the Paperwork
                         </h1>
                     </div>
-                    <img src="../img/Reports.png" alt="Submit reports without the paperwork" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <img src="../img/Reports.png" alt="Submit reports without the paperwork" class="mx-auto mb-5 max-h-56 object-contain float-in" style="animation-delay: 120ms;">
                     <p class="description-text max-w-2xl mx-auto">
-                        No more scattered messages. CaneMap organizes field updates, photo logs, and validation reports — all in one place.
+                        No more scattered messages. CaneMap organizes field updates, photo logs, and validation reports all in one place.
                     </p>
                 </div>
                 
@@ -295,7 +400,13 @@
             </div>
 
             <!-- Screen 4: Role-Based Access -->
-            <div id="screen-4" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-4" class="onboarding-screen hidden max-w-2xl w-full onboarding-content standard-body p-8 lg:p-12 text-center relative">
+                <div class="floating-shapes">
+                    <span class="shape-1"></span>
+                    <span class="shape-4"></span>
+                    <span class="shape-6"></span>
+                    <span class="shape-7"></span>
+                </div>
                 <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
                     Skip
                 </button>
@@ -307,9 +418,9 @@
                             Custom Dashboards per Role
                         </h1>
                     </div>
-                    <img src="../img/Dashboard.png" alt="Custom dashboards per role" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <img src="../img/Dashboard.png" alt="Custom dashboards per role" class="mx-auto mb-5 max-h-56 object-contain float-in" style="animation-delay: 120ms;">
                     <p class="description-text max-w-2xl mx-auto">
-                        Landowners, Farmers, MAO/RGA officers, and Admins each get personalized access to features relevant to their work.
+                        Landowners, Farmers, SRA officers, and Admins each get personalized access to features relevant to their work.
                     </p>
                 </div>
                 
@@ -328,7 +439,13 @@
             </div>
 
             <!-- Screen 5: Harvest Prediction -->
-            <div id="screen-5" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-5" class="onboarding-screen hidden max-w-2xl w-full onboarding-content standard-body p-8 lg:p-12 text-center relative">
+                <div class="floating-shapes">
+                    <span class="shape-2"></span>
+                    <span class="shape-3"></span>
+                    <span class="shape-5"></span>
+                    <span class="shape-7"></span>
+                </div>
                 <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
                     Skip
                 </button>
@@ -337,10 +454,10 @@
                     <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
                         <h1 class="title-text">
-                            Predict Harvest with Confidence
+                            Estimate Harvest with Confidence
                         </h1>
                     </div>
-                    <img src="../img/Estimate.png" alt="Predict harvest with confidence" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <img src="../img/Estimate.png" alt="Predict harvest with confidence" class="mx-auto mb-5 max-h-56 object-contain float-in" style="animation-delay: 120ms;">
                     <p class="description-text max-w-2xl mx-auto">
                         Know your estimated harvest date based on variety and planting date. Plan ahead for labor, logistics, and reporting.
                     </p>
@@ -361,7 +478,13 @@
             </div>
 
             <!-- Screen 6: Interactive Map Views -->
-            <div id="screen-6" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-6" class="onboarding-screen hidden max-w-2xl w-full onboarding-content standard-body p-8 lg:p-12 text-center relative">
+                <div class="floating-shapes">
+                    <span class="shape-1"></span>
+                    <span class="shape-2"></span>
+                    <span class="shape-4"></span>
+                    <span class="shape-5"></span>
+                </div>
                 <button onclick="skipOnboarding()" class="absolute top-6 right-6 skip-btn text-sm font-medium">
                     Skip
                 </button>
@@ -373,9 +496,9 @@
                             Visual Mapping by Barangay and Field
                         </h1>
                     </div>
-                    <img src="../img/mapping.png" alt="Visual mapping by barangay and field" class="mx-auto mb-5 max-h-44 object-contain float-in" style="animation-delay: 120ms;">
+                    <img src="../img/mapping.png" alt="Visual mapping by barangay and field" class="mx-auto mb-5 max-h-60 object-contain float-in" style="animation-delay: 120ms;">
                     <p class="description-text max-w-2xl mx-auto">
-                        See where sugarcane is growing, track progress per barangay, and monitor active fields at a glance — all in map view.
+                        See where sugarcane is growing, track progress per barangay, and monitor active fields at a glance all in map view.
                     </p>
                 </div>
                 
@@ -394,7 +517,13 @@
             </div>
 
             <!-- Screen 7: Ready to Start -->
-            <div id="screen-7" class="onboarding-screen hidden max-w-2xl w-full onboarding-content p-8 lg:p-12 text-center relative">
+            <div id="screen-7" class="onboarding-screen hidden max-w-2xl w-full onboarding-content standard-body p-8 lg:p-12 text-center relative">
+                <div class="floating-shapes">
+                    <span class="shape-1"></span>
+                    <span class="shape-2"></span>
+                    <span class="shape-3"></span>
+                    <span class="shape-5"></span>
+                </div>
                 <div class="mb-6">
                     <div class="flex items-center justify-center mb-4">
                         <span class="feature-icon mr-3 float-in" style="animation-delay: 80ms;"></span>
