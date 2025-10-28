@@ -4,6 +4,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Login</title>
 <style>
+:root {
+  --cane-50: #f7fee7;
+  --cane-100: #eafdd0;
+  --cane-200: #c9f28b;
+  --cane-300: #a2e059;
+  --cane-500: #5fab00;
+  --cane-600: #4a8a00;
+  --cane-700: #2f5400;
+  --cane-900: #132409;
+}
 html, body {
   margin: 0;
   padding: 0;
@@ -18,8 +28,11 @@ body {
   align-items: center;
   min-height: 100vh;
   position: relative;
-  padding: 0 10px;
+  padding: 0 16px;
   box-sizing: border-box;
+  background: radial-gradient(circle at top left, rgba(203, 240, 162, 0.65), transparent 60%),
+              radial-gradient(circle at bottom right, rgba(177, 236, 118, 0.5), transparent 55%),
+              linear-gradient(180deg, rgba(231, 248, 203, 0.9) 0%, rgba(203, 240, 162, 0.9) 100%);
 }
 
 body::before {
@@ -30,38 +43,43 @@ body::before {
   width: 100%;
   height: 100%;
   background: 
-    linear-gradient(
-      135deg, 
-      rgba(255, 255, 255, 0.2) 0%, 
-      rgba(255, 255, 255, 0.05) 50%, 
-      rgba(255, 255, 255, 0.2) 100%
-    ),
+    linear-gradient(135deg, rgba(194, 237, 138, 0.72), rgba(152, 214, 78, 0.28)),
     url('../img/sugarcane.webp') center/cover no-repeat;
-  filter: blur(10px);
-  transform: scale(1.05);
+  filter: blur(3px);
+  transform: scale(1.01);
   z-index: -1;
 }
 
 .container {
-  background: #fff;
+  background: #ffffff;
   width: 100%;
-  max-width: 420px;
-  padding: 28px 24px;
+  max-width: 520px;
+  padding: 32px 28px;
   border-radius: 22px;
-  box-shadow: 0 12px 48px 0 rgba(34,197,94,0.22), 0 4px 32px 0 rgba(0,0,0,0.13);
+  box-shadow: 0 14px 32px -8px rgba(27, 64, 9, 0.22), 0 8px 20px -10px rgba(27, 64, 9, 0.18);
+  border: 1px solid rgba(188, 244, 129, 0.3);
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: center;
+  align-items: stretch;
   transition: box-shadow 0.3s cubic-bezier(.4,2,.6,1), transform 0.3s cubic-bezier(.4,2,.6,1);
   animation: popIn 0.6s cubic-bezier(.4,2,.6,1);
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
 }
 
-.container:hover, .container:focus-within {
-  box-shadow: 0 18px 64px 0 rgba(34,197,94,0.32), 0 8px 40px 0 rgba(0,0,0,0.16);
-  transform: translateY(-4px) scale(1.018);
+.container::before {
+  content: "";
+  position: absolute;
+  inset: -60px;
+  background: radial-gradient(circle at 20% 20%, rgba(188, 244, 129, 0.35), transparent 55%),
+              radial-gradient(circle at 80% 30%, rgba(188, 244, 129, 0.2), transparent 60%),
+              radial-gradient(circle at 60% 85%, rgba(188, 244, 129, 0.28), transparent 55%);
+  z-index: -1;
+  opacity: 0.85;
+  transform: rotate(2deg);
 }
 
 @keyframes popIn {
@@ -75,10 +93,58 @@ body::before {
   }
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 h2 {
-  text-align: center;
-  margin-bottom: 25px;
-  font-size: 28px;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 20px;
+  font-size: 32px;
+  background: linear-gradient(135deg, var(--cane-700), var(--cane-900));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 4px 10px rgba(27, 64, 9, 0.12);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin-top: -6px;
+  margin-bottom: 24px;
+  text-align: left;
+  width: 100%;
+  font-size: 14px;
+  color: rgba(26, 46, 9, 0.7);
+  font-weight: 500;
+}
+
+.form-field {
+  position: relative;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.form-field label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ffffff;
+  padding: 0 6px;
+  font-size: 14px;
+  color: rgba(26, 46, 9, 0.58);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.form-field input {
+  width: 100%;
+  padding: 16px 16px 14px;
+  margin: 0;
 }
 
 input {
@@ -87,30 +153,42 @@ input {
   margin: 10px 0;
   font-size: 16px;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid rgba(152, 214, 78, 0.35);
   box-sizing: border-box;
+  background-color: #ffffff;
 }
 
 input[type="text"],
 input[type="email"],
 input[type="password"] {
   border-radius: 7px;
-  border: 1.8px solid #ccc;
+  border: 1.8px solid rgba(152, 214, 78, 0.45);
   font-size: 0.9rem;
   transition: border-color 0.3s ease;
   outline-offset: 2px;
+  background: #ffffff;
+  font-family: inherit;
 }
 
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus {
-  border-color: green;
-  box-shadow: 0 0 6px rgba(59,246,115,0.4);
+  border-color: var(--cane-500);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(188, 244, 129, 0.25);
+  background: #ffffff;
+}
+
+.form-field input:focus + label,
+.form-field input:not(:placeholder-shown) + label {
+  top: -6px;
+  font-size: 12px;
+  color: var(--cane-600);
 }
 
 button {
   width: 100%;
-  background: green;
+  background: linear-gradient(135deg, var(--cane-600), var(--cane-700));
   border: none;
   color: white;
   padding: 11px 0;
@@ -119,12 +197,44 @@ button {
   border-radius: 10px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  box-shadow: 0 4px 12px rgba(59, 246, 115, 0.4);
+  box-shadow: 0 6px 18px rgba(30, 68, 9, 0.28);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 button:hover {
-  background:  #28a745;
-  box-shadow: 0 6px 18px rgba(59,246,155,0.4);
+  background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
+  box-shadow: 0 10px 24px rgba(30, 68, 9, 0.32);
+}
+
+button.loading {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.btn-text {
+  transition: opacity 0.2s ease;
+}
+
+button.loading .btn-text {
+  opacity: 0.85;
+}
+
+.button-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  animation: spin 0.8s linear infinite;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+button.loading .button-spinner {
+  opacity: 1;
 }
 
 .alert {
@@ -134,6 +244,33 @@ button:hover {
   text-align: center;
   font-size: 14px;
   display: none;
+}
+
+.alert-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 30, 6, 0.35);
+  backdrop-filter: blur(4px);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.alert-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.alert-overlay .alert {
+  min-width: 280px;
+  max-width: 360px;
+  margin: 0;
+  font-size: 15px;
+  box-shadow: 0 18px 45px rgba(18, 42, 10, 0.25);
 }
 
 .error {
@@ -155,11 +292,11 @@ button:hover {
   text-align: center;
   margin-top: 15px;
   font-size: 14px;
-  color: #555;
+  color: rgba(26, 46, 9, 0.72);
 }
 
 .signup-text a {
-  color: green;
+  color: var(--cane-600);
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -170,13 +307,16 @@ button:hover {
 }
 
 .forgot-pass {
-  text-align: right;
-  margin: 5px 0 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0 12px;
   font-size: 13px;
+  color: rgba(26, 46, 9, 0.7);
 }
 
 .forgot-pass a {
-  color: #155724;
+  color: var(--cane-600);
   text-decoration: none;
 }
 
@@ -184,14 +324,27 @@ button:hover {
   text-decoration: underline;
 }
 
+.remember-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(26, 46, 9, 0.75);
+}
+
+.remember-wrapper input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cane-600);
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px) {
   .container {
-    padding: 20px 16px;
+    padding: 24px 22px;
     border-radius: 16px;
   }
   h2 {
-    font-size: 22px;
+    font-size: 24px;
   }
   input {
     font-size: 15px;
@@ -205,10 +358,10 @@ button:hover {
 
 @media (max-width: 400px) {
   .container {
-    padding: 16px 12px;
+    padding: 18px 16px;
   }
   h2 {
-    font-size: 20px;
+    font-size: 22px;
   }
   input {
     font-size: 14px;
@@ -224,22 +377,35 @@ button:hover {
 <body>
 
 <div class="container">
-  <h2>Login</h2>
+  <h2>Sign in</h2>
+  <p class="subtitle">Enter your credentials to access your account.</p>
   <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
+    <div class="form-field">
+      <input type="email" id="email" placeholder=" " required>
+      <label for="email">Email</label>
+    </div>
+    <div class="form-field">
+      <input type="password" id="password" placeholder=" " required>
+      <label for="password">Password</label>
+    </div>
     <p class="forgot-pass">
+      <span class="remember-wrapper">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">Remember me</label>
+      </span>
       <a href="farmers_forgotpass.html">Forgot password?</a>
     </p>
-    <button type="submit">Login</button>
+    <button type="submit"><span class="btn-text">Sign in</span><span class="button-spinner" aria-hidden="true"></span></button>
   </form>
-
-  <div id="alertBox" class="alert"></div>
 
   <p class="signup-text">
     Don't have an account yet? 
-    <a href="signup.html">Sign up here</a>
+    <a href="signup.html">Sign up</a>
   </p>
+</div>
+
+<div id="alertOverlay" class="alert-overlay" aria-hidden="true">
+  <div id="alertBox" class="alert" role="alert" aria-live="assertive"></div>
 </div>
 
     <script type="module" src="../../backend/Common/firebase-config.js?v=2"></script>

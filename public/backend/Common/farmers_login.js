@@ -13,49 +13,110 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { auth, db } from "./firebase-config.js"; 
 
 let alertBox = document.getElementById("alertBox");
+let alertOverlay = document.getElementById("alertOverlay");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const loginButton = document.querySelector("button[type='submit']");
+const DEFAULT_BUTTON_TEXT = "Sign in";
+let alertHideTimeout;
+const buttonLabelEl = loginButton ? loginButton.querySelector('.btn-text') : null;
+
+function setButtonLabel(label) {
+  if (!loginButton) return;
+  if (buttonLabelEl) {
+    buttonLabelEl.textContent = label;
+  } else {
+    loginButton.textContent = label;
+  }
+}
+
+function setButtonState({ loading = false, label = DEFAULT_BUTTON_TEXT, disabled }) {
+  if (!loginButton) return;
+  loginButton.classList.toggle('loading', loading);
+  if (disabled !== undefined) {
+    loginButton.disabled = disabled;
+  } else {
+    loginButton.disabled = loading;
+  }
+  setButtonLabel(label);
+}
 
 const MAX_ATTEMPTS = 5;
 const LOCK_TIME = 30 * 1000; // 30 seconds
 
-function showAlert(message, type) {
+function ensureAlertElements() {
+  if (!alertOverlay) {
+    alertOverlay = document.getElementById("alertOverlay");
+    if (!alertOverlay) {
+      alertOverlay = document.createElement("div");
+      alertOverlay.id = "alertOverlay";
+      alertOverlay.className = "alert-overlay";
+      document.body.appendChild(alertOverlay);
+    }
+  }
   if (!alertBox) {
     alertBox = document.getElementById("alertBox");
     if (!alertBox) {
-      const container = document.querySelector('.container') || document.body;
-      const div = document.createElement('div');
-      div.id = 'alertBox';
-      div.className = 'alert';
-      container.appendChild(div);
-      alertBox = div;
+      alertBox = document.createElement("div");
+      alertBox.id = "alertBox";
+      alertBox.className = "alert";
+      alertOverlay.appendChild(alertBox);
     }
   }
+}
+
+function hideAlert() {
+  if (alertHideTimeout) {
+    clearTimeout(alertHideTimeout);
+    alertHideTimeout = undefined;
+  }
+  if (alertBox) {
+    alertBox.style.display = "none";
+    alertBox.className = "alert";
+    alertBox.innerHTML = "";
+  }
+  if (alertOverlay) {
+    alertOverlay.classList.remove("active");
+    alertOverlay.setAttribute("aria-hidden", "true");
+  }
+}
+
+function showAlert(message, type, options = {}) {
+  const { autoHide = false, hideAfter = 2000 } = options;
+  ensureAlertElements();
   alertBox.innerHTML = message;
   alertBox.className = `alert ${type}`;
   alertBox.style.display = "block";
+  alertOverlay.classList.add("active");
+  alertOverlay.setAttribute("aria-hidden", "false");
+
+  if (alertHideTimeout) {
+    clearTimeout(alertHideTimeout);
+  }
+  if (autoHide) {
+    alertHideTimeout = setTimeout(() => {
+      hideAlert();
+    }, hideAfter);
+  }
 }
 
 function disableForm(seconds) {
   emailInput.disabled = true;
   passwordInput.disabled = true;
-  loginButton.disabled = true;
+  setButtonState({ loading: false, label: `Try again in ${seconds}s`, disabled: true });
 
   let remaining = seconds;
-  loginButton.textContent = `Try again in ${remaining}s`;
 
   const countdown = setInterval(() => {
     remaining--;
-    loginButton.textContent = `Try again in ${remaining}s`;
+    setButtonState({ loading: false, label: `Try again in ${remaining}s`, disabled: true });
 
     if (remaining <= 0) {
       clearInterval(countdown);
       emailInput.disabled = false;
       passwordInput.disabled = false;
-      loginButton.disabled = false;
-      loginButton.textContent = "Login";
-      alertBox.style.display = "none";
+      setButtonState({ loading: false, label: DEFAULT_BUTTON_TEXT, disabled: false });
+      hideAlert();
     }
   }, 1000);
 }
@@ -94,6 +155,8 @@ async function login() {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
 
+  setButtonState({ loading: true, label: "Signing in..." });
+
   try {
     await setPersistence(auth, browserLocalPersistence);
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -123,6 +186,7 @@ async function login() {
       }
       passwordInput.value = "";
       recordFailedAttempt();
+      setButtonState({ loading: false, label: DEFAULT_BUTTON_TEXT, disabled: false });
       return;
     }
 
@@ -201,6 +265,7 @@ async function login() {
     localStorage.setItem("farmerContact", farmerContact);
 
     resetAttempts();
+    setButtonState({ loading: true, label: "Signing in...", disabled: true });
     showAlert("Login successful!", "success");
 
     setTimeout(() => {
@@ -212,9 +277,10 @@ async function login() {
     }, 1500);
 
     } catch (error) {
-      const code = (error && error.code) || "";
+    setButtonState({ loading: false, label: DEFAULT_BUTTON_TEXT, disabled: false });
+    const code = (error && error.code) || "";
 
-      // ✅ Record failed login attempt if email exists
+    // ✅ Record failed login attempt if email exists
       if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
         try {
           const emailKey = email.toLowerCase();
@@ -271,9 +337,16 @@ document.getElementById("loginForm").addEventListener("submit", (e) => {
 
 document.querySelectorAll("#email, #password").forEach(input => {
   input.addEventListener("focus", () => {
-    const box = document.getElementById('alertBox');
-    if (box) box.style.display = "none";
+    hideAlert();
   });
 });
+
+if (alertOverlay) {
+  alertOverlay.addEventListener('click', (event) => {
+    if (event.target === alertOverlay) {
+      hideAlert();
+    }
+  });
+}
 
 isLocked();
