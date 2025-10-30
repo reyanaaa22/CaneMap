@@ -6,6 +6,8 @@
     <title>CaneMap - Field Handlers Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+
     <style>
         :root {
             /* Two-tone Green Palette */
@@ -40,6 +42,123 @@
         #hamburger.active .bar3 { transform: translateY(-6px) rotate(-45deg); }
         /* Submenu arrow animation */
         [id$="-arrow"] { transition: transform 0.3s ease; }
+        #handlerFieldsMap { min-height: 26rem; width: 100%; }
+        .btn-register-field {
+            background: linear-gradient(to right, #497d00, #5ea500);
+            color: #fff;
+            transition: transform 0.2s ease, filter 0.2s ease;
+            box-shadow: 0 4px 12px rgba(73, 125, 0, 0.2);
+        }
+
+        .btn-register-field:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.95);
+        }
+
+        #tasks .task-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f0ffe1 100%);
+            border: 1px solid #d4f2a8;
+            box-shadow: 0 18px 36px rgba(76, 140, 0, 0.12);
+            border-radius: 24px;
+        }
+
+        #tasks .task-form label {
+            color: #497d00;
+            font-weight: 600;
+        }
+
+        #tasks .task-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        #tasks .task-form input[type="text"],
+        #tasks .task-form input[type="date"],
+        #tasks .task-form input[type="time"],
+        #tasks .task-form input[type="number"],
+        #tasks .task-form select {
+            background-color: #ffffff;
+            color: #2d5f09;
+            border: 2px solid #b9ed73;
+            border-radius: 14px;
+            padding: 0.85rem 1.1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            min-height: 3.25rem;
+        }
+
+        #tasks .task-form input::placeholder,
+        #tasks .task-form textarea::placeholder {
+            color: #7ca959;
+        }
+
+        #tasks .task-form select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%2367a71f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1.1rem center;
+            background-size: 12px 8px;
+            padding-right: 2.75rem;
+        }
+
+        #tasks .task-form input:focus,
+        #tasks .task-form select:focus,
+        #tasks .task-form textarea:focus {
+            outline: none;
+            border-color: #85d841;
+            box-shadow: 0 0 0 4px rgba(133, 216, 65, 0.25);
+        }
+
+        #tasks .task-form .relative i {
+            color: #6db824;
+            pointer-events: none;
+        }
+
+        #tasks .task-form textarea {
+            background-color: #ffffff;
+            color: #2d5f09;
+            border: 2px solid #b9ed73;
+            border-radius: 14px;
+            padding: 0.85rem 1.1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            min-height: 8.5rem;
+            resize: vertical;
+        }
+
+        #tasks .task-form textarea:focus {
+            outline: none;
+            border-color: #85d841;
+            box-shadow: 0 0 0 4px rgba(133, 216, 65, 0.25);
+        }
+
+        .btn-task-cancel {
+            background: #e2e7f2;
+            color: #3b4a65;
+            border-radius: 18px;
+            padding: 0.65rem 1.95rem;
+            font-weight: 600;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .btn-task-cancel:hover {
+            background: #d2d9e6;
+            transform: translateY(-1px);
+        }
+
+        .btn-task-submit {
+            background: linear-gradient(135deg, #4a8b00 0%, #79bd0c 100%);
+            color: #ffffff;
+            border-radius: 18px;
+            padding: 0.65rem 1.95rem;
+            font-weight: 700;
+            box-shadow: 0 18px 30px rgba(76, 140, 0, 0.25);
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .btn-task-submit:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.95);
+        }
     </style>
  </head>
 <body class="min-h-screen bg-gray-100">
@@ -147,15 +266,10 @@
 
                     <!-- Workers -->
                     <div class="mb-4">
-                        <div class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors cursor-pointer" onclick="toggleSubmenu('workers')">
-                        <i class="fas fa-users w-5 h-5"></i>
-                        <span>Workers</span>
-                            <i class="fas fa-chevron-down ml-auto text-xs transition-transform" id="workers-arrow"></i>
-                        </div>
-                        <div id="workers-submenu" class="ml-6 mt-2 space-y-1 hidden">
-                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="workers">Worker List</a>
-                            <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="approvals">Approvals / Requests</a>
-                        </div>
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="workers">
+                            <i class="fas fa-users w-5 h-5"></i>
+                            <span>Workers</span>
+                        </a>
                     </div>
 
                     <!-- Tasks -->
@@ -237,85 +351,7 @@
             </div>
         </div>
 
-        <!-- Task Panel Section (replaces dashboard when selected) -->
-        <div id="task-panel" class="content-section hidden">
-            <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Task Assignment Form</h2>
-            <div class="section-card rounded-xl p-6">
-                <form id="taskForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Task Title:</label>
-                            <input type="text" placeholder="Enter task title" class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]"/>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Select Field:</label>
-                            <select class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]">
-                                <option>Lot A1 - Naungan</option>
-                                <option>Lot B2 - Ipil</option>
-                                <option>Lot C3 - Linao</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned Date:</label>
-                            <div class="relative">
-                                <input type="date" class="w-full px-3 py-2 pr-10 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]"/>
-                                <i class="fas fa-calendar-alt absolute right-3 top-2.5 text-gray-500"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned Time:</label>
-                            <input type="time" class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]"/>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned to:</label>
-                        <div class="flex items-center space-x-2 mb-2 text-[var(--cane-800)]">
-                            <input type="checkbox" class="w-4 h-4 border-gray-300 rounded">
-                            <span class="text-sm">Show only workers with Driver Badge</span>
-                        </div>
-                        <select class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]">
-                            <option>Select worker…</option>
-                            <option>Maria Sanchez</option>
-                            <option>Peter Romero (Driver)</option>
-                            <option>Anna Reyes</option>
-                            <option>Carl Ramos (Driver)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Task Description:</label>
-                        <textarea rows="6" class="w-full px-3 py-2 border-2 border-[var(--cane-200)] rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)]" placeholder="Add details, instructions, tools, etc."></textarea>
-                    </div>
-
-                    <div class="flex items-center justify-end space-x-3">
-                        <button type="button" class="px-5 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Cancel</button>
-                        <button type="submit" class="px-5 py-2 rounded-lg text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)] shadow">Assign Task</button>
-                    </div>
-                </form>
-            </div>
-            <div class="mt-6 section-card rounded-xl p-6">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-[var(--cane-900)]">My Tasks</h3>
-                <button id="btnRefreshTasks" class="px-3 py-1.5 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm"><i class="fas fa-rotate mr-2"></i>Refresh</button>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                  <thead>
-                    <tr class="text-left text-[var(--cane-800)]">
-                      <th class="py-2 pr-2">Title</th>
-                      <th class="py-2 pr-2">Field</th>
-                      <th class="py-2 pr-2">Assigned</th>
-                      <th class="py-2 pr-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tasksTbody"></tbody>
-                </table>
-              </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div id="dashboard-panels" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       <!-- Join Request panel -->
                       <div class="section-card rounded-xl p-6">
                           <div class="mb-4 p-3 rounded-lg" style="background-color: #E8F5E9;">
@@ -326,22 +362,7 @@
                           </div>
 
                           <!-- ✅ Dynamic Container -->
-                          <div id="joinRequestsList" class="space-y-3">
-
-                    <div class="flex items-start justify-between bg-white border rounded-lg p-4 shadow-sm" style="border-color: var(--neutral-medium);">
-                        <div class="flex items-start space-x-3">
-                            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--primary-medium), var(--primary-light));"><i class="fas fa-user"></i></div>
-                            <div>
-                                <p class="font-semibold leading-tight" style="color: var(--text-dark);">Peter Romero</p>
-                                <p class="text-xs" style="color: var(--text-medium);">Requesting to join: Lot B2 - Ipil</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button class="px-3 py-1 text-xs rounded text-white hover:opacity-90 transition-opacity" style="background-color: #43A047;">Approve</button>
-                            <button class="px-3 py-1 text-xs rounded text-white hover:opacity-90 transition-opacity" style="background-color: #E53935;">Decline</button>
-                        </div>
-                    </div>
-                </div>
+                          <div id="joinRequestsList" class="space-y-3"></div>
             </div>
 
             <!-- Recent Activity Logs panel -->
@@ -380,13 +401,90 @@
                 </div>
             </div>
         </div>
+        </div>
+
+        <!-- Tasks Section -->
+        <div id="tasks" class="content-section hidden">
+            <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Task Assignment Form</h2>
+            <div class="task-card rounded-2xl p-8">
+                <form id="taskForm" class="task-form space-y-7">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="form-group">
+                            <label>Task Title:</label>
+                            <input type="text" placeholder="Enter task title" />
+                        </div>
+                        <div class="form-group">
+                            <label>Select Field:</label>
+                            <select>
+                                <option value="">Choose field...</option>
+                                <option>Lot A1 - Naungan</option>
+                                <option>Lot B2 - Ipil</option>
+                                <option>Lot C3 - Linao</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Assigned Date:</label>
+                            <input type="date" />
+                        </div>
+                        <div class="form-group">
+                            <label>Assigned Time:</label>
+                            <input type="time" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Assigned to:</label>
+                        <div class="flex items-center space-x-2 mb-3 text-sm text-[#427a05]">
+                            <input type="checkbox" class="w-4 h-4 border-[#c9f18f] rounded" />
+                            <span>Show only workers with Driver Badge</span>
+                        </div>
+                        <select>
+                            <option value="">Select worker...</option>
+                            <option>Maria Sanchez</option>
+                            <option>Peter Romero (Driver)</option>
+                            <option>Anna Reyes</option>
+                            <option>Carl Ramos (Driver)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Task Description:</label>
+                        <textarea rows="6" placeholder="Add details, instructions, tools, etc."></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3">
+                        <button type="button" class="btn-task-cancel">Cancel</button>
+                        <button type="submit" class="btn-task-submit">Assign Task</button>
+                    </div>
+                </form>
+            </div>
+            <div class="mt-6 section-card rounded-xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">My Tasks</h3>
+                <button id="btnRefreshTasks" class="px-3 py-1.5 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm"><i class="fas fa-rotate mr-2"></i>Refresh</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-[var(--cane-800)]">
+                      <th class="py-2 pr-2">Title</th>
+                      <th class="py-2 pr-2">Field</th>
+                      <th class="py-2 pr-2">Assigned</th>
+                      <th class="py-2 pr-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tasksTbody"></tbody>
+                </table>
+              </div>
+            </div>
+        </div>
 
         <!-- Embedded sections -->
         <div id="reports" class="content-section hidden">
-          <div class="section-card rounded-xl p-6">
-            <div id="reports-list">
+          <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-6">
+            <div class="section-card rounded-xl p-6">
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-[var(--cane-900)]">Submitted Reports</h3>
+                <h2 class="text-xl font-semibold text-[var(--cane-900)]">Submitted Reports</h2>
                 <button id="btn-open-report-form" class="px-4 py-2 rounded-lg text-white bg-[var(--cane-700)] hover:bg-[var(--cane-800)] shadow"><i class="fas fa-plus mr-2"></i>Submit Report</button>
               </div>
               <div class="inner-box rounded-lg overflow-hidden">
@@ -396,34 +494,59 @@
                   <div class="w-1/4">Report Type</div>
                   <div class="w-1/4 text-right">Status</div>
                 </div>
-                <div id="reports-rows" class="divide-y divide-[var(--cane-200)]">
+                <div id="reports-rows" class="divide-y divide-[var(--cane-200)] min-h-[12rem]">
                   <!-- rows injected by JS -->
                 </div>
               </div>
             </div>
-            <div id="reports-form" class="hidden">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-bold text-[var(--cane-900)]">Submit Report</h3>
-                <button id="btn-back-to-list" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800"><i class="fas fa-arrow-left mr-2"></i>Back to List</button>
-              </div>
-              <div class="rounded-xl overflow-hidden border border-[var(--cane-200)]">
-                <iframe src="Report.html" class="w-full h-[1600px]" loading="lazy"></iframe>
-              </div>
+            <div class="section-card rounded-xl overflow-hidden hidden" id="reportsFormWrapper">
+              <iframe id="reportsFormFrame" src="" class="w-full h-[950px]" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="hidden" id="reportsBackBar">
+            <button id="btn-back-to-list" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 mt-4"><i class="fas fa-arrow-left"></i><span>Back to Reports</span></button>
+          </div>
+          <div id="fieldsRegister" class="hidden">
+            <div class="flex items-center justify-between mb-4">
+              <button id="backToFields" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to My Fields</span>
+              </button>
+              <h3 class="text-lg font-bold text-[var(--cane-900)]">Register New Field</h3>
+            </div>
+            <div class="section-card rounded-xl overflow-hidden">
+              <iframe id="registerFieldFrame" src="" class="w-full h-[80vh]" loading="lazy"></iframe>
             </div>
           </div>
         </div>
 
-        <div id="growth" class="content-section hidden">
+        <div id="analytics" class="content-section hidden">
           <div class="section-card rounded-xl overflow-hidden">
             <iframe src="GrowthTracker.html" class="w-full h-[1600px]" loading="lazy"></iframe>
           </div>
         </div>
 
-        <!-- Fields embedded section (content will be lazy-loaded) -->
+        <!-- Fields Section -->
         <div id="fields" class="content-section hidden">
-          <div class="section-card rounded-xl overflow-hidden" id="fields-container">
-            <!-- Fields.html will be injected here -->
-            <div class="p-6 text-sm text-gray-600">Loading fields...</div>
+          <div id="fieldsDefault" class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
+            <div class="section-card rounded-xl p-4">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
+                <button id="registerFieldBtn" type="button" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold btn-register-field">
+                  <i class="fas fa-plus"></i>
+                  <span>Register New Field</span>
+                </button>
+                <input id="handlerFieldsSearch" type="text" placeholder="Search fields..." class="w-full md:w-48 px-3 py-2 text-sm border border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+              </div>
+              <div id="handlerFieldsMap" class="h-[28rem] rounded-lg border border-[var(--cane-200)]"></div>
+              <p id="handlerFieldsMessage" class="mt-3 text-sm text-gray-500"></p>
+            </div>
+            <div class="section-card rounded-xl p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">My Fields</h3>
+                <span id="handlerFieldsTotal" class="text-sm text-gray-500"></span>
+              </div>
+              <div id="handlerFieldsList" class="space-y-3"></div>
+            </div>
           </div>
         </div>
 
@@ -501,6 +624,7 @@
         </main>
     </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script type="module" src="../../backend/Handler/dashboard.js"></script>
 </body>
 </html>

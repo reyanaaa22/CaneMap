@@ -28,8 +28,7 @@
         
         /* App shell styling to match reference UI */
         .app-header {
-            background: linear-gradient(180deg, var(--cane-600), var(--cane-700));
-            border-bottom: 3px solid rgba(0,0,0,0.05);
+            background-color: var(--cane-700);
         }
 
         .brand-badge {
@@ -78,19 +77,17 @@
         .sidebar-overlay {
             transition: opacity 0.3s ease-in-out;
         }
+
+        #recentAppsList > :nth-child(n+4) {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-[#eef2f7] min-h-screen">
     <!-- Header -->
-    <header class="app-header shadow-md">
+    <header class="app-header shadow-md lg:pl-64">
         <div class="container mx-auto px-6 py-4 text-white">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="../SRA/SRA_Dashboard.html" class="hover:opacity-90 transition-opacity">
-                        <i class="fas fa-arrow-left text-xl"></i>
-                    </a>
-                    <h1 class="text-2xl font-bold tracking-tight">CaneMap</h1>
-                </div>
+            <div class="flex items-center justify-end">
                 <div class="flex items-center space-x-4">
                     <!-- Notifications -->
                     <div class="relative">
@@ -136,7 +133,7 @@
         <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
         
         <!-- Left Sidebar -->
-        <div id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 z-50 w-64 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0 bg-slate-900">
+        <div id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0 bg-slate-900">
             <div class="p-6">
                 <!-- Sidebar Profile Block -->
                 <div class="flex items-center space-x-3 mb-2">
@@ -145,7 +142,7 @@
                     </div>
                     <div>
                         <div id="sidebarUserName" class="text-white font-semibold leading-tight">SRA Officer</div>
-                        <div class="text-gray-300 text-xs">Normal Access</div>
+                        <div class="text-gray-300 text-xs">SRA Officer</div>
                     </div>
                 </div>
                 <div class="h-px bg-white/10 my-4"></div>
@@ -188,7 +185,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <main class="flex-1 px-4 lg:px-6 py-8 h-full overflow-y-auto">
+        <main class="flex-1 px-4 lg:px-6 py-8 h-full overflow-y-auto lg:ml-64">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
                 <h1 class="text-3xl font-bold text-[var(--cane-900)] mb-8">Dashboard</h1>

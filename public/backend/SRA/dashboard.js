@@ -154,11 +154,11 @@
                             const applications = Object.values(byKey);
 
                             // Sort newest-first by createdAt
-                            applications.sort((x,y) => new Date(y.createdAt) - new Date(x.createdAt));
+                            applications.sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt));
 
-                            // Render (change .slice(0, 50) if you want limit)
+                            // Render only the three most recent applications
                             list.innerHTML = "";
-                            const visible = applications; // or applications.slice(0, 50);
+                            const visible = applications.slice(0, 3);
                             for (const app of visible) {
                             const card = document.createElement("div");
                             card.className = "flex justify-between items-center bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition";
