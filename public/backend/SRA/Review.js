@@ -14,7 +14,8 @@ import {
   updateDoc,
   addDoc,
   serverTimestamp,
-  getDoc
+  getDoc,
+  onSnapshot 
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 // small helper to create DOM nodes
@@ -194,6 +195,49 @@ function formatDate(ts) {
   } catch { return ''; }
 }
 
+function formatFullDate(ts) {
+  try {
+    if (!ts) return '';
+    const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr  = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    // 🔹 Under a minute
+    if (diffSec < 60) return `Last updated ${diffSec} second${diffSec !== 1 ? 's' : ''} ago`;
+
+    // 🔹 Under an hour
+    if (diffMin < 60) return `Last updated ${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+
+    // 🔹 Under a day
+    if (diffHr < 24) return `Last updated ${diffHr} hour${diffHr !== 1 ? 's' : ''} ago`;
+
+    // 🔹 Yesterday
+    if (diffDay === 1) return 'Last updated yesterday';
+
+    // 🔹 Within a week → show weekday
+    if (diffDay < 7) {
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+      return `Last updated ${weekday}`;
+    }
+
+    // 🔹 Older than a week → mm/dd/yy
+    const formatted = d.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
+    });
+    return `Last updated ${formatted}`;
+  } catch (e) {
+    console.warn('formatFullDate error:', e);
+    return '';
+  }
+}
+
+
 // ✅ CLEAN, FIXED MODAL — 1 confirmation only + working Send Remarks
 async function openModal(app) {
   let modal = document.getElementById('sraReviewModal');
@@ -229,7 +273,9 @@ async function openModal(app) {
     ['Latitude', app.lat != null ? String(app.lat) : '—'],
     ['Longitude', app.lng != null ? String(app.lng) : '—'],
     ['Status', app.status || 'pending'],
-    ['Submitted', formatDate(app.createdAt)]
+    ['Submitted', formatDate(app.createdAt)],
+    ['Last Updated', formatDate(app.raw.updatedAt || app.raw.statusUpdatedAt || app.raw.latestRemarkAt || app.createdAt)]
+
   ];
   for (const [k, v] of info)
     grid.appendChild(
@@ -309,16 +355,18 @@ sendRemarksBtn.addEventListener('click', async () => {
           createdAt: serverTimestamp()
         });
 
-        await updateDoc(app.docRef, {
-          latestRemark: text,
-          latestRemarkAt: serverTimestamp(),
-          status: 'to edit'
-        });
+      await updateDoc(app.docRef, {
+        latestRemark: text,
+        latestRemarkAt: serverTimestamp(),
+        status: 'to edit',
+        updatedAt: serverTimestamp()
+      });
+
 
       await addDoc(collection(db, 'notifications'), {
         userId: app.raw.requestedBy || app.raw.userId || app.applicantName,
         title: 'Remarks from Ormoc Mill District SRA Officer',
-        message: 'Change the document. <a href="../../frontend/Handler/Field Form.html" target="_blank" class="notif-link">Open Form</a>',
+        message: 'Change the document. <a href="../../frontend/Handler/field_form.html" target="_blank" class="notif-link">Open Form</a>',
         status: 'unread',
         timestamp: serverTimestamp()
       });
@@ -469,10 +517,12 @@ async function updateStatus(appOrId, status) {
 
     // If we have a docRef — perform the update
     if (docRefToUpdate) {
-      await updateDoc(docRefToUpdate, {
-        status,
-        statusUpdatedAt: serverTimestamp()
-      });
+    await updateDoc(docRefToUpdate, {
+      status,
+      statusUpdatedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
     } else {
       // fallback: try update top-level doc by id (legacy)
       if (typeof appOrId === 'string') {
@@ -556,7 +606,20 @@ async function updateStatus(appOrId, status) {
 }
 
 function buildItem(app) {
-  // --- Single Status Badge ---
+  // Determine if this field is newly updated
+  const lastUpdated =
+    app.raw.updatedAt ||
+    app.raw.statusUpdatedAt ||
+    app.raw.latestRemarkAt ||
+    app.createdAt;
+
+  // If the last updated is within 3 minutes → treat as new
+  const isNew =
+    lastUpdated &&
+    Date.now() - (lastUpdated.seconds ? lastUpdated.seconds * 1000 : new Date(lastUpdated).getTime()) <
+      3 * 60 * 1000;
+
+  // --- Badge color ---
   const statusColor =
     app.status === 'reviewed'
       ? 'bg-green-100 text-green-700'
@@ -573,31 +636,76 @@ function buildItem(app) {
 
   const statusBadge = h('span', `text-xs px-2 py-1 rounded ${statusColor}`, statusText);
 
-  // --- Left Info ---
+  // --- Left section (main display) ---
   const left = h('div', 'flex items-start space-x-3', [
+    // Avatar circle
     h(
       'div',
-      'w-9 h-9 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center text-white',
+      `w-9 h-9 ${
+        isNew ? 'bg-green-600' : 'bg-gradient-to-br from-green-600 to-green-700'
+      } rounded-full flex items-center justify-center text-white`,
       [h('i', 'fas fa-user')]
     ),
+
+    // Applicant info and address block
     h('div', '', [
-      h('p', 'text-[var(--cane-900)] font-semibold leading-tight', app.applicantName || 'Unknown Applicant'),
-      h('p', 'text-sm text-[var(--cane-700)]', `Field Registration - ${app.barangay || 'N/A'}`),
-      h('p', 'text-xs text-[var(--cane-600)]', `${formatDate(app.createdAt)} · ${app.barangay || ''}`)
+      // Applicant email/name
+      h(
+        'p',
+        'text-[var(--cane-900)] font-semibold leading-tight',
+        app.applicantName || 'Unknown Applicant'
+      ),
+
+      // “Cane · street name, Brgy. Barangay name”
+      h(
+        'p',
+        'text-sm text-[var(--cane-700)]',
+        `Cane · ${app.street || '—'}, Brgy. ${app.barangay || '—'}`
+      ),
+
+      // Green last updated date below
+      h(
+        'p',
+        'text-xs text-green-600 font-medium mt-0.5',
+        formatFullDate(lastUpdated)
+      )
     ])
   ]);
 
-  // --- Right: just status badge ---
-  const right = h('div', 'flex items-center space-x-2', [statusBadge]);
+  // --- Right section (status badge only) ---
+  const right = h('div', 'flex flex-col items-end', [statusBadge]);
 
-  // --- Row Wrapper ---
-  const row = h('div', 'flex items-start justify-between px-4 py-3 cursor-pointer hover:bg-[var(--cane-50)]');
+  // --- Card wrapper ---
+  const row = h(
+    'div',
+    `flex items-start justify-between px-4 py-3 cursor-pointer border-b border-[var(--cane-100)] ${
+      isNew ? 'bg-green-50' : 'bg-white'
+    } hover:bg-[var(--cane-50)] transition`
+  );
   row.append(left, right);
 
-  // --- Open modal when clicked ---
-  row.addEventListener('click', () => openModal(app));
+  // --- Click behavior (open modal + clear green highlight) ---
+  row.addEventListener('click', async () => {
+    row.classList.remove('bg-green-50');
+    row.classList.add('bg-white');
+    openModal(app);
+  });
 
   return row;
+}
+
+
+let unsubscribeListener = null;
+
+function startRealtimeUpdates(status = 'all') {
+  if (unsubscribeListener) unsubscribeListener(); // stop old listener
+  const q = status === 'all'
+    ? collectionGroup(db, 'fields')
+    : query(collectionGroup(db, 'fields'), where('status', '==', status));
+
+  unsubscribeListener = onSnapshot(q, async () => {
+    await render(status);
+  });
 }
 
 // Render the list into container #fieldDocsDynamic
@@ -699,11 +807,16 @@ export const SRAReview = {
   async init() {
     const statusSelect = document.getElementById('fieldDocsStatus');
     if (statusSelect) {
-      statusSelect.addEventListener('change', () => render(statusSelect.value));
+      statusSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        startRealtimeUpdates(val);
+      });
     }
     await render('all');
+    startRealtimeUpdates('all'); // 🟢 Live listener starts
   }
 };
+
 
 // Allow global access if not using modules
 // eslint-disable-next-line no-undef

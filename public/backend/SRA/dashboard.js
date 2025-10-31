@@ -162,14 +162,20 @@
                             for (const app of visible) {
                             const card = document.createElement("div");
                             card.className = "flex justify-between items-center bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition";
-                            const displayCreated = app.createdAt ? (new Date(app.createdAt)).toLocaleString() : '';
+                            const displayCreated = formatFullDate(app.createdAt || app.raw?.updatedAt || app.raw?.statusUpdatedAt);
                             card.innerHTML = `
-                                <div>
+                            <div>
                                 <p class="font-semibold text-[var(--cane-900)]">${app.applicantName}</p>
-                                <p class="text-sm text-gray-600">${app.fieldName ? app.fieldName + ' · ' : ''}Brgy. ${app.barangay}${app.street ? ' · ' + app.street : ''}</p>
-                                <p class="text-xs text-[var(--cane-600)]">${displayCreated}</p>
-                                </div>
-                                <span class="text-xs font-medium px-2 py-1 rounded-full ${app.status === "reviewed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-700"}">${app.status}</span>
+                                <p class="text-sm text-[var(--cane-700)]">
+                                ${app.fieldName ? app.fieldName + ' · ' : ''}Brgy. ${app.barangay}${app.street ? ' · ' + app.street : ''}
+                                </p>
+                                <p class="text-xs text-green-600 font-medium mt-0.5">${displayCreated}</p>
+                            </div>
+                            <span class="text-xs font-medium px-2 py-1 rounded-full ${
+                                app.status === "reviewed"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-yellow-100 text-yellow-700"
+                            }">${app.status}</span>
                             `;
                             // optional: click the card to open Review page for the item
                             card.addEventListener('click', async (e) => {
@@ -904,6 +910,30 @@
                 const h = Math.floor(m/60); if (h < 24) return `${h} hour${h>1?'s':''} ago`;
                 const days = Math.floor(h/24); return `${days} day${days>1?'s':''} ago`;
             }catch{ return ''; }
+        }
+
+        //  Friendly relative time formatter (replaces simple formatRelativeTime)
+        function formatFullDate(ts) {
+        try {
+            if (!ts) return '';
+            const d = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+            const now = new Date();
+            const diffMs = now - d;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHr  = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHr / 24);
+
+            if (diffSec < 60) return `Last updated ${diffSec} second${diffSec !== 1 ? 's' : ''} ago`;
+            if (diffMin < 60) return `Last updated ${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+            if (diffHr < 24)  return `Last updated ${diffHr} hour${diffHr !== 1 ? 's' : ''} ago`;
+            if (diffDay === 1) return 'Last updated yesterday';
+            if (diffDay < 7)  return `Last updated ${d.toLocaleDateString('en-US', { weekday: 'long' })}`;
+            return `Last updated ${d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}`;
+        } catch (e) {
+            console.warn('formatFullDate error:', e);
+            return '';
+        }
         }
 
         // Sidebar functionality

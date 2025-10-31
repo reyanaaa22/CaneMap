@@ -337,6 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
         status: "pending",
         requestedBy: currentUser.uid,
         submittedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         validBackUrl: backURL,
         validFrontUrl: frontURL,
         selfieUrl: selfieURL,
