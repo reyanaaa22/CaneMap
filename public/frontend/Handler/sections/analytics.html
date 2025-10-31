@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaneMap - Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --cane-50: #f7fee7;
+            --cane-100: #ecfcca;
+            --cane-200: #d8f999;
+            --cane-300: #bbf451;
+            --cane-400: #9ae600;
+            --cane-500: #7ccf00;
+            --cane-600: #5ea500;
+            --cane-700: #497d00;
+            --cane-800: #3c6300;
+            --cane-900: #35530e;
+            --cane-950: #192e03;
+        }
+        .section-card { 
+            background: white; 
+            border: 1px solid #e5e7eb; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        .stat-card {
+            background: linear-gradient(135deg, var(--cane-50), white);
+            border: 1px solid var(--cane-200);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+    <main class="container mx-auto px-4 lg:px-6 py-6">
+        <!-- Header -->
+        <div class="mb-6">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--cane-100)] text-[var(--cane-700)]">
+                    <i class="fas fa-chart-line"></i>
+                </span>
+                Analytics Dashboard
+            </h2>
+            <p class="text-gray-600">Track your farm's performance and growth metrics.</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-semibold text-gray-600">Total Fields</span>
+                    <i class="fas fa-map text-[var(--cane-600)] text-xl"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">24</p>
+                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> 12% from last month</p>
+            </div>
+
+            <div class="stat-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-semibold text-gray-600">Active Workers</span>
+                    <i class="fas fa-users text-[var(--cane-600)] text-xl"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">18</p>
+                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> 8% from last month</p>
+            </div>
+
+            <div class="stat-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-semibold text-gray-600">Completed Tasks</span>
+                    <i class="fas fa-check-circle text-[var(--cane-600)] text-xl"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">156</p>
+                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> 23% from last month</p>
+            </div>
+
+            <div class="stat-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-semibold text-gray-600">Total Harvest</span>
+                    <i class="fas fa-weight-hanging text-[var(--cane-600)] text-xl"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">2,450 tons</p>
+                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> 15% from last month</p>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Field Growth Chart -->
+            <div class="section-card rounded-xl p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-area text-[var(--cane-600)]"></i>
+                    Field Growth Over Time
+                </h3>
+                <canvas id="fieldGrowthChart" height="250"></canvas>
+            </div>
+
+            <!-- Task Completion Chart -->
+            <div class="section-card rounded-xl p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-tasks text-[var(--cane-600)]"></i>
+                    Task Completion Rate
+                </h3>
+                <canvas id="taskCompletionChart" height="250"></canvas>
+            </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Worker Distribution -->
+            <div class="section-card rounded-xl p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-friends text-[var(--cane-600)]"></i>
+                    Worker Distribution
+                </h3>
+                <canvas id="workerDistributionChart" height="200"></canvas>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="section-card rounded-xl p-6 lg:col-span-2">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-history text-[var(--cane-600)]"></i>
+                    Recent Activity
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <i class="fas fa-check text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900">Task Completed</p>
+                            <p class="text-xs text-gray-600">Harvest sugarcane - Lot A1</p>
+                            <p class="text-xs text-gray-500 mt-1">2 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-map-marked-alt text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900">New Field Registered</p>
+                            <p class="text-xs text-gray-600">Lot D4 - Poblacion</p>
+                            <p class="text-xs text-gray-500 mt-1">5 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                            <i class="fas fa-user-plus text-yellow-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900">New Worker Added</p>
+                            <p class="text-xs text-gray-600">Juan Dela Cruz - Farmer</p>
+                            <p class="text-xs text-gray-500 mt-1">1 day ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                            <i class="fas fa-file-alt text-purple-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900">Report Submitted</p>
+                            <p class="text-xs text-gray-600">Harvest Report - Lot B2</p>
+                            <p class="text-xs text-gray-500 mt-1">2 days ago</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Field Growth Chart
+        const fieldGrowthCtx = document.getElementById('fieldGrowthChart').getContext('2d');
+        new Chart(fieldGrowthCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                datasets: [{
+                    label: 'Number of Fields',
+                    data: [8, 10, 12, 14, 16, 18, 19, 21, 22, 24],
+                    borderColor: '#7ccf00',
+                    backgroundColor: 'rgba(124, 207, 0, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Task Completion Chart
+        const taskCompletionCtx = document.getElementById('taskCompletionChart').getContext('2d');
+        new Chart(taskCompletionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Completed',
+                    data: [35, 42, 38, 41],
+                    backgroundColor: '#7ccf00'
+                }, {
+                    label: 'Pending',
+                    data: [8, 6, 9, 5],
+                    backgroundColor: '#fbbf24'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Worker Distribution Chart
+        const workerDistributionCtx = document.getElementById('workerDistributionChart').getContext('2d');
+        new Chart(workerDistributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Farmers', 'Drivers', 'Others'],
+                datasets: [{
+                    data: [12, 4, 2],
+                    backgroundColor: ['#7ccf00', '#3b82f6', '#8b5cf6']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
