@@ -159,106 +159,180 @@
             transform: translateY(-1px);
             filter: brightness(0.95);
         }
+
+        #sidebar {
+          transform: translateX(-100%);
+          transition: transform 0.3s ease-in-out;
+        }
+        #sidebar.open {
+          transform: translateX(0);
+        }
+        #sidebar.closed {
+          transform: translateX(-100%);
+        }
+
+        /* Hamburger animation */
+        #hamburger.active .bar1 {
+          transform: translateY(6px) rotate(45deg);
+        }
+        #hamburger.active .bar2 {
+          opacity: 0;
+        }
+        #hamburger.active .bar3 {
+          transform: translateY(-6px) rotate(-45deg);
+        }
+
+        #closeSidebar {
+        top: 0.75rem; 
+        right: 0.75rem;
+        font-size: 1.25rem; 
+      }
+
+        /* Keep main and modals full width */
+        main {
+          width: 100%;
+          margin-left: 0 !important;
+        }
+
+      /* Desktop: sidebar stays visible only if not closed manually */
+      @media (min-width: 1024px) {
+        #sidebar.closed {
+          transform: translateX(-100%) !important;
+          opacity: 0 !important;
+        }
+
+        #sidebar.open {
+          transform: translateX(0) !important;
+          opacity: 1 !important;
+        }
+
+        #sidebarOverlay {
+          display: none !important; /* overlay hidden on desktop */
+        }
+
+        main {
+          transition: margin-left 0.3s ease-in-out;
+          margin-left: 16rem; /* 64px * 4 = sidebar width */
+        }
+
+        /* when sidebar closed → expand main */
+        #sidebar.closed ~ main {
+          margin-left: 0 !important;
+        }
+      }
+
+      header {
+        height: 70px; 
+      }
+
+      body {
+        padding-top: 75px; 
+      }
+
+      main {
+        transition: padding 0.3s ease;
+      }
+
     </style>
  </head>
 <body class="min-h-screen bg-gray-100">
-    <!-- Header -->
-    <header class="shadow-lg" style="background: linear-gradient(to right, #497d00, #5ea500);">
-        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-        <button id="hamburger" class="lg:hidden relative w-9 h-9 rounded-md bg-white/20 border border-white/30 flex items-center justify-center group">
-          <span class="bar1 absolute w-5 h-0.5 bg-white transition-transform"></span>
-          <span class="bar2 absolute w-5 h-0.5 bg-white transition-opacity"></span>
-          <span class="bar3 absolute w-5 h-0.5 bg-white transition-transform"></span>
-        </button>
-        <!-- Back button and title removed per request -->
-      </div>
-            <div class="flex items-center space-x-3 text-white">
-                <button class="relative text-white hover:text-gray-200"><i class="fas fa-bell text-lg"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
-                
-                <!-- Profile Dropdown -->
-                <div class="relative">
-                    <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
-                        <div class="w-7 h-7 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
-                            <i class="fas fa-user text-white text-xs"></i>
-                        </div>
-                        <span id="topUserName" class="font-medium text-sm">Loading...</span>
-                        <i class="fas fa-chevron-down text-xs"></i>
-                    </button>
-                    
-                    <!-- Dropdown Menu -->
-                    <div id="profileDropdown" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-50">
-                        <!-- Red Header Section -->
-                        <div class="bg-green-600 rounded-t-lg p-4 text-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md mx-auto mb-2">
-                                <i class="fas fa-user text-white text-xl"></i>
-                            </div>
-                            <h3 id="dropdownUserName" class="text-white font-semibold text-lg">Loading...</h3>
-                        </div>
-                        
-                        <!-- White Content Section -->
-                        <div class="py-2">
-                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-image w-5 h-5 mr-3 text-gray-500"></i>
-                                <span>Update Photo</span>
-                            </a>
-                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
-                                <span>Profile Settings</span>
-                            </a>
-                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
-                                <span>Change Password</span>
-                            </a>
-                      
-                        </div>
-                        
-                        <!-- Logout Section -->
-                        <div class="border-t border-gray-200 py-2">
-                            <a href="#" class="flex items-center px-4 py-3 text-red-600 hover:bg-red-50 transition-colors">
-                                <i class="fas fa-arrow-right w-5 h-5 mr-3"></i>
-                                <span class="font-medium">Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<header class="shadow-lg w-full fixed top-0 left-0 z-50 flex items-center justify-between px-6 h-[70px]" 
+        style="background: linear-gradient(to right, #497d00, #5ea500);">
+  <!-- Left: Hamburger -->
+  <div class="flex items-center space-x-3">
+    <button id="hamburger"
+      class="relative w-8 h-8 rounded-md bg-white/20 border border-white/30 flex flex-col items-center justify-center space-y-1 transition-all hover:bg-white/30">
+      <span class="bar1 w-4 h-0.5 bg-white transition-all"></span>
+      <span class="bar2 w-4 h-0.5 bg-white transition-all"></span>
+      <span class="bar3 w-4 h-0.5 bg-white transition-all"></span>
+    </button>
+  </div>
+
+  <!-- Right: Notification + Profile -->
+  <div class="flex items-center space-x-4 text-white">
+    <!-- Notifications -->
+    <button class="relative text-white hover:text-gray-200">
+      <i class="fas fa-bell text-lg"></i>
+      <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span>
+    </button>
+
+    <!-- Profile -->
+    <div class="relative">
+      <button id="profileDropdownBtn"
+        class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
+        <div
+          class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-md border border-white/30">
+          <i class="fas fa-user text-white text-sm"></i>
         </div>
-    </header>
+        <span id="topUserName" class="font-medium text-sm">Loading...</span>
+        <i class="fas fa-chevron-down text-xs"></i>
+      </button>
+
+      <!-- Dropdown -->
+      <div id="profileDropdown"
+        class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-50">
+        <div class="bg-green-600 rounded-t-lg p-4 text-center">
+          <div
+            class="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md mx-auto mb-2">
+            <i class="fas fa-user text-white text-xl"></i>
+          </div>
+          <h3 id="dropdownUserName" class="text-white font-semibold text-lg">Loading...</h3>
+        </div>
+        <div class="py-2">
+          <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100">
+            <i class="fas fa-image w-5 h-5 mr-3 text-gray-500"></i>
+            <span>Update Photo</span>
+          </a>
+          <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100">
+            <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
+            <span>Profile Settings</span>
+          </a>
+          <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100">
+            <i class="fas fa-lock w-5 h-5 mr-3 text-gray-500"></i>
+            <span>Change Password</span>
+          </a>
+        </div>
+        <div class="border-t border-gray-200 py-2">
+          <a href="#" class="flex items-center px-4 py-3 text-red-600 hover:bg-red-50">
+            <i class="fas fa-arrow-right w-5 h-5 mr-3"></i>
+            <span class="font-medium">Logout</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
 
     <div class="flex relative">
-  <!-- Sidebar (fixed overlay) -->
-  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-gray-900 z-50">
-            <!-- Profile Section -->
-            <div class="p-6 border-b border-gray-700">
-                <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ring-2 ring-white/10">
-                        <i class="fas fa-user text-white text-xl"></i>
-                    </div>
-                    <div>
-                      <h3 id="sidebarUserName" class="text-white font-semibold text-lg">Loading...</h3>
-                      <p id="sidebarUserRole" class="text-gray-400 text-sm">Field Handler</p>
-                    </div>
+    <!-- Sidebar (keep this clean and simple) -->
+    <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-gray-900 z-50">
 
-                </div>
-                <div class="flex items-center space-x-2">
-                   
-                </div>
-            </div>
-            
-            <div class="p-6">
-                <nav class="space-y-1">
-                    <!-- Dashboard -->
-                    <div class="mb-4">
-                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-white rounded-lg font-medium bg-gray-800" data-section="dashboard">
-                        <i class="fas fa-tachometer-alt w-5 h-5"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    </div>
+      
+    <!-- Close Sidebar Button -->
+    <button id="closeSidebar" aria-label="Close Sidebar"
+      class="absolute top-4 right-4 text-white text-2xl hover:text-green-400 transition">
+      <i class="fas fa-times"></i>
+    </button>
 
-          <!-- My Fields (single link) -->
+      <div class="p-6 border-b border-gray-700">
+        ...
+      </div>
+
+
+      <div class="p-6">
+        <nav class="space-y-1">
           <div class="mb-4">
-            <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="fields">
+            <a href="#" id="linkDashboard" class="nav-item flex items-center space-x-3 px-4 py-3 text-white rounded-lg font-medium bg-gray-800" data-section="dashboard">
+              <i class="fas fa-tachometer-alt w-5 h-5"></i>
+              <span>Dashboard</span>
+            </a>
+          </div>
+
+          <!-- ✅ Add Fields link here -->
+          <div class="mb-4">
+            <a href="#" id="linkMyFields"
+              class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors"
+              data-section="fields">
               <i class="fas fa-map-marked-alt w-5 h-5"></i>
               <span>My Fields</span>
             </a>
@@ -307,7 +381,11 @@
             </div>
         </aside>
 
-  <main class="flex-1 container mx-auto px-4 lg:px-6 py-8 lg:ml-64">
+<!-- Sidebar overlay (for mobile) -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+
+
+  <main class="flex-1 w-full px-6 py-8 lg:ml-64">
         <div id="dashboard" class="content-section">
         <h2 class="text-3xl font-extrabold mb-6 text-gray-900">Dashboard</h2>
 
@@ -526,30 +604,6 @@
           </div>
         </div>
 
-        <!-- Fields Section -->
-        <div id="fields" class="content-section hidden">
-          <div id="fieldsDefault" class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
-            <div class="section-card rounded-xl p-4">
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
-                <button id="registerFieldBtn" type="button" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold btn-register-field">
-                  <i class="fas fa-plus"></i>
-                  <span>Register New Field</span>
-                </button>
-                <input id="handlerFieldsSearch" type="text" placeholder="Search fields..." class="w-full md:w-48 px-3 py-2 text-sm border border-[var(--cane-200)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
-              </div>
-              <div id="handlerFieldsMap" class="h-[28rem] rounded-lg border border-[var(--cane-200)]"></div>
-              <p id="handlerFieldsMessage" class="mt-3 text-sm text-gray-500"></p>
-            </div>
-            <div class="section-card rounded-xl p-4">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-bold text-[var(--cane-900)]">My Fields</h3>
-                <span id="handlerFieldsTotal" class="text-sm text-gray-500"></span>
-              </div>
-              <div id="handlerFieldsList" class="space-y-3"></div>
-            </div>
-          </div>
-        </div>
-
         <!-- Workers Section -->
         <div id="workers" class="content-section hidden">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
@@ -624,8 +678,18 @@
         </main>
     </div>
 
+      <!-- ✅ Fields iframe container -->
+  <div id="fieldsSection" class="content-section hidden">
+    <iframe id="fieldsIframe"
+            src=""
+            class="w-full h-[85vh] rounded-lg border border-gray-300"
+            loading="lazy"></iframe>
+  </div>
+
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script type="module" src="../../backend/Handler/dashboard.js"></script>
+
 </body>
 </html>
 

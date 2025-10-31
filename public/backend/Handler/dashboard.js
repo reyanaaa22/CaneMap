@@ -730,4 +730,53 @@ function updateHandlerFieldsView(rawTerm = "") {
   setTimeout(() => handlerFieldsMapInstance.invalidateSize(), 150);
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  const myFieldsLink = document.getElementById("linkMyFields");
+  const fieldsSection = document.getElementById("fieldsSection");
+  const fieldsIframe = document.getElementById("fieldsIframe");
 
+  if (myFieldsLink && fieldsSection && fieldsIframe) {
+    myFieldsLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      // Hide all content sections
+      document.querySelectorAll(".content-section").forEach(sec => sec.classList.add("hidden"));
+      // Show Fields iframe
+      fieldsSection.classList.remove("hidden");
+      fieldsIframe.src = "Fields.html";
+    });
+  }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const sidebar = document.getElementById("sidebar");
+  const hamburger = document.getElementById("hamburger");
+  const closeSidebar = document.getElementById("closeSidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+
+  if (!sidebar || !hamburger) return;
+
+  const openSidebar = () => {
+    sidebar.classList.add("open");
+    sidebar.classList.remove("closed");
+    hamburger.classList.add("active");
+    overlay.classList.remove("hidden");
+  };
+
+  const closeSidebarFn = () => {
+    sidebar.classList.remove("open");
+    sidebar.classList.add("closed");
+    hamburger.classList.remove("active");
+    overlay.classList.add("hidden");
+  };
+
+  hamburger.addEventListener("click", () => {
+    if (sidebar.classList.contains("open")) {
+      closeSidebarFn();
+    } else {
+      openSidebar();
+    }
+  });
+
+  if (closeSidebar) closeSidebar.addEventListener("click", closeSidebarFn);
+  if (overlay) overlay.addEventListener("click", closeSidebarFn);
+});
