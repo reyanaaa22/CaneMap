@@ -295,5 +295,11 @@ service cloud.firestore {
       }
     }
 
+    // === Allow collectionGroup queries on join_fields ===
+    match /{path=**}/join_fields/{fieldId} {
+      // Allow authenticated users to query join_fields across all field_joins documents
+      allow read: if request.auth != null;
+    }
+
   }
 }

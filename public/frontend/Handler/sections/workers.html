@@ -1,12 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CaneMap - Workers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+<style>
         :root {
             --primary-dark: #1B5E20;
             --primary-medium: #2E7D32;
@@ -109,9 +101,7 @@
             font-weight: 600;
         }
     </style>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
-    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6">
         <!-- Left: All Workers List -->
         <div class="section-card rounded-2xl p-6 shadow-sm">
             <div class="mb-5">
@@ -234,6 +224,4 @@
         </div>
     </template>
 
-    <script type="module" src="../../backend/Handler/worker.js"></script>
-</body>
-</html>
+<script type="module" src="../../backend/Handler/worker.js"></script>
