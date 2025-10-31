@@ -207,11 +207,19 @@
   }
 }
 
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fadeIn {
+  animation: fadeInModal 0.25s ease-out forwards;
+}
+
 
   </style>
 </head>
 <body class="p-6">
-
+<h> WORKING PA, WAPAY FINAL UI, NAGFETCH PALANG</h>
 <!-- Container -->
 <div class="max-w-[1800px] mx-auto px-8">
 
@@ -247,7 +255,7 @@
   <!-- Field Box -->
   <main class="w-full section-card p-6">
     <div class="flex justify-between items-center border-b border-[rgba(0,0,0,0.06)] pb-3 mb-4">
-      <h2 class="text-lg font-semibold text-[var(--cane-800)]">Registered Fields</h2>
+      <h2 class="text-lg font-semibold text-[var(--cane-800)]">My Fields</h2>
       <span id="fieldCount" class="text-sm text-[var(--cane-700)]">Loading...</span>
     </div>
 
