@@ -194,14 +194,15 @@ function renderFields(list) {
       </div>
     `;
 
-    card.onclick = async () => {
-      if (data.isNew) {
-        await updateDoc(doc(db, 'field_applications', currentUid, 'fields', data.id), {
-          isNew: false,
-        });
-      }
-      openEditModal(currentUid, data.id, data);
-    };
+card.onclick = () => {
+  // Store selected field info
+  localStorage.setItem("selectedFieldId", data.id);
+  localStorage.setItem("selectedFieldData", JSON.stringify(data));
+
+  // Navigate to MyField.html inside dashboard
+  window.location.href = "MyField.html";
+};
+
 
     container.appendChild(card);
   });
@@ -213,8 +214,8 @@ function loadFields(uid) {
   spinner.style.display = 'flex';
   allFields = [];
 
-  const ref = collection(db, 'field_applications', uid, 'fields');
-  const q = query(ref, orderBy('submittedAt', 'desc'));
+const ref = collection(db, 'field_applications', uid, 'fields');
+const q = query(ref, where('status', '==', 'reviewed'), orderBy('submittedAt', 'desc'));
 
   // Real-time updates (no try/catch needed)
   onSnapshot(q, (snap) => {
@@ -982,3 +983,4 @@ function initLegalModal() {
     if (e.key === "Escape" && !overlay.classList.contains("hidden")) closeModal();
   });
 }
+
