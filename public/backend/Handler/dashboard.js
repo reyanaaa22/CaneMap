@@ -1,6 +1,4 @@
-// =============================
-// Handler Dashboard Script
-// =============================
+
 import { auth, db } from "../Common/firebase-config.js";
 import {
   onAuthStateChanged
@@ -155,7 +153,7 @@ async function loadJoinRequests(userId) {
       joinsSnap.docs.map(async (docSnap, idx) => {
         const raw = docSnap.data() || {};
         const fieldId = raw.fieldId || raw.field_id || raw.fieldID || docSnap.id;
-        
+
         let fieldInfo = fieldInfoMap.get(fieldId);
         if (!fieldInfo) {
           try {
@@ -172,7 +170,6 @@ async function loadJoinRequests(userId) {
           }
         }
 
-        // Only show requests for fields owned by current user
         if (!fieldOwnedByUser(fieldInfo, userId)) return;
 
         const requestedAt = raw.requestedAt || raw.requested_at || raw.createdAt || raw.created_at || null;
@@ -287,31 +284,71 @@ async function loadJoinRequests(userId) {
       container.appendChild(card);
     }
 
-    container.querySelectorAll("[data-join-action]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const path = btn.dataset.path;
-        const action = btn.dataset.joinAction;
-        if (!path || !action) return;
+container.querySelectorAll("[data-join-action]").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const path = btn.dataset.path;
+    const action = btn.dataset.joinAction;
+    if (!path || !action) return;
 
-        const originalText = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = action === "approve" ? "Approving..." : "Declining...";
-        try {
-          const pathSegments = path.split("/").filter(Boolean);
-          await updateDoc(doc(db, ...pathSegments), {
-            status: action === "approve" ? "approved" : "declined",
-            statusUpdatedAt: serverTimestamp()
-          });
-          await loadJoinRequests(userId);
-        } catch (err) {
-          console.error("Join Request update failed:", err);
-          btn.disabled = false;
-          btn.textContent = originalText;
-          btn.classList.add("shake");
-          setTimeout(() => btn.classList.remove("shake"), 600);
-        }
-      });
-    });
+    // 🧩 Show confirmation modal first
+    const confirmModal = document.createElement("div");
+    confirmModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
+    confirmModal.innerHTML = `
+      <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-md">
+        <h3 class="text-lg font-semibold mb-3 text-gray-800">Confirm ${action === "approve" ? "Approval" : "Rejection"}</h3>
+        <p class="text-gray-600 text-sm mb-5">Are you sure you want to <b>${action}</b> this join request?</p>
+        <div class="flex justify-center gap-3">
+          <button id="cancelConfirm" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+          <button id="okConfirm" class="px-4 py-2 rounded-md ${action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white transition">${action === "approve" ? "Approve" : "Reject"}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmModal);
+
+    // Cancel
+    confirmModal.querySelector("#cancelConfirm").onclick = () => confirmModal.remove();
+
+    // Confirm OK
+    confirmModal.querySelector("#okConfirm").onclick = async () => {
+      confirmModal.remove();
+
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = action === "approve" ? "Approving..." : "Rejecting...";
+
+      try {
+        const pathSegments = path.split("/").filter(Boolean);
+        const docRef = doc(db, path); // use direct Firestore path instead of split()
+        await updateDoc(docRef, {
+          status: action === "approve" ? "approved" : "rejected",
+          statusUpdatedAt: serverTimestamp()
+        });
+
+        // ✅ Show success modal after updating
+        const successModal = document.createElement("div");
+        successModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
+        successModal.innerHTML = `
+          <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-md">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">${action === "approve" ? "Approved" : "Rejected"} Successfully</h3>
+            <p class="text-gray-600 text-sm mb-5">The join request has been ${action === "approve" ? "approved" : "rejected"} successfully.</p>
+            <button id="okSuccess" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)] transition">OK</button>
+          </div>
+        `;
+        document.body.appendChild(successModal);
+
+        successModal.querySelector("#okSuccess").onclick = async () => {
+          successModal.remove();
+          await loadJoinRequests(userId); // refresh list
+        };
+
+      } catch (err) {
+        console.error("Join Request update failed:", err);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    };
+  });
+});
 
   } catch (err) {
     console.error("Join Request Error:", err);
