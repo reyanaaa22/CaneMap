@@ -36,11 +36,10 @@ const resolveValue = (candidates, placeholders) => {
 };
 
 const toTitleCase = (value) => {
-  const cleaned = cleanString(value);
-  if (!cleaned) return "";
-  return cleaned
+  if (!value) return "";
+  return value
     .split(/\s+/)
-    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
     .join(" ");
 };
 
@@ -127,6 +126,7 @@ async function loadUserProfile(user) {
 
     loadReviewedOwnedFields(user.uid);
     renderHandlerFields(user.uid);
+    loadJoinedUsersCount(user.uid);
   } catch (err) {
     console.error("❌ Profile Load Error:", err);
   }
@@ -144,56 +144,73 @@ async function loadJoinRequests(userId) {
 
   try {
     const collectFromFieldJoins = async () => {
-      const joinQuery = query(
-        collectionGroup(db, "join_fields"),
-        where("status", "==", "pending")
+      // 🔹 Step 1: Get all fields owned by this handler
+      const ownedFieldsSnap = await getDocs(
+        query(collection(db, "field_applications"), where("handlerId", "==", userId))
       );
+      const ownedFieldIds = ownedFieldsSnap.docs.map(d => d.id);
 
-      const joinsSnap = await getDocs(joinQuery);
-      const fieldInfoMap = new Map();
+      // If no fields, stop early
+      if (!ownedFieldIds.length) {
+        return { pendingRequests: [], fieldInfoMap: new Map() };
+      }
+
+      // 🔹 Step 2: Handle Firestore limit (10 IDs max per 'in' query)
+      const chunks = [];
+      for (let i = 0; i < ownedFieldIds.length; i += 10) {
+        chunks.push(ownedFieldIds.slice(i, i + 10));
+      }
+
       const pendingRequests = [];
+      const fieldInfoMap = new Map();
 
-      await Promise.all(
-        joinsSnap.docs.map(async (docSnap, idx) => {
+      // 🔹 Step 3: Fetch join_fields where fieldId matches owned fields
+      for (const ids of chunks) {
+        const snap = await getDocs(
+          query(
+            collectionGroup(db, "join_fields"),
+            where("fieldId", "in", ids),
+            where("status", "==", "pending")
+          )
+        );
+
+        for (const docSnap of snap.docs) {
           const raw = docSnap.data() || {};
-          const fieldId = raw.fieldId || raw.field_id || raw.fieldID;
-          if (!fieldId) return;
+          const fieldId = raw.fieldId || raw.field_id;
+          if (!fieldId) continue;
 
+          // Cache field info
           let fieldInfo = fieldInfoMap.get(fieldId);
           if (!fieldInfo) {
             try {
               const fieldSnap = await getDoc(doc(db, "fields", fieldId));
-              if (!fieldSnap.exists()) return;
-              fieldInfo = fieldSnap.data() || {};
+              if (!fieldSnap.exists()) continue;
+              fieldInfo = fieldSnap.data();
               fieldInfoMap.set(fieldId, fieldInfo);
-            } catch (_) {
-              return;
+            } catch {
+              continue;
             }
           }
 
-          if (!fieldOwnedByUser(fieldInfo, userId)) return;
-
-          const requestedAt = raw.requestedAt || raw.requested_at || raw.createdAt || raw.created_at || null;
+          const requestedAt = raw.requestedAt || raw.createdAt || null;
 
           pendingRequests.push({
             refPath: docSnap.ref.path,
             fieldId,
             fieldInfo,
-            orderIndex: idx,
             data: {
-              userId: raw.userId || raw.user_id || raw.user_uid || "",
+              userId: raw.user_uid || raw.userId,
               fieldId,
-              fieldName: raw.fieldName || raw.field_name || "",
-              barangay: raw.barangay || "",
-              street: raw.street || "",
+              fieldName: raw.fieldName || fieldInfo.field_name || "",
+              barangay: raw.barangay || fieldInfo.barangay || "",
+              street: raw.street || fieldInfo.street || "",
               role: raw.role || raw.requested_role || "worker",
               requestedAt
             }
           });
-        })
-      );
+        }
+      }
 
-      pendingRequests.sort((a, b) => a.orderIndex - b.orderIndex);
       return { pendingRequests, fieldInfoMap };
     };
 
@@ -544,15 +561,288 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadReviewedOwnedFields(userId) {
   try {
-    const q = query(collection(db, "fields"), where("userId", "==", userId));
+    const ref = collection(db, "field_applications", userId, "fields");
+    const q = query(ref, where("status", "==", "reviewed"));
     const snap = await getDocs(q);
     const total = snap.size;
+
     const mFields = document.getElementById("mFields");
     if (mFields) mFields.textContent = total;
   } catch (err) {
     console.error("❌ Reviewed Fields Error:", err);
   }
 }
+
+// =============================
+// 🟢 Load Joined Workers/Drivers (pending + approved) from field_joins / join_fields (combined source)
+// =============================
+async function loadJoinedUsersCount(handlerId) {
+  try {
+    // 1) Collect field IDs owned by handler from both top-level "fields" and nested "field_applications/{uid}/fields"
+    const ownedFieldIds = [];
+
+    // a) top-level fields collection
+    try {
+      const topSnap = await getDocs(query(collection(db, "fields"), where("userId", "==", handlerId)));
+      topSnap.forEach(d => ownedFieldIds.push(d.id));
+    } catch (_) {
+      // ignore
+    }
+
+    // b) nested field_applications/{handlerId}/fields
+    try {
+      const nestedSnap = await getDocs(collection(db, "field_applications", handlerId, "fields"));
+      nestedSnap.forEach(d => ownedFieldIds.push(d.id));
+    } catch (_) {
+      // ignore
+    }
+
+    // dedupe
+    const fieldIds = Array.from(new Set(ownedFieldIds));
+    if (!fieldIds.length) {
+      console.info("No owned fields found for handler:", handlerId);
+      const mWorkers = document.getElementById("mWorkers");
+      const mDrivers = document.getElementById("mDrivers");
+      if (mWorkers) mWorkers.textContent = "0";
+      if (mDrivers) mDrivers.textContent = "0";
+      // clear list UI
+      displayJoinedUsers([]);
+      return;
+    }
+
+    // 2) Pull join docs using collectionGroup('join_fields') where fieldId in fieldIds (split into chunks of <=10)
+    const chunks = [];
+    for (let i = 0; i < fieldIds.length; i += 10) chunks.push(fieldIds.slice(i, i + 10));
+
+    const joinedUsers = []; // will store { userId, fieldId, role, status, joinedAt }
+
+    for (const ids of chunks) {
+      const snap = await getDocs(
+        query(
+          collectionGroup(db, "join_fields"),
+          where("fieldId", "in", ids),
+          where("status", "in", ["pending", "approved", "rejected"])
+        )
+      );
+
+      snap.forEach(docSnap => {
+        const raw = docSnap.data() || {};
+        joinedUsers.push({
+          userId: raw.user_uid || raw.userId || raw.user || "",
+          fieldId: raw.fieldId || raw.field_id || "",
+          role: raw.role || raw.requested_role || "worker",
+          status: raw.status || "pending",
+          joinedAt: raw.joinedAt || raw.requestedAt || raw.createdAt || null
+        });
+      });
+    }
+
+    // 3) Update metric counts (workers vs drivers)
+    let workerCount = 0;
+    let driverCount = 0;
+    joinedUsers.forEach(j => {
+      const role = (j.role || "").toLowerCase();
+      if (role.includes("driver")) driverCount++;
+      else workerCount++;
+    });
+
+    const mWorkers = document.getElementById("mWorkers");
+    const mDrivers = document.getElementById("mDrivers");
+    if (mWorkers) mWorkers.textContent = String(workerCount);
+    if (mDrivers) mDrivers.textContent = String(driverCount);
+
+    // 4) Render the list in the dashboard (displayJoinedUsers will fetch user names)
+    displayJoinedUsers(joinedUsers);
+  } catch (err) {
+    console.error("❌ Error loading joined user counts:", err);
+    // fallback: clear UI
+    displayJoinedUsers([]);
+  }
+}
+
+
+// =============================
+// 🧩 Display joined users + approve/reject buttons (Fixed)
+// =============================
+async function displayJoinedUsers(joinedUsers = []) {
+  const container = document.getElementById("joinRequestsList");
+  if (!container) return;
+
+  container.innerHTML = `<div class="p-3 text-gray-500">Loading joined users...</div>`;
+
+  if (!Array.isArray(joinedUsers) || !joinedUsers.length) {
+    container.innerHTML = `<div class="p-3 text-gray-600">No joined workers or drivers yet.</div>`;
+    return;
+  }
+
+// 🔹 Fetch user display names (ensure fullname is fetched)
+const userIds = Array.from(new Set(joinedUsers.map(j => (j.userId || "").trim()).filter(Boolean)));
+const userMap = new Map();
+
+await Promise.all(
+  userIds.map(async (uid) => {
+    try {
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+
+        // Safely pick best available name
+        const fullName =
+          data.fullname ||
+          data.name ||
+          data.nickname ||
+          data.displayName ||
+          data.email ||
+          uid;
+
+        userMap.set(uid, toTitleCase(fullName.trim()));
+      } else {
+        userMap.set(uid, uid); // fallback to ID if not found
+      }
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch user:", uid, error);
+      userMap.set(uid, uid);
+    }
+  })
+);
+
+// 🔹 Fetch field info (both top-level and nested)
+const fieldIds = Array.from(new Set(joinedUsers.map(j => (j.fieldId || "").trim()).filter(Boolean)));
+const fieldMap = new Map();
+
+await Promise.all(
+  fieldIds.map(async fid => {
+    let fieldData = null;
+
+    // 1️⃣ Try top-level /fields
+    try {
+      const fSnap = await getDoc(doc(db, "fields", fid));
+      if (fSnap.exists()) fieldData = fSnap.data();
+    } catch (_) {}
+
+    // 2️⃣ Fallback: nested field_applications/.../fields
+    if (!fieldData) {
+      try {
+        const cgSnap = await getDocs(collectionGroup(db, "fields"));
+        const matchDoc = cgSnap.docs.find(d => d.id === fid);
+        if (matchDoc) fieldData = matchDoc.data();
+      } catch (err) {
+        console.warn("⚠️ Field collectionGroup fallback failed:", err);
+      }
+    }
+
+    if (fieldData) fieldMap.set(fid, fieldData);
+  })
+);
+
+  // 🔹 Clear old content
+  container.innerHTML = "";
+
+  // 🔹 Sort by join time (latest first)
+  joinedUsers.sort((a, b) => {
+    const tA = a.joinedAt?.toDate ? a.joinedAt.toDate().getTime() : 0;
+    const tB = b.joinedAt?.toDate ? b.joinedAt.toDate().getTime() : 0;
+    return tB - tA;
+  });
+
+  for (const j of joinedUsers) {
+    const uid = j.userId || "";
+    const name = userMap.get(uid) || uid;
+
+    const fieldData = fieldMap.get(j.fieldId) || {};
+    const fieldName =
+      fieldData.field_name || fieldData.fieldName || j.fieldName || "Unnamed Field";
+    const barangay =
+      fieldData.barangay || fieldData.location || j.barangay || "—";
+
+    const status = (j.status || "pending").toLowerCase();
+    const statusColor =
+      status === "approved"
+        ? "text-green-600"
+        : status === "pending"
+        ? "text-yellow-600"
+        : "text-red-600";
+
+    const joinedAtLabel = j.joinedAt?.toDate
+      ? j.joinedAt.toDate().toLocaleString("en-US", {
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—";
+
+    // 🔹 Create card
+    const div = document.createElement("div");
+    div.className =
+      "border border-gray-200 rounded-lg p-3 mb-2 bg-white flex justify-between items-center";
+
+    div.innerHTML = `
+      <div>
+        <p class="font-semibold text-[var(--cane-900)]">${name}</p>
+        <p class="text-sm text-gray-600">
+          ${toTitleCase(j.role || "Worker")} — 
+          <span class="font-medium">${fieldName}</span>
+          <span class="ml-2 px-2 py-0.5 rounded-full text-xs border ${statusColor} border-current">
+            ${toTitleCase(status)}
+          </span>
+        </p>
+        <p class="text-xs text-gray-500">Brgy. ${barangay} • Joined ${joinedAtLabel}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        ${
+          status === "pending"
+            ? `
+              <button class="px-3 py-1 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 transition" 
+                      data-action="approve" data-user="${uid}" data-field="${j.fieldId}">Approve</button>
+              <button class="px-3 py-1 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 transition" 
+                      data-action="reject" data-user="${uid}" data-field="${j.fieldId}">Reject</button>
+            `
+            : `<span class="font-semibold ${statusColor}">${toTitleCase(status)}</span>`
+        }
+      </div>
+    `;
+
+    container.appendChild(div);
+  }
+
+  // 🔹 Handle approve/reject clicks
+  container.querySelectorAll("button[data-action]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const userId = btn.dataset.user;
+      const fieldId = btn.dataset.field;
+      const action = btn.dataset.action;
+      if (!userId || !fieldId) return;
+
+      btn.disabled = true;
+      btn.textContent = action === "approve" ? "Approving..." : "Rejecting...";
+
+      try {
+        const qSnap = await getDocs(
+          query(collectionGroup(db, "join_fields"), where("user_uid", "==", userId), where("fieldId", "==", fieldId))
+        );
+        if (!qSnap.empty) {
+          const docRef = qSnap.docs[0].ref;
+          await updateDoc(docRef, {
+            status: action === "approve" ? "approved" : "rejected",
+            updatedAt: serverTimestamp(),
+          });
+          loadJoinedUsersCount(auth.currentUser?.uid);
+        } else {
+          alert("Join record not found!");
+        }
+      } catch (err) {
+        console.error("⚠️ Update failed:", err);
+        alert("Failed to update: " + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 
 const DEFAULT_HANDLER_MAP_CENTER = [11.0, 124.6];
 
