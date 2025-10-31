@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>CaneMap - Task Panel</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<style>
+		:root {
+			--cane-50: #f7fee7;
+			--cane-100: #ecfcca;
+			--cane-200: #d8f999;
+			--cane-300: #bbf451;
+			--cane-400: #9ae600;
+			--cane-500: #7ccf00;
+			--cane-600: #5ea500;
+			--cane-700: #497d00;
+			--cane-800: #3c6300;
+			--cane-900: #35530e;
+			--cane-950: #192e03;
+		}
+		.section-card { background: white; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+		.btn-primary { background: linear-gradient(135deg, var(--cane-700), var(--cane-800)); color: #fff; }
+		.btn-primary:hover { background: linear-gradient(135deg, var(--cane-800), var(--cane-900)); }
+		.btn-secondary { background: #e5e7eb; color: #374151; }
+		.btn-secondary:hover { background: #d1d5db; }
+		.search-input {
+			padding: 0.65rem 0.85rem;
+			border-radius: 0.75rem;
+			border: 1px solid #d9e2ec;
+			background: #ffffff;
+			font-size: 0.85rem;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+		.search-input:focus {
+			outline: none;
+			border-color: var(--cane-500);
+			box-shadow: 0 0 0 3px rgba(124, 207, 0, 0.15);
+		}
+		table thead th {
+			background: #f8fafc;
+			font-size: 0.8rem;
+			letter-spacing: 0.05em;
+			text-transform: uppercase;
+			color: #6b7280;
+			font-weight: 600;
+			padding: 1rem 1rem;
+		}
+		table tbody tr {
+			transition: background-color 0.15s ease;
+		}
+		table tbody tr:hover {
+			background-color: #f9fafb;
+		}
+		table tbody td {
+			padding: 1.25rem 1rem;
+			font-size: 0.95rem;
+		}
+		.modal {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.5);
+			z-index: 50;
+			align-items: center;
+			justify-content: center;
+		}
+		.modal.active {
+			display: flex;
+		}
+		.modal-content {
+			background: linear-gradient(135deg, #ecfcca, #f7fee7);
+			border-radius: 1rem;
+			max-width: 900px;
+			width: 90%;
+			max-height: 90vh;
+			overflow-y: auto;
+		}
+	</style>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+	<main class="container mx-auto px-4 lg:px-6 py-6">
+		<!-- Task List Section -->
+		<div class="section-card rounded-2xl p-6">
+			<div class="mb-5">
+				<h2 class="text-2xl font-bold text-[var(--cane-950)] mb-1 flex items-center gap-2">
+					<span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cane-100)] text-[var(--cane-700)]">
+						<i class="fas fa-tasks"></i>
+					</span>
+					My Tasks
+				</h2>
+				<p class="text-sm text-gray-600">Manage and track all assigned tasks.</p>
+			</div>
+
+			<!-- Action Bar -->
+			<div class="mb-4 flex flex-col sm:flex-row justify-between gap-3">
+				<button id="createTaskBtn" class="btn-primary px-5 py-2.5 rounded-lg font-semibold shadow-md transition-all hover:shadow-lg">
+					<i class="fas fa-plus mr-2"></i>Create Task
+				</button>
+				<div class="relative flex-1 sm:max-w-xs">
+					<i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"></i>
+					<input id="searchTasks" type="text" placeholder="Search tasks..." class="search-input pl-9 w-full" />
+				</div>
+			</div>
+
+			<!-- Tasks Table -->
+			<div class="overflow-hidden rounded-xl border border-gray-200">
+				<table class="min-w-full">
+					<thead>
+						<tr>
+							<th class="text-left">Task Title</th>
+							<th class="text-left">Field</th>
+							<th class="text-left">Assigned To</th>
+							<th class="text-left">Date</th>
+							<th class="text-left">Status</th>
+							<th class="text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody id="tasksTbody">
+						<!-- Sample data -->
+						<tr class="border-t border-gray-100">
+							<td class="font-semibold text-gray-900">Harvest sugarcane</td>
+							<td class="text-gray-700">Lot A1 - Naungan</td>
+							<td class="text-gray-700">Maria Sanchez</td>
+							<td class="text-gray-700">Nov 1, 2025</td>
+							<td>
+								<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+									Pending
+								</span>
+							</td>
+							<td class="text-right">
+								<button class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+									<i class="fas fa-eye"></i><span>View</span>
+								</button>
+							</td>
+						</tr>
+						<tr class="border-t border-gray-100">
+							<td class="font-semibold text-gray-900">Transport harvest</td>
+							<td class="text-gray-700">Lot B2 - Ipil</td>
+							<td class="text-gray-700">Peter Romero</td>
+							<td class="text-gray-700">Nov 2, 2025</td>
+							<td>
+								<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+									In Progress
+								</span>
+							</td>
+							<td class="text-right">
+								<button class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+									<i class="fas fa-eye"></i><span>View</span>
+								</button>
+							</td>
+						</tr>
+						<tr class="border-t border-gray-100">
+							<td class="font-semibold text-gray-900">Fertilizer application</td>
+							<td class="text-gray-700">Lot C3 - Linao</td>
+							<td class="text-gray-700">Anna Reyes</td>
+							<td class="text-gray-700">Oct 30, 2025</td>
+							<td>
+								<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+									Completed
+								</span>
+							</td>
+							<td class="text-right">
+								<button class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+									<i class="fas fa-eye"></i><span>View</span>
+								</button>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<!-- Empty State (hidden by default) -->
+			<div id="tasksEmpty" class="hidden mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-gray-400 shadow-inner">
+					<i class="fas fa-tasks text-2xl"></i>
+				</div>
+				<h3 class="mt-4 text-lg font-semibold text-gray-900">No tasks yet</h3>
+				<p class="mt-2 text-sm text-gray-600">Create your first task to get started.</p>
+			</div>
+		</div>
+	</main>
+
+	<!-- Modal for Task Assignment Form -->
+	<div id="taskModal" class="modal">
+		<div class="modal-content p-8">
+			<div class="flex items-center justify-between mb-6">
+				<div class="flex items-center gap-3">
+					<button id="closeModalBtn" class="text-gray-600 hover:text-gray-800">
+						<i class="fas fa-arrow-left text-xl"></i>
+					</button>
+					<h2 class="text-2xl font-bold text-[var(--cane-900)]">Task Assignment Form</h2>
+				</div>
+			</div>
+
+			<form id="taskForm" class="space-y-6">
+				<!-- Top fields -->
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div>
+						<label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Task Title:</label>
+						<input id="taskTitle" type="text" placeholder="Enter task title" class="w-full px-4 py-2.5 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)] bg-white"/>
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Select Field:</label>
+						<select id="fieldSelect" class="w-full px-4 py-2.5 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)] bg-white">
+							<option value="">Choose field…</option>
+							<option>Lot A1 - Naungan</option>
+							<option>Lot B2 - Ipil</option>
+							<option>Lot C3 - Linao</option>
+						</select>
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned Date:</label>
+						<input id="assignedDate" type="date" placeholder="dd/mm/yyyy" class="w-full px-4 py-2.5 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)] bg-white"/>
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned Time:</label>
+						<input id="assignedTime" type="time" placeholder="--:-- --" class="w-full px-4 py-2.5 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)] bg-white"/>
+					</div>
+				</div>
+
+				<!-- Assigned to -->
+				<div>
+					<label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Assigned to:</label>
+					<div class="flex items-center space-x-2 mb-3 text-[var(--cane-800)]">
+						<input id="filterDriver" type="checkbox" class="w-4 h-4 border-gray-300 rounded">
+						<label for="filterDriver" class="text-sm">Show only workers with Driver Badge</label>
+					</div>
+					<select id="workerSelect" class="w-full px-4 py-2.5 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)] bg-white">
+						<option value="">Select worker…</option>
+						<option>Maria Sanchez</option>
+						<option>Peter Romero (Driver)</option>
+						<option>Anna Reyes</option>
+						<option>Carl Ramos (Driver)</option>
+					</select>
+				</div>
+
+				<!-- Description -->
+				<div>
+					<label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">Task Description:</label>
+					<textarea id="taskDesc" rows="6" class="w-full px-4 py-2.5 border-2 border-[var(--cane-300)] rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] focus:border-[var(--cane-500)] text-[var(--cane-900)] bg-white" placeholder="Add details, instructions, tools, etc."></textarea>
+				</div>
+
+				<!-- Actions -->
+				<div class="flex items-center justify-end space-x-3">
+					<button type="button" id="cancelFormBtn" class="btn-secondary px-6 py-2.5 rounded-lg font-semibold">Cancel</button>
+					<button type="submit" class="btn-primary px-6 py-2.5 rounded-lg font-semibold shadow-md">Assign Task</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<script>
+		// Modal controls
+		const modal = document.getElementById('taskModal');
+		const createTaskBtn = document.getElementById('createTaskBtn');
+		const closeModalBtn = document.getElementById('closeModalBtn');
+		const cancelFormBtn = document.getElementById('cancelFormBtn');
+
+		createTaskBtn.addEventListener('click', () => {
+			modal.classList.add('active');
+		});
+
+		closeModalBtn.addEventListener('click', () => {
+			modal.classList.remove('active');
+		});
+
+		cancelFormBtn.addEventListener('click', () => {
+			modal.classList.remove('active');
+		});
+
+		// Close modal when clicking outside
+		modal.addEventListener('click', (e) => {
+			if (e.target === modal) {
+				modal.classList.remove('active');
+			}
+		});
+
+		// Form submission
+		document.getElementById('taskForm').addEventListener('submit', (e) => {
+			e.preventDefault();
+			// Add your form submission logic here
+			alert('Task assigned successfully!');
+			modal.classList.remove('active');
+		});
+
+		// Search functionality
+		document.getElementById('searchTasks').addEventListener('input', (e) => {
+			const searchTerm = e.target.value.toLowerCase();
+			const rows = document.querySelectorAll('#tasksTbody tr');
+			
+			rows.forEach(row => {
+				const text = row.textContent.toLowerCase();
+				row.style.display = text.includes(searchTerm) ? '' : 'none';
+			});
+		});
+	</script>
+</body>
+</html>
+
