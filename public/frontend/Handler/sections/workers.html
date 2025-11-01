@@ -30,6 +30,21 @@
             border-color: var(--primary-medium);
             box-shadow: 0 4px 12px rgba(76, 140, 0, 0.25);
         }
+        .filter-dropdown-item {
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .filter-dropdown-item i.fa-check {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        .filter-dropdown-item.active {
+            background: var(--cane-50);
+            color: var(--primary-medium);
+            font-weight: 600;
+        }
+        .filter-dropdown-item.active i.fa-check {
+            opacity: 1;
+        }
         .search-input {
             width: 100%;
             min-width: 12rem;
@@ -67,7 +82,7 @@
             border-bottom: none;
         }
         .requests-card {
-            background: linear-gradient(135deg, #eef9e2, #d9f1bc);
+            background: #f4f9ec;
             border: 1px solid rgba(148, 214, 59, 0.35);
             box-shadow: 0 14px 24px rgba(118, 171, 36, 0.18);
         }
@@ -101,7 +116,7 @@
             font-weight: 600;
         }
     </style>
-<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6 mt-12">
         <!-- Left: All Workers List -->
         <div class="section-card rounded-2xl p-6 shadow-sm">
             <div class="mb-5">
@@ -116,21 +131,35 @@
 
             <!-- Filter and Search Bar -->
             <div class="mb-4 flex flex-col sm:flex-row gap-3">
-                <div class="flex gap-2">
-                    <button id="filterAll" class="filter-btn active px-4 py-2 rounded-lg text-sm font-semibold transition-all">
-                        <i class="fas fa-users mr-1"></i>All
-                    </button>
-                    <button id="filterFarmers" class="filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all">
-                        <i class="fas fa-tractor mr-1"></i>Farmers
-                    </button>
-                    <button id="filterDrivers" class="filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all">
-                        <i class="fas fa-truck mr-1"></i>Drivers
-                    </button>
-                </div>
                 <div class="flex-1">
                     <div class="relative">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"></i>
                         <input id="searchWorkers" type="text" placeholder="Search workers..." class="search-input pl-9 w-full" />
+                    </div>
+                </div>
+                <div class="sm:w-52">
+                    <div class="relative">
+                        <button id="filterDropdownButton" type="button" class="w-full inline-flex items-center justify-between gap-2 rounded-lg border border-[#d9e2ec] bg-white px-3 py-2 text-sm font-semibold text-[var(--cane-800)] shadow-sm hover:bg-gray-50">
+                            <span class="inline-flex items-center gap-2">
+                                <i class="fas fa-filter"></i>
+                                <span id="filterDropdownLabel">All Workers</span>
+                            </span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="filterDropdownMenu" class="hidden absolute right-0 mt-2 w-full rounded-lg border border-[#d9e2ec] bg-white shadow-lg z-10">
+                            <button data-filter="all" class="filter-dropdown-item flex w-full items-center justify-between px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
+                                <span class="inline-flex items-center gap-2"><i class="fas fa-users"></i>All</span>
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button data-filter="farmers" class="filter-dropdown-item flex w-full items-center justify-between px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
+                                <span class="inline-flex items-center gap-2"><i class="fas fa-tractor"></i>Farmers</span>
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button data-filter="drivers" class="filter-dropdown-item flex w-full items-center justify-between px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
+                                <span class="inline-flex items-center gap-2"><i class="fas fa-truck"></i>Drivers</span>
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

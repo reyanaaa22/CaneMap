@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { initializeFieldsSection } from "./fields-map.js";
+import { initializeHandlerWorkersSection } from "./worker.js";
 
 const NAME_PLACEHOLDERS = new Set([
   "",
@@ -425,7 +426,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!container) return false;
 
     try {
-      const response = await fetch(dynamicSections[sectionId]);
+      const sectionUrl = dynamicSections[sectionId];
+      const cacheBuster = `?v=${Date.now()}`;
+      const response = await fetch(`${sectionUrl}${cacheBuster}`, { cache: 'no-store' });
+
       if (!response.ok) throw new Error(`Failed to load ${sectionId}`);
       const html = await response.text();
       container.innerHTML = html;
@@ -437,6 +441,13 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
           initializeFieldsSection();
         }, 100);
+      }
+
+      if (sectionId === 'workers') {
+        console.log('👥 Workers section loaded, initializing scripts...');
+        setTimeout(() => {
+          initializeHandlerWorkersSection();
+        }, 50);
       }
       
       return true;
