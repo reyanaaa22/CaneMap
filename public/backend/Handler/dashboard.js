@@ -3,7 +3,7 @@ import { auth, db } from "../Common/firebase-config.js";
 import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { initializeFieldsSection } from "./fields-map.js";
 import { initializeHandlerWorkersSection } from "./worker.js";
 
@@ -30,6 +30,145 @@ const resolveValue = (candidates, placeholders) => {
     if (cleaned && !placeholders.has(cleaned.toLowerCase())) {
       return cleaned;
     }
+
+// =============================
+// 🔔 Notifications Helpers
+// =============================
+
+function formatRelativeTime(ts) {
+  const date = ts && ts.toDate ? ts.toDate() : ts ? new Date(ts) : new Date();
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) > 1 ? "s" : ""} ago`;
+  return date.toLocaleDateString();
+}
+
+let notificationsUnsub = null;
+
+async function initNotifications(userId) {
+  const bellBtn = document.getElementById("notificationBellBtn");
+  const dropdown = document.getElementById("notificationDropdown");
+  const badge = document.getElementById("notificationBadge");
+  const list = document.getElementById("notificationList");
+  const refreshBtn = document.getElementById("notificationRefreshBtn");
+
+  if (!bellBtn || !dropdown || !badge || !list) return;
+
+  const closeDropdown = (event) => {
+    if (!dropdown.contains(event.target) && !bellBtn.contains(event.target)) {
+      dropdown.classList.add("hidden");
+    }
+  };
+
+  bellBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    dropdown.classList.toggle("hidden");
+    if (!dropdown.classList.contains("hidden")) {
+      bellBtn.classList.add("text-white");
+    }
+  });
+
+  document.addEventListener("click", closeDropdown);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") dropdown.classList.add("hidden");
+  });
+
+  const renderNotifications = (docs = []) => {
+    const unread = docs.filter((doc) => doc.status !== "read");
+
+    if (unread.length > 0) {
+      badge.textContent = String(unread.length);
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+
+    if (docs.length === 0) {
+      list.innerHTML = '<div class="p-4 text-sm text-gray-500 text-center">No notifications yet.</div>';
+      return;
+    }
+
+    list.innerHTML = docs
+      .map((item) => {
+        const title = item.title || "Notification";
+        const message = item.message || "";
+        const meta = formatRelativeTime(item.timestamp || item.createdAt);
+        const statusClass = item.status === "read" ? "bg-gray-100" : "bg-[var(--cane-50)]";
+        const safeMessage = typeof message === "string" ? message : "";
+
+        return `<button data-id="${item.id}" class="w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 focus:outline-none ${statusClass}">
+          <div class="flex items-start gap-2">
+            <div class="mt-1 h-2 w-2 rounded-full ${item.status === "read" ? "bg-gray-300" : "bg-[var(--cane-600)]"}"></div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-semibold text-[var(--cane-900)]">${title}</p>
+                <span class="text-xs text-[var(--cane-600)]">${meta}</span>
+              </div>
+              <p class="mt-1 text-sm text-[var(--cane-700)] leading-snug">${safeMessage}</p>
+            </div>
+          </div>
+        </button>`;
+      })
+      .join("");
+
+    Array.from(list.querySelectorAll("button[data-id]"))
+      .forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const notificationId = btn.dataset.id;
+          try {
+            await markNotificationRead(userId, notificationId);
+          } catch (err) {
+            console.warn("Failed to update notification status", err);
+          }
+        });
+      });
+  };
+
+  const fetchNotifications = () => {
+    if (notificationsUnsub) notificationsUnsub();
+
+    const notificationsRef = collection(db, "notifications");
+    const notificationsQuery = query(
+      notificationsRef,
+      where("userId", "==", userId),
+      orderBy("timestamp", "desc"),
+      limit(25)
+    );
+
+    notificationsUnsub = onSnapshot(notificationsQuery, (snapshot) => {
+      const docs = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderNotifications(docs);
+    }, (error) => {
+      console.error("Notifications stream failed", error);
+      list.innerHTML = '<div class="p-4 text-sm text-red-500 text-center">Failed to load notifications.</div>';
+    });
+  };
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      fetchNotifications();
+    });
+  }
+
+  fetchNotifications();
+}
+
+async function markNotificationRead(userId, notificationId) {
+  if (!notificationId) return;
+  try {
+    await updateDoc(doc(db, "notifications", notificationId), {
+      status: "read",
+      readAt: serverTimestamp(),
+      readBy: userId
+    });
+  } catch (err) {
+    console.warn("Failed to mark notification as read", err);
+  }
+}
   }
   return "";
 };
@@ -376,6 +515,7 @@ onAuthStateChanged(auth, (user) => {
   if (!user) return (window.location.href = "../../login.html");
   loadUserProfile(user);
   loadJoinRequests(user.uid);
+  initNotifications(user.uid);
 });
 
 // =============================

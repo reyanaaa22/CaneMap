@@ -9,6 +9,11 @@ export function initializeFieldsSection() {
   let markersLayer = null;
   let currentUserId = null;
   let fieldsData = [];
+  let topFieldsUnsub = null;
+  let nestedFieldsUnsub = null;
+  const fieldStore = new Map();
+  let topFieldKeys = new Set();
+  let nestedFieldKeys = new Set();
 
   const STATUS_META = {
     reviewed: {
@@ -271,47 +276,40 @@ export function initializeFieldsSection() {
     showMessage('Loading your fields...', 'info');
 
     try {
-      // Query fields collection where userId matches current user
-      const fieldsRef = collection(db, 'fields');
-      console.log('📂 Querying collection: fields');
-      console.log('🔍 Query: where("userId", "==", "' + currentUserId + '")');
-      
-      const q = query(fieldsRef, where('userId', '==', currentUserId));
-      
-      // Real-time listener for field updates
-      onSnapshot(q, (snapshot) => {
-        console.log('📦 Snapshot received, size:', snapshot.size);
-        
-        fieldsData = [];
-        markersLayer.clearLayers(); // Clear existing markers
-        
-        snapshot.forEach((doc) => {
-          const fieldData = { id: doc.id, ...doc.data() };
-          console.log('📍 Field found:', {
-            id: doc.id,
-            name: fieldData.field_name || fieldData.fieldName,
-            hasCoordinates: !!(fieldData.latitude && fieldData.longitude),
-            latitude: fieldData.latitude,
-            longitude: fieldData.longitude
-          });
-          
-          fieldsData.push(fieldData);
-          
-          // Add marker to map if coordinates exist
-          if (fieldData.latitude && fieldData.longitude) {
-            console.log('✅ Adding marker for:', fieldData.field_name || fieldData.fieldName);
-            addFieldMarker(fieldData);
-          } else {
-            console.warn('⚠️ No coordinates for field:', fieldData.field_name || fieldData.fieldName);
+      if (topFieldsUnsub) {
+        topFieldsUnsub();
+        topFieldsUnsub = null;
+      }
+      if (nestedFieldsUnsub) {
+        nestedFieldsUnsub();
+        nestedFieldsUnsub = null;
+      }
+
+      const renderFromStore = () => {
+        fieldsData = Array.from(fieldStore.values());
+
+        if (!markersLayer) {
+          markersLayer = L.layerGroup().addTo(fieldsMap);
+        }
+
+        markersLayer.clearLayers();
+        let markersAdded = 0;
+
+        fieldsData.forEach((field) => {
+          const lat = parseFloat(field.latitude ?? field.lat ?? '');
+          const lng = parseFloat(field.longitude ?? field.lng ?? '');
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            console.warn('⚠️ No coordinates for field:', field.field_name || field.fieldName || field.id);
+            return;
           }
+          addFieldMarker({ ...field, latitude: lat, longitude: lng });
+          markersAdded += 1;
         });
 
-        // Update fields list
         updateFieldsList();
         updateFieldsCount();
-        
-        // Fit map to show all markers
-        if (fieldsData.length > 0 && markersLayer.getLayers().length > 0) {
+
+        if (fieldsData.length > 0 && markersAdded > 0) {
           const group = new L.featureGroup(markersLayer.getLayers());
           fieldsMap.fitBounds(group.getBounds().pad(0.1));
           showMessage(`Showing ${fieldsData.length} field(s) on the map`, 'info');
@@ -321,12 +319,73 @@ export function initializeFieldsSection() {
           showMessage('No fields registered yet', 'info');
         }
 
-        console.log(`✅ Loaded ${fieldsData.length} fields, ${markersLayer.getLayers().length} markers`);
+        console.log(`✅ Loaded ${fieldsData.length} fields, ${markersAdded} markers`);
+      };
+
+      const createTopKey = (doc) => doc.data()?.sourceRef || doc.ref.path;
+
+      const topQuery = query(collection(db, 'fields'), where('userId', '==', currentUserId));
+      topFieldsUnsub = onSnapshot(topQuery, (snapshot) => {
+        console.log('📦 Top-level fields snapshot size:', snapshot.size);
+        const seen = new Set();
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() || {};
+          const key = createTopKey(docSnap);
+          seen.add(key);
+          fieldStore.set(key, {
+            id: docSnap.id,
+            ...data,
+            userId: data.userId || currentUserId,
+            sourceRef: key
+          });
+        });
+
+        topFieldKeys.forEach((key) => {
+          if (!seen.has(key) && !nestedFieldKeys.has(key)) {
+            fieldStore.delete(key);
+          }
+        });
+        topFieldKeys = seen;
+
+        renderFromStore();
       }, (error) => {
         console.error('❌ Error fetching fields:', error);
         showMessage('Error loading fields: ' + error.message, 'error');
       });
-      
+
+      const nestedRef = collection(db, 'field_applications', currentUserId, 'fields');
+      nestedFieldsUnsub = onSnapshot(nestedRef, (snapshot) => {
+        console.log('📦 Nested fields snapshot size:', snapshot.size);
+        const seen = new Set();
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() || {};
+          const key = docSnap.ref.path;
+          seen.add(key);
+          if (!fieldStore.has(key)) {
+            fieldStore.set(key, {
+              id: docSnap.id,
+              ...data,
+              userId: data.userId || currentUserId,
+              sourceRef: key
+            });
+          }
+        });
+
+        nestedFieldKeys.forEach((key) => {
+          if (!seen.has(key) && !topFieldKeys.has(key)) {
+            fieldStore.delete(key);
+          }
+        });
+        nestedFieldKeys = seen;
+
+        renderFromStore();
+      }, (error) => {
+        console.error('❌ Error fetching nested fields:', error);
+        showMessage('Error loading fields: ' + error.message, 'error');
+      });
+
     } catch (error) {
       console.error('❌ Error loading fields:', error);
       showMessage('Error loading fields: ' + error.message, 'error');
@@ -341,11 +400,11 @@ export function initializeFieldsSection() {
     if (!lat || !lng) return;
 
     // Create custom green marker icon
-    const fieldIcon = L.divIcon({
-      className: 'custom-field-marker',
-      html: `<div style="background: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(34,197,94,0.4);"></div>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11]
+    const fieldIcon = L.icon({
+      iconUrl: '../../frontend/img/PIN.png',
+      iconSize: [38, 44],
+      iconAnchor: [19, 44],
+      popupAnchor: [0, -36]
     });
 
     if (!markersLayer) {

@@ -352,7 +352,28 @@ document.addEventListener("DOMContentLoaded", () => {
         currentUser.uid,
         "fields"
       );
-      await addDoc(userFieldsRef, payload);
+      const fieldDocRef = await addDoc(userFieldsRef, payload);
+
+      const topLevelPayload = {
+        userId: currentUser.uid,
+        field_name: fieldName,
+        fieldName,
+        barangay,
+        street,
+        sugarcane_variety: sugarVariety,
+        terrain_type: terrain,
+        field_size: size,
+        area: size,
+        latitude: lat,
+        longitude: lng,
+        status: "pending",
+        sourceRef: fieldDocRef.path,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const topLevelRef = doc(db, "fields", fieldDocRef.id);
+      await setDoc(topLevelRef, topLevelPayload, { merge: true });
 
       alert("✅ Field registration submitted successfully! Your request will be reviewed by the SRA within 5–10 working days.");
         window.location.href = "../Common/lobby.html";

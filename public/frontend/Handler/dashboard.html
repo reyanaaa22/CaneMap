@@ -356,13 +356,27 @@
         </button>
         <!-- Back button and title removed per request -->
       </div>
-            <div class="flex items-center space-x-4 text-white text-base">
-                <button class="relative text-white hover:text-gray-200"><i class="fas fa-bell text-lg"></i><span class="absolute -top-2 -right-2 bg-red-500 text-white text-[0.65rem] rounded-full h-5 w-5 flex items-center justify-center">5</span></button>
+            <div class="flex items-center space-x-4 text-white text-base ml-2 lg:ml-4">
+                <div class="relative">
+                    <button id="notificationBellBtn" class="relative text-white hover:text-gray-200 focus:outline-none">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-[0.65rem] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center hidden">0</span>
+                    </button>
+                    <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white text-[var(--cane-900)] rounded-lg shadow-lg border border-gray-200 z-50">
+                        <div class="px-4 py-2 border-b border-gray-100 font-semibold text-sm flex items-center justify-between">
+                            <span>Notifications</span>
+                            <button id="notificationRefreshBtn" type="button" class="text-xs text-[var(--cane-600)] hover:text-[var(--cane-700)]">Refresh</button>
+                        </div>
+                        <div id="notificationList" class="max-h-80 overflow-y-auto">
+                            <div class="p-4 text-sm text-[var(--cane-700)] text-center">No notifications yet.</div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Profile Dropdown -->
                 <div class="relative">
-                    <button id="profileDropdownBtn" class="flex items-center space-x-3 text-white hover:text-gray-200 transition-colors text-base">
-                        <div class="w-9 h-9 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
+                    <button id="profileDropdownBtn" class="flex items-center space-x-5 text-white hover:text-gray-200 transition-colors text-base">
+                        <div class="w-9 h-9 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                             <i class="fas fa-user text-white text-xs"></i>
                         </div>
                         <span id="topUserName" class="font-semibold">Loading...</span>
@@ -373,7 +387,7 @@
                     <div id="profileDropdown" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-50">
                         <!-- Red Header Section -->
                         <div class="bg-green-600 rounded-t-lg p-4 text-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-md mx-auto mb-2">
+                            <div class="w-16 h-16 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md mx-auto mb-2">
                                 <i class="fas fa-user text-white text-xl"></i>
                             </div>
                             <h3 id="dropdownUserName" class="text-white font-semibold text-lg">Loading...</h3>
@@ -415,7 +429,7 @@
             <!-- Profile Section -->
             <div class="p-6 border-b border-gray-700">
                 <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ring-2 ring-white/10">
+                    <div class="w-14 h-14 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ring-2 ring-white/10">
                         <i class="fas fa-user text-white text-xl"></i>
                     </div>
                     <div>
