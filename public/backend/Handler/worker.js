@@ -1,6 +1,51 @@
 // CaneMap Workers handler hooked to Firestore (falls back to localStorage)
 import { db } from '../../backend/Common/firebase-config.js';
-import { collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, where } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+
+const NAME_PLACEHOLDERS = new Set([
+  '',
+  'loading',
+  'loading...',
+  'unnamed',
+  'unnamed farmer',
+  'farmer name',
+  'handler name',
+  'user name',
+  'null',
+  'undefined'
+]);
+
+const CONTACT_PLACEHOLDERS = new Set([
+  '',
+  'none',
+  'n/a',
+  'na',
+  '0000000000',
+  '00000000000',
+  'contact number',
+  'no contact'
+]);
+
+const cleanString = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const resolveValue = (candidates = [], placeholders = NAME_PLACEHOLDERS) => {
+  for (const value of candidates) {
+    const cleaned = cleanString(value);
+    if (cleaned && !placeholders.has(cleaned.toLowerCase())) {
+      return cleaned;
+    }
+  }
+  return '';
+};
+
+const toTitleCase = (value) => {
+  const cleaned = cleanString(value);
+  if (!cleaned) return '';
+  return cleaned
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+};
 
 export function initializeHandlerWorkersSection() {
   const STORAGE_KEYS = {
@@ -9,9 +54,19 @@ export function initializeHandlerWorkersSection() {
     requests: 'cm_worker_requests'
   };
 
-  const colFarmers = () => collection(db, 'farmers');
-  const colDrivers = () => collection(db, 'drivers');
-  const colRequests = () => collection(db, 'worker_requests');
+  const getUserId = () => cleanString(localStorage.getItem('userId') || '');
+  const colFarmers = () => {
+    const uid = getUserId();
+    return uid ? collection(db, `users/${uid}/farmers`) : collection(db, 'farmers');
+  };
+  const colDrivers = () => {
+    const uid = getUserId();
+    return uid ? collection(db, `users/${uid}/drivers`) : collection(db, 'drivers');
+  };
+  const colRequests = () => {
+    const uid = getUserId();
+    return uid ? collection(db, `users/${uid}/worker_requests`) : collection(db, 'worker_requests');
+  };
 
   const state = {
     farmers: [],
@@ -54,6 +109,8 @@ export function initializeHandlerWorkersSection() {
     refs.dropdownItems = refs.dropdownMenu ? Array.from(refs.dropdownMenu.querySelectorAll('.filter-dropdown-item')) : [];
     refs.farmersCount = document.getElementById('farmersCount');
     refs.driversCount = document.getElementById('driversCount');
+    refs.requestsCount = document.getElementById('requestsCount');
+    refs.requestsList = document.getElementById('requestsList');
   }
 
   function syncFilterUI(filter){
@@ -134,28 +191,105 @@ export function initializeHandlerWorkersSection() {
   }
 
   function renderRequests(){
-    if (refs.requestsCount) refs.requestsCount.textContent = `${state.requests.length} pending`;
-    if (!refs.requestsList) return;
+    if (!refs.requestsList || !refs.requestsCount) return;
 
-    if (state.requests.length === 0) {
-      refs.requestsList.innerHTML = '<div class="text-sm text-[var(--cane-700)]">No pending requests.</div>';
+    const total = state.requests.length;
+    const countBadge = refs.requestsCount.querySelector('span');
+    if (countBadge) countBadge.textContent = `${total} pending`;
+
+    if (total === 0) {
+      refs.requestsList.innerHTML = '<div class="p-3 text-sm text-[var(--cane-700)] bg-white/60 rounded-lg">No pending requests.</div>';
       return;
     }
 
-    const tpl = document.getElementById('requestItemTpl');
-    if (!tpl) return;
+    refs.requestsList.innerHTML = state.requests.map((item) => {
+      const dateLine = item.requestedLabel ? `<p class="text-[11px] text-gray-500">Requested ${item.requestedLabel}</p>` : '';
+      return `
+      <div class="request-item rounded-xl bg-white p-3 flex flex-col gap-3">
+        <div class="flex justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-[var(--cane-900)]">${item.name || 'Unknown User'}</p>
+            <p class="text-xs text-gray-600">${item.role || 'Worker'} • ${item.fieldName || 'Field'}</p>
+            <p class="text-xs text-gray-500">${item.locationLine || ''}</p>
+            ${dateLine}
+          </div>
+          <div class="flex gap-2">
+            <button class="request-btn request-btn-primary" data-action="approve" data-path="${item.refPath}">Approve</button>
+            <button class="request-btn request-btn-secondary" data-action="decline" data-path="${item.refPath}">Decline</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
 
-    refs.requestsList.innerHTML = '';
-    state.requests.forEach(req => {
-      const node = tpl.content.cloneNode(true);
-      node.querySelector('[data-field="name"]').textContent = req.name || 'Unnamed';
-      node.querySelector('[data-field="role"]').textContent = req.role || '';
-      node.querySelector('[data-field="barangay"]').textContent = req.barangay || '';
-      node.querySelector('[data-field="phone"]').textContent = req.phone || '';
-      node.querySelector('[data-action="approve"]').addEventListener('click', async () => { await onApprove(req.id); });
-      node.querySelector('[data-action="reject"]').addEventListener('click', async () => { await onReject(req.id); });
-      refs.requestsList.appendChild(node);
+    refs.requestsList.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', async (event) => {
+        const { path, action } = btn.dataset;
+        if (!path || !action) return;
+        await handleJoinRequestAction(btn, path, action);
+      });
     });
+  }
+
+  async function handleJoinRequestAction(button, path, action) {
+    if (!button) return;
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = action === 'approve' ? 'Approving…' : 'Declining…';
+
+    const requestIndex = state.requests.findIndex(req => req.refPath === path);
+    const request = requestIndex >= 0 ? state.requests[requestIndex] : null;
+
+    try {
+      const docRef = doc(db, path);
+      await updateDoc(docRef, {
+        status: action === 'approve' ? 'approved' : 'rejected',
+        statusUpdatedAt: serverTimestamp()
+      });
+
+      if (action === 'approve' && request) {
+        const roleKey = cleanString(request.role || 'worker').toLowerCase();
+        const basePayload = {
+          name: request.name || 'Unnamed Worker',
+          phone: request.contact || '',
+          barangay: request.barangay || '',
+          plate: request.plate || ''
+        };
+
+        if (roleKey === 'driver') {
+          await addDriverFirestore({
+            name: basePayload.name,
+            phone: basePayload.phone,
+            plate: basePayload.plate,
+            since: new Date().toISOString()
+          });
+        } else {
+          await addFarmerFirestore({
+            name: basePayload.name,
+            phone: basePayload.phone,
+            barangay: basePayload.barangay,
+            since: new Date().toISOString()
+          });
+        }
+      }
+
+      if (requestIndex >= 0) {
+        state.requests.splice(requestIndex, 1);
+      }
+
+      await fetchAllData();
+      await loadJoinRequests();
+      updateSummaryCounts();
+      renderWorkers();
+    } catch (err) {
+      console.warn('Failed to update join request', err);
+      button.disabled = false;
+      button.textContent = originalLabel;
+      return;
+    }
+
+    button.disabled = false;
+    button.textContent = originalLabel;
   }
 
   function closeDropdown(){
@@ -203,24 +337,28 @@ export function initializeHandlerWorkersSection() {
   }
 
   async function fetchAllData(){
+    const uid = getUserId();
+    if (!uid) {
+      state.farmers = [];
+      state.drivers = [];
+      state.requests = [];
+      return;
+    }
     try {
-      const [farmersSnap, driversSnap, requestsSnap] = await Promise.all([
-        getDocs(colFarmers()),
-        getDocs(colDrivers()),
-        getDocs(colRequests())
+      const [farmersSnap, driversSnap] = await Promise.all([
+        getDocs(query(colFarmers()))
+        ,
+        getDocs(query(colDrivers()))
       ]);
 
       state.farmers = farmersSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
       state.drivers = driversSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-      state.requests = requestsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
       writeJson(STORAGE_KEYS.farmers, state.farmers);
       writeJson(STORAGE_KEYS.drivers, state.drivers);
-      writeJson(STORAGE_KEYS.requests, state.requests);
     } catch (err) {
       state.farmers = readJson(STORAGE_KEYS.farmers, []);
       state.drivers = readJson(STORAGE_KEYS.drivers, []);
-      state.requests = readJson(STORAGE_KEYS.requests, []);
     }
   }
 
@@ -244,73 +382,21 @@ export function initializeHandlerWorkersSection() {
     }
   }
 
-  async function approveRequestFirestore(req){
+  async function loadJoinRequests(){
     try {
-      const rRef = doc(colRequests(), req.id);
-      await deleteDoc(rRef);
-
-      if ((req.role || '').toLowerCase() === 'driver') {
-        await addDriverFirestore({ name: req.name, phone: req.phone || '', plate: req.plate || '' });
-      } else {
-        await addFarmerFirestore({ name: req.name, phone: req.phone || '', barangay: req.barangay || '' });
-      }
-      return true;
-    } catch (_) {
-      return false;
+      const result = await loadJoinRequestsForUser();
+      state.requests = result;
+      renderRequests();
+    } catch (err) {
+      console.warn('Failed to load join requests', err);
     }
-  }
-
-  async function rejectRequestFirestore(req){
-    try {
-      await deleteDoc(doc(colRequests(), req.id));
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  async function onApprove(id){
-    const idx = state.requests.findIndex(req => req.id === id);
-    if (idx === -1) return;
-
-    const req = state.requests[idx];
-    state.requests.splice(idx, 1);
-    writeJson(STORAGE_KEYS.requests, state.requests);
-    renderRequests();
-
-    const ok = await approveRequestFirestore(req);
-    if (!ok) {
-      if ((req.role || '').toLowerCase() === 'driver') {
-        const drivers = readJson(STORAGE_KEYS.drivers, []);
-        drivers.push({ id: uid(), name: req.name, phone: req.phone, plate: req.plate || '', since: new Date().toISOString() });
-        writeJson(STORAGE_KEYS.drivers, drivers);
-      } else {
-        const farmers = readJson(STORAGE_KEYS.farmers, []);
-        farmers.push({ id: uid(), name: req.name, phone: req.phone, barangay: req.barangay || '', since: new Date().toISOString() });
-        writeJson(STORAGE_KEYS.farmers, farmers);
-      }
-    }
-
-    await refresh();
-  }
-
-  async function onReject(id){
-    const idx = state.requests.findIndex(req => req.id === id);
-    if (idx === -1) return;
-
-    const req = state.requests[idx];
-    state.requests.splice(idx, 1);
-    writeJson(STORAGE_KEYS.requests, state.requests);
-    renderRequests();
-    await rejectRequestFirestore(req);
-    await refresh();
   }
 
   async function refresh(){
     await fetchAllData();
     updateSummaryCounts();
     renderWorkers();
-    renderRequests();
+    await loadJoinRequests();
   }
 
   async function init(){
@@ -321,4 +407,119 @@ export function initializeHandlerWorkersSection() {
   }
 
   init();
+}
+
+async function loadJoinRequestsForUser(){
+  const userId = localStorage.getItem('userId');
+  if (!userId) return [];
+
+  const joinFieldsRef = collection(db, `field_joins/${userId}/join_fields`);
+  const q = query(joinFieldsRef, where('status', '==', 'pending'));
+  const snapshot = await getDocs(q);
+
+  const fieldCache = new Map();
+
+  const resolveField = async (fieldId) => {
+    if (!fieldId) return {};
+    if (fieldCache.has(fieldId)) return fieldCache.get(fieldId);
+    const candidates = [
+      doc(db, 'fields', fieldId),
+      doc(db, `field_applications/${userId}/fields/${fieldId}`)
+    ];
+    for (const ref of candidates) {
+      try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          fieldCache.set(fieldId, data);
+          return data;
+        }
+      } catch (_) {}
+    }
+    return {};
+  };
+
+  const toLabel = (ts) => {
+    if (!ts) return '';
+    const date = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
+    return date ? date.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  };
+
+  const requests = [];
+
+  for (const docSnap of snapshot.docs) {
+    const raw = docSnap.data() || {};
+    const fieldId = raw.fieldId || raw.field_id || raw.fieldID || docSnap.id;
+    const fieldInfo = await resolveField(fieldId);
+    const requesterId = raw.userId || raw.user_id || raw.user_uid || '';
+    const rawNameCandidates = [
+      raw.userName,
+      raw.username,
+      raw.requesterName,
+      raw.requester_name,
+      raw.name
+    ];
+    let requesterName = resolveValue(rawNameCandidates, NAME_PLACEHOLDERS) || requesterId;
+    let requesterRole = cleanString(raw.role || raw.requested_role || '');
+    const phoneCandidates = [
+      raw.contact,
+      raw.contactNumber,
+      raw.contact_number,
+      raw.phone,
+      raw.phoneNumber,
+      raw.phone_number,
+      raw.mobile,
+      raw.mobileNumber
+    ];
+    let contact = resolveValue(phoneCandidates, CONTACT_PLACEHOLDERS);
+    let plate = cleanString(raw.plate || raw.vehiclePlate || raw.vehicle_plate || '');
+    if (requesterId) {
+      try {
+        const snap = await getDoc(doc(db, 'users', requesterId));
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          requesterName = resolveValue([
+            data.nickname,
+            data.name,
+            data.fullname,
+            data.fullName,
+            data.full_name,
+            data.displayName,
+            data.display_name,
+            [data.firstName, data.lastName].filter(Boolean).join(' '),
+            [data.firstname, data.lastname].filter(Boolean).join(' '),
+            data.email
+          ], NAME_PLACEHOLDERS) || requesterName || requesterId;
+          requesterRole = cleanString(data.role || requesterRole);
+          contact = resolveValue([
+            contact,
+            data.phone,
+            data.phoneNumber,
+            data.contact,
+            data.mobile
+          ], CONTACT_PLACEHOLDERS) || contact;
+        }
+      } catch (_) {}
+    }
+
+    const barangay = raw.barangay || fieldInfo.barangay || '';
+    const street = raw.street || fieldInfo.street || '';
+    const locationLine = [barangay, street].filter(Boolean).join(' • ');
+
+    requests.push({
+      refPath: docSnap.ref.path,
+      name: requesterName,
+      role: toTitleCase(requesterRole || 'worker'),
+      userId: requesterId,
+      contact,
+      fieldName: raw.fieldName || raw.field_name || fieldInfo.field_name || fieldInfo.fieldName || '',
+      locationLine,
+      barangay,
+      street,
+      plate,
+      requestedLabel: toLabel(raw.requestedAt || raw.requested_at || raw.createdAt || raw.created_at)
+    });
+  }
+
+  return requests;
 }

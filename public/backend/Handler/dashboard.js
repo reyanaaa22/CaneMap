@@ -289,42 +289,51 @@ async function loadJoinRequests(userId) {
     const fieldInfoMap = new Map();
     const pendingRequests = [];
 
+    const resolveFieldInfo = async (fieldId) => {
+      if (!fieldId) return null;
+      if (fieldInfoMap.has(fieldId)) return fieldInfoMap.get(fieldId);
+
+      const fallbacks = [
+        doc(db, "fields", fieldId),
+        doc(db, `field_applications/${userId}/fields/${fieldId}`)
+      ];
+
+      for (const ref of fallbacks) {
+        try {
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            const data = snap.data() || {};
+            fieldInfoMap.set(fieldId, data);
+            return data;
+          }
+        } catch (err) {
+          console.warn(`Error fetching field info ${fieldId} from ${ref.path}:`, err);
+        }
+      }
+
+      return null;
+    };
+
     await Promise.all(
       joinsSnap.docs.map(async (docSnap, idx) => {
         const raw = docSnap.data() || {};
         const fieldId = raw.fieldId || raw.field_id || raw.fieldID || docSnap.id;
 
-        let fieldInfo = fieldInfoMap.get(fieldId);
-        if (!fieldInfo) {
-          try {
-            const fieldSnap = await getDoc(doc(db, "fields", fieldId));
-            if (!fieldSnap.exists()) {
-              console.warn(`Field ${fieldId} not found`);
-              return;
-            }
-            fieldInfo = fieldSnap.data() || {};
-            fieldInfoMap.set(fieldId, fieldInfo);
-          } catch (err) {
-            console.warn(`Error fetching field ${fieldId}:`, err);
-            return;
-          }
-        }
-
-        if (!fieldOwnedByUser(fieldInfo, userId)) return;
+        const fieldInfo = await resolveFieldInfo(fieldId);
 
         const requestedAt = raw.requestedAt || raw.requested_at || raw.createdAt || raw.created_at || null;
 
         pendingRequests.push({
           refPath: docSnap.ref.path,
           fieldId,
-          fieldInfo,
+          fieldInfo: fieldInfo || {},
           orderIndex: idx,
           data: {
             userId: raw.userId || raw.user_id || raw.user_uid || "",
             fieldId,
-            fieldName: raw.fieldName || raw.field_name || fieldInfo.field_name || fieldInfo.fieldName || "",
-            barangay: raw.barangay || fieldInfo.barangay || "",
-            street: raw.street || fieldInfo.street || "",
+            fieldName: raw.fieldName || raw.field_name || fieldInfo?.field_name || fieldInfo?.fieldName || "",
+            barangay: raw.barangay || fieldInfo?.barangay || "",
+            street: raw.street || fieldInfo?.street || "",
             role: raw.role || raw.requested_role || "worker",
             requestedAt
           }
