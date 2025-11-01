@@ -116,9 +116,20 @@ exports.createSRA = functions.https.onRequest(async (req, res) => {
       uid: user.uid
     });
 
-    return res.status(200).json({ ok: true, uid: user.uid, docId: docRef.id });
+    // Try to generate a Firebase action link (email verification) server-side and return it to the client
+    let verificationLink = null;
+    try {
+      verificationLink = await admin.auth().generateEmailVerificationLink(email, {
+        url: `https://canemap-system.web.app/verify.html?email=${encodeURIComponent(email)}`
+      });
+    } catch (linkErr) {
+      console.warn('Could not generate email verification link via Admin SDK:', linkErr && linkErr.message ? linkErr.message : linkErr);
+    }
+
+    return res.status(200).json({ ok: true, uid: user.uid, docId: docRef.id, verificationLink });
   } catch (err) {
     console.error('createSRA error:', err);
     return res.status(500).json({ error: err.message || String(err) });
   }
 });
+

@@ -2,7 +2,7 @@
 // CaneMap - Add SRA Officer Module
 // ================================
 
-import { db } from '../Common/firebase-config.js';
+import { db, auth } from '../Common/firebase-config.js';
 import { 
   addDoc, 
   collection, 
@@ -263,14 +263,27 @@ export function wireSRAAddForm() {
             throw new Error(err && err.error ? err.error : 'Failed to create Auth user');
           }
 
-          const verificationLink = `https://canemap-system.web.app/verify.html?email=${encodeURIComponent(email)}`;
-          const ej = window.emailjs;
-          if (!ej) throw new Error('EmailJS not loaded. Make sure script tag is in your HTML.');
+          // The Cloud Function may generate a proper Firebase email verification action link.
+          // Prefer using that server-generated link for faster, more reliable delivery.
+          const respJson = await resp.json().catch(() => ({}));
+          const serverLink = respJson && respJson.verificationLink ? respJson.verificationLink : null;
 
-          ej.init('fugIuCmCmUNG7-aXj');
-
-          const params = { email, name, verification_link: verificationLink, temp_password: temp };
-          await ej.send('service_wjr7a3q', 'template_q2h4txg', params);
+          if (serverLink) {
+            // Send the server-generated action link via EmailJS (keeps our existing template)
+            const ej = window.emailjs;
+            if (!ej) throw new Error('EmailJS not loaded. Make sure script tag is in your HTML.');
+            ej.init('fugIuCmCmUNG7-aXj');
+            const params = { email, name, verification_link: serverLink, temp_password: temp };
+            await ej.send('service_wjr7a3q', 'template_q2h4txg', params);
+          } else {
+            // Fallback to the legacy verification link which points to our verify.html
+            const verificationLink = `https://canemap-system.web.app/verify.html?email=${encodeURIComponent(email)}`;
+            const ej = window.emailjs;
+            if (!ej) throw new Error('EmailJS not loaded. Make sure script tag is in your HTML.');
+            ej.init('fugIuCmCmUNG7-aXj');
+            const params = { email, name, verification_link: verificationLink, temp_password: temp };
+            await ej.send('service_wjr7a3q', 'template_q2h4txg', params);
+          }
 
           showPopup({
             title: 'SRA Officer Added Successfully!',
