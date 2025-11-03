@@ -1,5 +1,7 @@
 
-        // Global variables
+import { showPopupMessage } from '../Common/ui-popup.js';
+
+    // Global variables
         let currentSection = 'dashboard';
 
         // Initialize dashboard when DOM is loaded
@@ -13,7 +15,7 @@
                     if (user) {
                         // Check if user is verified
                         if (!user.emailVerified) {
-                            alert('Please verify your email before accessing the SRA dashboard.');
+                            await showPopupMessage('Please verify your email before accessing the SRA dashboard.', 'warning');
                             window.location.href = '../Common/farmers_login.html';
                             return;
                         }
@@ -24,7 +26,7 @@
                         const userRole = userSnap.exists() ? userSnap.data().role : 'farmer';
                         
                         if (userRole !== 'sra') {
-                            alert('Access denied. This dashboard is only for SRA Officers.');
+                            await showPopupMessage('Access denied. This dashboard is only for SRA Officers.', 'error');
                             window.location.href = '../Common/lobby.html';
                             return;
                         }

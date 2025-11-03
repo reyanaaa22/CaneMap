@@ -518,7 +518,8 @@
     </div>
     </div>
 
-<script>
+<script type="module">
+import { showPopupMessage } from '../../backend/Common/ui-popup.js';
 let locationMap, locationMarker;
 
 // 🗺️ Barangays of Ormoc City with sample coordinates (approximate)
@@ -636,12 +637,12 @@ function initLocationMap() {
     popupAnchor: [0, -32]
     });
 
-    // 🖱️ Click to set location (Ormoc only)
-    locationMap.on('click', e => {
+  // 🖱️ Click to set location (Ormoc only)
+  locationMap.on('click', async e => {
       const lat = e.latlng.lat;
       const lng = e.latlng.lng;
       if (!ormocBounds.contains([lat, lng])) {
-        alert("Only fields within Ormoc City are allowed.");
+        await showPopupMessage("Only fields within Ormoc City are allowed.", 'warning');
         return;
       }
       document.getElementById('latitude').value = lat.toFixed(6);
@@ -673,21 +674,21 @@ function initLocationMap() {
     const input = document.getElementById('rfSearchInput');
     const btn = document.getElementById('rfSearchBtn');
 
-    function searchBarangay() {
+  async function searchBarangay() {
     const q = input.value.trim().toLowerCase();
     if (!q) return;
 
     const match = barangays.find(b => b.name.toLowerCase().includes(q));
-    if (!match) {
-        alert("Barangay not found in Ormoc City.");
-        return;
-    }
+  if (!match) {
+    await showPopupMessage("Barangay not found in Ormoc City.", 'warning');
+    return;
+  }
 
     // 🟢 Skip barangays with missing coordinates
-    if (!match.coords || match.coords[0] == null || match.coords[1] == null) {
-        alert(`Found ${match.name}, but it has no coordinates. Please click the map to pin manually.`);
-        return;
-    }
+  if (!match.coords || match.coords[0] == null || match.coords[1] == null) {
+    await showPopupMessage(`Found ${match.name}, but it has no coordinates. Please click the map to pin manually.`, 'info');
+    return;
+  }
 
     const [lat, lng] = match.coords;
     locationMap.setView([lat, lng], 15);

@@ -1,4 +1,5 @@
 // Workers Dashboard JavaScript
+import { showPopupMessage } from '../Common/ui-popup.js';
 // Global variables
 let userType = 'worker';
 let hasDriverBadge = false;
@@ -245,17 +246,17 @@ function navigateToSection(section) {
 }
 
 // Toggle notifications
-function toggleNotifications() {
+async function toggleNotifications() {
     console.log('Toggle notifications clicked');
     // You can implement notification panel logic here
-    alert('Notifications feature will be implemented here');
+    await showPopupMessage('Notifications feature will be implemented here', 'info');
 }
 
 // Logout function
-function logout() {
+async function logout() {
     // Add your logout logic here
-    alert('Logging out...');
-                window.location.href = '../frontend/Common/lobby.html';
+    await showPopupMessage('Logging out...', 'info');
+    window.location.href = '../frontend/Common/lobby.html';
 }
 
 // Setup event listeners

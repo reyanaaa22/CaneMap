@@ -254,7 +254,8 @@
 		</div>
 	</div>
 
-	<script>
+	<script type="module">
+	import { showPopupMessage } from '../../../backend/Common/ui-popup.js';
 		// Modal controls
 		const modal = document.getElementById('taskModal');
 		const createTaskBtn = document.getElementById('createTaskBtn');
@@ -281,10 +282,10 @@
 		});
 
 		// Form submission
-		document.getElementById('taskForm').addEventListener('submit', (e) => {
+		document.getElementById('taskForm').addEventListener('submit', async (e) => {
 			e.preventDefault();
 			// Add your form submission logic here
-			alert('Task assigned successfully!');
+			await showPopupMessage('Task assigned successfully!', 'success');
 			modal.classList.remove('active');
 		});
 
