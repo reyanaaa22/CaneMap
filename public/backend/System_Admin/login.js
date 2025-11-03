@@ -24,6 +24,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 import { setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { showPopupMessage } from "../Common/ui-popup.js";
 
 // Security Configuration
 const SECURITY_CONFIG = {
@@ -724,11 +725,11 @@ if (authResult.success) {
           createdAt: serverTimestamp()
         });
         console.log("✅ Default system admin created & signed in.");
-      } else if (err.code === "auth/wrong-password") {
-        console.warn("⚠️ Wrong password for admin account — please set Firebase password = 123456.");
-        alert("Please open Firebase → Authentication → canemapteam@gmail.com → set password to 123456");
-        throw err;
-      } else {
+                } else if (err.code === "auth/wrong-password") {
+                console.warn("⚠️ Wrong password for admin account — please set Firebase password = 123456.");
+                showPopupMessage('Please open Firebase → Authentication → canemapteam@gmail.com → set password to 123456', 'warning');
+                throw err;
+            } else {
         console.error("Auth error:", err);
         throw err;
       }

@@ -20,6 +20,56 @@ window.addEventListener('error', function (ev) {
         window.addEventListener('scroll', animateOnScroll);
         window.addEventListener('load', animateOnScroll);
 
+        // Lightweight custom popup modal to replace native alert() calls
+        function showPopupMessage(message, type = 'info') {
+            try {
+                // remove existing
+                const existing = document.getElementById('customPopupMessage');
+                if (existing) existing.remove();
+
+                const colors = {
+                    info: { bg: '#ffffff', border: '#c7f0c0', text: '#14532d' },
+                    success: { bg: '#ecfdf5', border: '#bbf7d0', text: '#065f46' },
+                    warning: { bg: '#fffbeb', border: '#fde68a', text: '#92400e' },
+                    error: { bg: '#fff1f2', border: '#fecaca', text: '#7f1d1d' }
+                };
+                const cfg = colors[type] || colors.info;
+
+                const modal = document.createElement('div');
+                modal.id = 'customPopupMessage';
+                Object.assign(modal.style, {
+                    position: 'fixed', inset: '0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.45)', zIndex: 999999
+                });
+
+                const box = document.createElement('div');
+                Object.assign(box.style, {
+                    background: cfg.bg, border: `1px solid ${cfg.border}`, padding: '18px', borderRadius: '12px',
+                    minWidth: '280px', maxWidth: '92%', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', color: cfg.text, textAlign: 'center'
+                });
+
+                const txt = document.createElement('div');
+                txt.innerHTML = message;
+                txt.style.marginBottom = '12px';
+
+                const btn = document.createElement('button');
+                btn.textContent = 'OK';
+                Object.assign(btn.style, {
+                    padding: '8px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 700,
+                    background: (type === 'error' ? '#7f1d1d' : type === 'warning' ? '#92400e' : '#14532d'), color: '#fff'
+                });
+
+                btn.addEventListener('click', () => modal.remove());
+                modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+                document.addEventListener('keydown', function escListener(ev){ if (ev.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', escListener); } });
+
+                box.appendChild(txt);
+                box.appendChild(btn);
+                modal.appendChild(box);
+                document.body.appendChild(modal);
+            } catch (e) { try { console.error('showPopupMessage failed', e); } catch(_) {} }
+        }
+
         // Weather API integration
         async function getWeather() {
             try {
@@ -567,7 +617,7 @@ const tooltipHtml = `
 
                 const match = barangays.find(b => b.name.toLowerCase() === query);
                 if (!match) {
-                    alert('Barangay not found or outside Ormoc City.');
+                    showPopupMessage('Barangay not found or outside Ormoc City.', 'error');
                     return;
                 }
 
@@ -582,7 +632,7 @@ const tooltipHtml = `
                 );
 
                 if (!found) {
-                    alert('❌ Field not found. Please type the exact Field Name.');
+                    showPopupMessage('Field not found. Please type the exact Field Name.', 'error');
                     return;
                 }
 
@@ -905,7 +955,7 @@ const tooltipHtml = `
 
             const userId = localStorage.getItem('userId');
             if (!userId) {
-            alert('⚠️ Please log in first.');
+            showPopupMessage('Please log in first.', 'warning');
             return;
             }
 
@@ -941,9 +991,9 @@ const tooltipHtml = `
             joinBtn.classList.add('opacity-60', 'cursor-not-allowed');
             joinBtn.style.backgroundColor = '#9ca3af';
             }
-        } catch (err) {
+            } catch (err) {
             console.error('❌ Error confirming join:', err);
-            alert('Failed to send join request. Please try again.');
+            showPopupMessage('Failed to send join request. Please try again.', 'error');
         }
         }
 
@@ -1938,13 +1988,13 @@ const tooltipHtml = `
         // small UI helpers for feedback modal
         function showInlineError(msg) {
             // temporary place the message in feedbackHint
-            try {
-                const hint = document.getElementById('feedbackHint');
-                if (!hint) return alert(msg);
-                hint.textContent = msg;
-                hint.classList.add('text-red-600');
-                setTimeout(() => { hint.textContent = "This pops up above the smile icon. Your input helps improve CaneMap."; hint.classList.remove('text-red-600'); }, 3500);
-            } catch (_) { alert(msg); }
+                try {
+                    const hint = document.getElementById('feedbackHint');
+                    if (!hint) return showPopupMessage(msg, 'info');
+                    hint.textContent = msg;
+                    hint.classList.add('text-red-600');
+                    setTimeout(() => { hint.textContent = "This pops up above the smile icon. Your input helps improve CaneMap."; hint.classList.remove('text-red-600'); }, 3500);
+                } catch (_) { showPopupMessage(msg, 'info'); }
         }
 
         function showConfirmationPopup(){
@@ -2370,11 +2420,11 @@ setTimeout(() => {
 
                         // Prefix message with ⚠️ and show same gray toast style
                         const toastMsg = `⚠️ ${message}`;
-                        if (typeof showToast === 'function') {
+                            if (typeof showToast === 'function') {
                             // Same look as Driver Badge: gray bg, top position
                             showToast(toastMsg, 'gray'); 
                         } else {
-                            alert(toastMsg);
+                            showToast(toastMsg, 'gray');
                         }
                     };
                     // Capture phase ensures this runs before inline onclick
@@ -2535,7 +2585,7 @@ setTimeout(() => {
           try {
             const unread = cachedData.filter((n) => n.status === "unread");
             if (unread.length === 0) {
-              alert("All notifications are already read.");
+              showPopupMessage("All notifications are already read.", 'info');
               return;
             }
 

@@ -1,4 +1,5 @@
 // Minimal JS to mock field/worker options and handle submit
+import { showPopupMessage } from "../Common/ui-popup.js";
 document.addEventListener('DOMContentLoaded', () => {
   const fieldSelect = document.getElementById('fieldSelect');
   const workerSelect = document.getElementById('workerSelect');
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    alert('Task assigned successfully.');
+    showPopupMessage('Task assigned successfully.', 'success');
   });
 });
 

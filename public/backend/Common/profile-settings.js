@@ -1,4 +1,5 @@
 import { auth, db } from "./firebase-config.js";
+import { showPopupMessage, showConfirm } from "./ui-popup.js";
 import { getAuth, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider, updateEmail, updateProfile } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
@@ -342,7 +343,12 @@ ui.editSaveBtn?.addEventListener('click', async () => {
     }
   } catch (err) {
     console.error('Save failed:', err);
-    alert('Saving failed: ' + (err?.message || err));
+    try { 
+      await showPopupMessage('Saving failed: ' + (err?.message || err), 'error');
+    } catch (e) {
+      // fallback to console if UI fails
+      console.error('Popup failed', e);
+    }
   }
 });
 

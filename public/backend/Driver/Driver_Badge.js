@@ -86,7 +86,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   onAuthStateChanged(auth, (user) => {
     if (!user) {
-      alert("Please log in to apply for a Driver Badge.");
+      showPopupLocal({
+        title: 'Login required',
+        message: 'Please log in to apply for a Driver Badge.',
+        type: 'warning',
+        closeText: 'OK'
+      });
       window.location.href = "../../frontend/Handler/farmers_login.html";
       return;
     }

@@ -1,4 +1,5 @@
 import { auth, db } from '../Common/firebase-config.js';
+import { showConfirm, showPopupMessage } from '../Common/ui-popup.js';
 import { getDocs, collection, doc, updateDoc, deleteDoc, onSnapshot } 
   from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -284,12 +285,14 @@ function openModal(id) {
     </div>
   `;
 
-  // 🔹 Attach Approve/Reject logic
-  document.getElementById("approveBtn").addEventListener("click", () => {
-    if (confirm("Are you sure you want to approve this request?")) updateStatus(req.id, "approved");
+  // 🔹 Attach Approve/Reject logic (use modern confirm popup)
+  document.getElementById("approveBtn").addEventListener("click", async () => {
+    const ok = await showConfirm('Are you sure you want to approve this request?');
+    if (ok) updateStatus(req.id, 'approved');
   });
-  document.getElementById("rejectBtn").addEventListener("click", () => {
-    if (confirm("Are you sure you want to reject this request?")) updateStatus(req.id, "rejected");
+  document.getElementById("rejectBtn").addEventListener("click", async () => {
+    const ok = await showConfirm('Are you sure you want to reject this request?');
+    if (ok) updateStatus(req.id, 'rejected');
   });
 
   // 🔹 Close modal

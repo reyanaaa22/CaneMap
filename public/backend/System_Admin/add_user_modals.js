@@ -134,10 +134,14 @@ function showConfirmationModal({ name, email, temp, onConfirm }) {
 
   document.getElementById('cancelConfirm').addEventListener('click', () => overlay.remove());
 
-  document.getElementById('proceedConfirm').addEventListener('click', () => {
+    document.getElementById('proceedConfirm').addEventListener('click', () => {
     const checked = document.getElementById('policyCheck').checked;
     if (!checked) {
-      alert('Please check the confirmation box before proceeding.');
+      showPopup({
+        title: 'Confirmation required',
+        message: 'Please check the confirmation box before proceeding.',
+        type: 'warning'
+      });
       return;
     }
     overlay.remove();

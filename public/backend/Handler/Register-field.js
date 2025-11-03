@@ -1,4 +1,5 @@
 import { collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { showPopupMessage } from "../Common/ui-popup.js";
 import { auth, db } from "../Common/firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import {
@@ -29,7 +30,7 @@ function setupDocUpload(fileInputId, base64InputId, nameDisplayId) {
     const file = fileInput.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("File too large. Max 5MB allowed.");
+      showPopupMessage('File too large. Max 5MB allowed.', 'error');
       fileInput.value = "";
       return;
     }
@@ -94,7 +95,7 @@ function setupCameraAndUpload(config) {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
       video.srcObject = stream;
     } catch (err) {
-      alert("Camera not accessible. Please allow camera permission or upload a file instead.");
+      showPopupMessage('Camera not accessible. Please allow camera permission or upload a file instead.', 'error');
       cameraDiv.remove();
       return;
     }
@@ -135,7 +136,7 @@ function setupCameraAndUpload(config) {
     const file = fileInput.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("File too large. Max 5MB allowed.");
+      showPopupMessage('File too large. Max 5MB allowed.', 'error');
       fileInput.value = "";
       return;
     }
@@ -189,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
 
     if (!currentUser) {
-      alert("Please login first before registering a field.");
+      showPopupMessage('Please login first before registering a field.', 'warning');
       return;
     }
 
@@ -237,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
         validBack,
         selfie
       });
-      alert("Please fill out all fields and capture all required photos.");
+      showPopupMessage('Please fill out all fields and capture all required photos.', 'error');
       return;
     }
 
@@ -289,9 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (duplicateFound) {
-        alert(
-          "⚠️ You already registered this field with the same field name, barangay, street, field size, terrain type, variety, and coordinates."
-        );
+        showPopupMessage('⚠️ You already registered this field with the same field name, barangay, street, field size, terrain type, variety, and coordinates.', 'warning');
         submitBtn.disabled = false;
         submitBtn.textContent = "Submit Field Registration";
         submitBtn.classList.remove("opacity-50");
@@ -375,14 +374,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const topLevelRef = doc(db, "fields", fieldDocRef.id);
       await setDoc(topLevelRef, topLevelPayload, { merge: true });
 
-      alert("✅ Field registration submitted successfully! Your request will be reviewed by the SRA within 5–10 working days.");
+      showPopupMessage('✅ Field registration submitted successfully! Your request will be reviewed by the SRA within 5–10 working days.', 'success');
         window.location.href = "../Common/lobby.html";
 
 
       form.reset();
     } catch (err) {
       console.error("❌ Field registration error:", err);
-      alert("Error submitting field registration: " + (err.message || err));
+      showPopupMessage('Error submitting field registration: ' + (err.message || err), 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Submit Field Registration";

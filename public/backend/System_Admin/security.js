@@ -2,6 +2,7 @@
 // Handles all security-related functionality for system administrators
 
 import { auth, db } from '../Common/firebase-config.js';
+import { showConfirm, showPopupMessage } from '../Common/ui-popup.js';
 import { 
     collection, 
     query, 
@@ -689,9 +690,8 @@ function formatLastLogin(date) {
 
 // Action functions
 export async function terminateSession(sessionId) {
-    if (!confirm('Are you sure you want to terminate this session?')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to terminate this session?');
+    if (!ok) return;
     
     try {
         await updateDoc(doc(db, 'user_sessions', sessionId), {
@@ -710,9 +710,8 @@ export async function terminateSession(sessionId) {
 }
 
 export async function lockAccount(userId) {
-    if (!confirm('Are you sure you want to lock this account?')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to lock this account?');
+    if (!ok) return;
     
     try {
         await updateDoc(doc(db, 'users', userId), {
@@ -731,9 +730,8 @@ export async function lockAccount(userId) {
 }
 
 export async function unlockAccount(userId) {
-    if (!confirm('Are you sure you want to unlock this account?')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to unlock this account?');
+    if (!ok) return;
     
     try {
         await updateDoc(doc(db, 'users', userId), {
@@ -753,9 +751,8 @@ export async function unlockAccount(userId) {
 }
 
 export async function resetFailedAttempts(userId) {
-    if (!confirm('Are you sure you want to reset failed attempts for this account?')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to reset failed attempts for this account?');
+    if (!ok) return;
     
     try {
         await updateDoc(doc(db, 'users', userId), {

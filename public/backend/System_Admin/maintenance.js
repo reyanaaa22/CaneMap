@@ -2,6 +2,7 @@
 // Handles system maintenance, monitoring, and optimization
 
 import { auth, db } from '../Common/firebase-config.js';
+import { showConfirm, showPopupMessage } from '../Common/ui-popup.js';
 import { 
     collection, 
     query, 
@@ -828,9 +829,8 @@ export async function createBackup() {
 }
 
 export async function restoreBackup(backupId) {
-    if (!confirm('Are you sure you want to restore this backup? This will overwrite current data.')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to restore this backup? This will overwrite current data.');
+    if (!ok) return;
     
     try {
         await updateDoc(doc(db, 'system_backups', backupId), {
@@ -849,9 +849,8 @@ export async function restoreBackup(backupId) {
 }
 
 export async function deleteBackup(backupId) {
-    if (!confirm('Are you sure you want to delete this backup?')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to delete this backup?');
+    if (!ok) return;
     
     try {
         await deleteDoc(doc(db, 'system_backups', backupId));
@@ -866,9 +865,8 @@ export async function deleteBackup(backupId) {
 }
 
 export async function installUpdate(updateId) {
-    if (!confirm('Are you sure you want to install this update? The system may be temporarily unavailable.')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to install this update? The system may be temporarily unavailable.');
+    if (!ok) return;
     
     try {
         const updateData = {
@@ -890,9 +888,8 @@ export async function installUpdate(updateId) {
 }
 
 export async function runCleanup() {
-    if (!confirm('Are you sure you want to run cleanup? This action cannot be undone.')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to run cleanup? This action cannot be undone.');
+    if (!ok) return;
     
     try {
         const cleanupOptions = {
@@ -947,9 +944,8 @@ export function stopMonitoring() {
 }
 
 export async function toggleMaintenanceMode() {
-    if (!confirm('Are you sure you want to enable maintenance mode? Users will not be able to access the system.')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to enable maintenance mode? Users will not be able to access the system.');
+    if (!ok) return;
     
     try {
         const maintenanceData = {

@@ -2,6 +2,7 @@
 // Handles user management, activity logging, and system administration
 
 import { auth, db } from '../Common/firebase-config.js';
+import { showPopupMessage } from '../Common/ui-popup.js';
 import { 
     collection, 
     addDoc, 
@@ -375,7 +376,7 @@ async function confirmDeleteUser(userId, el) {
             if (typeof window.showPopup === 'function') {
                 window.showPopup({ title: 'Confirmation required', message: 'Please confirm the checkbox to proceed.', type: 'warning' });
             } else {
-                alert('Please confirm the checkbox to proceed.');
+                showPopupMessage('Please confirm the checkbox to proceed.', 'warning');
             }
             return;
         }
@@ -1082,7 +1083,7 @@ async function confirmDeleteSRA(id, name, email) {
             if (typeof window.showPopup === 'function') {
                 window.showPopup({ title: 'Confirmation required', message: 'Please confirm that you agree to the data policy before proceeding.', type: 'warning' });
             } else {
-                alert('Please confirm that you agree to the data policy before proceeding.');
+                showPopupMessage('Please confirm that you agree to the data policy before proceeding.', 'warning');
             }
             return;
         }
@@ -1159,7 +1160,7 @@ async function confirmDeleteBadge(id, name) {
             if (typeof window.showPopup === 'function') {
                 window.showPopup({ title: 'Confirmation required', message: 'Please confirm the checkbox to proceed.', type: 'warning' });
             } else {
-                alert('Please confirm the checkbox to proceed.');
+                showPopupMessage('Please confirm the checkbox to proceed.', 'warning');
             }
             return;
         }
@@ -1273,7 +1274,7 @@ function addExistingSRAOfficer() {
     
     if (existingData.some(officer => officer.email === existingEmail)) {
         if (typeof showAlert === 'function') showAlert('SRA Officer data already exists in localStorage!', 'info');
-        else alert('SRA Officer data already exists in localStorage!');
+        else showPopupMessage('SRA Officer data already exists in localStorage!', 'info');
         return;
     }
     
@@ -1293,7 +1294,7 @@ function addExistingSRAOfficer() {
     
     fetchAndRenderSRA();
     if (typeof showAlert === 'function') showAlert('Existing SRA Officer data loaded successfully!', 'success');
-    else alert('Existing SRA Officer data loaded successfully!');
+    else showPopupMessage('Existing SRA Officer data loaded successfully!', 'success');
     console.log('Existing SRA Officer added to localStorage');
 }
 
@@ -1327,10 +1328,10 @@ function importAllExistingSRAOfficers() {
         localStorage.setItem('sraOfficers', JSON.stringify(existingData));
         fetchAndRenderSRA();
         if (typeof showAlert === 'function') showAlert(`Imported ${addedCount} existing SRA Officer(s) successfully!`, 'success');
-        else alert(`Imported ${addedCount} existing SRA Officer(s) successfully!`);
+        else showPopupMessage(`Imported ${addedCount} existing SRA Officer(s) successfully!`, 'success');
     } else {
         if (typeof showAlert === 'function') showAlert('All existing SRA Officers are already imported!', 'info');
-        else alert('All existing SRA Officers are already imported!');
+        else showPopupMessage('All existing SRA Officers are already imported!', 'info');
     }
 }
 

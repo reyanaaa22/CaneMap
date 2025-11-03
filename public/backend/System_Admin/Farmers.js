@@ -2,6 +2,7 @@
 // Handles farmer filtering, data loading, and table rendering
 
 import { auth, db } from '../Common/firebase-config.js';
+import { showConfirm, showPopupMessage } from '../Common/ui-popup.js';
 import { 
     collection, 
     query, 
@@ -404,9 +405,8 @@ export function editFarmer(farmerId) {
 
 // Delete farmer function
 export async function deleteFarmer(farmerId) {
-    if (!confirm('Are you sure you want to delete this farmer? This action cannot be undone.')) {
-        return;
-    }
+    const ok = await showConfirm('Are you sure you want to delete this farmer? This action cannot be undone.');
+    if (!ok) return;
     
     try {
         await deleteDoc(doc(db, 'users', farmerId));
