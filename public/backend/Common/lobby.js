@@ -72,100 +72,174 @@ window.addEventListener('error', function (ev) {
 
         // Weather API integration
         async function getWeather() {
+            // Robust weather fetch: current + forecast (renders immediately and dispatches canemap:weather-updated)
             try {
                 console.info('getWeather() start');
                 const apiKey = '2d59a2816a02c3178386f3d51233b2ea';
                 const lat = 11.0064; // Ormoc City latitude
                 const lon = 124.6075; // Ormoc City longitude
-                const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
-                const response = await fetch(url);
-                const data = await response.json();
+
+                const urls = {
+                    current: `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`,
+                    forecast: `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+                };
+
+                const [curRes, fRes] = await Promise.all([fetch(urls.current), fetch(urls.forecast)]);
+                if (!curRes.ok || !fRes.ok) {
+                    const msg = `Weather API error: current(${curRes.status}) forecast(${fRes.status})`;
+                    console.warn(msg);
+                    throw new Error(msg);
+                }
+
+                const cur = await curRes.json();
+                const fdata = await fRes.json();
+
+                // Try to fetch OneCall for UV index and daily summaries (best-effort)
+                let onecall = null;
+                try {
+                    const onecallUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&units=metric&exclude=minutely,hourly,alerts&appid=${apiKey}`;
+                    const ocRes = await fetch(onecallUrl);
+                    if (ocRes.ok) onecall = await ocRes.json();
+                } catch(_) { /* ignore onecall failures */ }
+
+                // If OneCall failed (CORS/quota), try the older UV endpoint as a fallback for UV only
+                if (!onecall) {
+                    try {
+                        const uviUrl = `https://api.openweathermap.org/data/2.5/uvi?lat=${lat}&lon=${lon}&appid=${apiKey}`;
+                        const uvRes = await fetch(uviUrl);
+                        if (uvRes.ok) {
+                            const uvjson = await uvRes.json();
+                            onecall = { current: { uvi: typeof uvjson.value === 'number' ? uvjson.value : null }, daily: null };
+                        }
+                    } catch (_) { /* ignore */ }
+                }
+
                 const weatherContainer = document.getElementById('weatherForecast');
                 const wxDaily = document.getElementById('wxDaily');
-                
-                if (!data.list) {
-                    let errorMsg = 'Weather data unavailable.';
-                    if (data.message) {
-                        errorMsg += `<br><span class='text-xs text-[var(--cane-600)]'>API: ${data.message}</span>`;
-                    }
-                    if (wxDaily) {
-                        wxDaily.innerHTML = `<div class='p-3 rounded-lg border border-[var(--cane-200)] bg-white/10 text-white/90'>${errorMsg}</div>`;
-                    }
-                    return;
-                }
-                
-                // Group forecasts by day
-                const days = {};
-                data.list.forEach(item => {
-                    const date = new Date(item.dt * 1000);
-                    const dayStr = date.toLocaleDateString();
-                    if (!days[dayStr]) {
-                        days[dayStr] = [];
-                    }
-                    days[dayStr].push(item);
-                });
-                
-                // Get today, tomorrow, and next day
-                const dayKeys = Object.keys(days).slice(0, 3);
-                const dayNames = [
-                    'Today',
-                    dayKeys[1] ? 'Tomorrow' : '',
-                    dayKeys[2] ? new Date(dayKeys[2]).toLocaleDateString('en-US', { weekday: 'long' }) : ''
-                ].filter(Boolean);
-                
-                const rows = dayKeys.map((key, idx) => {
-                    // Use the forecast closest to noon for each day
-                    const forecasts = days[key];
-                    let forecast = forecasts.find(f => new Date(f.dt * 1000).getHours() === 12) || forecasts[Math.floor(forecasts.length / 2)];
-                    const temp = `${Math.round(forecast.main.temp_min)}°C / ${Math.round(forecast.main.temp_max)}°C`;
-                    const icon = forecast.weather[0].icon;
-                    const desc = forecast.weather[0].description;
-                    return `
-                        <div class="flex items-center justify-between p-3 rounded-lg bg-white/10 text-white border border-white/20">
-                            <div class="flex items-center space-x-3">
-                                <span class="w-8 h-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
-                                    <img src="https://openweathermap.org/img/wn/${icon}.png" alt="${desc}" class="w-5 h-5" />
-                                </span>
-                                <span class="font-semibold text-sm">${dayNames[idx]}</span>
-                            </div>
-                            <div class="text-right leading-tight">
-                                <div class="font-bold text-sm">${temp}</div>
-                                <div class="text-xs opacity-90">${desc}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
 
-                // Render into the compact list area only (preserve card structure)
-                if (wxDaily) wxDaily.innerHTML = rows;
-
-                // Update big "Today" metrics from first day
+                // Update 'Today' metrics from current weather
                 try {
-                    const firstKey = dayKeys[0];
-                    const forecasts = days[firstKey] || [];
-                    const forecast = forecasts.find(f => new Date(f.dt * 1000).getHours() === 12) || forecasts[0];
-                    if (forecast) {
-                        const tEl = document.getElementById('wxTemp');
-                        const wEl = document.getElementById('wxWind');
-                        const uvEl = document.getElementById('wxUv');
-                        const uvBar = document.getElementById('wxUvBar');
-                        const tempNow = Math.round(forecast.main.temp);
-                        const windKmh = typeof forecast.wind?.speed === 'number' ? (forecast.wind.speed * 3.6) : null; // m/s → km/h
-                        if (tEl) tEl.textContent = String(tempNow);
-                        if (wEl && windKmh !== null) wEl.textContent = windKmh.toFixed(1) + ' km/h';
-                        // UV not in forecast endpoint; leave as is if not available
+                    const tEl = document.getElementById('wxTemp');
+                    const wEl = document.getElementById('wxWind');
+                    const uvEl = document.getElementById('wxUv');
+                    const uvBar = document.getElementById('wxUvBar');
 
-                        // Notify background swapper
-                        const cond = forecast.weather?.[0]?.description || '';
-                        window.dispatchEvent(new CustomEvent('canemap:weather-updated', {
-                            detail: { condition: cond, temp: tempNow, windKmh }
-                        }));
+                    const tempNow = typeof cur.main?.temp === 'number' ? Math.round(cur.main.temp) : '--';
+                    const windKmh = typeof cur.wind?.speed === 'number' ? (cur.wind.speed * 3.6) : null; // m/s → km/h
+                    if (tEl) tEl.textContent = tempNow === '--' ? '--' : String(tempNow);
+                    if (wEl) wEl.textContent = windKmh !== null ? windKmh.toFixed(1) + ' km/h' : '-- km/h';
+
+                    // UV: prefer OneCall current.uvi if available
+                    if (uvEl && uvBar) {
+                        const uvi = onecall && typeof onecall.current?.uvi === 'number' ? onecall.current.uvi : null;
+                        if (uvi !== null) {
+                            const pct = Math.max(0, Math.min(100, (uvi / 11) * 100));
+                            uvEl.textContent = uvi.toFixed(1);
+                            uvBar.style.width = pct + '%';
+                            // Colorize UV bar according to simple safety scale
+                            // 0-2 Low (green), 3-5 Moderate (yellow), 6-7 High (orange), 8-10 Very High (red), 11+ Extreme (violet)
+                            let color = '#34d399'; // green
+                            if (uvi >= 11) color = '#8b5cf6';
+                            else if (uvi >= 8) color = '#ef4444';
+                            else if (uvi >= 6) color = '#fb923c';
+                            else if (uvi >= 3) color = '#facc15';
+                            uvBar.style.background = color;
+                            uvEl.setAttribute('data-uv-level', String(uvi));
+                            uvEl.title = `UV index ${uvi.toFixed(1)} — ${uvi>=11? 'Extreme': uvi>=8? 'Very High' : uvi>=6? 'High' : uvi>=3? 'Moderate' : 'Low'}`;
+                        } else {
+                            uvEl.textContent = '--';
+                            uvBar.style.width = '0%';
+                            uvBar.style.background = '';
+                            uvEl.removeAttribute('data-uv-level');
+                            uvEl.title = '';
+                        }
                     }
-                } catch(_) {}
+
+                    // Dispatch update for background swapper and any listeners
+                    const cond = (cur.weather && cur.weather[0] && cur.weather[0].description) || '';
+                    window.dispatchEvent(new CustomEvent('canemap:weather-updated', {
+                        detail: { condition: cond, temp: (typeof tempNow === 'number' ? tempNow : null), windKmh }
+                    }));
+                } catch (err) {
+                    console.warn('Failed to update main weather metrics:', err);
+                }
+
+                    // Build compact multi-day forecast. Prefer OneCall.daily for clean daily summaries if available.
+                try {
+                    let rows = '';
+                    if (onecall && Array.isArray(onecall.daily)) {
+                        const days = onecall.daily.slice(0, 4); // today + next 3
+                        rows = days.map((d, idx) => {
+                            const dayName = idx === 0 ? 'Today' : (idx === 1 ? 'Tomorrow' : new Date(d.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' }));
+                            const tempLo = Math.round(d.temp.min);
+                            const tempHi = Math.round(d.temp.max);
+                            const icon = d.weather?.[0]?.icon || '';
+                            const desc = d.weather?.[0]?.description || '';
+                            const iconUrl = icon ? `https://openweathermap.org/img/wn/${icon}.png` : '';
+                            return `
+                                <div class="wx-day flex items-center justify-between p-3 rounded-lg bg-white/10 text-white border border-white/20">
+                                    <div class="flex items-center gap-3">
+                                        ${iconUrl ? `<img src="${iconUrl}" alt="${desc}" class="w-6 h-6"/>` : ''}
+                                        <span class="font-semibold text-sm">${dayName}</span>
+                                    </div>
+                                    <div class="text-right leading-tight">
+                                        <div class="font-bold text-sm">${tempLo}° / ${tempHi}°</div>
+                                        <div class="text-xs opacity-90">${desc}</div>
+                                    </div>
+                                </div>`;
+                        }).join('');
+                    } else if (fdata && Array.isArray(fdata.list)) {
+                        // Fallback to the forecast grouping by day
+                        const grouped = {};
+                        fdata.list.forEach(item => {
+                            const date = new Date(item.dt * 1000);
+                            const dayStr = date.toLocaleDateString();
+                            if (!grouped[dayStr]) grouped[dayStr] = [];
+                            grouped[dayStr].push(item);
+                        });
+                        const dayKeys = Object.keys(grouped).slice(0, 4);
+                        rows = dayKeys.map((key, idx) => {
+                            const block = grouped[key];
+                            const midday = block.find(f => new Date(f.dt * 1000).getHours() === 12) || block[Math.floor(block.length / 2)] || block[0];
+                            const tempLo = Math.round(Math.min(...block.map(b => b.main.temp_min)));
+                            const tempHi = Math.round(Math.max(...block.map(b => b.main.temp_max)));
+                            const icon = midday.weather?.[0]?.icon || '';
+                            const desc = midday.weather?.[0]?.description || '';
+                            const iconUrl = icon ? `https://openweathermap.org/img/wn/${icon}.png` : '';
+                            const dayName = idx === 0 ? 'Today' : (idx === 1 ? 'Tomorrow' : new Date(key).toLocaleDateString('en-US', { weekday: 'short' }));
+                            return `
+                                <div class="wx-day flex items-center justify-between p-3 rounded-lg bg-white/10 text-white border border-white/20">
+                                    <div class="flex items-center gap-3">
+                                        ${iconUrl ? `<img src="${iconUrl}" alt="${desc}" class="w-6 h-6"/>` : ''}
+                                        <span class="font-semibold text-sm">${dayName}</span>
+                                    </div>
+                                    <div class="text-right leading-tight">
+                                        <div class="font-bold text-sm">${tempLo}° / ${tempHi}°</div>
+                                        <div class="text-xs opacity-90">${desc}</div>
+                                    </div>
+                                </div>`;
+                        }).join('');
+                    } else {
+                        rows = `<div class='p-3 rounded-lg border border-[var(--cane-200)] bg-white/10 text-white/90'>Forecast data unavailable.</div>`;
+                    }
+
+                    if (wxDaily) wxDaily.innerHTML = rows;
+                } catch (err) {
+                    console.warn('Failed to build forecast UI:', err);
+                }
+
             } catch (error) {
                 console.error('Error fetching weather:', error);
                 const el = document.getElementById('weatherForecast');
-                if (el) el.innerHTML = `<div class='text-[var(--cane-700)] bg-[var(--cane-50)] p-3 rounded-lg border border-[var(--cane-200)]'>Weather data unavailable.<br><span class='text-xs text-[var(--cane-600)]'>${error}</span></div>`;
+                const wxDaily = document.getElementById('wxDaily');
+                if (wxDaily) wxDaily.innerHTML = `<div class='p-3 rounded-lg border border-[var(--cane-200)] bg-white/10 text-white/90'>Weather data unavailable.</div>`;
+                if (el && (!el.querySelector || !el.querySelector('.weather-error'))) {
+                    // keep card layout; show small inline error
+                    const errNote = document.createElement('div');
+                    errNote.className = 'text-[var(--cane-700)] weather-error text-sm mt-2';
+                    errNote.textContent = 'Unable to load weather at this time.';
+                    el.appendChild(errNote);
+                }
             }
         }
 
@@ -1137,6 +1211,9 @@ const tooltipHtml = `
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => { initMap(); }, 100);
             getWeather();
+            // Poll weather every 10 minutes (600000 ms)
+            try { window.__canemap_weather_interval && clearInterval(window.__canemap_weather_interval); } catch(_) {}
+            window.__canemap_weather_interval = setInterval(() => { try { getWeather(); } catch(_) {} }, 10 * 60 * 1000);
             const fullName = localStorage.getItem('farmerName') || 'Farmer Name';
             const firstName = fullName.trim().split(/\s+/)[0] || fullName;
             const headerNameEl = document.getElementById('userName');
@@ -1153,6 +1230,93 @@ const tooltipHtml = `
                     dropdownRoleEl.textContent = map[role] || (role ? (role.charAt(0).toUpperCase() + role.slice(1)) : 'Farmer');
                 } catch (_) {}
             })();
+
+            // Initialize weather toggle state: collapsed by default (show Today only)
+            try {
+                const weatherCard = document.getElementById('weatherForecast');
+                const toggle = document.getElementById('wxToggleBtn');
+                const toggleIcon = document.getElementById('wxToggleIcon');
+                const wxDaily = document.getElementById('wxDaily');
+                const wxCompact = document.getElementById('wxCompact');
+                // visible expand button (main CTA)
+                const expandBtn = document.getElementById('wxExpandBtn');
+                const expandChevron = document.getElementById('wxExpandChevron');
+                const expandLabel = document.getElementById('wxExpandLabel');
+
+                // store the initial Today HTML so we can restore it when toggling back
+                let initialTodayHTML = null;
+                if (wxTodayMain) initialTodayHTML = wxTodayMain.innerHTML;
+
+                function syncToggleState(isExpanded){
+                    try {
+                        if (!weatherCard) return;
+                        if (isExpanded) weatherCard.classList.add('expanded'); else weatherCard.classList.remove('expanded');
+                        if (wxDaily) wxDaily.setAttribute('aria-hidden', (!isExpanded).toString());
+                        if (wxCompact) wxCompact.setAttribute('aria-hidden', (!isExpanded).toString());
+                        if (toggle) toggle.setAttribute('aria-expanded', isExpanded.toString());
+                        if (toggleIcon) {
+                            toggleIcon.classList.toggle('fa-chevron-down', !isExpanded);
+                            toggleIcon.classList.toggle('fa-chevron-up', isExpanded);
+                        }
+                        if (expandChevron) {
+                            expandChevron.classList.toggle('fa-chevron-down', !isExpanded);
+                            expandChevron.classList.toggle('fa-chevron-up', isExpanded);
+                        }
+                        if (expandLabel) {
+                            // when expanded, show a control to return to current weather
+                            expandLabel.textContent = isExpanded ? 'Show current weather' : 'Show next days';
+                        }
+
+                        // Move the wxDaily element into the main area when expanded, and restore Today when collapsed
+                        try {
+                            if (isExpanded) {
+                                if (wxTodayMain && wxDaily) {
+                                    // clear the Today area and append the daily list
+                                    wxTodayMain._savedToday = wxTodayMain.innerHTML;
+                                    wxTodayMain.innerHTML = '';
+                                    wxTodayMain.appendChild(wxDaily);
+                                }
+                            } else {
+                                // collapse: move wxDaily back to compact container and restore Today
+                                if (wxCompact && wxDaily) {
+                                    wxCompact.appendChild(wxDaily);
+                                }
+                                if (wxTodayMain) {
+                                    // restore saved content if present
+                                    if (typeof wxTodayMain._savedToday === 'string') {
+                                        wxTodayMain.innerHTML = wxTodayMain._savedToday;
+                                    } else if (initialTodayHTML) {
+                                        wxTodayMain.innerHTML = initialTodayHTML;
+                                    }
+                                }
+                            }
+                        } catch(_){}
+                    } catch(_){}
+                }
+
+                if (weatherCard && wxDaily) {
+                    // start collapsed
+                    syncToggleState(false);
+                }
+
+                if (toggle) {
+                    toggle.addEventListener('click', function(ev){
+                        ev && ev.preventDefault && ev.preventDefault();
+                        if (!weatherCard) return;
+                        const isExpanded = !weatherCard.classList.contains('expanded');
+                        syncToggleState(isExpanded);
+                    });
+                }
+
+                if (expandBtn) {
+                    expandBtn.addEventListener('click', function(ev){
+                        ev && ev.preventDefault && ev.preventDefault();
+                        if (!weatherCard) return;
+                        const isExpanded = !weatherCard.classList.contains('expanded');
+                        syncToggleState(isExpanded);
+                    });
+                }
+            } catch(_) {}
 
             // Role gating for Dashboard
             const dashboardLink = document.getElementById('dashboardLink');
