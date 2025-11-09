@@ -1143,6 +1143,16 @@ const tooltipHtml = `
             const dropdownNameEl = document.getElementById('dropdownUserName');
             if (headerNameEl) headerNameEl.textContent = firstName;
             if (dropdownNameEl) dropdownNameEl.textContent = fullName;
+            // Set role in dropdown if present
+            (function setInitialDropdownRole(){
+                try {
+                    const dropdownRoleEl = document.getElementById('dropdownUserRole');
+                    if (!dropdownRoleEl) return;
+                    const role = (localStorage.getItem('userRole') || '').toLowerCase();
+                    const map = { handler: 'Handler', worker: 'Worker', driver: 'Driver', sra: 'SRA Officer', farmer: 'Farmer' };
+                    dropdownRoleEl.textContent = map[role] || (role ? (role.charAt(0).toUpperCase() + role.slice(1)) : 'Farmer');
+                } catch (_) {}
+            })();
 
             // Role gating for Dashboard
             const dashboardLink = document.getElementById('dashboardLink');
@@ -1183,6 +1193,13 @@ const tooltipHtml = `
                 const isApproved = approvedRoles.includes(role);
                 localStorage.setItem('userRole', role);
                 console.log('🧭 Live role update detected:', role);
+                try {
+                    const dropdownRoleEl = document.getElementById('dropdownUserRole');
+                    if (dropdownRoleEl) {
+                        const map = { handler: 'Handler', worker: 'Worker', driver: 'Driver', sra: 'SRA Officer', farmer: 'Farmer' };
+                        dropdownRoleEl.textContent = map[role] || (role ? (role.charAt(0).toUpperCase() + role.slice(1)) : 'Farmer');
+                    }
+                } catch(_) {}
                 // inside your onSnapshot(userRef, ...) after you set localStorage userRole:
                 updatePendingFieldMenu();
 
