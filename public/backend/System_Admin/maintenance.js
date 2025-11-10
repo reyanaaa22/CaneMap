@@ -27,6 +27,9 @@ let performanceData = {
     memory: [],
     responseTime: []
 };
+// Chart.js instances to avoid multiple creations
+let cpuChartInstance = null;
+let memoryChartInstance = null;
 
 // Initialize maintenance management system
 export function initializeMaintenance() {
@@ -450,7 +453,8 @@ function initializePerformanceCharts() {
     // CPU Chart
     const cpuCtx = document.getElementById('cpuChart');
     if (cpuCtx) {
-        new Chart(cpuCtx, {
+        try { if (cpuChartInstance) { cpuChartInstance.destroy(); } } catch(_) {}
+        cpuChartInstance = new Chart(cpuCtx, {
             type: 'line',
             data: {
                 labels: Array.from({length: 20}, (_, i) => i),
@@ -485,7 +489,8 @@ function initializePerformanceCharts() {
     // Memory Chart
     const memoryCtx = document.getElementById('memoryChart');
     if (memoryCtx) {
-        new Chart(memoryCtx, {
+        try { if (memoryChartInstance) { memoryChartInstance.destroy(); } } catch(_) {}
+        memoryChartInstance = new Chart(memoryCtx, {
             type: 'line',
             data: {
                 labels: Array.from({length: 20}, (_, i) => i),

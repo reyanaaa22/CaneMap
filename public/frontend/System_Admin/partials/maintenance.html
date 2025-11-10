@@ -1,4 +1,9 @@
 <div class="space-y-6">
+    <style>
+        /* Prevent Performance Monitor charts from growing vertically */
+        .perf-card { height: 260px; overflow: hidden; }
+        .perf-card canvas { height: 100% !important; width: 100% !important; display: block; }
+    </style>
     <!-- System Health Overview -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- System Status -->
@@ -336,13 +341,13 @@
                 
                 <!-- Performance Charts -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 perf-card">
                         <h4 class="font-medium text-gray-900 mb-3">CPU Usage</h4>
-                        <canvas id="cpuChart" width="400" height="200"></canvas>
+                        <canvas id="cpuChart"></canvas>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 perf-card">
                         <h4 class="font-medium text-gray-900 mb-3">Memory Usage</h4>
-                        <canvas id="memoryChart" width="400" height="200"></canvas>
+                        <canvas id="memoryChart"></canvas>
                     </div>
                 </div>
                 
