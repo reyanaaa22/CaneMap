@@ -1234,6 +1234,7 @@ const tooltipHtml = `
             // Initialize weather toggle state: collapsed by default (show Today only)
             try {
                 const weatherCard = document.getElementById('weatherForecast');
+                const wxTodayMain = document.getElementById('wxTodayMain');
                 const toggle = document.getElementById('wxToggleBtn');
                 const toggleIcon = document.getElementById('wxToggleIcon');
                 const wxDaily = document.getElementById('wxDaily');
@@ -1242,10 +1243,11 @@ const tooltipHtml = `
                 const expandBtn = document.getElementById('wxExpandBtn');
                 const expandChevron = document.getElementById('wxExpandChevron');
                 const expandLabel = document.getElementById('wxExpandLabel');
+                const wxCompactFooter = document.getElementById('wxCompactFooter');
 
-                // store the initial Today HTML so we can restore it when toggling back
-                let initialTodayHTML = null;
-                if (wxTodayMain) initialTodayHTML = wxTodayMain.innerHTML;
+                // cache references for simple show/hide
+                const wxTodayContainer = document.getElementById('wxTodayContainer');
+                const expandBtnContainer = expandBtn ? expandBtn.parentElement : null;
 
                 function syncToggleState(isExpanded){
                     try {
@@ -1267,27 +1269,17 @@ const tooltipHtml = `
                             expandLabel.textContent = isExpanded ? 'Show current weather' : 'Show next days';
                         }
 
-                        // Move the wxDaily element into the main area when expanded, and restore Today when collapsed
+                        // Show/hide only the today container; keep next days inside #wxCompact always
                         try {
-                            if (isExpanded) {
-                                if (wxTodayMain && wxDaily) {
-                                    // clear the Today area and append the daily list
-                                    wxTodayMain._savedToday = wxTodayMain.innerHTML;
-                                    wxTodayMain.innerHTML = '';
-                                    wxTodayMain.appendChild(wxDaily);
-                                }
-                            } else {
-                                // collapse: move wxDaily back to compact container and restore Today
-                                if (wxCompact && wxDaily) {
-                                    wxCompact.appendChild(wxDaily);
-                                }
-                                if (wxTodayMain) {
-                                    // restore saved content if present
-                                    if (typeof wxTodayMain._savedToday === 'string') {
-                                        wxTodayMain.innerHTML = wxTodayMain._savedToday;
-                                    } else if (initialTodayHTML) {
-                                        wxTodayMain.innerHTML = initialTodayHTML;
-                                    }
+                            if (wxTodayContainer) {
+                                wxTodayContainer.style.display = isExpanded ? 'none' : '';
+                            }
+                            // Move the button below the next-days container when expanded, and back when collapsed
+                            if (expandBtn) {
+                                if (isExpanded && wxCompactFooter && expandBtn.parentElement !== wxCompactFooter) {
+                                    wxCompactFooter.appendChild(expandBtn);
+                                } else if (!isExpanded && expandBtnContainer && expandBtn.parentElement !== expandBtnContainer) {
+                                    expandBtnContainer.appendChild(expandBtn);
                                 }
                             }
                         } catch(_){}

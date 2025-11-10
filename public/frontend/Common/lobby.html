@@ -117,6 +117,10 @@
             max-height: 220px;
             padding-right: 6px; /* allow space for scrollbar */
         }
+        /* Ensure next days list is inside the compact container, not beside */
+        #weatherForecast #wxCompact { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        #weatherForecast #wxCompact #wxDaily { width: 100%; flex: 1 1 auto; overflow-y: auto; }
+        #weatherForecast #wxCompact #wxCompactFooter { position: sticky; bottom: 0; padding-top: 6px; background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.06)); }
 
         /* Make sure the main 'Today' block doesn't overflow its column */
         #weatherForecast .flex-1 { overflow: hidden; min-width: 0; }
@@ -141,13 +145,18 @@
         }
         /* hide compact right-side summary until user expands the forecast */
         #weatherForecast:not(.expanded) #wxCompact { display: none; }
-        #weatherForecast.expanded #wxCompact { display: block; }
+        #weatherForecast.expanded > .relative { width: 100%; align-items: stretch; }
+        #weatherForecast.expanded #wxCompact { display: flex; width: 100% !important; flex: 1 1 auto !important; max-width: 100% !important; align-self: stretch; margin-left: 0; margin-right: 0; }
+        #weatherForecast.expanded .w-48 { width: 100% !important; }
+        #weatherForecast.expanded #wxTodayMain { display: none; }
+        #weatherForecast.expanded #wxCompact { max-height: 320px; }
         #weatherForecast.expanded #wxDaily {
-            /* large enough to show our internal scroll max-height; wxDaily also has its own max-height */
-            max-height: 320px !important;
+            /* use flex height; allow internal scroll while keeping footer visible */
+            max-height: none !important;
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
+            margin-top: 4px;
         }
 
         /* expand button styling */
@@ -722,24 +731,26 @@ header nav .flex.items-center.justify-between > .relative {
                           <div class="flex items-start justify-between gap-4">
                               <!-- Left: Today big -->
                               <div id="wxTodayMain" class="flex-1 min-w-0">
-                                  <div id="wxTodayContent">
-                                      <p class="text-white/80 text-sm">Today</p>
-                                      <h3 class="text-3xl font-extrabold tracking-tight">Weather Now</h3>
-                                      <p class="text-white/70 text-xs max-w-xs">Condition for today.</p>
-                                      <div class="flex items-end gap-2 mt-3">
-                                          <span id="wxTemp" class="text-6xl leading-none font-extrabold">--</span>
-                                          <span class="text-3xl">°C</span>
-                                          <div class="ml-3 glass px-3 py-2 text-sm">Wind: <span id="wxWind">-- km/h</span></div>
+                                  <div id="wxTodayContainer">
+                                      <div id="wxTodayContent">
+                                          <p class="text-white/80 text-sm">Today</p>
+                                          <h3 class="text-3xl font-extrabold tracking-tight">Weather Now</h3>
+                                          <p class="text-white/70 text-xs max-w-xs">Condition for today.</p>
+                                          <div class="flex items-end gap-2 mt-3">
+                                              <span id="wxTemp" class="text-6xl leading-none font-extrabold">--</span>
+                                              <span class="text-3xl">°C</span>
+                                              <div class="ml-3 glass px-3 py-2 text-sm">Wind: <span id="wxWind">-- km/h</span></div>
+                                          </div>
+                                          <div class="mt-3 glass p-3 w-full max-w-sm">
+                                              <p class="text-xs text-white/80 mb-2">UV Index</p>
+                                              <div class="flex items-center justify-between">
+                                                  <div class="w-full h-2 bg-white/20 rounded-full overflow-hidden mr-3">
+                                                      <div id="wxUvBar" class="h-full bg-gradient-to-r from-yellow-300 to-orange-400" style="width: 0%"></div>
+                                                  </div>
+                                                  <span id="wxUv" class="text-sm font-semibold">--</span>
+                                             </div>
+                                             </div>
                                       </div>
-                                      <div class="mt-3 glass p-3 w-full max-w-sm">
-                                          <p class="text-xs text-white/80 mb-2">UV Index</p>
-                                          <div class="flex items-center justify-between">
-                                              <div class="w-full h-2 bg-white/20 rounded-full overflow-hidden mr-3">
-                                                  <div id="wxUvBar" class="h-full bg-gradient-to-r from-yellow-300 to-orange-400" style="width: 0%"></div>
-                                              </div>
-                                              <span id="wxUv" class="text-sm font-semibold">--</span>
-                                 </div>
-                                 </div>
                                   </div>
                                   <!-- Expand button: visible, centered, shows next days when clicked -->
                                   <div class="mt-3 flex items-center justify-center">
@@ -752,12 +763,7 @@ header nav .flex.items-center.justify-between > .relative {
                               </div>
                               <!-- Right: Upcoming compact -->
                               <div id="wxCompact" class="w-48 glass p-3 self-stretch" aria-hidden="true">
-                                  <div class="flex items-center justify-between mb-2">
-                                      <p class="text-xs text-white/80">Next days</p>
-                                      <button id="wxToggleBtn" aria-expanded="false" aria-controls="wxDaily" class="text-white/70 text-sm px-2 py-1 rounded hover:bg-white/10 transition-transform">
-                                          <i id="wxToggleIcon" class="fas fa-chevron-down"></i>
-                                      </button>
-                                  </div>
+                                  <p class="text-xs text-white/80 mb-2">Next days forecast</p>
                                   <div id="wxDaily" class="wx-day-list" aria-hidden="true">
                                       <div class="wx-day">
                                           <span class="name">Tomorrow</span>
@@ -768,14 +774,15 @@ header nav .flex.items-center.justify-between > .relative {
                                           <span class="name">+2 days</span>
                                           <span class="wx-pill"><i class="fas fa-cloud"></i></span>
                                           <span class="temp">--/--°</span>
-                             </div>
+                                      </div>
                                       <div class="wx-day">
                                           <span class="name">+3 days</span>
                                           <span class="wx-pill"><i class="fas fa-sun"></i></span>
                                           <span class="temp">--/--°</span>
-                             </div>
-                         </div>
-                     </div>
+                                      </div>
+                                  </div>
+                                  <div id="wxCompactFooter" class="mt-2"></div>
+                              </div>
                  </div>
                      </div>
                  </div>
