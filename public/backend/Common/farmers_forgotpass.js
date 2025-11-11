@@ -3,6 +3,7 @@ import { auth } from "./firebase-config.js";
 
 const emailInput = document.getElementById("email");
 const resetBtn = document.getElementById("resetBtn");
+const forgotForm = document.getElementById("forgotForm");
 const alertBox = document.getElementById("alertBox");
 
 const modalOverlay = document.getElementById("modalOverlay");
@@ -33,7 +34,8 @@ function hideModal() {
   modalOverlay.style.display = "none";
 }
 
-resetBtn.addEventListener("click", async () => {
+forgotForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
   clearAlert();
   hideModal();
 

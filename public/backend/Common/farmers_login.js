@@ -16,10 +16,62 @@ let alertBox = document.getElementById("alertBox");
 let alertOverlay = document.getElementById("alertOverlay");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
+const rememberCheckbox = document.getElementById("rememberMe");
 const loginButton = document.querySelector("button[type='submit']");
 const DEFAULT_BUTTON_TEXT = "Sign in";
 let alertHideTimeout;
 const buttonLabelEl = loginButton ? loginButton.querySelector('.btn-text') : null;
+const REMEMBER_STORAGE_KEY = "caneMapRememberCredentials";
+
+function encodeCredential(value) {
+  try {
+    return btoa(value);
+  } catch (_) {
+    return value;
+  }
+}
+
+function decodeCredential(value) {
+  try {
+    return atob(value);
+  } catch (_) {
+    return value;
+  }
+}
+
+function saveRememberedCredentials(email, password) {
+  if (!email || !password) return;
+  const payload = {
+    email,
+    password: encodeCredential(password)
+  };
+  localStorage.setItem(REMEMBER_STORAGE_KEY, JSON.stringify(payload));
+}
+
+function clearRememberedCredentials() {
+  localStorage.removeItem(REMEMBER_STORAGE_KEY);
+}
+
+function restoreRememberedCredentials() {
+  const stored = localStorage.getItem(REMEMBER_STORAGE_KEY);
+  if (!stored) return;
+
+  try {
+    const { email, password } = JSON.parse(stored);
+    if (emailInput && email) {
+      emailInput.value = email;
+    }
+    if (passwordInput && password) {
+      passwordInput.value = decodeCredential(password);
+    }
+    if (rememberCheckbox) {
+      rememberCheckbox.checked = true;
+    }
+  } catch (error) {
+    console.warn("Unable to restore remembered credentials:", error);
+    clearRememberedCredentials();
+  }
+}
 
 function setButtonLabel(label) {
   if (!loginButton) return;
@@ -268,6 +320,12 @@ async function login() {
     setButtonState({ loading: true, label: "Signing in...", disabled: true });
     showAlert("Login successful!", "success");
 
+    if (rememberCheckbox && rememberCheckbox.checked) {
+      saveRememberedCredentials(email, password);
+    } else {
+      clearRememberedCredentials();
+    }
+
     setTimeout(() => {
       if (userRole === "sra") {
         window.location.href = "../../frontend/SRA/SRA_Dashboard.html";
@@ -334,6 +392,18 @@ document.getElementById("loginForm").addEventListener("submit", (e) => {
   e.preventDefault();
   login();
 });
+
+restoreRememberedCredentials();
+
+if (rememberCheckbox) {
+  rememberCheckbox.addEventListener("change", () => {
+    if (!rememberCheckbox.checked) {
+      clearRememberedCredentials();
+    } else if (emailInput.value && passwordInput.value) {
+      saveRememberedCredentials(emailInput.value.trim(), passwordInput.value);
+    }
+  });
+}
 
 document.querySelectorAll("#email, #password").forEach(input => {
   input.addEventListener("focus", () => {
