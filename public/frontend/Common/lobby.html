@@ -565,6 +565,12 @@ header nav .flex.items-center.justify-between > .relative {
 </head>
     <body class="bg-[#F5F5F0] min-h-screen antialiased">
     <style>
+        body {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
         :root {
             --cane-50: #f7fee7;
             --cane-100: #ecfcca;
@@ -803,10 +809,10 @@ header nav .flex.items-center.justify-between > .relative {
 
                         <div class="relative w-full">
                 <!-- Header Section -->
-                <div class="text-center mb-8 fade-in-up">
-                    <h2 class="text-5xl font-bold text-white mb-2">CaneMap Features</h2>
-                    <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full mb-6"></div>
-                    <p class="text-xl text-[var(--cane-200)] max-w-3xl mx-auto">Discover the powerful tools designed to revolutionize sugarcane farming and agricultural management.</p>
+                <div class="text-center mb-12 fade-in-up">
+                    <h2 class="text-4xl md:text-5xl font-black text-white mb-4">CaneMap Features</h2>
+                    <div class="w-20 h-1 bg-gradient-to-r from-[var(--cane-400)] to-[var(--cane-600)] mx-auto rounded-full"></div>
+                    <p class="text-lg text-white/95 leading-relaxed max-w-3xl mx-auto mt-6 font-medium">Discover the powerful tools designed to revolutionize sugarcane farming and agricultural management.</p>
 						</div>
 
                 <!-- Main Content Grid -->
@@ -953,125 +959,159 @@ header nav .flex.items-center.justify-between > .relative {
         </div>
     </section>
     <!-- Interactive Mockups (Scrollable) -->
-    <section id="mockups" class="relative py-8 bg-[#F5F5F0]">
-            
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 items-center gap-6 px-6 md:px-10">
-                <!-- Left: Accessible Anytime, Anywhere copy -->
-                <div class="order-2 lg:order-1 max-w-2xl fade-in-left">
-                    <h3 class="text-4xl md:text-5xl lg:text-6xl font-extrabold bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-500)] bg-clip-text text-transparent mb-3">Accessible Anytime, Anywhere</h3>
-                    <p class="text-[var(--cane-900)]/90 leading-relaxed text-sm md:text-base font-medium mb-4">
-                        CaneMap is designed for flexibility and convenience. You can access our system through:
+    <section id="mockups" class="relative py-12 bg-gradient-to-b from-[#F5F5F0] to-white overflow-hidden">
+        <div class="absolute inset-0 pointer-events-none">
+            <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-[var(--cane-100)]/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
+            <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[var(--cane-50)]/40 rounded-full blur-3xl -ml-24 -mb-24"></div>
+        </div>
+        <div class="container mx-auto px-6 md:px-10 relative">
+            <div class="grid grid-cols-1 lg:grid-cols-2 items-center gap-8 lg:gap-12">
+                <!-- Left: Content -->
+                <div class="order-2 lg:order-1 fade-in-left">
+                    <div class="inline-block mb-3">
+                        <span class="px-4 py-2 rounded-full bg-[var(--cane-100)] text-[var(--cane-700)] text-xs font-bold uppercase tracking-wider">Multi-Platform Access</span>
+                    </div>
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-[var(--cane-900)] mb-4 leading-tight">Accessible Anytime, Anywhere</h2>
+                    <p class="text-base text-[var(--cane-900)]/80 leading-relaxed mb-6 font-medium">
+                        CaneMap is designed for flexibility and convenience. Access your sugarcane management tools whenever you need them, from any device.
                     </p>
                     <div class="space-y-3">
-                        <div class="flex items-start gap-3 p-3 rounded-xl bg-white/80 border border-[var(--cane-200)] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-desktop text-white text-sm"></i>
+                        <div class="group flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-[var(--cane-200)] shadow-md hover:shadow-lg hover:border-[var(--cane-500)] transition-all duration-300 cursor-pointer">
+                            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-desktop text-white text-base"></i>
                             </div>
-                            <div>
-                                <h4 class="text-[var(--cane-950)] font-bold text-base">Website (Desktop/Laptop)</h4>
-                                <p class="text-[var(--cane-900)]/90 font-medium text-sm">Manage sugarcane fields with full dashboard features and real‑time mapping.</p>
+                            <div class="flex-1">
+                                <h4 class="text-[var(--cane-950)] font-bold text-base mb-0.5">Website (Desktop/Laptop)</h4>
+                                <p class="text-[var(--cane-900)]/75 font-medium text-xs leading-relaxed">Manage sugarcane fields with full dashboard features, real-time mapping, and comprehensive analytics.</p>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3 p-3 rounded-xl bg-white/80 border border-[var(--cane-200)] shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-mobile-alt text-white text-sm"></i>
+                        <div class="group flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-[var(--cane-200)] shadow-md hover:shadow-lg hover:border-[var(--cane-500)] transition-all duration-300 cursor-pointer">
+                            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-mobile-alt text-white text-base"></i>
                             </div>
-                            <div>
-                                <h4 class="text-[var(--cane-950)] font-bold text-base">Mobile Application</h4>
-                                <p class="text-[var(--cane-900)]/90 font-medium text-sm">Stay connected with maps, weather updates, and field data on the go.</p>
+                            <div class="flex-1">
+                                <h4 class="text-[var(--cane-950)] font-bold text-base mb-0.5">Mobile Application</h4>
+                                <p class="text-[var(--cane-900)]/75 font-medium text-xs leading-relaxed">Stay connected with maps, weather updates, task notifications, and field data on the go.</p>
                             </div>
                         </div>
                     </div>
-                    <p class="mt-4 text-[var(--cane-900)] font-semibold text-sm md:text-base">Whether you're in the office or in the field, CaneMap keeps you connected.</p>
+                    <div class="mt-6 p-4 rounded-xl bg-gradient-to-r from-[var(--cane-50)] to-[var(--cane-100)] border border-[var(--cane-200)]">
+                        <p class="text-[var(--cane-900)] font-bold text-sm flex items-center gap-2">
+                            <i class="fas fa-check-circle text-[var(--cane-600)] text-lg"></i>
+                            Whether you're in the office or in the field, CaneMap keeps you connected and productive.
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Right: Enlarged mockup image -->
-                <div class="order-1 lg:order-2 flex justify-end fade-in-right">
-                    <img src="../img/Mockup.png" alt="CaneMap 3D Mockup" class="w-[480px] md:w-[560px] lg:w-[600px] max-w-full rounded-none shadow-none transition-transform duration-700 ease-out hover:-translate-y-1 hover:rotate-1" loading="eager" decoding="async" style="image-rendering: -webkit-optimize-contrast;" />
+                <!-- Right: Mockup image -->
+                <div class="order-1 lg:order-2 flex justify-center lg:justify-end fade-in-right">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-[var(--cane-400)]/20 to-[var(--cane-600)]/20 rounded-3xl blur-2xl"></div>
+                        <img src="../img/Mockup.png" alt="CaneMap Multi-Platform Interface" class="relative w-[340px] md:w-[420px] lg:w-[480px] max-w-full rounded-2xl shadow-xl transition-transform duration-700 ease-out hover:-translate-y-2 hover:scale-105" loading="eager" decoding="async" />
+                    </div>
+                </div>
             </div>
         </div>
     </section>
     <!-- About Us Section -->
-    <section id="about" class="relative py-24">
-        <!-- Background image + gradient overlay (match features style) -->
-        <div class="absolute inset-0">
-            <img src="../img/sugarcane.webp" alt="Sugarcane background" class="absolute inset-0 w-full h-full object-cover">
-            <!-- green tint + fade to clear -->
-            <div class="absolute inset-0 bg-[var(--cane-900)]/45 mix-blend-multiply"></div>
-            <div class="absolute inset-0 bg-gradient-to-r from-[var(--cane-900)] via-[var(--cane-900)/80] to-transparent"></div>
-            <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[var(--cane-900)] to-transparent"></div>
-            <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[var(--cane-900)] to-transparent"></div>
+    <section id="about" class="relative py-20 overflow-hidden">
+        <!-- Background image + overlays to match sign-in styling -->
+        <div class="absolute inset-0 -z-10">
+            <img src="../img/sugarcane.webp" alt="Sugarcane background" class="w-full h-full object-cover object-center" loading="lazy" decoding="async">
         </div>
-        <div class="container mx-auto px-6 about-content">
-            <div class="text-center mb-16 fade-in-up">
-                <h2 class="text-5xl font-bold text-white mb-6">About CaneMap</h2>
-                <div class="w-24 h-1 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] mx-auto rounded-full"></div>
+        <div class="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgba(60,99,0,0.48)_0%,rgba(73,125,0,0.38)_35%,rgba(124,207,0,0.18)_70%,rgba(25,46,3,0.45)_100%)] mix-blend-multiply"></div>
+        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white/20 via-white/10 to-transparent backdrop-blur-sm"></div>
+        <div class="absolute inset-0 -z-10 pointer-events-none">
+            <div class="absolute -top-32 -left-24 w-[260px] h-[260px] bg-white/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-[300px] h-[300px] bg-white/10 rounded-full blur-[120px]"></div>
+        </div>
+        <div class="container mx-auto px-6 about-content relative">
+            <div class="text-center mb-12 fade-in-up">
+                <h2 class="text-4xl md:text-5xl font-black text-white mb-4">About CaneMap</h2>
+                <div class="w-20 h-1 bg-gradient-to-r from-[var(--cane-400)] to-[var(--cane-600)] mx-auto rounded-full"></div>
             </div>
             
-            <div class="max-w-5xl mx-auto text-center mb-16 fade-in-up">
-                <p class="text-xl text-white/90 leading-relaxed font-medium">
+            <div class="max-w-4xl mx-auto text-center mb-14 fade-in-up">
+                <p class="text-lg text-white/95 leading-relaxed font-medium">
                     CaneMap is an agricultural decision-support platform designed to help sugarcane farmers and field workers register land, track field progress, and collaborate with the Sugar Regulatory Administration (SRA) for better transparency and productivity. Developed in collaboration with local stakeholders and SRA Ormoc Mill District, CaneMap empowers farmers through digital mapping, task coordination, and predictive analytics to make informed decisions throughout the crop cycle.
                 </p>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
-                <div class="bg-white rounded-2xl shadow-xl p-10 text-center transform hover:scale-105 transition-all duration-500 border border-[var(--cane-200)] scale-in">
-                    <div class="w-16 h-16 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="fas fa-bullseye text-white text-2xl"></i>
-                </div>
-                    <h3 class="text-3xl font-bold text-[var(--cane-950)] mb-6">Our Mission</h3>
-                    <p class="text-lg text-[var(--cane-900)] font-medium leading-relaxed">To empower sugarcane farmers with digital tools for better decision-making and productivity through innovative technology solutions.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="group bg-white rounded-3xl shadow-2xl p-8 text-center transform hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-[var(--cane-100)] scale-in backdrop-blur-sm relative overflow-hidden">
+                    <!-- Animated background shapes -->
+                    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                        <div class="absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br from-[rgba(124,207,0,0.8)] to-[rgba(73,125,0,0.5)] rounded-full blur-2xl animate-pulse"></div>
+                        <div class="absolute -bottom-8 -left-8 w-32 h-32 bg-gradient-to-br from-[rgba(94,165,0,0.7)] to-[rgba(53,83,14,0.4)] rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+                        <div class="absolute top-1/4 right-1/3 w-20 h-20 bg-radial-gradient rounded-full blur-xl animate-pulse" style="background: radial-gradient(circle at 30% 30%, rgba(124, 207, 0, 0.8), rgba(73, 125, 0, 0.4) 65%, rgba(25, 46, 3, 0.2) 100%); animation-delay: 0.5s;"></div>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="w-20 h-20 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                            <i class="fas fa-bullseye text-white text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-[var(--cane-950)] mb-4">Our Mission</h3>
+                        <p class="text-base text-[var(--cane-900)] font-medium leading-relaxed">To empower sugarcane farmers with digital tools for better decision-making and productivity through innovative technology solutions.</p>
+                    </div>
                 </div>
                 
-                <div class="bg-white rounded-2xl shadow-xl p-10 text-center transform hover:scale-105 transition-all duration-500 border border-[var(--cane-200)] scale-in">
-                    <div class="w-16 h-16 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="fas fa-eye text-white text-2xl"></i>
-            </div>
-                    <h3 class="text-3xl font-bold text-[var(--cane-950)] mb-6">Our Vision</h3>
-                    <p class="text-lg text-[var(--cane-900)] font-medium leading-relaxed">To be the leading agricultural technology platform for sugarcane farming in the Philippines, driving digital transformation in agriculture.</p>
+                <div class="group bg-white rounded-3xl shadow-2xl p-8 text-center transform hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-[var(--cane-100)] scale-in backdrop-blur-sm relative overflow-hidden">
+                    <!-- Animated background shapes -->
+                    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                        <div class="absolute -top-8 -left-8 w-28 h-28 bg-gradient-to-br from-[rgba(124,207,0,0.8)] to-[rgba(73,125,0,0.5)] rounded-full blur-2xl animate-pulse" style="animation-delay: 0.5s;"></div>
+                        <div class="absolute -bottom-8 -right-8 w-36 h-36 bg-gradient-to-br from-[rgba(94,165,0,0.7)] to-[rgba(53,83,14,0.4)] rounded-full blur-3xl animate-pulse" style="animation-delay: 1.5s;"></div>
+                        <div class="absolute bottom-1/4 left-1/3 w-24 h-24 bg-radial-gradient rounded-full blur-xl animate-pulse" style="background: radial-gradient(circle at 70% 30%, rgba(94, 165, 0, 0.8), rgba(53, 83, 14, 0.4) 60%, rgba(25, 46, 3, 0.2) 100%); animation-delay: 1s;"></div>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="w-20 h-20 bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                            <i class="fas fa-eye text-white text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-[var(--cane-950)] mb-4">Our Vision</h3>
+                        <p class="text-base text-[var(--cane-900)] font-medium leading-relaxed">To be the leading agricultural technology platform for sugarcane farming in the Philippines, driving digital transformation in agriculture.</p>
+                    </div>
                 </div>
             </div>
         </div>
-        
     </section>
     <!-- Driver Badge Promo Section -->
-    <section id="driver-badge" class="relative py-24 bg-gradient-to-br from-white to-[#ECF2F6] overflow-hidden">
+    <section id="driver-badge" class="relative py-20 bg-gradient-to-br from-white via-[#F8FAFC] to-[#E8F5E9] overflow-hidden">
         <!-- ambient blobs -->
-        <div class="blob blob-emerald w-[360px] h-[360px] -top-20 -left-20"></div>
-        <div class="blob blob-lime w-[300px] h-[300px] -bottom-10 -right-16"></div>
-        <div class="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 items-center gap-10">
+        <div class="absolute inset-0 pointer-events-none">
+            <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-[var(--cane-100)]/40 rounded-full blur-3xl -mr-32 -mt-32"></div>
+            <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[var(--cane-50)]/50 rounded-full blur-3xl -ml-24 -mb-24"></div>
+        </div>
+        <div class="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-16 relative">
             <!-- Left copy -->
             <div class="reveal-up">
-                <p class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold mb-4">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--cane-100)] text-[var(--cane-700)] text-xs font-bold uppercase tracking-wider mb-6">
                     <i class="fas fa-shield-alt"></i> Verified Drivers Program
-                </p>
-                <h2 class="text-5xl md:text-6xl lg:text-7xl font-black text-[#0f172a] leading-[1.1] mb-1">Be a</h2>
-                <h2 class="text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] pb-2 mb-1 bg-gradient-to-b from-[var(--cane-600)] to-[var(--cane-700)] bg-clip-text text-transparent">Driver Badge</h2>
-                <h2 class="text-5xl md:text-6xl lg:text-7xl font-black text-[#0f172a] leading-[1.1]">Holder</h2>
-                <p class="text-slate-700 text-lg max-w-xl mb-6">Get verified, receive tasks faster, and access transport features tailored for professional drivers in CaneMap.</p>
-                <a href="../Driver/Driver_Badge.html" class="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-[var(--cane-700)] text-white font-semibold shadow hover:shadow-xl transition transform hover:-translate-y-0.5">
+                </div>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-[var(--cane-900)] leading-tight mb-2">Be a</h2>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight pb-2 mb-2 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-500)] bg-clip-text text-transparent">Driver Badge</h2>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-[var(--cane-900)] leading-tight mb-6">Holder</h2>
+                <p class="text-[var(--cane-900)]/80 text-lg max-w-xl mb-8 leading-relaxed font-medium">Get verified, receive tasks faster, and access transport features tailored for professional drivers in CaneMap.</p>
+                <a href="../Driver/Driver_Badge.html" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] text-white font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
                     Get Driver Badge <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
 
             <!-- Right visual: standalone image (no container frame) -->
-            <div class="relative w-[120%] lg:w-[140%] ml-auto mr-[-10%] lg:mr-[-16%]">
-                <img src="../img/Transport.jpg" alt="Driver logistics" class="w-full h-[440px] lg:h-[520px] object-cover object-center rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.18)]" />
-                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent"></div>
-                <div class="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg border border-emerald-100 px-3 py-2 flex items-center gap-2 float-slow">
-                    <i class="fas fa-check-circle text-emerald-600"></i>
-                    <span class="text-sm font-semibold text-emerald-700">Verified</span>
+            <div class="relative">
+                <div class="absolute inset-0 bg-gradient-to-br from-[var(--cane-400)]/20 to-[var(--cane-600)]/20 rounded-3xl blur-2xl"></div>
+                <img src="../img/Transport.jpg" alt="Driver logistics" class="relative w-full h-[380px] md:h-[450px] lg:h-[520px] object-cover object-center rounded-3xl shadow-2xl transition-transform duration-700 hover:scale-105" />
+                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/50 via-black/20 to-transparent rounded-3xl"></div>
+                <div class="absolute -top-4 -right-4 bg-white rounded-2xl shadow-xl border-2 border-[var(--cane-100)] px-4 py-3 flex items-center gap-2 float-slow">
+                    <i class="fas fa-check-circle text-[var(--cane-600)] text-lg"></i>
+                    <span class="text-sm font-bold text-[var(--cane-700)]">Verified</span>
                 </div>
-                <div class="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg border border-emerald-100 px-3 py-2 flex items-center gap-2 float-slow" style="animation-delay:1s">
-                    <i class="fas fa-truck text-emerald-600"></i>
-                    <span class="text-sm font-semibold text-emerald-700">Hauling Ready</span>
+                <div class="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-xl border-2 border-[var(--cane-100)] px-4 py-3 flex items-center gap-2 float-slow" style="animation-delay:1s">
+                    <i class="fas fa-truck text-[var(--cane-600)] text-lg"></i>
+                    <span class="text-sm font-bold text-[var(--cane-700)]">Hauling Ready</span>
                 </div>
             </div>
         </div>
     </section>
     <!-- Contact Section -->
-    <section id="contact" class="relative bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] pt-24 pb-12">
+    <section id="contact" class="relative bg-gradient-to-b from-[#F5F5F0] to-white pt-24 pb-12">
         <div class="custom-shape-divider-top-1755503018">
             <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
                 <defs>
@@ -1155,10 +1195,7 @@ header nav .flex.items-center.justify-between > .relative {
                          <a href="./help.html" class="text-[var(--cane-200)] hover:text-[var(--cane-100)] transition-colors">Help Center</a>
                     </div>
                 </div>
-                 <button onclick="scrollToTop()" class="bg-gradient-to-br from-[var(--cane-600)] to-[var(--cane-700)] rounded-full p-3 hover:from-[var(--cane-700)] hover:to-[var(--cane-800)] transition-all duration-300 transform hover:scale-110 shadow-lg">
-                    <i class="fas fa-arrow-up text-white"></i>
-                </button>
-            </div>
+             </div>
         </div>
     </footer>
     <!-- Floating Feedback Widget -->
