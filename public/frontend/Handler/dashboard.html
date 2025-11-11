@@ -53,6 +53,17 @@
         #hamburger.active .bar3 { transform: translateY(-6px) rotate(-45deg); }
         /* Submenu arrow animation */
         [id$="-arrow"] { transition: transform 0.3s ease; }
+        /* Active menu item styling */
+        .nav-item.active {
+            background: #F8F9FA;
+            color: #212529;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+        .nav-item.active i {
+            color: #212529;
+        }
         #handlerFieldsMap { min-height: 26rem; width: 100%; }
         .btn-register-field {
             background: linear-gradient(to right, #497d00, #5ea500);
@@ -345,89 +356,12 @@
     </style>
  </head>
 <body class="min-h-screen bg-gray-100">
-    <!-- Header -->
-    <header class="shadow-lg" style="background: linear-gradient(to right, #497d00, #5ea500);">
-        <div class="container mx-auto px-5 py-4 flex items-center justify-between">
-        <div class="flex items-center space-x-5">
-        <button id="hamburger" class="lg:hidden relative w-10 h-10 rounded-md bg-white/20 border border-white/30 flex items-center justify-center group">
-          <span class="bar1 absolute w-6 h-[3px] bg-white transition-transform"></span>
-          <span class="bar2 absolute w-6 h-[3px] bg-white transition-opacity"></span>
-          <span class="bar3 absolute w-6 h-[3px] bg-white transition-transform"></span>
-        </button>
-        <!-- Back button and title removed per request -->
-      </div>
-            <div class="flex items-center space-x-4 text-white text-base ml-2 lg:ml-4">
-                <div class="relative">
-                    <button id="notificationBellBtn" class="relative text-white hover:text-gray-200 focus:outline-none">
-                        <i class="fas fa-bell text-lg"></i>
-                        <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-[0.65rem] rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center hidden">0</span>
-                    </button>
-                    <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white text-[var(--cane-900)] rounded-lg shadow-lg border border-gray-200 z-50">
-                        <div class="px-4 py-2 border-b border-gray-100 font-semibold text-sm flex items-center justify-between">
-                            <span>Notifications</span>
-                            <button id="notificationRefreshBtn" type="button" class="text-xs text-[var(--cane-600)] hover:text-[var(--cane-700)]">Refresh</button>
-                        </div>
-                        <div id="notificationList" class="max-h-80 overflow-y-auto">
-                            <div class="p-4 text-sm text-[var(--cane-700)] text-center">No notifications yet.</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Profile Dropdown -->
-                <div class="relative">
-                    <button id="profileDropdownBtn" class="flex items-center space-x-5 text-white hover:text-gray-200 transition-colors text-base">
-                        <div class="w-9 h-9 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
-                            <i class="fas fa-user text-white text-xs"></i>
-                        </div>
-                        <span id="topUserName" class="font-semibold">Loading...</span>
-                        <i class="fas fa-chevron-down text-xs"></i>
-                    </button>
-                    
-                    <!-- Dropdown Menu -->
-                    <div id="profileDropdown" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-50">
-                        <!-- Red Header Section -->
-                        <div class="bg-green-600 rounded-t-lg p-4 text-center">
-                            <div class="w-16 h-16 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md mx-auto mb-2">
-                                <i class="fas fa-user text-white text-xl"></i>
-                            </div>
-                            <h3 id="dropdownUserName" class="text-white font-semibold text-lg">Loading...</h3>
-                        </div>
-                        
-                        <!-- White Content Section -->
-                        <div class="py-2">
-                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-image w-5 h-5 mr-3 text-gray-500"></i>
-                                <span>Update Photo</span>
-                            </a>
-                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
-                                <span>Profile Settings</span>
-                            </a>
-                            <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-cog w-5 h-5 mr-3 text-gray-500"></i>
-                                <span>Change Password</span>
-                            </a>
-                      
-                        </div>
-                        
-                        <!-- Logout Section -->
-                        <div class="border-t border-gray-200 py-2">
-                            <a href="#" id="handlerLogoutBtn" class="flex items-center px-4 py-3 text-red-600 hover:bg-red-50 transition-colors">
-                                <i class="fas fa-arrow-right w-5 h-5 mr-3"></i>
-                                <span class="font-medium">Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
 
     <div class="flex relative">
   <!-- Sidebar (fixed overlay) -->
-  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-gray-900 z-50">
+  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-[#1B5E20] z-50">
             <!-- Profile Section -->
-            <div class="p-6 border-b border-gray-700">
+            <div class="p-6 border-b border-white">
                 <div class="flex items-center space-x-3 mb-4">
                     <div class="w-14 h-14 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ring-2 ring-white/10">
                         <i class="fas fa-user text-white text-xl"></i>
@@ -504,7 +438,7 @@
 
           <!-- My Fields (single link) -->
           <div class="mb-4">
-            <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="fields">
+            <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="fields">
               <i class="fas fa-map-marked-alt w-5 h-5"></i>
               <span>My Fields</span>
             </a>
@@ -512,7 +446,7 @@
 
                     <!-- Workers -->
                     <div class="mb-4">
-                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="workers">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="workers">
                             <i class="fas fa-users w-5 h-5"></i>
                             <span>Workers</span>
                         </a>
@@ -520,7 +454,7 @@
 
                     <!-- Tasks -->
                     <div class="mb-4">
-                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="tasks">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="tasks">
                             <i class="fas fa-list-check w-5 h-5"></i>
                             <span>Tasks</span>
                         </a>
@@ -528,7 +462,7 @@
 
                     <!-- Analytics -->
                     <div class="mb-4">
-                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="analytics">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="analytics">
                             <i class="fas fa-chart-line w-5 h-5"></i>
                             <span>Analytics</span>
                         </a>
@@ -536,7 +470,7 @@
 
                     <!-- Reports -->
                     <div class="mb-4">
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="reports">
+                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="reports">
                         <i class="fas fa-chart-bar w-5 h-5"></i>
                         <span>Reports</span>
                     </a>
@@ -544,7 +478,7 @@
 
                     <!-- Settings -->
                     <div class="mb-4">
-                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="settings">
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="settings">
                             <i class="fas fa-cog w-5 h-5"></i>
                             <span>Settings</span>
                         </a>
@@ -555,7 +489,29 @@
 
   <main class="flex-1 px-0 lg:px-4 lg:ml-64">
         <div id="dashboard" class="content-section">
-        <h2 class="text-3xl font-extrabold mb-6 mt-6 text-gray-900">Dashboard</h2>
+        <!-- Top Header with Notification and Profile -->
+        <div class="flex items-center justify-between px-4 lg:px-0 py-4 mb-6">
+            <h2 class="text-3xl font-extrabold text-gray-900">Dashboard</h2>
+            <div class="flex items-center space-x-6">
+                <!-- Notification Bell -->
+                <div class="relative">
+                    <button id="topNotificationBell" class="relative text-gray-600 hover:text-gray-900 transition-colors">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span id="topNotificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold hidden">0</span>
+                    </button>
+                </div>
+                <!-- Profile Name -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center shadow-md">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <p id="topUserName" class="text-sm font-semibold text-gray-900">Loading...</p>
+                        <p class="text-xs text-gray-500">Field Handler</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -671,5 +627,26 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script type="module" src="../../backend/Handler/dashboard.js"></script>
+<script>
+    // Handle active menu item styling
+    document.addEventListener('DOMContentLoaded', function() {
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        navItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                // Remove active class from all items
+                navItems.forEach(i => i.classList.remove('active'));
+                // Add active class to clicked item
+                this.classList.add('active');
+            });
+        });
+        
+        // Set Dashboard as active by default
+        const dashboardItem = document.querySelector('.nav-item[data-section="dashboard"]');
+        if (dashboardItem) {
+            dashboardItem.classList.add('active');
+        }
+    });
+</script>
 </body>
 </html>
