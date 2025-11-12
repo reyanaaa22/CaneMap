@@ -100,30 +100,58 @@ document.addEventListener("DOMContentLoaded", () => {
     (async () => {
       try {
         const f = form.elements;
-        const fullnameEl = f["fullname"]; const contactEl = f["contact_number"] || f["contact"]; const emailEl = f["email"];
+        const fullnameEl = f["fullname"];
+        const contactEl = f["contact_number"] || f["contact"];
+        const emailEl = f["email"];
+        const birthdayEl = f["birth_date"]; // <-- your input name
 
-        // 1) Firestore profile
+        // Firestore profile
         try {
           const userSnap = await getDoc(doc(db, "users", user.uid));
           if (userSnap.exists()) {
             const u = userSnap.data();
-            if (fullnameEl && !fullnameEl.value && (u.name || u.fullname)) fullnameEl.value = (u.name || u.fullname);
-            if (contactEl && !contactEl.value && (u.contact || u.phone || u.contact_number)) contactEl.value = (u.contact || u.phone || u.contact_number);
-            if (emailEl && !emailEl.value && u.email) emailEl.value = u.email;
+
+            if (fullnameEl && !fullnameEl.value && (u.name || u.fullname))
+              fullnameEl.value = u.name || u.fullname;
+
+            if (contactEl && !contactEl.value && (u.contact || u.phone || u.contact_number))
+              contactEl.value = u.contact || u.phone || u.contact_number;
+
+            if (emailEl && !emailEl.value && u.email)
+              emailEl.value = u.email;
+
+            //Auto-fill birthday — supports both `birthday` or `birth_date`
+            const bday = u.birthday || u.birth_date;
+            if (birthdayEl && !birthdayEl.value && bday) {
+              // If Firestore stores it as string (e.g. "1996-07-12")
+              if (typeof bday === "string") {
+                birthdayEl.value = bday;
+              } else if (bday.toDate) {
+                // If it’s a Firestore Timestamp
+                birthdayEl.value = bday.toDate().toISOString().split("T")[0];
+              } else if (bday instanceof Date) {
+                birthdayEl.value = bday.toISOString().split("T")[0];
+              }
+            }
           }
-        } catch {}
+        } catch (err) {
+          console.warn("User Firestore profile fetch failed:", err);
+        }
 
-        // 2) Auth object fallback
+        // Auth object fallback
         if (emailEl && !emailEl.value && user.email) emailEl.value = user.email;
-        if (fullnameEl && !fullnameEl.value && (user.displayName || "")) fullnameEl.value = user.displayName;
+        if (fullnameEl && !fullnameEl.value && user.displayName) fullnameEl.value = user.displayName;
 
-        // 3) localStorage fallback
+        // LocalStorage fallback
         const farmerName = localStorage.getItem("farmerName");
         const farmerContact = localStorage.getItem("farmerContact");
+        const farmerBirthday = localStorage.getItem("farmerBirthday");
+
         if (fullnameEl && !fullnameEl.value && farmerName) fullnameEl.value = farmerName;
         if (contactEl && !contactEl.value && farmerContact) contactEl.value = farmerContact;
+        if (birthdayEl && !birthdayEl.value && farmerBirthday) birthdayEl.value = farmerBirthday;
       } catch (e) {
-        console.warn('Profile autofill failed', e);
+        console.warn("Profile autofill failed", e);
       }
     })();
 

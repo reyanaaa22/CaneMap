@@ -324,6 +324,28 @@ export function initializeHandlerWorkersSection() {
           }
         }
 
+        if (requesterUserId) {
+          const notifRef = doc(collection(db, "notifications"));
+          const notifTitle =
+            action === "approve"
+              ? "Field Registration Approved!"
+              : "Field Registration Rejected!";
+          const notifMessage =
+            action === "approve"
+              ? `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been approved by the handler. You can now check your joined fields <a href="../../frontend/Worker/join-field.html" target="_blank" class="notif-link">here</a>.`
+              : `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been rejected by the handler. Please contact your handler for more information.`;
+
+          await setDoc(notifRef, {
+            userId: requesterUserId,
+            title: notifTitle,
+            message: notifMessage,
+            status: "unread",
+            timestamp: serverTimestamp(),
+          });
+
+          console.log(`📨 Notification sent to ${requesterUserId} (${notifTitle})`);
+        }
+
         // Show success message
         const successModal = document.createElement("div");
         successModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
@@ -463,6 +485,20 @@ export function initializeHandlerWorkersSection() {
             
             const userData = userSnap.data();
             const userRole = (userData.role || "").toLowerCase();
+
+            // fetch contact number from Drivers_Badge if driver
+            let badgeData = {};
+            if (userRole === "driver") {
+              try {
+                const badgeSnap = await getDoc(doc(db, "Drivers_Badge", userId));
+                if (badgeSnap.exists()) {
+                  badgeData = badgeSnap.data();
+                }
+              } catch (err) {
+                console.warn(`⚠️ Failed to fetch Drivers_Badge for ${userId}:`, err);
+              }
+            }
+
             
             // Only include users with role "worker" or "driver"
             if (userRole !== "worker" && userRole !== "driver") return;
@@ -479,10 +515,22 @@ export function initializeHandlerWorkersSection() {
             const userInfo = {
               id: userId,
               name: userName,
-              phone: resolveValue([userData.phone, userData.phoneNumber, userData.contact, userData.mobile], CONTACT_PLACEHOLDERS) || '—',
-              barangay: userData.barangay || '—',
-              plate: userData.plate || userData.vehiclePlate || '—',
-              since: approvedReq?.requestedAt ? (approvedReq.requestedAt.toDate ? approvedReq.requestedAt.toDate().toISOString() : approvedReq.requestedAt) : new Date().toISOString()
+              phone: resolveValue(
+                [
+                  userData.phone,
+                  userData.phoneNumber,
+                  userData.contact,
+                  userData.mobile,
+                  badgeData.contact_number,
+                  badgeData.contactNumber,  
+                ],
+                CONTACT_PLACEHOLDERS
+              ) || '—',
+              barangay: userData.barangay || badgeData.barangay || '—',
+              plate: userData.plate || badgeData.vehiclePlate || badgeData.plate || '—',
+              since: approvedReq?.requestedAt
+                ? (approvedReq.requestedAt.toDate ? approvedReq.requestedAt.toDate().toISOString() : approvedReq.requestedAt)
+                : new Date().toISOString()
             };
             
             if (requestedRole.toLowerCase() === "driver" || userRole === "driver") {

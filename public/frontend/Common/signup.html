@@ -342,6 +342,14 @@ button.loading .button-spinner {
   }
 }
 
+.form-field input[type="date"] {
+  color-scheme: light;
+}
+
+.form-field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
 </style>
 </head>
 <body class="main-background">
@@ -367,6 +375,11 @@ button.loading .button-spinner {
             <input type="text" id="contact" name="contact" placeholder=" " required>
             <label for="contact">Contact number</label>
             <div id="error-contact" class="error-message"></div>
+          </div>
+          <div class="form-field">
+            <input type="date" id="birthday" name="birthday" placeholder=" " required>
+            <label for="birthday">Birthday</label>
+            <div id="error-birthday" class="error-message"></div>
           </div>
           <div class="form-field">
             <input type="password" id="password" name="password" minlength="8" placeholder=" " required>

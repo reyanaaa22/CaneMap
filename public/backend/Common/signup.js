@@ -24,6 +24,7 @@ const errors = {
   fullname: document.getElementById('error-fullname'),
   email: document.getElementById('error-email'),
   contact: document.getElementById('error-contact'),
+  birthday: document.getElementById('error-birthday'),
   password: document.getElementById('error-password'),
   confirmPassword: document.getElementById('error-confirm-password'),
   terms: document.getElementById('error-terms'),
@@ -80,6 +81,7 @@ form.addEventListener('submit', async (e) => {
   const fullName = form.fullname.value.trim();
   const email = form.email.value.trim();
   const contact = form.contact.value.trim();
+  const birthday = form.birthday.value;
   const password = form.password.value;
   const confirmPassword = form['confirm-password'].value;
   const terms = form.terms.checked;
@@ -100,6 +102,11 @@ form.addEventListener('submit', async (e) => {
   } else {
     const contactRegex = /^\+?\d{10,15}$/;
     if (!contactRegex.test(contact)) { errors.contact.textContent = 'Please enter a valid contact number.'; valid = false; }
+  }
+
+  if (!birthday) {
+    errors.birthday.textContent = 'Please select your birthday.';
+    valid = false;
   }
 
   if (!password) {
@@ -154,6 +161,7 @@ form.addEventListener('submit', async (e) => {
       name: fullName,
       email: email,
       contact: contact,
+      birthday: birthday,
       role: "farmer",
       status: "pending",
       lastLogin: null,

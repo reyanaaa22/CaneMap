@@ -684,6 +684,29 @@ async function loadJoinRequests(handlerId) {
               }
             }
 
+            //notification for the requester
+            if (requesterUserId) {
+              const notifRef = doc(collection(db, "notifications"));
+              const notifTitle =
+                action === "approve"
+                  ? "Field Registration Approved!"
+                  : "Field Registration Rejected!";
+              const notifMessage =
+                action === "approve"
+                  ? `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been approved by the handler. You can now check your joined fields <a href="../../frontend/Worker/join-field.html" target="_blank" class="notif-link">here</a>.`
+                  : `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been rejected by the handler. Please contact your handler for more details.`;
+
+              await setDoc(notifRef, {
+                userId: requesterUserId,
+                title: notifTitle,
+                message: notifMessage,
+                status: "unread",
+                timestamp: serverTimestamp(),
+              });
+
+              console.log(`📨 Notification sent to ${requesterUserId} (${notifTitle})`);
+            }
+
             // Show success message
             const successModal = document.createElement("div");
             successModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
