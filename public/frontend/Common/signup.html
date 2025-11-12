@@ -422,6 +422,148 @@ button.loading .button-spinner {
   padding-right: 42px;
 }
 
+/* Terms & Privacy Modal Styling */
+.terms-modal-content {
+  background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(236,252,215,0.98));
+  border-radius: 20px;
+  padding: 20px 24px 24px;
+  width: 92%;
+  max-width: 650px;
+  box-shadow: 0 20px 60px rgba(30,68,9,0.28);
+  position: relative;
+  overflow: hidden;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid rgba(152,214,78,0.35);
+  text-align: center;
+}
+
+.modal-header h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--cane-700);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: rgba(26, 46, 9, 0.65);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease, color 0.25s ease;
+  z-index: 10;
+}
+
+.close-btn:hover {
+  transform: scale(1.1);
+  color: rgba(26, 46, 9, 0.9);
+}
+
+
+@media (max-width: 480px) {
+  .modal-header {
+    padding: 12px 0;
+  }
+
+  .modal-header h2 {
+    font-size: 1.3rem;
+    padding: 0 40px; }
+
+  .close-btn {
+    top: 8px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    font-size: 1.3rem;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.terms-nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.tab-btn {
+  background: rgba(152,214,78,0.15);
+  border: 1px solid rgba(152,214,78,0.45);
+  color: var(--cane-700);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--cane-600), var(--cane-700));
+  color: white;
+  box-shadow: 0 4px 14px rgba(73,125,0,0.25);
+}
+
+.tab-btn:hover:not(.active) {
+  background: rgba(188,244,129,0.25);
+}
+
+.terms-body {
+  overflow-y: auto;
+  padding: 8px 4px 10px;
+  scroll-behavior: smooth;
+}
+
+.terms-body section {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.terms-body section.active {
+  display: block;
+}
+
+.terms-body h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--cane-700);
+}
+
+.terms-body p {
+  text-align: justify;
+  color: rgba(26,46,9,0.85);
+  line-height: 1.55;
+  font-size: 0.94rem;
+  margin-bottom: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -508,6 +650,61 @@ button.loading .button-spinner {
       <button id="modalOkBtn">OK</button>
     </div>
   </div>
+
+<!-- Terms & Privacy Modal -->
+<div id="termsPrivacyModal" class="modal">
+  <div class="terms-modal-content">
+    <div class="modal-header">
+      <h2>CaneMap Legal Policies</h2>
+      <button id="closeTermsModal" class="close-btn" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="terms-nav">
+      <button class="tab-btn active" data-target="terms-section">Terms of Service</button>
+      <button class="tab-btn" data-target="privacy-section">Privacy Policy</button>
+    </div>
+    <div class="terms-body" id="terms-scroll">
+      <section id="terms-section">
+        <h3>Terms of Service</h3>
+        <p>Welcome to CaneMap. By creating an account, you agree to follow these terms. Please read carefully.</p>
+        <p><strong>1. Account Responsibilities</strong><br>
+        You are responsible for maintaining the confidentiality of your login information and for all activities that occur under your account.</p>
+        <p><strong>2. Usage of the Platform</strong><br>
+        CaneMap is designed to assist in digital management of sugarcane operations. Misuse of the platform, including fraudulent activities or unauthorized access, is strictly prohibited.</p>
+        <p><strong>3. Data Accuracy</strong><br>
+        You agree to provide accurate and complete information when registering and updating your account details.</p>
+        <p><strong>4. Service Changes</strong><br>
+        We may update or modify the services to improve performance or security. We will notify you of significant changes.</p>
+        <p><strong>5. Termination</strong><br>
+        Violation of these terms may lead to temporary suspension or permanent termination of your account.</p>
+        <p><strong>6. Limitation of Liability</strong><br>
+        CaneMap is not responsible for indirect losses resulting from the use or inability to use the platform.</p>
+        <p><strong>7. Governing Law</strong><br>
+        These terms are governed by applicable Philippine law.</p>
+      </section>
+
+      <section id="privacy-section">
+        <h3>Privacy Policy</h3>
+        <p>At CaneMap, your privacy is our priority. This policy explains how we handle your data.</p>
+        <p><strong>1. Information We Collect</strong><br>
+        We collect personal information such as your name, email address, contact number, and location to provide better service.</p>
+        <p><strong>2. How We Use Your Data</strong><br>
+        Your information is used to manage your account, provide support, and improve platform efficiency.</p>
+        <p><strong>3. Data Security</strong><br>
+        We employ secure cloud-based technologies and encryption methods to protect your information.</p>
+        <p><strong>4. Data Sharing</strong><br>
+        We do not sell your information. Limited data may be shared only with trusted partners who follow strict confidentiality agreements.</p>
+        <p><strong>5. Data Retention</strong><br>
+        We retain data only as long as necessary to fulfill service or legal obligations.</p>
+        <p><strong>6. Your Rights</strong><br>
+        You may request to access, update, or delete your data at any time by contacting our support.</p>
+        <p><strong>7. Policy Updates</strong><br>
+        We may update this Privacy Policy periodically to reflect system changes. Updates will be posted on this page.</p>
+      </section>
+    </div>
+  </div>
+</div>
 
   <script type="module" src="../../backend/Common/firebase-config.js"></script>
   <script type="module" src="../../backend/Common/signup.js"></script>

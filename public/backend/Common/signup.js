@@ -288,3 +288,39 @@ document.querySelectorAll('.toggle-password').forEach(icon => {
     icon.classList.toggle('fa-eye-slash');
   });
 });
+
+const termsModal = document.getElementById('termsPrivacyModal');
+const closeTermsModal = document.getElementById('closeTermsModal');
+const tabButtons = document.querySelectorAll('.tab-btn');
+const sections = document.querySelectorAll('.terms-body section');
+
+document.querySelectorAll('.checkbox-container a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = e.target.textContent.includes('Privacy') ? 'privacy-section' : 'terms-section';
+    sections.forEach(sec => sec.classList.remove('active'));
+    document.getElementById(target).classList.add('active');
+    tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.target === target));
+    termsModal.style.display = 'flex';
+  });
+});
+
+closeTermsModal.addEventListener('click', () => {
+  termsModal.style.display = 'none';
+});
+
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sections.forEach(sec => sec.classList.remove('active'));
+    document.getElementById(btn.dataset.target).classList.add('active');
+  });
+});
+
+window.addEventListener('click', (e) => {
+  if (e.target === termsModal) termsModal.style.display = 'none';
+});
+
+// Default state
+document.getElementById('terms-section').classList.add('active');
