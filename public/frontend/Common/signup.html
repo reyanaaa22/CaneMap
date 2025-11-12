@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" >
 <title>Sign Up - CaneMap</title>
 <style>
 :root {
@@ -68,8 +68,8 @@ body {
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 40px 24px;
+  align-items: center; 
+  padding: 0 24px; 
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.10) 0%,
@@ -80,6 +80,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-sizing: border-box;
 }
+
 
 .container {
   background: #ffffff;
@@ -350,7 +351,80 @@ button.loading .button-spinner {
   cursor: pointer;
 }
 
+.form-field input::placeholder {
+  color: rgba(26, 46, 9, 0.45);
+  font-size: 0.9rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.form-field.half {
+  flex: 1;
+}
+
+.form-field.full-width {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+  }
+}
+
+.form-field input:focus + label,
+.form-field input:not(:placeholder-shown) + label {
+  top: -8px;
+}
+
+#message {
+  margin-bottom: 4px;
+}
+
+.account-login {
+  margin-top: 4px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.container {
+  padding-bottom: 15px;
+}
+
+.checkbox-container {
+  margin-bottom: 10px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: rgba(26, 46, 9, 0.45);
+  font-size: 1.1rem;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.8;
+  line-height: 0;
+  pointer-events: auto;
+}
+
+.toggle-password:hover {
+  color: var(--cane-600);
+  opacity: 1;
+}
+
+.form-field input {
+  padding-right: 42px;
+}
+
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 <body class="main-background">
   <div class="green-overlay"></div>
@@ -361,36 +435,53 @@ button.loading .button-spinner {
 
       <form id="signup-form" novalidate>
         <div class="form-grid">
-          <div class="form-field">
+
+          <div class="form-field full-width">
             <input type="text" id="fullname" name="fullname" placeholder=" " required>
             <label for="fullname">Full name</label>
             <div id="error-fullname" class="error-message"></div>
           </div>
-          <div class="form-field">
-            <input type="email" id="email" name="email" placeholder=" " required>
-            <label for="email">Email address</label>
-            <div id="error-email" class="error-message"></div>
+
+          <div class="form-row">
+            <div class="form-field half">
+              <input type="email" id="email" name="email" placeholder=" " required>
+              <label for="email">Email address</label>
+              <div id="error-email" class="error-message"></div>
+            </div>
+            <div class="form-field half">
+              <input type="text" id="contact" name="contact" placeholder=" " required>
+              <label for="contact">Contact number</label>
+              <div id="error-contact" class="error-message"></div>
+            </div>
           </div>
-          <div class="form-field">
-            <input type="text" id="contact" name="contact" placeholder=" " required>
-            <label for="contact">Contact number</label>
-            <div id="error-contact" class="error-message"></div>
+
+          <div class="form-row">
+            <div class="form-field half">
+              <input type="text" id="address" name="address" placeholder="" required>
+              <label for="address">Address (Street/Brgy/City)</label>
+              <div id="error-address" class="error-message"></div>
+            </div>
+            <div class="form-field half">
+              <input type="date" id="birthday" name="birthday" placeholder=" " required>
+              <label for="birthday">Birthday</label>
+              <div id="error-birthday" class="error-message"></div>
+            </div>
           </div>
-          <div class="form-field">
-            <input type="date" id="birthday" name="birthday" placeholder=" " required>
-            <label for="birthday">Birthday</label>
-            <div id="error-birthday" class="error-message"></div>
-          </div>
-          <div class="form-field">
-            <input type="password" id="password" name="password" minlength="8" placeholder=" " required>
-            <label for="password">Password</label>
-            <div id="error-password" class="error-message"></div>
-          </div>
-          <div class="form-field">
-            <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder=" " required>
-            <label for="confirm-password">Confirm password</label>
-            <div id="error-confirm-password" class="error-message"></div>
-          </div>
+
+        <div class="form-field">
+          <input type="password" id="password" name="password" minlength="8" placeholder=" " required>
+          <label for="password">Password</label>
+          <i class="fa-regular fa-eye toggle-password" data-target="password"></i>
+          <div id="error-password" class="error-message"></div>
+        </div>
+
+        <div class="form-field">
+          <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder=" " required>
+          <label for="confirm-password">Confirm password</label>
+          <i class="fa-regular fa-eye toggle-password" data-target="confirm-password"></i>
+          <div id="error-confirm-password" class="error-message"></div>
+        </div>
+
         </div>
 
         <input type="hidden" id="role" name="role" value="farmer">

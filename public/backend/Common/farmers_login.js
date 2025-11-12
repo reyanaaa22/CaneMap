@@ -420,3 +420,13 @@ if (alertOverlay) {
 }
 
 isLocked();
+
+document.querySelectorAll('.toggle-password').forEach(icon => {
+  icon.addEventListener('click', () => {
+    const input = document.getElementById(icon.getAttribute('data-target'));
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
+  });
+});

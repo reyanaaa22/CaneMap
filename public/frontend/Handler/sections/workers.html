@@ -135,6 +135,38 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+
+        
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+#details-modal .modal-cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  #details-modal .modal-cols { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  #details-modal .modal-cols { grid-template-columns: 1fr; }
+}
+
     </style>
 <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6 mt-12">
         <!-- Left: All Workers List -->
@@ -191,7 +223,6 @@
                         <tr>
                             <th class="py-3 pl-4 text-left">Type</th>
                             <th class="py-3 text-left">Name</th>
-                            <th class="py-3 text-left">Contact</th>
                             <th class="py-3 text-left">Details</th>
                             <th class="py-3 pr-4 text-right">Actions</th>
                         </tr>

@@ -151,21 +151,17 @@ export function initializeHandlerWorkersSection() {
     if (refs.driversCount) refs.driversCount.textContent = state.drivers.length;
   }
 
-  function renderWorkers(){
+  function renderWorkers() {
     if (!refs.workersTbody) return;
 
     const records = collectWorkers()
       .filter(worker => state.filter === 'all' || worker.type === state.filter)
       .filter(worker => {
-        // Dynamic search: filter as user types any key
         if (!state.search) return true;
         const searchTerm = state.search.toLowerCase().trim();
         if (!searchTerm) return true;
-        
-        // Search across name, contact, detail, label
         const searchableText = [
           worker.name,
-          worker.contact,
           worker.detail,
           worker.label,
           worker.type
@@ -173,34 +169,41 @@ export function initializeHandlerWorkersSection() {
           .filter(Boolean)
           .join(' ')
           .toLowerCase();
-        
         return searchableText.includes(searchTerm);
       });
 
     if (records.length === 0) {
-      refs.workersTbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-sm text-[var(--cane-700)]">No workers found.</td></tr>';
+      refs.workersTbody.innerHTML =
+        '<tr><td colspan="3" class="py-5 text-center text-sm text-[var(--cane-700)]">No workers found.</td></tr>';
       return;
     }
 
     const rows = records.map(worker => `
-      <tr class="border-t border-[var(--cane-100)]">
-        <td class="py-3 pl-4">
+      <tr class="group transition-all hover:bg-[var(--cane-50)] border-t border-[var(--cane-100)]">
+        <td class="py-4 pl-5">
           <span class="inline-flex items-center gap-2 font-semibold text-[var(--cane-800)]">
             <i class="${worker.icon}"></i>
             ${worker.label}
           </span>
         </td>
-        <td class="py-3">
+        <td class="py-4">
           <div class="font-semibold text-[var(--cane-950)]">${worker.name}</div>
           ${worker.since ? `<div class="text-xs text-[var(--cane-600)]">Since ${fmtDate(worker.since)}</div>` : ''}
         </td>
-        <td class="py-3">${worker.contact}</td>
-        <td class="py-3">${worker.detail}</td>
-        <td class="py-3 pr-4 text-right text-sm text-[var(--cane-600)]">—</td>
+        <td class="py-4 pr-5 text-right">
+          <button class="see-details-btn bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+            data-id="${worker.id}">
+            See Details
+          </button>
+        </td>
       </tr>
     `).join('');
 
     refs.workersTbody.innerHTML = rows;
+
+    refs.workersTbody.querySelectorAll('.see-details-btn').forEach(btn => {
+      btn.addEventListener('click', e => showDetailsModal(e.target.dataset.id));
+    });
   }
 
   function renderRequests(){
@@ -512,26 +515,39 @@ export function initializeHandlerWorkersSection() {
               NAME_PLACEHOLDERS
             ) || userId;
             
-            const userInfo = {
-              id: userId,
-              name: userName,
-              phone: resolveValue(
-                [
-                  userData.phone,
-                  userData.phoneNumber,
-                  userData.contact,
-                  userData.mobile,
-                  badgeData.contact_number,
-                  badgeData.contactNumber,  
-                ],
-                CONTACT_PLACEHOLDERS
-              ) || '—',
-              barangay: userData.barangay || badgeData.barangay || '—',
-              plate: userData.plate || badgeData.vehiclePlate || badgeData.plate || '—',
-              since: approvedReq?.requestedAt
-                ? (approvedReq.requestedAt.toDate ? approvedReq.requestedAt.toDate().toISOString() : approvedReq.requestedAt)
-                : new Date().toISOString()
-            };
+const address =
+  userRole === "worker"
+    ? resolveValue(
+        [
+          userData.address,
+          `${userData.street || ""}, ${userData.barangay || ""}, ${userData.city || ""}`,
+          userData.barangay,
+          userData.city,
+        ],
+        new Set(["", "n/a", "none"])
+      )
+    : userData.barangay || badgeData.barangay || "—";
+
+      const userInfo = {
+        id: userId,
+        name: userName,
+        phone: resolveValue(
+          [
+            userData.phone,
+            userData.phoneNumber,
+            userData.contact,
+            userData.mobile,
+            badgeData.contact_number,
+            badgeData.contactNumber,
+          ],
+          CONTACT_PLACEHOLDERS
+        ) || "—",
+        barangay: address || "—",
+        plate: userData.plate || badgeData.vehiclePlate || badgeData.plate || "—",
+        since: approvedReq?.requestedAt
+          ? (approvedReq.requestedAt.toDate ? approvedReq.requestedAt.toDate().toISOString() : approvedReq.requestedAt)
+          : new Date().toISOString(),
+      };
             
             if (requestedRole.toLowerCase() === "driver" || userRole === "driver") {
               drivers.push(userInfo);
@@ -685,6 +701,239 @@ export function initializeHandlerWorkersSection() {
     await refresh();
     setupJoinRequestsListener();
   }
+
+// Show Details Modal (fixed clean layout, includes contact, birthday, and driver badge info)
+async function showDetailsModal(uid) {
+  try {
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      alert("User not found.");
+      return;
+    }
+
+    const userData = userSnap.data() || {};
+    const fullname = resolveValue(
+      [userData.fullname, userData.name, userData.displayName, userData.nickname],
+      NAME_PLACEHOLDERS
+    ) || uid;
+    const roleRaw = (userData.role || "worker").toLowerCase();
+    const roleLabel = toTitleCase(roleRaw);
+
+    // birthday
+    const birthday = userData.birthday || userData.birth_date || "";
+    const age = computeAge(birthday);
+
+    // default contact from users
+    let contact = resolveValue(
+      [userData.contact, userData.phone, userData.phoneNumber, userData.mobile],
+      CONTACT_PLACEHOLDERS
+    );
+
+    let badge = {};
+    if (roleRaw === "driver") {
+      try {
+        const badgeRef = doc(db, "Drivers_Badge", uid);
+        const badgeSnap = await getDoc(badgeRef);
+        if (badgeSnap.exists()) {
+          badge = badgeSnap.data();
+          // override contact with badge version if available
+          if (badge.contact_number && badge.contact_number.trim()) {
+            contact = badge.contact_number.trim();
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch Drivers_Badge:", err);
+      }
+    }
+
+  const address =
+    roleRaw === "worker"
+      ? resolveValue(
+          [
+            userData.address,
+            `${userData.street || ""}, ${userData.barangay || ""}, ${userData.city || ""}`,
+            userData.barangay,
+          ],
+          new Set(["", "none", "n/a"])
+        ) || "—"
+      : resolveValue(
+          [badge.address, userData.address, userData.barangay, userData.street],
+          new Set(["", "none", "n/a"])
+        ) || "—";
+
+    const plate = badge.plate_number || badge.plate || userData.plate || "—";
+    const vehicleType = badge.vehicle_types || badge.vehicle_type || "—";
+    const vehicleModel = badge.vehicle_model || "—";
+    const vehicleColor = badge.vehicle_color || "—";
+    const licenseExpiry = badge.license_expiry || badge.licenseExpiry || "—";
+
+    let contentHTML = `
+      <div style="margin-bottom:16px;">
+        <h2 style="margin:0;font-size:20px;font-weight:700;color:var(--cane-900)">
+          ${escapeHtml(fullname)}
+          <span style="font-weight:600;font-size:13px;color:var(--cane-700)"> (${escapeHtml(roleLabel)})</span>
+        </h2>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Contact</label>
+          <input type="text" value="${escapeHtml(contact || '—')}" readonly
+            style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+            background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Address</label>
+          <input type="text" value="${escapeHtml(address)}" readonly
+            style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+            background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Birthday</label>
+          <input type="text" value="${birthday ? escapeHtml(birthday) : '—'}" readonly
+            style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+            background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Age</label>
+          <input type="text" value="${escapeHtml(String(age))}" readonly
+            style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+            background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+        </div>
+      </div>
+    `;
+
+    if (roleRaw === "driver") {
+      contentHTML += `
+        <hr style="margin:18px 0;border-color:var(--cane-200)">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Plate Number</label>
+            <input type="text" value="${escapeHtml(plate)}" readonly
+              style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+              background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Vehicle Type</label>
+            <input type="text" value="${escapeHtml(vehicleType)}" readonly
+              style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+              background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Vehicle Model</label>
+            <input type="text" value="${escapeHtml(vehicleModel)}" readonly
+              style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+              background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">Vehicle Color</label>
+            <input type="text" value="${escapeHtml(vehicleColor)}" readonly
+              style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+              background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--cane-700);margin-bottom:4px;">License Expiry</label>
+            <input type="text" value="${escapeHtml(licenseExpiry)}" readonly
+              style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--cane-200);
+              background:var(--cane-50);font-size:13px;color:var(--cane-900)">
+          </div>
+        </div>
+      `;
+    }
+
+    createModal(contentHTML);
+  } catch (err) {
+    console.error("Error showing details modal:", err);
+    alert("Failed to load user details.");
+  }
+}
+
+  // Compute age from birthday (accepts YYYY-MM-DD string or Date)
+  function computeAge(birth) {
+    if (!birth) return "N/A";
+    let birthDate;
+    if (typeof birth === "string") {
+      const s = birth.trim();
+      const maybe = s.split("T")[0];
+      birthDate = new Date(maybe);
+    } else if (birth.toDate && typeof birth.toDate === "function") {
+      birthDate = birth.toDate();
+    } else if (birth instanceof Date) {
+      birthDate = birth;
+    } else {
+      birthDate = new Date(birth);
+    }
+    if (isNaN(birthDate.getTime())) return "N/A";
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : "N/A";
+  }
+
+  // Escape HTML for user-controlled values
+  function escapeHtml(str) {
+    if (!str && str !== 0) return "";
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+function createModal(contentHTML) {
+  const existing = document.getElementById("details-modal");
+  if (existing) existing.remove();
+
+  // Overlay (background)
+  const overlay = document.createElement("div");
+  overlay.id = "details-modal";
+  overlay.className = `
+    fixed inset-0 bg-[rgba(0,0,0,0.45)] backdrop-blur-sm 
+    z-[9999] flex justify-center overflow-y-auto animate-fadeIn
+  `;
+  overlay.style.scrollBehavior = "smooth";
+  overlay.style.padding = "40px 0"; // space top & bottom when scrolling
+
+  // Modal container
+  const modal = document.createElement("div");
+  modal.className = `
+    relative bg-gradient-to-b from-white to-[var(--cane-50)] 
+    rounded-2xl shadow-2xl w-[90%] max-w-lg border border-[var(--cane-200)] 
+    p-7 my-auto transform transition-all duration-300 animate-slideUp
+  `;
+  modal.style.boxShadow = "0 15px 35px rgba(0,0,0,0.25)";
+  modal.style.maxHeight = "90vh"; // keep inside viewport
+  modal.style.overflowY = "auto"; // allow scroll for long content
+  modal.style.scrollbarWidth = "thin";
+  modal.style.scrollbarColor = "var(--cane-400) transparent";
+
+  // Modal content
+  modal.innerHTML = `
+    <button id="closeModalBtn" 
+      class="absolute top-3 right-4 text-[var(--cane-700)] text-2xl font-bold 
+      hover:text-[var(--cane-900)] hover:scale-110 transition-transform duration-200 
+      bg-transparent border-none cursor-pointer">×</button>
+
+    <div class="space-y-4">${contentHTML}</div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Close logic
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  modal.querySelector("#closeModalBtn").onclick = () => overlay.remove();
+}
 
   init();
 }

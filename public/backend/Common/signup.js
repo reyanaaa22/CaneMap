@@ -24,6 +24,7 @@ const errors = {
   fullname: document.getElementById('error-fullname'),
   email: document.getElementById('error-email'),
   contact: document.getElementById('error-contact'),
+  address: document.getElementById('error-address'),
   birthday: document.getElementById('error-birthday'),
   password: document.getElementById('error-password'),
   confirmPassword: document.getElementById('error-confirm-password'),
@@ -81,6 +82,7 @@ form.addEventListener('submit', async (e) => {
   const fullName = form.fullname.value.trim();
   const email = form.email.value.trim();
   const contact = form.contact.value.trim();
+  const address = form.address.value.trim();
   const birthday = form.birthday.value;
   const password = form.password.value;
   const confirmPassword = form['confirm-password'].value;
@@ -88,7 +90,17 @@ form.addEventListener('submit', async (e) => {
 
   let valid = true;
 
-  if (!fullName) { errors.fullname.textContent = 'Please enter your full name.'; valid = false; }
+  if (!fullName) {
+    errors.fullname.textContent = 'Please enter your full name.';
+    valid = false;
+  } else {
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2) {
+      errors.fullname.textContent = 'Please enter your full name (first and last name).';
+      valid = false;
+    }
+  }
+
 
   if (!email) {
     errors.email.textContent = 'Please enter your email address.'; valid = false;
@@ -102,6 +114,11 @@ form.addEventListener('submit', async (e) => {
   } else {
     const contactRegex = /^\+?\d{10,15}$/;
     if (!contactRegex.test(contact)) { errors.contact.textContent = 'Please enter a valid contact number.'; valid = false; }
+  }
+
+  if (!address) {
+    errors.address.textContent = 'Please enter your address.';
+    valid = false;
   }
 
   if (!birthday) {
@@ -161,6 +178,7 @@ form.addEventListener('submit', async (e) => {
       name: fullName,
       email: email,
       contact: contact,
+      address: address,
       birthday: birthday,
       role: "farmer",
       status: "pending",
@@ -203,8 +221,17 @@ const inputs = {
 function validateField(field) {
   switch (field) {
     case 'fullname':
-      errors.fullname.textContent = inputs.fullname.value.trim() ? '' : 'Please enter your full name.';
+      const nameVal = inputs.fullname.value.trim();
+      if (!nameVal) {
+        errors.fullname.textContent = 'Please enter your full name.';
+      } else {
+        const nameParts = nameVal.split(/\s+/).filter(Boolean);
+        errors.fullname.textContent = nameParts.length < 2
+          ? 'Please enter your full name (first and last name).'
+          : '';
+      }
       break;
+
     case 'email':
       const emailVal = inputs.email.value.trim();
       if (!emailVal) errors.email.textContent = 'Please enter your email address.';
@@ -252,3 +279,12 @@ inputs.password.addEventListener('input', () => validateField('password'));
 inputs.confirmPassword.addEventListener('input', () => validateField('confirmPassword'));
 inputs.terms.addEventListener('change', () => validateField('terms'));
 
+document.querySelectorAll('.toggle-password').forEach(icon => {
+  icon.addEventListener('click', () => {
+    const input = document.getElementById(icon.getAttribute('data-target'));
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
+  });
+});

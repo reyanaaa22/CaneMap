@@ -389,7 +389,31 @@ button.loading .button-spinner {
     padding: 9px 0;
   }
 }
+
+.toggle-password {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: rgba(26, 46, 9, 0.45);
+  font-size: 1.1rem;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.8;
+  line-height: 0;
+  pointer-events: auto;
+}
+
+.toggle-password:hover {
+  color: var(--cane-600);
+  opacity: 1;
+}
+
+.form-field input {
+  padding-right: 42px;}
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 <body class="main-background">
   <div class="green-overlay"></div>
@@ -405,6 +429,7 @@ button.loading .button-spinner {
         <div class="form-field">
           <input type="password" id="password" placeholder=" " required>
           <label for="password">Password</label>
+          <i class="fa-regular fa-eye toggle-password" data-target="password"></i>
         </div>
         <p class="forgot-pass">
           <span class="remember-wrapper">
