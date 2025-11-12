@@ -85,95 +85,122 @@ body {
 .container {
   background: #ffffff;
   width: 100%;
-  max-width: 520px;
-  padding: 26px 28px;
-  border-radius: 20px;
-  box-shadow: 0 12px 28px -8px rgba(27, 64, 9, 0.2), 0 6px 16px -10px rgba(27, 64, 9, 0.18);
+  max-width: 500px;
+  padding: 18px 24px 16px;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px -6px rgba(27, 64, 9, 0.18), 0 4px 12px -4px rgba(27, 64, 9, 0.15);
   border: 1px solid rgba(188, 244, 129, 0.3);
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
   position: relative;
   z-index: 1;
+  margin: 2vh auto;
 }
 
 h2 {
-  margin: 0;
+  margin: 0 0 4px 0;
   text-align: left;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   background: linear-gradient(135deg, var(--cane-700), var(--cane-900));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 4px 10px rgba(27, 64, 9, 0.12);
+  text-shadow: 0 2px 6px rgba(27, 64, 9, 0.1);
   letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .subtitle {
   text-align: left;
-  margin: -2px 0 18px;
-  font-size: 15px;
+  margin: 0 0 12px 0;
+  font-size: 14px;
   color: rgba(26, 46, 9, 0.72);
+  line-height: 1.3;
 }
 
 form {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
 }
 
 .form-field {
   position: relative;
   width: 100%;
-  margin: -2px 0;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.form-field label {
+  font-size: 12px;
+  color: rgba(26, 46, 9, 0.9);
+  font-weight: 500;
+  margin-bottom: 3px;
+  display: block;
+  width: 100%;
+  text-align: left;
+  line-height: 1.2;
+}
+
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid rgba(152, 214, 78, 0.45);
+  border-radius: 5px;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  background: #fff;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.input-wrapper input:focus {
+  border-color: rgba(188, 244, 129, 0.8);
+  box-shadow: 0 0 0 3px rgba(188, 244, 129, 0.15);
+  outline: none;
+}
+
+.input-wrapper input::placeholder {
+  color: rgba(26, 46, 9, 0.4);
 }
 
 .form-field input {
   width: 100%;
-  padding: 12px 16px 10px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+  border-radius: 7px;
   border: 1.8px solid rgba(152, 214, 78, 0.45);
-  background: #ffffff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   transition: border-color 0.3s ease;
   outline-offset: 2px;
+  background: #ffffff;
   font-family: inherit;
   -webkit-font-smoothing: inherit;
   -moz-osx-font-smoothing: inherit;
 }
 
-.form-field label {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #ffffff;
-  padding: 0 6px;
-  font-size: 14px;
-  color: rgba(26, 46, 9, 0.6);
-  pointer-events: none;
-  transition: all 0.2s ease;
-}
-
 .form-field input:focus {
-  border-color: var(--cane-500);
-  border-width: 2px;
-  box-shadow: 0 0 0 3px rgba(188, 244, 129, 0.25);
-}
-
-.form-field input:focus + label,
-.form-field input:not(:placeholder-shown) + label {
-  top: -6px;
-  font-size: 12px;
-  color: var(--cane-600);
+  border-color: rgba(188, 244, 129, 0.8);
+  border-width: 1.8px;
+  box-shadow: 0 0 0 3px rgba(188, 244, 129, 0.15);
+  background: #ffffff;
+  outline: none;
 }
 
 .error-message {
@@ -405,12 +432,22 @@ button.loading .button-spinner {
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
-  color: rgba(26, 46, 9, 0.45);
-  font-size: 1.1rem;
+  color: rgba(26, 46, 9, 0.5);
+  font-size: 16px;
   transition: color 0.2s ease, opacity 0.2s ease;
   opacity: 0.8;
-  line-height: 0;
+  line-height: 1;
   pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  z-index: 2;
 }
 
 .toggle-password:hover {
@@ -418,8 +455,8 @@ button.loading .button-spinner {
   opacity: 1;
 }
 
-.form-field input {
-  padding-right: 42px;
+.input-wrapper input[type="password"] {
+  padding-right: 40px !important;
 }
 
 /* Terms & Privacy Modal Styling */
@@ -572,75 +609,92 @@ button.loading .button-spinner {
   <div class="green-overlay"></div>
   <div class="page-wrapper">
     <div class="container">
-      <h2>Sign up</h2>
-      <p class="subtitle">Join CaneMap and start managing your sugarcane fields digitally.</p>
+      <h2 style="margin: 0 0 2px 0; font-size: 28px; font-weight: 800; color: #1a2e09; letter-spacing: -0.3px;">Sign up</h2>
+      <p class="subtitle" style="margin: 0 0 20px 0; font-size: 15px; color: rgba(26, 46, 9, 0.8); line-height: 1.4;">Join CaneMap and start managing your sugarcane fields digitally.</p>
 
       <form id="signup-form" novalidate>
-        <div class="form-grid">
+        <div class="form-grid" style="margin: 0; gap: 2px;">
 
-          <div class="form-field full-width">
-            <input type="text" id="fullname" name="fullname" placeholder=" " required>
+          <div class="form-field full-width" style="margin-top: 0;">
             <label for="fullname">Full name</label>
+            <div class="input-wrapper">
+              <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required>
+            </div>
             <div id="error-fullname" class="error-message"></div>
           </div>
 
-          <div class="form-row">
+          <div class="form-row" style="gap: 8px; margin: 0;">
             <div class="form-field half">
-              <input type="email" id="email" name="email" placeholder=" " required>
               <label for="email">Email address</label>
+              <div class="input-wrapper">
+                <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+              </div>
               <div id="error-email" class="error-message"></div>
             </div>
             <div class="form-field half">
-              <input type="text" id="contact" name="contact" placeholder=" " required>
               <label for="contact">Contact number</label>
+              <div class="input-wrapper">
+                <input type="text" id="contact" name="contact" placeholder="09123456789" required>
+              </div>
               <div id="error-contact" class="error-message"></div>
             </div>
           </div>
 
-          <div class="form-row">
+          <div class="form-row" style="gap: 8px; margin: 0;">
             <div class="form-field half">
-              <input type="text" id="address" name="address" placeholder="" required>
               <label for="address">Address (Street/Brgy/City)</label>
+              <div class="input-wrapper">
+                <input type="text" id="address" name="address" placeholder="Enter your address" required>
+              </div>
               <div id="error-address" class="error-message"></div>
             </div>
             <div class="form-field half">
-              <input type="date" id="birthday" name="birthday" placeholder=" " required>
               <label for="birthday">Birthday</label>
+              <div class="input-wrapper">
+                <input type="date" id="birthday" name="birthday" required>
+              </div>
               <div id="error-birthday" class="error-message"></div>
             </div>
           </div>
 
-        <div class="form-field">
-          <input type="password" id="password" name="password" minlength="8" placeholder=" " required>
-          <label for="password">Password</label>
-          <i class="fa-regular fa-eye toggle-password" data-target="password"></i>
-          <div id="error-password" class="error-message"></div>
-        </div>
+          <div class="form-field">
+            <label for="password">Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="password" name="password" minlength="8" placeholder="Create a password" required>
+            </div>
+            <div id="error-password" class="error-message"></div>
+          </div>
 
-        <div class="form-field">
-          <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder=" " required>
-          <label for="confirm-password">Confirm password</label>
-          <i class="fa-regular fa-eye toggle-password" data-target="confirm-password"></i>
-          <div id="error-confirm-password" class="error-message"></div>
-        </div>
+          <div class="form-field">
+            <label for="confirm-password">Confirm password</label>
+            <div class="input-wrapper">
+              <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder="Confirm your password" required>
+            </div>
+            <div id="error-confirm-password" class="error-message"></div>
+          </div>
 
         </div>
 
         <input type="hidden" id="role" name="role" value="farmer">
 
-        <div class="checkbox-container">
+        <div class="checkbox-container" style="margin-bottom: 6px;">
           <input type="checkbox" id="terms" name="terms" required>
           <label for="terms">I agree to the <a href="#" target="_blank" rel="noopener">Terms of Service</a> and <a href="#" target="_blank" rel="noopener">Privacy Policy</a></label>
         </div>
         <div id="error-terms" class="error-message" style="margin-top: -4px;"></div>
 
-        <button type="submit"><span class="btn-text">Sign up</span><span class="button-spinner" aria-hidden="true"></span></button>
+        <div class="form-actions" style="margin-top: 10px;">
+          <button type="submit" class="btn btn-primary" id="signupButton" style="width: 100%; padding: 10px; font-size: 14px; font-weight: 600; border-radius: 6px;">
+          <span class="btn-text">Sign up</span>
+          <span class="button-spinner" aria-hidden="true"></span>
+        </button>
       </form>
 
-      <div id="message"></div>
-      <p class="account-login">
-        Already have an account? <a href="farmers_login.html">Sign in</a>
-      </p>
+      <div id="message" style="margin: 4px 0;"></div>
+      
+      <div class="login-link" style="margin: 8px 0 4px; font-size: 14px; color: var(--cane-800);">
+        Already have an account?&nbsp;&nbsp;<a href="farmers_login.html" style="color: var(--cane-600); font-weight: 500; text-decoration: none; transition: color 0.2s ease;">Sign In</a>
+      </div>
     </div>
   </div>
 
