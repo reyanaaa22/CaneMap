@@ -556,11 +556,14 @@
         <div id="dashboard-panels" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
                       <!-- Join Request panel -->
                       <div class="section-card rounded-xl p-6">
-                          <div class="mb-4 p-3 rounded-lg" style="background-color: #E8F5E9;">
+                          <div class="mb-4 p-3 rounded-lg flex items-center justify-between" style="background-color: #E8F5E9;">
                               <h3 class="text-lg font-bold flex items-center" style="color: var(--text-dark);">
                                   <i class="fas fa-user-plus mr-3" style="color: var(--primary-medium);"></i>
-                                  Join Request
+                                  Join Requests
                               </h3>
+                              <button id="refreshJoinRequests" class="px-3 py-1.5 text-sm rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" title="Refresh join requests">
+                                  <i class="fas fa-sync-alt mr-1"></i>Refresh
+                              </button>
                           </div>
 
                           <!-- ✅ Dynamic Container -->

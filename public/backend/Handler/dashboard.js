@@ -3,7 +3,7 @@ import { auth, db } from "../Common/firebase-config.js";
 import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp, orderBy, limit, onSnapshot, collectionGroup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { initializeFieldsSection } from "./fields-map.js";
 import { initializeHandlerWorkersSection } from "./worker.js";
 
@@ -30,6 +30,9 @@ const resolveValue = (candidates, placeholders) => {
     if (cleaned && !placeholders.has(cleaned.toLowerCase())) {
       return cleaned;
     }
+  }
+  return "";
+};
 
 // =============================
 // 🔔 Notifications Helpers
@@ -169,9 +172,6 @@ async function markNotificationRead(userId, notificationId) {
     console.warn("Failed to mark notification as read", err);
   }
 }
-  }
-  return "";
-};
 
 const toTitleCase = (value) => {
   const cleaned = cleanString(value);
@@ -274,96 +274,230 @@ async function loadUserProfile(user) {
 // 🟢 Render Fields owned by user
 // =============================
 
-async function loadJoinRequests(userId) {
+async function loadJoinRequests(handlerId) {
   const container = document.getElementById("joinRequestsList");
   if (!container) return;
 
   container.innerHTML = `<div class="p-3 text-gray-500">Loading join requests...</div>`;
 
+  // Debug: Check handler role
   try {
-    // Query the user's specific subcollection instead of collection group
-    const joinFieldsRef = collection(db, `field_joins/${userId}/join_fields`);
-    const joinQuery = query(joinFieldsRef, where("status", "==", "pending"));
-
-    const joinsSnap = await getDocs(joinQuery);
-    const fieldInfoMap = new Map();
-    const pendingRequests = [];
-
-    const resolveFieldInfo = async (fieldId) => {
-      if (!fieldId) return null;
-      if (fieldInfoMap.has(fieldId)) return fieldInfoMap.get(fieldId);
-
-      const fallbacks = [
-        doc(db, "fields", fieldId),
-        doc(db, `field_applications/${userId}/fields/${fieldId}`)
-      ];
-
-      for (const ref of fallbacks) {
-        try {
-          const snap = await getDoc(ref);
-          if (snap.exists()) {
-            const data = snap.data() || {};
-            fieldInfoMap.set(fieldId, data);
-            return data;
-          }
-        } catch (err) {
-          console.warn(`Error fetching field info ${fieldId} from ${ref.path}:`, err);
-        }
+    const handlerUserRef = doc(db, "users", handlerId);
+    const handlerUserSnap = await getDoc(handlerUserRef);
+    if (handlerUserSnap.exists()) {
+      const handlerData = handlerUserSnap.data();
+      const handlerRole = handlerData.role || "";
+      console.log(`🔍 Handler role check: ${handlerRole} (should be 'handler')`);
+      if (handlerRole !== "handler") {
+        console.warn(`⚠️ Handler role mismatch: Expected 'handler', got '${handlerRole}'. This may cause permission issues.`);
       }
+    } else {
+      console.warn(`⚠️ Handler user document not found for ${handlerId}`);
+    }
+  } catch (err) {
+    console.warn("⚠️ Could not verify handler role:", err.message);
+  }
 
-      return null;
-    };
+  try {
+    // Step 1: Get all fields owned by this handler
+    // Check multiple possible owner fields (userId, landowner_id, user_id, registered_by)
+    let fieldsFromUserId = [];
+    let fieldsFromLandownerId = [];
+    let fieldsFromRegisteredBy = [];
+    
+    // Query by userId
+    try {
+      const fieldsQuery1 = query(
+        collection(db, "fields"),
+        where("userId", "==", handlerId)
+      );
+      const snap1 = await getDocs(fieldsQuery1);
+      fieldsFromUserId = snap1.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn("Could not fetch fields by userId:", err.message);
+    }
 
-    await Promise.all(
-      joinsSnap.docs.map(async (docSnap, idx) => {
-        const raw = docSnap.data() || {};
-        const fieldId = raw.fieldId || raw.field_id || raw.fieldID || docSnap.id;
+    // Query by landowner_id
+    try {
+      const fieldsQuery2 = query(
+        collection(db, "fields"),
+        where("landowner_id", "==", handlerId)
+      );
+      const snap2 = await getDocs(fieldsQuery2);
+      fieldsFromLandownerId = snap2.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn("Could not fetch fields by landowner_id:", err.message);
+    }
 
-        const fieldInfo = await resolveFieldInfo(fieldId);
+    // Query by registered_by
+    try {
+      const fieldsQuery3 = query(
+        collection(db, "fields"),
+        where("registered_by", "==", handlerId)
+      );
+      const snap3 = await getDocs(fieldsQuery3);
+      fieldsFromRegisteredBy = snap3.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn("Could not fetch fields by registered_by:", err.message);
+    }
+    
+    // Also check field_applications subcollection (nested fields)
+    let nestedFields = [];
+    try {
+      const nestedFieldsQuery = query(
+        collection(db, `field_applications/${handlerId}/fields`)
+      );
+      const nestedSnap = await getDocs(nestedFieldsQuery);
+      nestedFields = nestedSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn("Could not fetch nested fields:", err.message);
+    }
 
-        const requestedAt = raw.requestedAt || raw.requested_at || raw.createdAt || raw.created_at || null;
-
-        pendingRequests.push({
-          refPath: docSnap.ref.path,
-          fieldId,
-          fieldInfo: fieldInfo || {},
-          orderIndex: idx,
-          data: {
-            userId: raw.userId || raw.user_id || raw.user_uid || "",
-            fieldId,
-            fieldName: raw.fieldName || raw.field_name || fieldInfo?.field_name || fieldInfo?.fieldName || "",
-            barangay: raw.barangay || fieldInfo?.barangay || "",
-            street: raw.street || fieldInfo?.street || "",
-            role: raw.role || raw.requested_role || "worker",
-            requestedAt
-          }
-        });
-      })
-    );
-
-    pendingRequests.sort((a, b) => {
-      const toMillis = (ts) => {
-        if (!ts) return 0;
-        const date = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
-        return date ? date.getTime() : 0;
-      };
-      return toMillis(b.data.requestedAt) - toMillis(a.data.requestedAt);
+    // Merge all fields and remove duplicates by id
+    const allFieldsMap = new Map();
+    [...fieldsFromUserId, ...fieldsFromLandownerId, ...fieldsFromRegisteredBy, ...nestedFields].forEach(field => {
+      if (field.id) {
+        allFieldsMap.set(field.id, field);
+      }
     });
 
-    updateJoinRequestCounts(pendingRequests.length);
-
-    if (!pendingRequests.length) {
-      container.innerHTML = `<div class="p-3 text-gray-600">No pending join requests for your fields.</div>`;
+    const handlerFields = Array.from(allFieldsMap.values());
+    const handlerFieldIds = new Set(handlerFields.map(f => f.id).filter(Boolean));
+    
+    console.log(`📋 Found ${handlerFieldIds.size} fields owned by handler:`, Array.from(handlerFieldIds));
+    
+    if (handlerFieldIds.size === 0) {
+      container.innerHTML = `<div class="p-3 text-gray-600">No fields found. Register a field to receive join requests.</div>`;
+      updateJoinRequestCounts(0);
       return;
     }
 
+    // Step 2: Query join_fields for each handler field
+    // Since we don't know all users, we'll try collectionGroup but handle errors gracefully
+    // and also check field_workers collection as a fallback
+    let allJoinRequests = [];
+    
+    // Step 2: Query join_fields using collectionGroup
+    // The security rules will filter which documents the handler can read based on field ownership
+    try {
+      // Query all join_fields documents (security rules will filter by field ownership)
+      // We filter client-side for pending status and handler's fields
+      const joinFieldsQuery = query(collectionGroup(db, "join_fields"));
+      const joinFieldsSnap = await getDocs(joinFieldsQuery);
+      
+      console.log(`📥 Retrieved ${joinFieldsSnap.docs.length} join_fields documents from collectionGroup`);
+      
+      // Process and filter join requests
+      allJoinRequests = joinFieldsSnap.docs
+        .map(doc => {
+          const data = doc.data();
+          const fieldId = data.fieldId || data.field_id || data.fieldID || doc.id;
+          const userId = data.userId || data.user_id || data.user_uid || "";
+          
+          return {
+            id: doc.id,
+            refPath: doc.ref.path,
+            fieldId: fieldId,
+            userId: userId,
+            user_uid: userId, // Add for compatibility with rules
+            fieldName: data.fieldName || data.field_name || "",
+            street: data.street || "",
+            barangay: data.barangay || "",
+            role: data.role || data.requested_role || "worker",
+            status: data.status || "pending",
+            requestedAt: data.requestedAt || data.requested_at || data.createdAt || data.created_at
+          };
+        })
+        .filter(req => {
+          // Filter 1: Only include requests for fields owned by this handler
+          if (!req.fieldId || !handlerFieldIds.has(req.fieldId)) {
+            return false;
+          }
+          // Filter 2: Only include pending requests
+          if (req.status !== "pending") {
+            return false;
+          }
+          return true;
+        });
+      
+      console.log(`✅ Filtered to ${allJoinRequests.length} pending join requests for handler's ${handlerFieldIds.size} fields`);
+      
+    } catch (err) {
+      console.error("❌ Error fetching join requests via collectionGroup:", err);
+      console.error("   Error code:", err.code);
+      console.error("   Error message:", err.message);
+      
+      // If collectionGroup fails, try field_workers collection as fallback
+      console.log("🔄 Attempting fallback: field_workers collection...");
+      try {
+        const fieldWorkersQuery = query(
+          collection(db, "field_workers"),
+          where("status", "==", "pending")
+        );
+        const fieldWorkersSnap = await getDocs(fieldWorkersQuery);
+        const workersRequests = fieldWorkersSnap.docs
+          .map(doc => {
+            const data = doc.data();
+            const fieldId = data.field_id || data.fieldId;
+            const userId = data.user_uid || data.userId || "";
+            
+            return {
+              id: doc.id,
+              refPath: doc.ref.path,
+              fieldId: fieldId,
+              userId: userId,
+              user_uid: userId,
+              role: data.role || "worker",
+              requestedAt: data.requested_at || data.requestedAt || data.createdAt,
+              status: data.status || "pending",
+              fieldName: data.field_name || data.fieldName || "",
+              street: data.street || "",
+              barangay: data.barangay || ""
+            };
+          })
+          .filter(req => req.fieldId && handlerFieldIds.has(req.fieldId));
+        
+        allJoinRequests = workersRequests;
+        console.log(`✅ Found ${allJoinRequests.length} join requests via field_workers fallback`);
+      } catch (fallbackErr) {
+        console.error("❌ Fallback query also failed:", fallbackErr);
+        console.error("   Fallback error code:", fallbackErr.code);
+        console.error("   Fallback error message:", fallbackErr.message);
+        
+        // Show user-friendly error message
+        container.innerHTML = `
+          <div class="p-4 text-red-600 border border-red-200 rounded-lg bg-red-50">
+            <p class="font-semibold mb-2">Unable to load join requests</p>
+            <p class="text-sm mb-2">Error: ${fallbackErr.message || "Permission denied"}</p>
+            <p class="text-xs text-gray-600 mb-3">
+              This may be due to Firestore security rules or missing indexes. 
+              Please check that your fields have the correct ownership fields set (userId, landowner_id, or registered_by).
+            </p>
+            <button onclick="location.reload()" class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+              <i class="fas fa-redo mr-1"></i>Retry
+            </button>
+          </div>
+        `;
+        updateJoinRequestCounts(0);
+        return;
+      }
+    }
+
+    // Step 3: Build field info map for quick lookup
+    const fieldInfoMap = new Map();
+    handlerFields.forEach(field => {
+      fieldInfoMap.set(field.id, field);
+    });
+
+    // Step 4: Fetch user info for all requesters
     const requesterIds = Array.from(new Set(
-      pendingRequests
-        .map(req => req.data.userId)
+      allJoinRequests
+        .map(req => req.userId || req.user_id || req.user_uid)
         .filter(Boolean)
         .map(cleanString)
         .filter(Boolean)
     ));
+
     const requesterMap = new Map();
     await Promise.all(
       requesterIds.map(async uid => {
@@ -388,6 +522,24 @@ async function loadJoinRequests(userId) {
       })
     );
 
+    // Step 5: Sort requests by requestedAt (newest first)
+    allJoinRequests.sort((a, b) => {
+      const toMillis = (ts) => {
+        if (!ts) return 0;
+        const date = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
+        return date ? date.getTime() : 0;
+      };
+      return toMillis(b.requestedAt) - toMillis(a.requestedAt);
+    });
+
+    updateJoinRequestCounts(allJoinRequests.length);
+
+    // Step 6: Render the requests
+    if (!allJoinRequests.length) {
+      container.innerHTML = `<div class="p-3 text-gray-600">No pending join requests for your fields.</div>`;
+      return;
+    }
+
     const formatDateTime = (ts) => {
       if (!ts) return "—";
       const date = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
@@ -403,107 +555,172 @@ async function loadJoinRequests(userId) {
 
     container.innerHTML = "";
 
-    for (const req of pendingRequests) {
-      const requesterId = cleanString(req.data.userId || req.data.user_id || req.data.user_uid || "");
-      const requester = requesterMap.get(requesterId) || { name: requesterId || "Unknown", role: "" };
-      const fieldInfo = req.fieldInfo || {};
-      const fieldName = req.data.fieldName || fieldInfo.field_name || fieldInfo.fieldName || req.fieldId;
-      const barangay = req.data.barangay || fieldInfo.barangay || "—";
-      const street = req.data.street || fieldInfo.street || "";
-      const locationLine = [barangay, street].filter(Boolean).join(" • ") || "Pending location";
-      const roleLabel = toTitleCase(req.data.role || "worker");
-      const requestedLabel = formatDateTime(req.data.requestedAt);
+    for (const req of allJoinRequests) {
+      const requesterId = cleanString(req.userId || req.user_id || req.user_uid || "");
+      const requester = requesterMap.get(requesterId) || { name: requesterId || "Unknown User", role: "" };
+      
+      const fieldId = req.fieldId || req.field_id || req.fieldID;
+      const fieldInfo = fieldInfoMap.get(fieldId) || {};
+      
+      const fieldName = req.fieldName || req.field_name || fieldInfo.field_name || fieldInfo.fieldName || fieldInfo.name || `Field ${fieldId}`;
+      const barangay = req.barangay || fieldInfo.barangay || fieldInfo.location || "—";
+      const street = req.street || fieldInfo.street || "";
+      const locationLine = [barangay, street].filter(Boolean).join(" • ") || "Location pending";
+      const roleLabel = toTitleCase(req.role || req.requested_role || "worker");
+      const requestedLabel = formatDateTime(req.requestedAt || req.requested_at || req.createdAt);
 
       const card = document.createElement("div");
-      card.className = "border border-gray-200 rounded-xl p-4 mb-3 shadow-sm bg-white";
+      card.className = "border border-gray-200 rounded-xl p-4 mb-3 shadow-sm bg-white hover:shadow-md transition-shadow";
       card.dataset.requestItem = "true";
       card.innerHTML = `
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <p class="font-semibold text-[var(--cane-900)]">${requester.name}</p>
-            <p class="text-sm text-gray-600">${roleLabel} request for <span class="font-medium">${fieldName}</span></p>
-            <p class="text-xs text-gray-500">${locationLine} • Requested ${requestedLabel}</p>
+          <div class="flex-1">
+            <p class="font-semibold text-[var(--cane-900)] text-base">${requester.name}</p>
+            <p class="text-sm text-gray-600 mt-1">
+              <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mr-2">${roleLabel}</span>
+              request for <span class="font-medium text-[var(--cane-900)]">${fieldName}</span>
+            </p>
+            <p class="text-xs text-gray-500 mt-1">
+              <i class="fas fa-map-marker-alt mr-1"></i>${locationLine}
+            </p>
+            <p class="text-xs text-gray-400 mt-1">
+              <i class="fas fa-clock mr-1"></i>Requested ${requestedLabel}
+            </p>
           </div>
-          <div class="flex items-center gap-2">
-            <button class="px-3 py-1.5 rounded-md text-sm bg-green-600 text-white hover:bg-green-700 transition" data-join-action="approve" data-path="${req.refPath}">Approve</button>
-            <button class="px-3 py-1.5 rounded-md text-sm bg-red-600 text-white hover:bg-red-700 transition" data-join-action="decline" data-path="${req.refPath}">Decline</button>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button class="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" data-join-action="approve" data-path="${req.refPath}" data-request-id="${req.id}">
+              <i class="fas fa-check mr-1"></i>Approve
+            </button>
+            <button class="px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" data-join-action="reject" data-path="${req.refPath}" data-request-id="${req.id}">
+              <i class="fas fa-times mr-1"></i>Reject
+            </button>
           </div>
         </div>
       `;
       container.appendChild(card);
     }
 
-container.querySelectorAll("[data-join-action]").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    const path = btn.dataset.path;
-    const action = btn.dataset.joinAction;
-    if (!path || !action) return;
+    // Step 7: Attach event listeners to action buttons
+    container.querySelectorAll("[data-join-action]").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const path = btn.dataset.path;
+        const action = btn.dataset.joinAction;
+        const requestId = btn.dataset.requestId;
+        
+        if (!path || !action) {
+          console.error("Missing path or action for join request button");
+          return;
+        }
 
-    // 🧩 Show confirmation modal first
-    const confirmModal = document.createElement("div");
-    confirmModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
-    confirmModal.innerHTML = `
-      <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-md">
-        <h3 class="text-lg font-semibold mb-3 text-gray-800">Confirm ${action === "approve" ? "Approval" : "Rejection"}</h3>
-        <p class="text-gray-600 text-sm mb-5">Are you sure you want to <b>${action}</b> this join request?</p>
-        <div class="flex justify-center gap-3">
-          <button id="cancelConfirm" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 transition">Cancel</button>
-          <button id="okConfirm" class="px-4 py-2 rounded-md ${action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white transition">${action === "approve" ? "Approve" : "Reject"}</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(confirmModal);
-
-    // Cancel
-    confirmModal.querySelector("#cancelConfirm").onclick = () => confirmModal.remove();
-
-    // Confirm OK
-    confirmModal.querySelector("#okConfirm").onclick = async () => {
-      confirmModal.remove();
-
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = action === "approve" ? "Approving..." : "Rejecting...";
-
-      try {
-        const pathSegments = path.split("/").filter(Boolean);
-        const docRef = doc(db, path); // use direct Firestore path instead of split()
-        await updateDoc(docRef, {
-          status: action === "approve" ? "approved" : "rejected",
-          statusUpdatedAt: serverTimestamp()
-        });
-
-        // ✅ Show success modal after updating
-        const successModal = document.createElement("div");
-        successModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
-        successModal.innerHTML = `
-          <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-md">
-            <h3 class="text-lg font-semibold mb-2 text-gray-800">${action === "approve" ? "Approved" : "Rejected"} Successfully</h3>
-            <p class="text-gray-600 text-sm mb-5">The join request has been ${action === "approve" ? "approved" : "rejected"} successfully.</p>
-            <button id="okSuccess" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)] transition">OK</button>
+        // Show confirmation modal
+        const confirmModal = document.createElement("div");
+        confirmModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
+        const iconClass = action === "approve" ? "check" : "times";
+        const iconColor = action === "approve" ? "text-green-600" : "text-red-600";
+        const bgColor = action === "approve" ? "bg-green-100" : "bg-red-100";
+        const btnColor = action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700";
+        
+        confirmModal.innerHTML = `
+          <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-lg">
+            <div class="mb-4">
+              <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center ${bgColor}">
+                <i class="fas fa-${iconClass} text-2xl ${iconColor}"></i>
+              </div>
+            </div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">Confirm ${action === "approve" ? "Approval" : "Rejection"}</h3>
+            <p class="text-gray-600 text-sm mb-5">Are you sure you want to <strong>${action === "approve" ? "approve" : "reject"}</strong> this join request?</p>
+            <div class="flex justify-center gap-3">
+              <button id="cancelConfirm" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+              <button id="okConfirm" class="px-4 py-2 rounded-md ${btnColor} text-white transition font-medium">${action === "approve" ? "Approve" : "Reject"}</button>
+            </div>
           </div>
         `;
-        document.body.appendChild(successModal);
+        document.body.appendChild(confirmModal);
 
-        successModal.querySelector("#okSuccess").onclick = async () => {
-          successModal.remove();
-          await loadJoinRequests(userId); // refresh list
+        // Cancel handler
+        confirmModal.querySelector("#cancelConfirm").onclick = () => {
+          confirmModal.remove();
         };
 
-      } catch (err) {
-        console.error("Join Request update failed:", err);
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }
-    };
-  });
-});
+        // Confirm handler
+        confirmModal.querySelector("#okConfirm").onclick = async () => {
+          confirmModal.remove();
+
+          const originalText = btn.textContent;
+          const originalDisabled = btn.disabled;
+          btn.disabled = true;
+          btn.textContent = action === "approve" ? "Approving..." : "Rejecting...";
+
+          try {
+            const docRef = doc(db, path);
+            await updateDoc(docRef, {
+              status: action === "approve" ? "approved" : "rejected",
+              statusUpdatedAt: serverTimestamp(),
+              reviewedBy: handlerId,
+              reviewedAt: serverTimestamp()
+            });
+
+            // Show success message
+            const successModal = document.createElement("div");
+            successModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
+            const successIconClass = action === "approve" ? "check-circle" : "times-circle";
+            const successIconColor = action === "approve" ? "text-green-600" : "text-red-600";
+            const successBgColor = action === "approve" ? "bg-green-100" : "bg-red-100";
+            
+            successModal.innerHTML = `
+              <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-lg">
+                <div class="mb-4">
+                  <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center ${successBgColor}">
+                    <i class="fas fa-${successIconClass} text-2xl ${successIconColor}"></i>
+                  </div>
+                </div>
+                <h3 class="text-lg font-semibold mb-2 text-gray-800">${action === "approve" ? "Approved" : "Rejected"} Successfully</h3>
+                <p class="text-gray-600 text-sm mb-5">The join request has been ${action === "approve" ? "approved" : "rejected"} successfully.</p>
+                <button id="okSuccess" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)] transition font-medium">OK</button>
+              </div>
+            `;
+            document.body.appendChild(successModal);
+
+            successModal.querySelector("#okSuccess").onclick = async () => {
+              successModal.remove();
+              // Refresh the list
+              await loadJoinRequests(handlerId);
+            };
+
+          } catch (err) {
+            console.error("Join Request update failed:", err);
+            alert(`Failed to ${action} join request: ${err.message || "Unknown error"}`);
+            btn.disabled = originalDisabled;
+            btn.textContent = originalText;
+          }
+        };
+
+        // Close modal on background click
+        confirmModal.addEventListener("click", (e) => {
+          if (e.target === confirmModal) {
+            confirmModal.remove();
+          }
+        });
+      });
+    });
 
   } catch (err) {
     console.error("Join Request Error:", err);
     const container = document.getElementById("joinRequestsList");
     const message = err?.message || err?.code || "Unexpected error";
-    if (container) container.innerHTML = `<div class="p-3 text-red-500">Error loading join requests. ${message}</div>`;
+    if (container) {
+      container.innerHTML = `
+        <div class="p-4 text-red-500 border border-red-200 rounded-lg bg-red-50">
+          <p class="font-semibold">Error loading join requests</p>
+          <p class="text-sm mt-1">${message}</p>
+          <button onclick="location.reload()" class="mt-3 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+            <i class="fas fa-redo mr-1"></i>Reload
+          </button>
+        </div>
+      `;
+    }
+    updateJoinRequestCounts(0);
   }
 }
 
@@ -525,6 +742,30 @@ onAuthStateChanged(auth, (user) => {
   loadUserProfile(user);
   loadJoinRequests(user.uid);
   initNotifications(user.uid);
+});
+
+// Add refresh button event listener for join requests
+document.addEventListener("DOMContentLoaded", () => {
+  const refreshBtn = document.getElementById("refreshJoinRequests");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      
+      refreshBtn.disabled = true;
+      const icon = refreshBtn.querySelector("i");
+      if (icon) icon.classList.add("fa-spin");
+      
+      try {
+        await loadJoinRequests(user.uid);
+      } catch (err) {
+        console.error("Error refreshing join requests:", err);
+      } finally {
+        refreshBtn.disabled = false;
+        if (icon) icon.classList.remove("fa-spin");
+      }
+    });
+  }
 });
 
 // =============================
