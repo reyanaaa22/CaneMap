@@ -393,10 +393,19 @@ window.addEventListener('error', function (ev) {
             const userSnap = await getDoc(doc(db, 'users', possibleUid));
             if (userSnap.exists()) {
                 const u = userSnap.data();
+                // prioritize common fullname variants used across your DB
                 const displayName =
-                u.name || u.fullName || u.displayName || u.email || possibleUid;
+                    (u.fullname && String(u.fullname).trim()) ||
+                    (u.full_name && String(u.full_name).trim()) ||
+                    (u.fullName && String(u.fullName).trim()) ||
+                    (u.name && String(u.name).trim()) ||
+                    (u.displayName && String(u.displayName).trim()) ||
+                    (u.email && String(u.email).trim()) ||
+                    possibleUid; // fallback to uid if nothing else
+
                 f.applicantName = displayName;
                 userCache[possibleUid] = displayName;
+
             }
             } catch (err) {
             console.warn('User lookup failed for', possibleUid, err);
