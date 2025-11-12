@@ -403,21 +403,14 @@ async function loadJoinRequests(handlerId) {
             fieldName: data.fieldName || data.field_name || "",
             street: data.street || "",
             barangay: data.barangay || "",
-            role: data.role || data.requested_role || "worker",
+            role: data.joinAs || data.role || data.requested_role || "worker",
             status: data.status || "pending",
             requestedAt: data.requestedAt || data.requested_at || data.createdAt || data.created_at
           };
         })
         .filter(req => {
-          // Filter 1: Only include requests for fields owned by this handler
-          if (!req.fieldId || !handlerFieldIds.has(req.fieldId)) {
-            return false;
-          }
-          // Filter 2: Only include pending requests
-          if (req.status !== "pending") {
-            return false;
-          }
-          return true;
+          // Filter: Only include PENDING requests for fields owned by this handler
+          return req.fieldId && handlerFieldIds.has(req.fieldId) && req.status === "pending";
         });
       
       console.log(`✅ Filtered to ${allJoinRequests.length} pending join requests for handler's ${handlerFieldIds.size} fields`);
@@ -532,11 +525,13 @@ async function loadJoinRequests(handlerId) {
       return toMillis(b.requestedAt) - toMillis(a.requestedAt);
     });
 
+    // Count pending requests for the badge (allJoinRequests already filtered to pending only)
     updateJoinRequestCounts(allJoinRequests.length);
 
     // Step 6: Render the requests
     if (!allJoinRequests.length) {
       container.innerHTML = `<div class="p-3 text-gray-600">No pending join requests for your fields.</div>`;
+      updateJoinRequestCounts(0);
       return;
     }
 
@@ -566,7 +561,8 @@ async function loadJoinRequests(handlerId) {
       const barangay = req.barangay || fieldInfo.barangay || fieldInfo.location || "—";
       const street = req.street || fieldInfo.street || "";
       const locationLine = [barangay, street].filter(Boolean).join(" • ") || "Location pending";
-      const roleLabel = toTitleCase(req.role || req.requested_role || "worker");
+      // Check for joinAs field first, then fallback to role/requested_role
+      const roleLabel = toTitleCase(req.joinAs || req.role || req.requested_role || "worker");
       const requestedLabel = formatDateTime(req.requestedAt || req.requested_at || req.createdAt);
 
       const card = document.createElement("div");
@@ -588,12 +584,17 @@ async function loadJoinRequests(handlerId) {
             </p>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
-            <button class="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" data-join-action="approve" data-path="${req.refPath}" data-request-id="${req.id}">
-              <i class="fas fa-check mr-1"></i>Approve
-            </button>
-            <button class="px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" data-join-action="reject" data-path="${req.refPath}" data-request-id="${req.id}">
-              <i class="fas fa-times mr-1"></i>Reject
-            </button>
+            ${
+              // Only show buttons for pending requests (since we filter to only show pending)
+              `
+                <button class="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" data-join-action="approve" data-path="${req.refPath}" data-request-id="${req.id}">
+                  <i class="fas fa-check mr-1"></i>Approve
+                </button>
+                <button class="px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" data-join-action="reject" data-path="${req.refPath}" data-request-id="${req.id}">
+                  <i class="fas fa-times mr-1"></i>Reject
+                </button>
+              `
+            }
           </div>
         </div>
       `;
@@ -654,12 +655,34 @@ async function loadJoinRequests(handlerId) {
 
           try {
             const docRef = doc(db, path);
+            const requestDoc = await getDoc(docRef);
+            const requestData = requestDoc.exists() ? requestDoc.data() : {};
+            const requesterUserId = requestData.userId || requestData.user_id || requestData.user_uid || "";
+            // Check for joinAs field first (as per user requirements), then fallback to role/requested_role
+            const requestedRole = requestData.joinAs || requestData.role || requestData.requested_role || "worker";
+            
+            // Update join request status
             await updateDoc(docRef, {
               status: action === "approve" ? "approved" : "rejected",
               statusUpdatedAt: serverTimestamp(),
               reviewedBy: handlerId,
               reviewedAt: serverTimestamp()
             });
+
+            // If approved, update the user's role in the users collection
+            if (action === "approve" && requesterUserId) {
+              try {
+                const userRef = doc(db, "users", requesterUserId);
+                await updateDoc(userRef, {
+                  role: requestedRole.toLowerCase(), // Set to "worker" or "driver"
+                  roleUpdatedAt: serverTimestamp()
+                });
+                console.log(`✅ Updated user ${requesterUserId} role to ${requestedRole}`);
+              } catch (roleUpdateErr) {
+                console.error("Failed to update user role:", roleUpdateErr);
+                // Continue even if role update fails
+              }
+            }
 
             // Show success message
             const successModal = document.createElement("div");
@@ -684,7 +707,7 @@ async function loadJoinRequests(handlerId) {
 
             successModal.querySelector("#okSuccess").onclick = async () => {
               successModal.remove();
-              // Refresh the list
+              // Refresh the list - approved/rejected requests will disappear (only pending shown)
               await loadJoinRequests(handlerId);
             };
 
@@ -737,10 +760,36 @@ function updateJoinRequestCounts(count) {
 // =============================
 // 🟢 Auth Check
 // =============================
+let unsubscribeJoinRequests = null;
+
+function setupJoinRequestsListener(handlerId) {
+  if (!handlerId) return;
+
+  // Unsubscribe from previous listener if exists
+  if (unsubscribeJoinRequests) {
+    unsubscribeJoinRequests();
+    unsubscribeJoinRequests = null;
+  }
+
+  try {
+    // Listen to all join_fields documents via collectionGroup for real-time updates
+    const joinFieldsQuery = query(collectionGroup(db, "join_fields"));
+    unsubscribeJoinRequests = onSnapshot(joinFieldsQuery, async (snapshot) => {
+      console.log('🔄 Join requests updated in real-time');
+      await loadJoinRequests(handlerId);
+    }, (error) => {
+      console.error('Error in join requests listener:', error);
+    });
+  } catch (err) {
+    console.error('Failed to set up join requests listener:', err);
+  }
+}
+
 onAuthStateChanged(auth, (user) => {
   if (!user) return (window.location.href = "../../login.html");
   loadUserProfile(user);
   loadJoinRequests(user.uid);
+  setupJoinRequestsListener(user.uid);
   initNotifications(user.uid);
 });
 
