@@ -1,5 +1,8 @@
 // Workers Dashboard JavaScript
 import { showPopupMessage } from '../Common/ui-popup.js';
+import { auth, db } from '../Common/firebase-config.js';
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 // Global variables
 let userType = 'worker';
 let hasDriverBadge = false;
@@ -8,7 +11,7 @@ let currentSection = 'dashboard';
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
-    setDisplayNameFromStorage();
+    initAuthSession();
     // Listen for cross-tab updates from profile-settings without reload
     window.addEventListener('storage', function(e) {
         if (e.key === 'farmerNickname' || e.key === 'farmerName') {
@@ -17,6 +20,51 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     setupEventListeners();
 });
+
+async function initAuthSession() {
+    try {
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                await showPopupMessage('Your session has ended. Redirecting to login...', 'info', { autoClose: true, timeout: 1200 });
+                window.location.href = '../Common/lobby.html';
+                return;
+            }
+
+            // Persist uid for other modules
+            try { localStorage.setItem('userId', user.uid); } catch(_) {}
+
+            // Load user profile document
+            try {
+                const userRef = doc(db, 'users', user.uid);
+                const snap = await getDoc(userRef);
+                const data = snap.exists() ? (snap.data() || {}) : {};
+
+                const role = (data.role || 'worker').toString().toLowerCase();
+                const nickname = (data.nickname || '').trim();
+                const fullname = data.fullname || data.name || user.displayName || '';
+                const display = nickname.length > 0 ? nickname : (fullname || (user.email ? user.email.split('@')[0] : 'Worker'));
+
+                try { localStorage.setItem('userRole', role); } catch(_) {}
+                try { localStorage.setItem('farmerName', fullname || display); } catch(_) {}
+                if (nickname) { try { localStorage.setItem('farmerNickname', nickname); } catch(_) {} }
+                try { localStorage.setItem('userEmail', user.email || ''); } catch(_) {}
+
+                // Update UI
+                const nameEls = document.querySelectorAll('#userName, #dropdownUserName');
+                nameEls.forEach(el => { if (el) el.textContent = display; });
+                const dropdownUserType = document.getElementById('dropdownUserType');
+                if (dropdownUserType) dropdownUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+
+            } catch (err) {
+                console.warn('Failed to load user profile:', err);
+                setDisplayNameFromStorage();
+            }
+        });
+    } catch (e) {
+        console.error('Auth init failed:', e);
+        setDisplayNameFromStorage();
+    }
+}
 
 function setDisplayNameFromStorage() {
     const nickname = localStorage.getItem('farmerNickname');
@@ -254,9 +302,22 @@ async function toggleNotifications() {
 
 // Logout function
 async function logout() {
-    // Add your logout logic here
-    await showPopupMessage('Logging out...', 'info');
-    window.location.href = '../frontend/Common/lobby.html';
+    try {
+        await showPopupMessage('Signing you out...', 'info', { autoClose: true, timeout: 800 });
+        try { await signOut(auth); } catch (_) {}
+        try {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('farmerName');
+            localStorage.removeItem('farmerNickname');
+            localStorage.removeItem('farmerContact');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('pendingWorker');
+            localStorage.removeItem('pendingDriver');
+        } catch(_) {}
+    } finally {
+        window.location.href = '../Common/lobby.html';
+    }
 }
 
 // Setup event listeners
