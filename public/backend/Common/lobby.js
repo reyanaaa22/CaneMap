@@ -70,6 +70,20 @@ window.addEventListener('error', function (ev) {
             } catch (e) { try { console.error('showPopupMessage failed', e); } catch(_) {} }
         }
 
+  // safe global wrapper to avoid ReferenceError: tryRebuild is not defined
+  window.tryRebuild = function tryRebuild() {
+    try {
+      if (typeof rebuild === 'function') {
+        rebuild();
+      } else if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+          if (typeof rebuild === 'function') rebuild();
+        });
+      }
+    } catch (err) {
+      console.warn('tryRebuild wrapper error (ignored):', err);
+    }
+  };
         // Weather API integration
         async function getWeather() {
             // Robust weather fetch: current + forecast (renders immediately and dispatches canemap:weather-updated)
@@ -85,10 +99,15 @@ window.addEventListener('error', function (ev) {
                 };
 
                 const [curRes, fRes] = await Promise.all([fetch(urls.current), fetch(urls.forecast)]);
+                if (curRes.status === 401 || fRes.status === 401) {
+                console.warn('Weather API 401 Unauthorized');
+                showPopupMessage('Weather data unavailable (unauthorized API key).', 'warning');
+                const wxDaily = document.getElementById('wxDaily');
+                if (wxDaily) wxDaily.innerHTML = '<div class="p-3 rounded-md">Weather unavailable (401).</div>';
+                return;
+                }
                 if (!curRes.ok || !fRes.ok) {
-                    const msg = `Weather API error: current(${curRes.status}) forecast(${fRes.status})`;
-                    console.warn(msg);
-                    throw new Error(msg);
+                throw new Error(`Weather API error: current(${curRes.status}) forecast(${fRes.status})`);
                 }
 
                 const cur = await curRes.json();
@@ -2788,3 +2807,40 @@ setTimeout(() => {
     if (uid) listenNotifications(uid);
   })();
 }, 1000);
+
+// --- Fix undefined global references ---
+try {
+  if (typeof checkDriverBadgeEligibility === 'function') {
+    window.checkDriverBadgeEligibility = checkDriverBadgeEligibility;
+  } else {
+    window.checkDriverBadgeEligibility = async function() {};
+  }
+
+  if (typeof checkJoinFieldButton === 'function') {
+    window.checkJoinFieldButton = checkJoinFieldButton;
+  } else {
+    window.checkJoinFieldButton = function() {};
+  }
+
+  if (typeof recheckAll === 'function') {
+    window.recheckAll = recheckAll;
+  }
+} catch (e) {
+  console.warn('Global export fallback error:', e);
+}
+
+function checkJoinFieldButton() {
+  try {
+    const role = (localStorage.getItem('userRole') || '').toLowerCase();
+    const buttons = document.querySelectorAll('.join-field-button, #joinBtn');
+    buttons.forEach(btn => {
+      if (role === 'sra' || role === 'handler') {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = '';
+      }
+    });
+  } catch (err) {
+    console.warn('checkJoinFieldButton error:', err);
+  }
+}
