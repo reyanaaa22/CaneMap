@@ -77,7 +77,7 @@ export function initializeHandlerWorkersSection() {
   };
 
   const FILTER_LABELS = {
-    all: 'All Workers',
+    all: 'All Farmers',
     farmers: 'Workers', // Changed from 'Farmers' to 'Workers'
     drivers: 'Drivers'
   };
@@ -125,7 +125,7 @@ export function initializeHandlerWorkersSection() {
       id: f.id,
       type: 'farmers',
       label: 'Worker', // Changed from 'Farmer' to 'Worker'
-      icon: 'fas fa-tractor text-[var(--cane-700)]',
+      icon: 'fas fa-user text-[var(--cane-700)]',
       name: f.name || 'Unnamed Worker',
       contact: f.phone || '—',
       detail: f.barangay || '—',
@@ -252,59 +252,115 @@ export function initializeHandlerWorkersSection() {
   async function handleJoinRequestAction(button, path, action) {
     if (!button) return;
 
-    const originalLabel = button.textContent;
-    button.disabled = true;
-    button.textContent = action === 'approve' ? 'Approving…' : 'Rejecting…';
-
-    const requestIndex = state.requests.findIndex(req => req.refPath === path);
-    const request = requestIndex >= 0 ? state.requests[requestIndex] : null;
     const handlerId = getUserId();
+    
+    // Show confirmation dialog (same as dashboard.js)
+    const confirmModal = document.createElement("div");
+    confirmModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
+    const iconClass = action === "approve" ? "check-circle" : "times-circle";
+    const iconColor = action === "approve" ? "text-green-600" : "text-red-600";
+    const bgColor = action === "approve" ? "bg-green-100" : "bg-red-100";
+    const btnColor = action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700";
+    
+    confirmModal.innerHTML = `
+      <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-lg">
+        <div class="mb-4">
+          <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center ${bgColor}">
+            <i class="fas fa-${iconClass} text-2xl ${iconColor}"></i>
+          </div>
+        </div>
+        <h3 class="text-lg font-semibold mb-2 text-gray-800">Confirm ${action === "approve" ? "Approval" : "Rejection"}</h3>
+        <p class="text-gray-600 text-sm mb-5">Are you sure you want to <strong>${action === "approve" ? "approve" : "reject"}</strong> this join request?</p>
+        <div class="flex justify-center gap-3">
+          <button id="cancelConfirm" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+          <button id="okConfirm" class="px-4 py-2 rounded-md ${btnColor} text-white transition font-medium">${action === "approve" ? "Approve" : "Reject"}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmModal);
 
-    try {
-      const docRef = doc(db, path);
-      const requestDoc = await getDoc(docRef);
-      const requestData = requestDoc.exists() ? requestDoc.data() : {};
-      const requesterUserId = requestData.userId || requestData.user_id || requestData.user_uid || "";
-      // Check for joinAs field first (as per user requirements), then fallback to role/requested_role
-      const requestedRole = requestData.joinAs || requestData.role || requestData.requested_role || "worker";
-      
-      // Update join request status
-      await updateDoc(docRef, {
-        status: action === 'approve' ? 'approved' : 'rejected',
-        statusUpdatedAt: serverTimestamp(),
-        reviewedBy: handlerId,
-        reviewedAt: serverTimestamp()
-      });
+    // Cancel handler
+    confirmModal.querySelector("#cancelConfirm").onclick = () => {
+      confirmModal.remove();
+    };
 
-      // If approved, update the user's role in the users collection
-      if (action === 'approve' && requesterUserId) {
-        try {
-          const userRef = doc(db, "users", requesterUserId);
-          await updateDoc(userRef, {
-            role: requestedRole.toLowerCase(), // Set to "worker" or "driver"
-            roleUpdatedAt: serverTimestamp()
-          });
-          console.log(`✅ Updated user ${requesterUserId} role to ${requestedRole}`);
-        } catch (roleUpdateErr) {
-          console.error("Failed to update user role:", roleUpdateErr);
-          // Continue even if role update fails
+    // Confirm handler
+    confirmModal.querySelector("#okConfirm").onclick = async () => {
+      confirmModal.remove();
+
+      const originalText = button.textContent;
+      const originalDisabled = button.disabled;
+      button.disabled = true;
+      button.textContent = action === "approve" ? "Approving..." : "Rejecting...";
+
+      try {
+        const docRef = doc(db, path);
+        const requestDoc = await getDoc(docRef);
+        const requestData = requestDoc.exists() ? requestDoc.data() : {};
+        const requesterUserId = requestData.userId || requestData.user_id || requestData.user_uid || "";
+        // Check for joinAs field first (as per user requirements), then fallback to role/requested_role
+        const requestedRole = requestData.joinAs || requestData.role || requestData.requested_role || "worker";
+        
+        // Update join request status
+        await updateDoc(docRef, {
+          status: action === "approve" ? "approved" : "rejected",
+          statusUpdatedAt: serverTimestamp(),
+          reviewedBy: handlerId,
+          reviewedAt: serverTimestamp()
+        });
+
+        // If approved, update the user's role in the users collection
+        if (action === "approve" && requesterUserId) {
+          try {
+            const userRef = doc(db, "users", requesterUserId);
+            await updateDoc(userRef, {
+              role: requestedRole.toLowerCase(), // Set to "worker" or "driver"
+              roleUpdatedAt: serverTimestamp()
+            });
+            console.log(`✅ Updated user ${requesterUserId} role to ${requestedRole}`);
+          } catch (roleUpdateErr) {
+            console.error("Failed to update user role:", roleUpdateErr);
+            // Continue even if role update fails
+          }
         }
+
+        // Show success message
+        const successModal = document.createElement("div");
+        successModal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]";
+        const successIconClass = action === "approve" ? "check-circle" : "times-circle";
+        const successIconColor = action === "approve" ? "text-green-600" : "text-red-600";
+        const successBgColor = action === "approve" ? "bg-green-100" : "bg-red-100";
+        
+        successModal.innerHTML = `
+          <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-lg">
+            <div class="mb-4">
+              <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center ${successBgColor}">
+                <i class="fas fa-${successIconClass} text-2xl ${successIconColor}"></i>
+              </div>
+            </div>
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">${action === "approve" ? "Approved" : "Rejected"} Successfully</h3>
+            <p class="text-gray-600 text-sm mb-5">The join request has been ${action === "approve" ? "approved" : "rejected"} successfully.</p>
+            <button id="okSuccess" class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)] transition font-medium">OK</button>
+          </div>
+        `;
+        document.body.appendChild(successModal);
+
+        successModal.querySelector("#okSuccess").onclick = async () => {
+          successModal.remove();
+          // Refresh the list - approved/rejected requests will disappear (only pending shown)
+          await loadJoinRequests();
+          await fetchAllData();
+          updateSummaryCounts();
+          renderWorkers();
+        };
+
+      } catch (err) {
+        console.error("Join Request update failed:", err);
+        alert(`Failed to ${action} join request: ${err.message || "Unknown error"}`);
+        button.disabled = originalDisabled;
+        button.textContent = originalText;
       }
-
-      // Refresh data
-      await fetchAllData();
-      await loadJoinRequests();
-      updateSummaryCounts();
-      renderWorkers();
-    } catch (err) {
-      console.warn('Failed to update join request', err);
-      button.disabled = false;
-      button.textContent = originalLabel;
-      return;
-    }
-
-    button.disabled = false;
-    button.textContent = originalLabel;
+    };
   }
 
   function closeDropdown(){
