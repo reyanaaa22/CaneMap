@@ -1,94 +1,20 @@
 // create-task.js
-// Place at: C:\CaneMap\public\backend\Handler\create-task.js
-// ES module — uses same Firebase v12 imports as fields-map.js
-
 import { db, auth } from '../Common/firebase-config.js';
 import {
-  collection, doc, addDoc, setDoc, getDocs, query, where, orderBy, getDoc
+  collection, doc, addDoc, getDocs, query, where, orderBy, getDoc, collectionGroup, serverTimestamp, Timestamp
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-// FILE: C:\CaneMap\public\backend\Handler\create-task.js   (replace lines building payload)
-import { serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
-// Expose function globally later: window.openCreateTaskModal = openCreateTaskModal;
 let currentUserId = null;
 onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; });
 
 // Helper to escape html
 function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-// Attempt multiple queries to find drivers/workers associated with a field
-async function fetchParticipantsForField(fieldId) {
-  // Try a few collection patterns; return { workers: [...], driversPresent: [...] }
-  const workers = [];
-  const driversPresent = [];
-  try {
-    // 1) fields/{fieldId}/members
-    const c1 = collection(db, 'fields', fieldId, 'members');
-    const snap1 = await getDocs(query(c1, orderBy('name', 'asc')));
-    if (!snap1.empty) {
-      snap1.forEach(d => {
-        const data = d.data();
-        if ((data.role || '').toLowerCase().includes('driver')) driversPresent.push({ id: d.id, ...data });
-        else workers.push({ id: d.id, ...data });
-      });
-      return { workers, driversPresent };
-    }
-  } catch(e){ /* ignore */ }
-
-  try {
-    // 2) field_participants collection with fieldId property
-    const c2 = query(collection(db, 'field_participants'), where('fieldId', '==', fieldId), orderBy('name','asc'));
-    const snap2 = await getDocs(c2);
-    if (!snap2.empty) {
-      snap2.forEach(d => {
-        const data = d.data();
-        if ((data.role || '').toLowerCase().includes('driver')) driversPresent.push({ id: d.id, ...data });
-        else workers.push({ id: d.id, ...data });
-      });
-      return { workers, driversPresent };
-    }
-  } catch(e){ /* ignore */ }
-
-  try {
-    // 3) fields_applications/{requestedBy}/fields/{fieldId}/workers (fallback)
-    // We can't know requestedBy here; skip
-  } catch(e){ /* ignore */ }
-
-  // If still empty return empty arrays
-  return { workers, driversPresent };
-}
-
-// Fetch rental drivers available in Ormoc City (fallback queries)
-async function fetchRentalDrivers(cityName = 'Ormoc City') {
-  try {
-    const q = query(collection(db, 'drivers_for_rent'), where('city', '==', cityName), orderBy('name','asc'));
-    const snap = await getDocs(q);
-    const arr = [];
-    if (!snap.empty) {
-      snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
-    }
-    return arr;
-  } catch(e) {
-    // fallback: top-level drivers collection filtered
-    try {
-      const q2 = query(collection(db, 'drivers'), where('city','==', cityName), orderBy('name','asc'));
-      const s2 = await getDocs(q2);
-      const arr2 = [];
-      s2.forEach(d => arr2.push({ id: d.id, ...d.data() }));
-      return arr2;
-    } catch(err) {
-      console.warn('fetchRentalDrivers failed', err);
-      return [];
-    }
-  }
-}
-
-// Save task to both subcollection and top-level tasks (best effort)
+// Save task to Firestore (subcollection + top-level fallback)
 async function saveTaskToFirestore(fieldId, payload) {
   const result = { ok: false, errors: [] };
   try {
-    // add to fields/{fieldId}/tasks if possible
     try {
       const ref = collection(db, 'fields', fieldId, 'tasks');
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
@@ -96,15 +22,12 @@ async function saveTaskToFirestore(fieldId, payload) {
     } catch (err) {
       result.errors.push('subcollection:' + err.message);
     }
-
-    // also add to top-level tasks collection as duplicate/fallback
     try {
       const topRef = collection(db, 'tasks');
       await addDoc(topRef, { ...payload, fieldId });
     } catch (err) {
       result.errors.push('topcollection:' + err.message);
     }
-
     result.ok = true;
     return result;
   } catch(e) {
@@ -112,7 +35,86 @@ async function saveTaskToFirestore(fieldId, payload) {
   }
 }
 
-export async function openCreateTaskModal(fieldId, options = {}) {
+// Fetch drivers joined for this field
+async function fetchDriversForField(fieldId) {
+  const drivers = [];
+  try {
+    const q = query(
+      collectionGroup(db, 'join_fields'),
+      where('fieldId', '==', fieldId),
+      where('role', '==', 'driver'),
+      where('status', '==', 'approved')
+    );
+    const snap = await getDocs(q);
+    const seenIds = new Set();
+
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      const userId = data.user_uid || data.userId || data.user_id;
+      if (!userId || seenIds.has(userId)) continue;
+      seenIds.add(userId);
+
+      const badgeDoc = await getDoc(doc(db, 'Drivers_Badge', userId));
+      const badgeData = badgeDoc.exists() ? badgeDoc.data() : null;
+      if (!badgeData) continue;
+
+      drivers.push({
+        id: userId,
+        fullname: badgeData.fullname || 'Unknown',
+        vehicle_type: badgeData.other_vehicle_type || 'Unknown',
+        contact_number: badgeData.contact_number || 'N/A',
+        plate_number: badgeData.plate_number || 'N/A'
+      });
+    }
+  } catch (err) {
+    console.error('Error fetching drivers for field:', err);
+  }
+  return drivers;
+}
+
+// Populate driver dropdown
+async function populateDriverDropdown(modal, fieldId) {
+  const dropdownBtn = modal.querySelector('#ct_driver_dropdown_btn');
+  const dropdownList = modal.querySelector('#ct_driver_dropdown_list');
+  dropdownList.innerHTML = '';
+
+  const drivers = await fetchDriversForField(fieldId);
+
+  if (drivers.length === 0) {
+    dropdownBtn.textContent = 'No drivers';
+    dropdownBtn.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
+    dropdownBtn.style.pointerEvents = 'none';
+
+    const div = document.createElement('div');
+    div.className = 'px-3 py-2 text-gray-500';
+    div.textContent = 'No drivers joined this field';
+    dropdownList.appendChild(div);
+    return;
+  }
+
+  drivers.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer transition duration-200 transform hover:scale-105';
+    div.innerHTML = `
+      <div class="font-medium">${d.fullname} (${d.contact_number})</div>
+      <div class="text-sm text-gray-600">${d.vehicle_type} — ${d.plate_number}</div>
+    `;
+    div.addEventListener('click', () => {
+      dropdownBtn.textContent = d.fullname;
+      dropdownBtn.dataset.driverId = d.id;
+      dropdownList.classList.add('hidden');
+    });
+    dropdownList.appendChild(div);
+  });
+
+  // Toggle dropdown
+  dropdownBtn.addEventListener('click', () => {
+    dropdownList.classList.toggle('hidden');
+  });
+}
+
+// Main function to open modal
+export async function openCreateTaskModal(fieldId) {
   const existing = document.getElementById('createTaskModal');
   if (existing) existing.remove();
 
@@ -124,64 +126,74 @@ export async function openCreateTaskModal(fieldId, options = {}) {
     <div class="relative w-full max-w-[520px] rounded-xl bg-white border border-[var(--cane-200)] shadow p-5">
       <header class="flex items-center justify-start mb-3 pb-2 border-b border-gray-200">
         <h3 class="text-xl font-semibold text-[var(--cane-900)]">Create Task</h3>
-        <!-- Removed X button -->
       </header>
 
       <div class="space-y-4 text-sm">
-
-        <!-- DEADLINE -->
-        <div>
-          <label class="text-[var(--cane-700)] font-semibold text-[15px] block mb-1">Deadline</label>
-          <div class="flex items-center gap-2 mb-2">
-            <input id="ct_this_week" type="checkbox" class="accent-[var(--cane-700)]" />
-            <span class="text-[var(--cane-700)] font-medium">This week</span>
-          </div>
-
-          <div class="text-xs text-[var(--cane-600)] mb-1">or set time & date:</div>
-          <div class="grid grid-cols-2 gap-2">
-            <input id="ct_date" type="date" class="px-3 py-2 border rounded-md text-sm" />
-            <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
-          </div>
+        <div class="flex items-center gap-2 mb-2">
+          <label id="ct_deadline_label" class="text-[var(--cane-700)] font-semibold text-[15px]">Deadline</label>
+          <span id="ct_deadline_error" class="text-xs text-red-500 hidden ml-2"></span>
         </div>
 
-        <!-- TITLE -->
+        <div class="flex items-center gap-2 mb-2">
+          <input id="ct_this_week" type="checkbox" class="accent-[var(--cane-700)]" />
+          <span class="text-[var(--cane-700)] font-medium">This week</span>
+        </div>
+
+        <div class="text-xs text-[var(--cane-600)] mb-1">or set time & date:</div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="ct_date" type="date" class="px-3 py-2 border rounded-md text-sm" />
+          <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
+        </div>
+
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Title</label>
           <input id="ct_title" type="text" placeholder="e.g. Fertilizer application" class="w-full px-3 py-2 border rounded-md text-sm" />
         </div>
 
-        <!-- DETAILS -->
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Details</label>
           <textarea id="ct_details" rows="3" placeholder="Describe what needs to be done" class="w-full px-3 py-2 border rounded-md text-sm"></textarea>
         </div>
 
-        <!-- ASSIGN TO -->
         <div>
           <label id="ct_assign_label" class="text-[var(--cane-700)] font-semibold text-[15px] block mb-2">Assign to:</label>
-
           <div class="flex gap-3 mb-3">
             <button id="ct_btn_worker" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Worker</button>
             <button id="ct_btn_driver" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Driver</button>
           </div>
 
-          <!-- WORKER OPTIONS -->
           <div id="ct_worker_options" class="hidden space-y-2 mt-2 border-t pt-3">
             <div class="flex items-center justify-between">
               <label id="ct_people_label" class="text-sm font-medium text-[var(--cane-700)]">People needed:</label>
-              <input id="ct_workers_count" type="number" min="1" value="1" class="w-24 px-2 py-1 border rounded-md text-sm" />
+              <input id="ct_workers_count" type="number" min="0" value="0" class="w-24 px-2 py-1 border rounded-md text-sm" />
             </div>
             <div class="flex items-center gap-2">
               <input id="ct_all_workers" type="checkbox" class="accent-[var(--cane-700)]" />
               <label for="ct_all_workers" class="text-sm text-[var(--cane-700)]">All workers</label>
             </div>
+            <div id="ct_worker_error" class="text-xs text-red-500 mt-1 hidden"></div>
+          </div>
+
+          <div id="ct_driver_options" class="hidden space-y-2 mt-2 border-t pt-3">
+            <div class="flex items-center gap-2">
+              <input id="ct_any_driver" type="checkbox" class="accent-[var(--cane-700)]" />
+              <label for="ct_any_driver" class="text-sm text-[var(--cane-700)]">Any available driver</label>
+            </div>
+            <div class="relative w-full">
+              <div id="ct_driver_dropdown_btn" 
+                  class="px-3 py-2 border rounded-md text-sm cursor-pointer bg-white flex justify-between items-center hover:bg-gray-100 transition-colors duration-200">
+                <span>Select driver</span>
+                <svg class="w-4 h-4 text-gray-500 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </div>
+              <div id="ct_driver_dropdown_list" class="absolute left-0 bottom-full w-full border rounded shadow mb-1 bg-white hidden max-h-60 overflow-y-auto z-50"></div>
+            </div>
+            <div id="ct_driver_error" class="text-xs text-red-500 mt-1 hidden"></div>
           </div>
         </div>
-
-        <div id="ct_error" class="text-xs text-red-500 hidden"></div>
       </div>
 
-      <!-- FOOTER -->
       <footer class="mt-6 flex items-center justify-end gap-3">
         <button id="ct_cancel" class="px-3 py-2 rounded-md border hover:bg-gray-50 text-sm">Close</button>
         <button id="ct_save" class="px-4 py-2 rounded-md bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white font-semibold text-sm shadow">Save</button>
@@ -190,248 +202,204 @@ export async function openCreateTaskModal(fieldId, options = {}) {
   `;
 
   document.body.appendChild(modal);
-  const el = (s) => modal.querySelector(s);
+  const el = s => modal.querySelector(s);
 
-  // --- ASSIGN-TO ERROR HELPERS (MUST BE HERE, BEFORE ANY USE) ---
+  // --- Variables ---
+  const btnWorker = el('#ct_btn_worker');
+  const btnDriver = el('#ct_btn_driver');
+  const workerOpts = el('#ct_worker_options');
+  const driverOpts = el('#ct_driver_options');
+  const allWorkersCheck = el('#ct_all_workers');
+  const workerInput = el('#ct_workers_count');
+  const peopleLabel = el('#ct_people_label');
+  const anyDriverCheck = el('#ct_any_driver');
+  const dateInput = el('#ct_date');
+  const timeInput = el('#ct_time');
+  const weekCheck = el('#ct_this_week');
+  const dropdownBtn = el('#ct_driver_dropdown_btn');
+  const dropdownList = el('#ct_driver_dropdown_list');
+  const driverErrorEl = el('#ct_driver_error');
+
+  // Clear driver error when a driver is selected from the dropdown
+  dropdownList.addEventListener('click', () => {
+    driverErrorEl.textContent = '';
+    driverErrorEl.classList.add('hidden');
+  });
+
+  // Clear driver error when "Any available driver" is checked or unchecked
+  anyDriverCheck.addEventListener('change', () => {
+    if (anyDriverCheck.checked) { 
+        dropdownBtn.classList.add('bg-gray-100','text-gray-400','cursor-not-allowed'); 
+        dropdownBtn.style.pointerEvents='none'; 
+        dropdownBtn.textContent='Any available driver';
+        driverErrorEl.textContent = '';
+        driverErrorEl.classList.add('hidden');
+    } else { 
+        dropdownBtn.classList.remove('bg-gray-100','text-gray-400','cursor-not-allowed'); 
+        dropdownBtn.style.pointerEvents='auto'; 
+        dropdownBtn.textContent='Select driver'; 
+    }
+  });
+
+  let assignType = null;
   let assignErrorEl = null;
-  const assignLabel = el('#ct_assign_label'); // "Assign to:" label
 
   function showAssignError(msg) {
     if (assignErrorEl) assignErrorEl.remove();
     assignErrorEl = document.createElement('span');
-    assignErrorEl.className = 'ct_field_error ml-2 text-xs text-red-500';
+    assignErrorEl.className = 'text-xs text-red-500 mt-1 block';
     assignErrorEl.textContent = msg;
-    assignLabel.appendChild(assignErrorEl);
+    el('#ct_assign_label').appendChild(assignErrorEl);
   }
 
   function clearAssignError() {
-    if (assignErrorEl) {
-      assignErrorEl.remove();
-      assignErrorEl = null;
-    }
+    if (assignErrorEl) { assignErrorEl.remove(); assignErrorEl = null; }
   }
-// --- Now these can safely use clearAssignError ---
-['#ct_date','#ct_time','#ct_title','#ct_details','#ct_workers_count','#ct_all_workers'].forEach(sel => {
-  el(sel).addEventListener('focus', () => clearAssignError());
+
+function updateAssignUI() {
+    // Reset both buttons
+    [btnWorker, btnDriver].forEach(btn => {
+        btn.classList.remove('bg-green-700','text-white','shadow-inner');
+        btn.classList.add('bg-white','text-gray-700');
+    });
+
+    workerOpts.classList.add('hidden');
+    driverOpts.classList.add('hidden');
+
+    // Apply active styles
+    if(assignType === 'worker') {
+        btnWorker.classList.remove('bg-white','text-gray-700');
+        btnWorker.classList.add('bg-green-700','text-white','shadow-inner');
+        workerOpts.classList.remove('hidden');
+
+        // Force inline text color
+        btnWorker.style.color = '#ffffff';
+        btnDriver.style.color = '#4b5563'; // gray-700
+    }
+    if(assignType === 'driver') {
+        btnDriver.classList.remove('bg-white','text-gray-700');
+        btnDriver.classList.add('bg-green-700','text-white','shadow-inner');
+        driverOpts.classList.remove('hidden');
+
+        btnDriver.style.color = '#ffffff';
+        btnWorker.style.color = '#4b5563'; // gray-700
+    }
+}
+
+
+  // --- Worker / Driver button events ---
+  btnWorker.addEventListener('click', () => { assignType='worker'; updateAssignUI(); clearAssignError(); });
+  btnDriver.addEventListener('click', async () => { assignType='driver'; updateAssignUI(); clearAssignError(); await populateDriverDropdown(modal, fieldId); });
+
+workerInput.addEventListener('input', () => {
+  const errorEl = el('#ct_worker_error');
+  if(parseInt(workerInput.value,10) > 0 || allWorkersCheck.checked){
+    errorEl.textContent = '';
+    errorEl.classList.add('hidden');
+  }
+});
+
+allWorkersCheck.addEventListener('change', () => {
+  const dis = allWorkersCheck.checked;
+  workerInput.disabled = dis;
+  peopleLabel.classList.toggle('text-gray-400', dis);
+  workerInput.classList.toggle('bg-gray-100', dis);
+  workerInput.classList.toggle('text-gray-400', dis);
+  if(dis) workerInput.value = 0; // reset
+  const errorEl = el('#ct_worker_error');
+  errorEl.textContent = '';
+  errorEl.classList.add('hidden');
 });
 
 
-  // btn click handlers
-  const btnWorker = el('#ct_btn_worker');
-  const btnDriver = el('#ct_btn_driver');
-
-  btnWorker.addEventListener('click', () => {
-    assignType = 'worker';
-    updateAssignUI();
-    clearAssignError();
-  });
-  btnDriver.addEventListener('click', () => {
-    assignType = 'driver';
-    updateAssignUI();
-    clearAssignError();
+  // --- Driver checkbox ---
+  anyDriverCheck.addEventListener('change', () => {
+    const dropdownBtn = el('#ct_driver_dropdown_btn');
+    if (anyDriverCheck.checked) { dropdownBtn.classList.add('bg-gray-100','text-gray-400','cursor-not-allowed'); dropdownBtn.style.pointerEvents='none'; }
+    else { dropdownBtn.classList.remove('bg-gray-100','text-gray-400','cursor-not-allowed'); dropdownBtn.style.pointerEvents='auto'; dropdownBtn.textContent='Select driver'; }
   });
 
-  // --- DATE / THIS WEEK logic ---
-  const dateInput = el('#ct_date');
-  const timeInput = el('#ct_time');
-  const weekCheck = el('#ct_this_week');
+  // --- Date / This week ---
   weekCheck.addEventListener('change', () => {
     const dis = weekCheck.checked;
-    [dateInput, timeInput].forEach(i => {
-      i.disabled = dis;
-      i.classList.toggle('bg-gray-100', dis);
-      i.classList.toggle('text-gray-400', dis);
-    });
-    if (dis) {
-      dateInput.value = '';
-      timeInput.value = '';
+    [dateInput,timeInput].forEach(i => { i.disabled=dis; i.classList.toggle('bg-gray-100',dis); i.classList.toggle('text-gray-400',dis); });
+    if(dis){ dateInput.value=''; timeInput.value=''; }
+  });
+
+  // --- Cancel / Backdrop ---
+  el('#ct_cancel').addEventListener('click',()=>modal.remove());
+  el('#ct_backdrop').addEventListener('click',(e)=>{ if(e.target.id==='ct_backdrop') modal.remove(); });
+
+  // --- Save button ---
+  el('#ct_save').addEventListener('click', async ()=>{
+    modal.querySelectorAll('.ct_field_error').forEach(e=>e.remove());
+    const title = el('#ct_title').value.trim();
+    const details = el('#ct_details').value.trim();
+    const isWeek = weekCheck.checked;
+    const date = dateInput.value;
+    const workersCount = parseInt(workerInput.value,10)||0;
+
+    if(!title){ el('#ct_title').focus(); el('#ct_title').insertAdjacentHTML('afterend','<div class="ct_field_error text-xs text-red-500 mt-1">Please enter a Title.</div>'); return; }
+    if(!details){ el('#ct_details').focus(); el('#ct_details').insertAdjacentHTML('afterend','<div class="ct_field_error text-xs text-red-500 mt-1">Please enter Details.</div>'); return; }
+    const deadlineErrorEl = el('#ct_deadline_error');
+
+    // Clear previous error
+    deadlineErrorEl.textContent = '';
+    deadlineErrorEl.classList.add('hidden');
+
+    if(!isWeek && !date){
+        dateInput.focus();
+        deadlineErrorEl.textContent = 'Please set a Deadline date or check "This week".';
+        deadlineErrorEl.classList.remove('hidden');
+        return;
     }
-  });
 
-  // --- ASSIGN TO logic ---
-  let assignType = null;
-  const workerOpts = el('#ct_worker_options');
-  const allWorkersCheck = el('#ct_all_workers');
-  const peopleLabel = el('#ct_people_label');
-  const workerInput = el('#ct_workers_count');
-
-  function updateAssignUI() {
-    // reset styles
-    [btnWorker, btnDriver].forEach(btn => {
-      btn.classList.remove('bg-[var(--cane-700)]', 'text-white', 'shadow-inner');
-      btn.classList.add('text-[var(--cane-700)]', 'bg-white');
-    });
-    workerOpts.classList.add('hidden');
-
-    if (assignType === 'worker') {
-      btnWorker.classList.remove('text-[var(--cane-700)]', 'bg-white');
-      btnWorker.classList.add('bg-[var(--cane-700)]', 'text-white', 'shadow-inner');
-      workerOpts.classList.remove('hidden');
-    } else if (assignType === 'driver') {
-      btnDriver.classList.remove('text-[var(--cane-700)]', 'bg-white');
-      btnDriver.classList.add('bg-[var(--cane-700)]', 'text-white', 'shadow-inner');
+    if(!assignType){ showAssignError('Please select Worker or Driver.'); return; }
+    if(assignType==='worker' && !allWorkersCheck.checked && workersCount <= 0){
+        const errorEl = el('#ct_worker_error');
+        errorEl.textContent = 'Please specify the number of workers needed.';
+        errorEl.classList.remove('hidden');
+        workerInput.focus();
+        return;
+    } else {
+        el('#ct_worker_error').textContent = '';
+        el('#ct_worker_error').classList.add('hidden');
     }
-  }
+    const driverErrorEl = el('#ct_driver_error');
+    driverErrorEl.textContent = '';
+    driverErrorEl.classList.add('hidden');
 
-  allWorkersCheck.addEventListener('change', () => {
-    const dis = allWorkersCheck.checked;
-    workerInput.disabled = dis;
-    peopleLabel.classList.toggle('text-gray-400', dis);
-    workerInput.classList.toggle('bg-gray-100', dis);
-    workerInput.classList.toggle('text-gray-400', dis);
+    if(assignType==='driver' && !anyDriverCheck.checked && !el('#ct_driver_dropdown_btn').dataset.driverId){
+        driverErrorEl.textContent = 'Please select a driver or check "Any available driver".';
+        driverErrorEl.classList.remove('hidden');
+        return;
+    }
+
+    let scheduledAt = isWeek ? Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() + ((7-new Date().getDay())%7)))) : Timestamp.fromDate(new Date(date+'T'+(timeInput.value||'00:00')+':00'));
+    if(isWeek){ const d = scheduledAt.toDate(); d.setHours(23,59,0,0); scheduledAt = Timestamp.fromDate(d); }
+
+    const payload = { title, details, scheduled_at:scheduledAt, created_by:currentUserId, created_at:serverTimestamp(), assign_type:assignType, status:'todo', metadata:{} };
+
+    if(assignType==='worker'){ payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount; }
+    if(assignType==='driver'){ payload.metadata.driver = anyDriverCheck.checked ? {id:'any',fullname:'Any available driver'} : {id:el('#ct_driver_dropdown_btn').dataset.driverId, fullname:el('#ct_driver_dropdown_btn').textContent}; }
+    if(Object.keys(payload.metadata).length===0) delete payload.metadata;
+
+    const saveBtn = el('#ct_save'); saveBtn.disabled=true; saveBtn.textContent='Saving...';
+    const res = await saveTaskToFirestore(fieldId,payload);
+    saveBtn.disabled=false; saveBtn.textContent='Save';
+
+    if(res.ok){
+      const toast = document.createElement('div');
+      toast.className='fixed right-6 bottom-6 bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-medium';
+      toast.textContent='✅ Task saved successfully!';
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(),2500);
+      modal.remove();
+      document.dispatchEvent(new CustomEvent('task:created',{detail:{fieldId}}));
+    } else { alert('Save failed: '+(res.errors?.join(' | ')||'')); }
   });
-
-  el('#ct_cancel').addEventListener('click', () => modal.remove());
-  el('#ct_backdrop').addEventListener('click', (e) => { if (e.target.id === 'ct_backdrop') modal.remove(); });
-
-// Helper to show error below a specific element
-function showFieldError(elInput, msg) {
-  // remove existing error for this field first
-  const existing = elInput.parentElement.querySelector('.ct_field_error');
-  if (existing) existing.remove();
-
-  const err = document.createElement('div');
-  err.className = 'ct_field_error text-xs text-red-500 mt-1';
-  err.textContent = msg;
-  elInput.parentElement.appendChild(err);
-
-  elInput.focus();
-}
-
-// Helper to remove all field errors
-function clearAllFieldErrors(modal) {
-  modal.querySelectorAll('.ct_field_error').forEach(e => e.remove());
-}
-
-el('#ct_save').addEventListener('click', async () => {
-  clearAllFieldErrors(modal);
-
-  const titleInput = el('#ct_title');
-  const detailsInput = el('#ct_details');
-  const dateInput = el('#ct_date');
-  const timeInput = el('#ct_time');
-  const allWorkersCheck = el('#ct_all_workers');
-  const workerInput = el('#ct_workers_count');
-
-  const title = titleInput.value.trim();
-  const details = detailsInput.value.trim();
-  const isWeek = weekCheck.checked;
-  const date = dateInput.value;
-  const assignTypeValue = assignType;
-  const workersCount = parseInt(workerInput.value, 10) || 0;
-
-  // --- FIELD VALIDATION ---
-  if (!title) {
-    showFieldError(titleInput, 'Please enter a Title.');
-    return;
-  }
-  if (!details) {
-    showFieldError(detailsInput, 'Please enter Details.');
-    return;
-  }
-  if (!isWeek && !date) {
-    showFieldError(dateInput, 'Please set a Deadline date or check "This week".');
-    return;
-  }
-  if (!assignTypeValue) {
-    showAssignError('Please select Worker or Driver.');
-    return;
-  }
-  if (assignTypeValue === 'worker' && !allWorkersCheck.checked && workersCount < 1) {
-    showFieldError(workerInput, 'Please specify the number of workers needed.');
-    return;
-  }
-
-  let scheduledAt = null;
-
-  if (isWeek) {
-    // Calculate upcoming Sunday 11:59 PM
-    const now = new Date();
-    const day = now.getDay(); // Sunday = 0, Monday = 1, ...
-    const diffToSunday = (7 - day) % 7; // days until Sunday
-    const nextSunday = new Date(now);
-    nextSunday.setDate(now.getDate() + diffToSunday);
-    nextSunday.setHours(23, 59, 0, 0); // 11:59:00 PM
-    scheduledAt = Timestamp.fromDate(nextSunday);
-  } else {
-    scheduledAt = new Date(date + 'T' + (timeInput.value || '00:00') + ':00');
-    scheduledAt = Timestamp.fromDate(scheduledAt);
-  }
-
-  const payload = {
-    title,
-    details,
-    scheduled_at: scheduledAt,
-    created_by: currentUserId,
-    created_at: serverTimestamp(),
-    assign_type: assignTypeValue,
-    status: 'todo',
-    metadata: {}
-  };
-
-  if (assignTypeValue === 'worker') {
-    payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount;
-  }
-
-  if (Object.keys(payload.metadata).length === 0) delete payload.metadata;
-
-  // --- SAVE TASK ---
-  const saveBtn = el('#ct_save');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving...';
-
-  const res = await saveTaskToFirestore(fieldId, payload);
-
-  saveBtn.disabled = false;
-  saveBtn.textContent = 'Save';
-
-  if (res.ok) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed right-6 bottom-6 bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-medium';
-    toast.textContent = '✅ Task saved successfully!';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-    modal.remove();
-    document.dispatchEvent(new CustomEvent('task:created', { detail: { fieldId } }));
-  } else {
-    alert('Save failed: ' + (res.errors?.join(' | ') || ''));
-  }
-});
-
-// --- AUTO CLEAR ERRORS FUNCTION ---
-// Call this once to attach to all relevant inputs/buttons
-function attachAutoClearErrors() {
-  const inputs = [
-    '#ct_title', '#ct_details', '#ct_date', '#ct_time', 
-    '#ct_workers_count', '#ct_all_workers'
-  ];
-
-  inputs.forEach(sel => {
-    const elInput = el(sel);
-    if (!elInput) return;
-    elInput.addEventListener('input', clearAllErrors);
-    elInput.addEventListener('change', clearAllErrors); // for checkboxes & date
-  });
-
-  // also clear assign error when clicking Worker/Driver buttons
-  [btnWorker, btnDriver].forEach(btn => {
-    btn.addEventListener('click', clearAllErrors);
-  });
-}
-
-// clears all field errors and assign errors
-function clearAllErrors() {
-  clearAllFieldErrors(modal); // removes ct_field_error divs
-  clearAssignError();          // removes assign-to error
-}
-
-// --- attach on modal creation ---
-attachAutoClearErrors();
 
   return modal;
 }
 
-
-// expose globally for older code to call
 window.openCreateTaskModal = openCreateTaskModal;
-
