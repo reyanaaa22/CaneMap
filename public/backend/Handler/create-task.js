@@ -7,6 +7,8 @@ import {
   collection, doc, addDoc, setDoc, getDocs, query, where, orderBy, getDoc
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+// FILE: C:\CaneMap\public\backend\Handler\create-task.js   (replace lines building payload)
+import { serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 // Expose function globally later: window.openCreateTaskModal = openCreateTaskModal;
 let currentUserId = null;
@@ -89,6 +91,7 @@ async function saveTaskToFirestore(fieldId, payload) {
     // add to fields/{fieldId}/tasks if possible
     try {
       const ref = collection(db, 'fields', fieldId, 'tasks');
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
       await addDoc(ref, payload);
     } catch (err) {
       result.errors.push('subcollection:' + err.message);
@@ -109,83 +112,77 @@ async function saveTaskToFirestore(fieldId, payload) {
   }
 }
 
-// Build and open the small Create Task modal
 export async function openCreateTaskModal(fieldId, options = {}) {
-  // options can include small boolean for size etc.
-  // Remove existing create-task modal
   const existing = document.getElementById('createTaskModal');
   if (existing) existing.remove();
 
-  // Create modal element
   const modal = document.createElement('div');
   modal.id = 'createTaskModal';
   modal.className = 'fixed inset-0 z-[22000] flex items-center justify-center p-4';
   modal.innerHTML = `
     <div id="ct_backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-    <div class="relative w-full max-w-[520px] rounded-xl bg-white border border-[var(--cane-200)] shadow-xl p-4">
-      <header class="flex items-center justify-between gap-3 mb-3">
-        <h3 class="text-lg font-semibold text-[var(--cane-900)]">Create Task</h3>
-        <button id="ct_close_x" class="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100">
-          <i class="fas fa-times text-[var(--cane-700)]"></i>
-        </button>
+    <div class="relative w-full max-w-[520px] rounded-xl bg-white border border-[var(--cane-200)] shadow p-5">
+      <header class="flex items-center justify-start mb-3 pb-2 border-b border-gray-200">
+        <h3 class="text-xl font-semibold text-[var(--cane-900)]">Create Task</h3>
+        <!-- Removed X button -->
       </header>
 
-      <div class="space-y-3 text-sm">
-        <div class="grid grid-cols-2 gap-2">
-          <label class="col-span-2 text-xs font-semibold text-[var(--cane-700)]">When</label>
-          <input id="ct_date" type="date" class="px-3 py-2 border rounded-md text-sm" />
-          <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
+      <div class="space-y-4 text-sm">
+
+        <!-- DEADLINE -->
+        <div>
+          <label class="text-[var(--cane-700)] font-semibold text-[15px] block mb-1">Deadline</label>
+          <div class="flex items-center gap-2 mb-2">
+            <input id="ct_this_week" type="checkbox" class="accent-[var(--cane-700)]" />
+            <span class="text-[var(--cane-700)] font-medium">This week</span>
+          </div>
+
+          <div class="text-xs text-[var(--cane-600)] mb-1">or set time & date:</div>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="ct_date" type="date" class="px-3 py-2 border rounded-md text-sm" />
+            <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
+          </div>
         </div>
 
+        <!-- TITLE -->
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Title</label>
-          <input id="ct_title" type="text" placeholder="e.g. Pest control — Plot A" class="w-full px-3 py-2 border rounded-md text-sm" />
+          <input id="ct_title" type="text" placeholder="e.g. Fertilizer application" class="w-full px-3 py-2 border rounded-md text-sm" />
         </div>
 
+        <!-- DETAILS -->
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Details</label>
           <textarea id="ct_details" rows="3" placeholder="Describe what needs to be done" class="w-full px-3 py-2 border rounded-md text-sm"></textarea>
         </div>
 
+        <!-- ASSIGN TO -->
         <div>
-          <label class="text-xs font-semibold text-[var(--cane-700)]">Assign to</label>
-          <div class="mt-1 flex gap-2 items-center">
-            <select id="ct_assign_type" class="px-3 py-2 border rounded-md text-sm">
-              <option value="worker" selected>Worker</option>
-              <option value="driver">Driver</option>
-            </select>
-            <div id="ct_assign_placeholder" class="flex-1 text-xs text-[var(--cane-600)]">Choose assignment type</div>
-          </div>
-        </div>
+          <label id="ct_assign_label" class="text-[var(--cane-700)] font-semibold text-[15px] block mb-2">Assign to:</label>
 
-        <div id="ct_worker_options" class="hidden space-y-2">
-          <div class="flex items-center gap-2">
-            <input id="ct_all_workers" type="checkbox" />
-            <label for="ct_all_workers" class="text-xs">All workers</label>
-            <div class="flex items-center ml-auto gap-2">
-              <label class="text-xs">Needed:</label>
-              <input id="ct_workers_count" type="number" min="1" class="w-20 px-2 py-1 border rounded-md text-sm" />
+          <div class="flex gap-3 mb-3">
+            <button id="ct_btn_worker" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Worker</button>
+            <button id="ct_btn_driver" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Driver</button>
+          </div>
+
+          <!-- WORKER OPTIONS -->
+          <div id="ct_worker_options" class="hidden space-y-2 mt-2 border-t pt-3">
+            <div class="flex items-center justify-between">
+              <label id="ct_people_label" class="text-sm font-medium text-[var(--cane-700)]">People needed:</label>
+              <input id="ct_workers_count" type="number" min="1" value="1" class="w-24 px-2 py-1 border rounded-md text-sm" />
             </div>
-          </div>
-        </div>
-
-        <div id="ct_driver_options" class="hidden space-y-2">
-          <div class="text-xs text-[var(--cane-700)]">Drivers currently on field</div>
-          <div id="ct_drivers_list" class="max-h-24 overflow-auto space-y-1 mt-1 p-1 border rounded-md"></div>
-
-          <div class="text-xs text-[var(--cane-700)]">Rental drivers (Ormoc City)</div>
-          <div id="ct_rental_list" class="max-h-24 overflow-auto space-y-1 mt-1 p-1 border rounded-md"></div>
-
-          <div class="flex items-center gap-2 mt-1">
-            <input id="ct_any_driver" type="checkbox" />
-            <label for="ct_any_driver" class="text-xs">Any available driver</label>
+            <div class="flex items-center gap-2">
+              <input id="ct_all_workers" type="checkbox" class="accent-[var(--cane-700)]" />
+              <label for="ct_all_workers" class="text-sm text-[var(--cane-700)]">All workers</label>
+            </div>
           </div>
         </div>
 
         <div id="ct_error" class="text-xs text-red-500 hidden"></div>
       </div>
 
-      <footer class="mt-4 flex items-center justify-end gap-3">
+      <!-- FOOTER -->
+      <footer class="mt-6 flex items-center justify-end gap-3">
         <button id="ct_cancel" class="px-3 py-2 rounded-md border hover:bg-gray-50 text-sm">Close</button>
         <button id="ct_save" class="px-4 py-2 rounded-md bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white font-semibold text-sm shadow">Save</button>
       </footer>
@@ -193,143 +190,248 @@ export async function openCreateTaskModal(fieldId, options = {}) {
   `;
 
   document.body.appendChild(modal);
+  const el = (s) => modal.querySelector(s);
 
-  // short helpers to select elements
-  const el = (sel) => modal.querySelector(sel);
+  // --- ASSIGN-TO ERROR HELPERS (MUST BE HERE, BEFORE ANY USE) ---
+  let assignErrorEl = null;
+  const assignLabel = el('#ct_assign_label'); // "Assign to:" label
 
-  // set default date/time to today + current time
-  const dateInput = el('#ct_date');
-  const timeInput = el('#ct_time');
-  const today = new Date();
-  dateInput.value = today.toISOString().slice(0,10);
-  timeInput.value = today.toTimeString().slice(0,5);
+  function showAssignError(msg) {
+    if (assignErrorEl) assignErrorEl.remove();
+    assignErrorEl = document.createElement('span');
+    assignErrorEl.className = 'ct_field_error ml-2 text-xs text-red-500';
+    assignErrorEl.textContent = msg;
+    assignLabel.appendChild(assignErrorEl);
+  }
 
-  // show/hide assign sections
-  const assignSelect = el('#ct_assign_type');
-  const workerOpts = el('#ct_worker_options');
-  const driverOpts = el('#ct_driver_options');
-
-  function updateAssignUI() {
-    const v = assignSelect.value;
-    if (v === 'worker') {
-      workerOpts.classList.remove('hidden');
-      driverOpts.classList.add('hidden');
-      el('#ct_assign_placeholder').textContent = 'Assign to workers';
-    } else {
-      workerOpts.classList.add('hidden');
-      driverOpts.classList.remove('hidden');
-      el('#ct_assign_placeholder').textContent = 'Assign to drivers';
+  function clearAssignError() {
+    if (assignErrorEl) {
+      assignErrorEl.remove();
+      assignErrorEl = null;
     }
   }
-  assignSelect.addEventListener('change', updateAssignUI);
-  updateAssignUI();
+// --- Now these can safely use clearAssignError ---
+['#ct_date','#ct_time','#ct_title','#ct_details','#ct_workers_count','#ct_all_workers'].forEach(sel => {
+  el(sel).addEventListener('focus', () => clearAssignError());
+});
 
-  // fetch participants + rental drivers
-  const driversListEl = el('#ct_drivers_list');
-  const rentalListEl = el('#ct_rental_list');
 
-  (async () => {
-    const { workers, driversPresent } = await fetchParticipantsForField(fieldId).catch(()=>({workers:[],driversPresent:[]}));
-    // populate driversPresent
-    driversPresent.forEach(d => {
-      const id = 'drv_' + (d.id||Math.random().toString(36).slice(2,8));
-      const html = `<label class="flex items-center gap-2 text-xs"><input type="radio" name="ct_driver_select" value="${escapeHtml(d.id || d.name || id)}" /> <span>${escapeHtml(d.name || d.fullname || d.displayName || 'Unnamed')}</span> <small class="text-[10px] text-[var(--cane-600)] ml-2">${escapeHtml(d.truck_type || d.vehicle || '')}</small></label>`;
-      driversListEl.insertAdjacentHTML('beforeend', html);
+  // btn click handlers
+  const btnWorker = el('#ct_btn_worker');
+  const btnDriver = el('#ct_btn_driver');
+
+  btnWorker.addEventListener('click', () => {
+    assignType = 'worker';
+    updateAssignUI();
+    clearAssignError();
+  });
+  btnDriver.addEventListener('click', () => {
+    assignType = 'driver';
+    updateAssignUI();
+    clearAssignError();
+  });
+
+  // --- DATE / THIS WEEK logic ---
+  const dateInput = el('#ct_date');
+  const timeInput = el('#ct_time');
+  const weekCheck = el('#ct_this_week');
+  weekCheck.addEventListener('change', () => {
+    const dis = weekCheck.checked;
+    [dateInput, timeInput].forEach(i => {
+      i.disabled = dis;
+      i.classList.toggle('bg-gray-100', dis);
+      i.classList.toggle('text-gray-400', dis);
     });
-
-    // workers count default
-    if (workers && workers.length > 0) {
-      // nothing to list here in compact UI; the option All workers / number is enough
-      el('#ct_workers_count').value = Math.min(3, workers.length);
-    }
-
-    // rental drivers
-    const rentals = await fetchRentalDrivers('Ormoc City').catch(()=>[]);
-    rentals.forEach(d => {
-      const id = 'rental_' + (d.id||Math.random().toString(36).slice(2,8));
-      const html = `<label class="flex items-center gap-2 text-xs"><input type="radio" name="ct_rental_select" value="${escapeHtml(d.id || d.name)}" /> <span>${escapeHtml(d.name || 'Unnamed')}</span> <small class="text-[10px] text-[var(--cane-600)] ml-2">Age: ${escapeHtml(String(d.age || '—'))} • ${escapeHtml(d.truck_type || d.vehicle || '')}</small></label>`;
-      rentalListEl.insertAdjacentHTML('beforeend', html);
-    });
-
-    if (!driversPresent.length && rentals.length === 0) {
-      driversListEl.innerHTML = `<div class="text-xs text-[var(--cane-500)]">No drivers found for this field.</div>`;
-      rentalListEl.innerHTML = `<div class="text-xs text-[var(--cane-500)]">No rental drivers found in Ormoc City.</div>`;
-    }
-  })();
-
-  // close handlers
-  el('#ct_close_x').addEventListener('click', () => modal.remove());
-  el('#ct_cancel').addEventListener('click', () => modal.remove());
-  el('#ct_backdrop').addEventListener('click', (e) => { if (e.target.id === 'ct_backdrop') modal.remove(); });
-
-  // Save handler
-  el('#ct_save').addEventListener('click', async () => {
-    el('#ct_error').classList.add('hidden');
-    const title = el('#ct_title').value.trim();
-    const details = el('#ct_details').value.trim();
-    const date = el('#ct_date').value;
-    const time = el('#ct_time').value;
-    const assignType = el('#ct_assign_type').value;
-    const allWorkers = el('#ct_all_workers').checked;
-    const workersCount = parseInt(el('#ct_workers_count').value, 10) || null;
-    const anyDriver = el('#ct_any_driver').checked;
-
-    // selected driver from present drivers or rentals (priority: present drivers, then rentals)
-    const selectedDriverRadio = modal.querySelector('input[name="ct_driver_select"]:checked');
-    const selectedRentalRadio = modal.querySelector('input[name="ct_rental_select"]:checked');
-    const assignedDriver = selectedDriverRadio ? selectedDriverRadio.value : (selectedRentalRadio ? selectedRentalRadio.value : null);
-
-    // basic validation
-    if (!title) {
-      el('#ct_error').textContent = 'Please enter a short title for the task.'; el('#ct_error').classList.remove('hidden'); return;
-    }
-    if (!date) { el('#ct_error').textContent = 'Please select a date.'; el('#ct_error').classList.remove('hidden'); return; }
-
-    // build scheduled_at ISO (local)
-    const scheduledAt = new Date(date + 'T' + (time || '00:00') + ':00');
-    const payload = {
-      title,
-      details,
-      scheduled_at: scheduledAt,
-      created_by: currentUserId || 'unknown',
-      created_at: new Date(),
-      assign_type: assignType, // 'worker' | 'driver'
-      status: 'todo',
-      metadata: {
-        workers: assignType === 'worker' ? (allWorkers ? 'all' : (workersCount || 1)) : null,
-        driver_assigned: assignType === 'driver' ? (assignedDriver || (anyDriver ? 'any' : null)) : null,
-      },
-    };
-
-    // disable save while in progress
-    const saveBtn = el('#ct_save');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-
-    const res = await saveTaskToFirestore(fieldId, payload);
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save';
-
-    if (res.ok) {
-      // small success toast-like
-      const tiny = document.createElement('div');
-      tiny.className = 'fixed right-6 bottom-6 bg-white border px-3 py-2 rounded shadow-lg text-sm';
-      tiny.textContent = 'Task saved';
-      document.body.appendChild(tiny);
-      setTimeout(()=>tiny.remove(), 2400);
-
-      modal.remove();
-      // optionally trigger an event so parent modal can refresh tasks
-      document.dispatchEvent(new CustomEvent('task:created', { detail: { fieldId } }));
-    } else {
-      el('#ct_error').textContent = 'Save failed. ' + (res.errors?.join(' | ') || '');
-      el('#ct_error').classList.remove('hidden');
+    if (dis) {
+      dateInput.value = '';
+      timeInput.value = '';
     }
   });
 
-  // return modal DOM reference
+  // --- ASSIGN TO logic ---
+  let assignType = null;
+  const workerOpts = el('#ct_worker_options');
+  const allWorkersCheck = el('#ct_all_workers');
+  const peopleLabel = el('#ct_people_label');
+  const workerInput = el('#ct_workers_count');
+
+  function updateAssignUI() {
+    // reset styles
+    [btnWorker, btnDriver].forEach(btn => {
+      btn.classList.remove('bg-[var(--cane-700)]', 'text-white', 'shadow-inner');
+      btn.classList.add('text-[var(--cane-700)]', 'bg-white');
+    });
+    workerOpts.classList.add('hidden');
+
+    if (assignType === 'worker') {
+      btnWorker.classList.remove('text-[var(--cane-700)]', 'bg-white');
+      btnWorker.classList.add('bg-[var(--cane-700)]', 'text-white', 'shadow-inner');
+      workerOpts.classList.remove('hidden');
+    } else if (assignType === 'driver') {
+      btnDriver.classList.remove('text-[var(--cane-700)]', 'bg-white');
+      btnDriver.classList.add('bg-[var(--cane-700)]', 'text-white', 'shadow-inner');
+    }
+  }
+
+  allWorkersCheck.addEventListener('change', () => {
+    const dis = allWorkersCheck.checked;
+    workerInput.disabled = dis;
+    peopleLabel.classList.toggle('text-gray-400', dis);
+    workerInput.classList.toggle('bg-gray-100', dis);
+    workerInput.classList.toggle('text-gray-400', dis);
+  });
+
+  el('#ct_cancel').addEventListener('click', () => modal.remove());
+  el('#ct_backdrop').addEventListener('click', (e) => { if (e.target.id === 'ct_backdrop') modal.remove(); });
+
+// Helper to show error below a specific element
+function showFieldError(elInput, msg) {
+  // remove existing error for this field first
+  const existing = elInput.parentElement.querySelector('.ct_field_error');
+  if (existing) existing.remove();
+
+  const err = document.createElement('div');
+  err.className = 'ct_field_error text-xs text-red-500 mt-1';
+  err.textContent = msg;
+  elInput.parentElement.appendChild(err);
+
+  elInput.focus();
+}
+
+// Helper to remove all field errors
+function clearAllFieldErrors(modal) {
+  modal.querySelectorAll('.ct_field_error').forEach(e => e.remove());
+}
+
+el('#ct_save').addEventListener('click', async () => {
+  clearAllFieldErrors(modal);
+
+  const titleInput = el('#ct_title');
+  const detailsInput = el('#ct_details');
+  const dateInput = el('#ct_date');
+  const timeInput = el('#ct_time');
+  const allWorkersCheck = el('#ct_all_workers');
+  const workerInput = el('#ct_workers_count');
+
+  const title = titleInput.value.trim();
+  const details = detailsInput.value.trim();
+  const isWeek = weekCheck.checked;
+  const date = dateInput.value;
+  const assignTypeValue = assignType;
+  const workersCount = parseInt(workerInput.value, 10) || 0;
+
+  // --- FIELD VALIDATION ---
+  if (!title) {
+    showFieldError(titleInput, 'Please enter a Title.');
+    return;
+  }
+  if (!details) {
+    showFieldError(detailsInput, 'Please enter Details.');
+    return;
+  }
+  if (!isWeek && !date) {
+    showFieldError(dateInput, 'Please set a Deadline date or check "This week".');
+    return;
+  }
+  if (!assignTypeValue) {
+    showAssignError('Please select Worker or Driver.');
+    return;
+  }
+  if (assignTypeValue === 'worker' && !allWorkersCheck.checked && workersCount < 1) {
+    showFieldError(workerInput, 'Please specify the number of workers needed.');
+    return;
+  }
+
+  let scheduledAt = null;
+
+  if (isWeek) {
+    // Calculate upcoming Sunday 11:59 PM
+    const now = new Date();
+    const day = now.getDay(); // Sunday = 0, Monday = 1, ...
+    const diffToSunday = (7 - day) % 7; // days until Sunday
+    const nextSunday = new Date(now);
+    nextSunday.setDate(now.getDate() + diffToSunday);
+    nextSunday.setHours(23, 59, 0, 0); // 11:59:00 PM
+    scheduledAt = Timestamp.fromDate(nextSunday);
+  } else {
+    scheduledAt = new Date(date + 'T' + (timeInput.value || '00:00') + ':00');
+    scheduledAt = Timestamp.fromDate(scheduledAt);
+  }
+
+  const payload = {
+    title,
+    details,
+    scheduled_at: scheduledAt,
+    created_by: currentUserId,
+    created_at: serverTimestamp(),
+    assign_type: assignTypeValue,
+    status: 'todo',
+    metadata: {}
+  };
+
+  if (assignTypeValue === 'worker') {
+    payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount;
+  }
+
+  if (Object.keys(payload.metadata).length === 0) delete payload.metadata;
+
+  // --- SAVE TASK ---
+  const saveBtn = el('#ct_save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  const res = await saveTaskToFirestore(fieldId, payload);
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save';
+
+  if (res.ok) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed right-6 bottom-6 bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-medium';
+    toast.textContent = '✅ Task saved successfully!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+    modal.remove();
+    document.dispatchEvent(new CustomEvent('task:created', { detail: { fieldId } }));
+  } else {
+    alert('Save failed: ' + (res.errors?.join(' | ') || ''));
+  }
+});
+
+// --- AUTO CLEAR ERRORS FUNCTION ---
+// Call this once to attach to all relevant inputs/buttons
+function attachAutoClearErrors() {
+  const inputs = [
+    '#ct_title', '#ct_details', '#ct_date', '#ct_time', 
+    '#ct_workers_count', '#ct_all_workers'
+  ];
+
+  inputs.forEach(sel => {
+    const elInput = el(sel);
+    if (!elInput) return;
+    elInput.addEventListener('input', clearAllErrors);
+    elInput.addEventListener('change', clearAllErrors); // for checkboxes & date
+  });
+
+  // also clear assign error when clicking Worker/Driver buttons
+  [btnWorker, btnDriver].forEach(btn => {
+    btn.addEventListener('click', clearAllErrors);
+  });
+}
+
+// clears all field errors and assign errors
+function clearAllErrors() {
+  clearAllFieldErrors(modal); // removes ct_field_error divs
+  clearAssignError();          // removes assign-to error
+}
+
+// --- attach on modal creation ---
+attachAutoClearErrors();
+
   return modal;
 }
 
+
 // expose globally for older code to call
 window.openCreateTaskModal = openCreateTaskModal;
+

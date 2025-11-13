@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot,  doc,
   limit,
   collectionGroup } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { openCreateTaskModal } from './create-task.js';
 
 // Initialize Leaflet Map for Fields Section
 export function initializeFieldsSection() {
@@ -942,14 +943,16 @@ monthSelector.addEventListener('change', (e) => {
     // --- Close handlers ---
     modal.querySelector('#fd_close_btn')?.addEventListener('click', () => modal.remove());
     // --- Open Create Task modal (small) ---
+    // FILE: C:\CaneMap\public\backend\Handler\fields-map.js   (replace lines matching "// --- Open Create Task modal (small) ---" block)
     modal.querySelector('#fd_create_task_btn')?.addEventListener('click', (e) => {
-      // open the create-task small modal from the module
-      // window.openCreateTaskModal is set by create-task.js
-      if (typeof window.openCreateTaskModal === 'function') {
-        window.openCreateTaskModal(fieldId);
-      } else {
-        console.warn('Create Task module not loaded. Make sure create-task.js is included as a module in the page.');
-        alert('Create Task module not available.');
+      // open the create-task small modal using the imported module function
+      try {
+        // openCreateTaskModal is imported from ./create-task.js at top of this file
+        openCreateTaskModal(fieldId);
+      } catch (err) {
+        console.error('Failed to open Create Task modal:', err);
+        // user-visible fallback
+        alert('Unable to open Create Task modal. See console for details.');
       }
     });
     modal.querySelector('#fieldDetailsBackdrop')?.addEventListener('click', (e) => {
