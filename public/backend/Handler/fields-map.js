@@ -14,6 +14,35 @@ export function initializeFieldsSection() {
   const fieldStore = new Map();
   let topFieldKeys = new Set();
   let nestedFieldKeys = new Set();
+  let activeHighlightedField = null;
+
+function highlightFieldInList(fieldName) {
+  const listContainer = document.getElementById('handlerFieldsList');
+  if (!listContainer) return;
+
+  if (activeHighlightedField) {
+    activeHighlightedField.classList.remove('ring-2', 'ring-green-400', 'bg-green-50');
+    activeHighlightedField = null;
+  }
+
+  const items = Array.from(listContainer.children);
+  const match = items.find(item =>
+    item.textContent.toLowerCase().includes((fieldName || '').toLowerCase())
+  );
+
+  if (match) {
+    match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    match.classList.add('ring-2', 'ring-green-400', 'bg-green-50');
+    activeHighlightedField = match;
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (activeHighlightedField && !e.target.closest('#handlerFieldsList') && !e.target.closest('.leaflet-popup') && !e.target.closest('.leaflet-container')) {
+    activeHighlightedField.classList.remove('ring-2', 'ring-green-400', 'bg-green-50');
+    activeHighlightedField = null;
+  }
+});
 
   const STATUS_META = {
     reviewed: {
@@ -243,6 +272,7 @@ export function initializeFieldsSection() {
         }
       }, 250);
       
+      
       // Load user's fields after map is ready
       loadUserFields();
       
@@ -273,7 +303,7 @@ export function initializeFieldsSection() {
     }
 
     console.log('📡 Fetching fields for user:', currentUserId);
-    showMessage('Loading your fields...', 'info');
+    showMessage('Loading your reviewed fields...', 'info');
 
     try {
       if (topFieldsUnsub) {
@@ -324,9 +354,16 @@ export function initializeFieldsSection() {
 
       const createTopKey = (doc) => doc.data()?.sourceRef || doc.ref.path;
 
-      const topQuery = query(collection(db, 'fields'), where('userId', '==', currentUserId));
+      // --- Only fetch top-level fields that belong to user AND are reviewed ---
+      // We use `in` to cover both 'reviewed' and 'Reviewed' variants in case of inconsistent casing.
+      // If your DB is normalized to lowercase, you can switch to where('status','==','reviewed')
+      const topQuery = query(
+        collection(db, 'fields'),
+        where('userId', '==', currentUserId),
+        where('status', '==', 'reviewed')
+      );
       topFieldsUnsub = onSnapshot(topQuery, (snapshot) => {
-        console.log('📦 Top-level fields snapshot size:', snapshot.size);
+        console.log('📦 Top-level fields snapshot (reviewed) size:', snapshot.size);
         const seen = new Set();
 
         snapshot.forEach((docSnap) => {
@@ -350,27 +387,30 @@ export function initializeFieldsSection() {
 
         renderFromStore();
       }, (error) => {
-        console.error('❌ Error fetching fields:', error);
+        console.error('❌ Error fetching fields (top-level reviewed):', error);
         showMessage('Error loading fields: ' + error.message, 'error');
       });
 
-      const nestedRef = collection(db, 'field_applications', currentUserId, 'fields');
-      nestedFieldsUnsub = onSnapshot(nestedRef, (snapshot) => {
-        console.log('📦 Nested fields snapshot size:', snapshot.size);
+      // --- Only fetch nested field applications that are reviewed ---
+      const nestedQuery = query(
+        collection(db, 'field_applications', currentUserId, 'fields'),
+        where('status', '==', 'reviewed')
+      );
+      nestedFieldsUnsub = onSnapshot(nestedQuery, (snapshot) => {
+        console.log('📦 Nested fields snapshot (reviewed) size:', snapshot.size);
         const seen = new Set();
 
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() || {};
           const key = docSnap.ref.path;
           seen.add(key);
-          if (!fieldStore.has(key)) {
-            fieldStore.set(key, {
-              id: docSnap.id,
-              ...data,
-              userId: data.userId || currentUserId,
-              sourceRef: key
-            });
-          }
+          // keep user's nested fields; overwrite only if not present (top-level takes precedence)
+          fieldStore.set(key, {
+            id: docSnap.id,
+            ...data,
+            userId: data.userId || currentUserId,
+            sourceRef: key
+          });
         });
 
         nestedFieldKeys.forEach((key) => {
@@ -382,7 +422,7 @@ export function initializeFieldsSection() {
 
         renderFromStore();
       }, (error) => {
-        console.error('❌ Error fetching nested fields:', error);
+        console.error('❌ Error fetching nested fields (reviewed):', error);
         showMessage('Error loading fields: ' + error.message, 'error');
       });
 
@@ -396,10 +436,8 @@ export function initializeFieldsSection() {
   function addFieldMarker(field) {
     const lat = field.latitude || field.lat;
     const lng = field.longitude || field.lng;
-    
     if (!lat || !lng) return;
 
-    // Create custom green marker icon
     const fieldIcon = L.icon({
       iconUrl: '../../frontend/img/PIN.png',
       iconSize: [38, 44],
@@ -411,10 +449,8 @@ export function initializeFieldsSection() {
       markersLayer = L.layerGroup().addTo(fieldsMap);
     }
 
-    // Create marker
     const marker = L.marker([lat, lng], { icon: fieldIcon }).addTo(markersLayer);
 
-    // Create popup content
     const statusLabel = getStatusLabel(field.status);
     const statusColor = getStatusColor(field.status);
     const popupContent = `
@@ -432,8 +468,12 @@ export function initializeFieldsSection() {
         </button>
       </div>
     `;
-
     marker.bindPopup(popupContent);
+
+    marker.on('click', () => {
+      highlightFieldInList(field.field_name || field.fieldName || '');
+    });
+
   }
 
   // Update fields list in sidebar
@@ -497,41 +537,85 @@ export function initializeFieldsSection() {
   }
 
   // Focus on specific field
-  window.focusField = function(fieldId) {
-    const field = fieldsData.find(f => f.id === fieldId);
-    if (field) {
+    window.focusField = function(fieldId) {
+      const field = fieldsData.find(f => f.id === fieldId);
+      if (!field) return;
+
       const lat = field.latitude || field.lat;
       const lng = field.longitude || field.lng;
-      
-      if (lat && lng) {
-        fieldsMap.setView([lat, lng], 16);
-        
-        // Find and open popup for this field
-        markersLayer.eachLayer(layer => {
-          if (layer instanceof L.Marker) {
-            const markerLatLng = layer.getLatLng();
-            if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lng) < 0.0001) {
-              layer.openPopup();
-            }
+      if (!lat || !lng) return;
+
+      fieldsMap.setView([lat, lng], 16);
+
+      markersLayer.eachLayer(layer => {
+        if (layer instanceof L.Marker) {
+          const markerLatLng = layer.getLatLng();
+          if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lng) < 0.0001) {
+            layer.openPopup();
           }
-        });
+        }
+      });
+
+      highlightFieldInList(field.field_name || field.fieldName || '');
+    };
+
+    // View field details
+    window.viewFieldDetails = function(fieldId) {
+      console.log('View details for field:', fieldId);
+      // Add your field details view logic here
+    };
+
+    // Show message
+    function showMessage(message, type = 'info') {
+      const messageEl = document.getElementById('handlerFieldsMessage');
+      if (messageEl) {
+        messageEl.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'} text-${type === 'error' ? 'red' : 'blue'}-500"></i><span>${message}</span>`;
       }
     }
-  };
 
-  // View field details
-  window.viewFieldDetails = function(fieldId) {
-    console.log('View details for field:', fieldId);
-    // Add your field details view logic here
-  };
+    document.getElementById('handlerFieldsSearch')?.addEventListener('input', (e) => {
+      const term = e.target.value.trim().toLowerCase();
 
-  // Show message
-  function showMessage(message, type = 'info') {
-    const messageEl = document.getElementById('handlerFieldsMessage');
-    if (messageEl) {
-      messageEl.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'} text-${type === 'error' ? 'red' : 'blue'}-500"></i><span>${message}</span>`;
-    }
-  }
+      if (!term) {
+        updateFieldsList();
+        updateFieldsCount();
+        if (markersLayer) {
+          markersLayer.clearLayers();
+          fieldsData.forEach(f => addFieldMarker(f));
+          const group = new L.featureGroup(markersLayer.getLayers());
+          fieldsMap.fitBounds(group.getBounds().pad(0.1));
+        }
+        return;
+      }
+
+      const filtered = fieldsData.filter(f =>
+        (f.field_name || f.fieldName || '').toLowerCase().includes(term) ||
+        (f.barangay || '').toLowerCase().includes(term) ||
+        (f.location || '').toLowerCase().includes(term)
+      );
+
+      const listContainer = document.getElementById('handlerFieldsList');
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `
+          <div class="p-3 text-center text-sm text-gray-600">
+            <i class="fas fa-search text-[var(--cane-600)] mr-1"></i>
+            No fields found.
+          </div>`;
+      } else {
+        const backup = fieldsData;
+        fieldsData = filtered;
+        updateFieldsList();
+        fieldsData = backup;
+      }
+
+      if (markersLayer) markersLayer.clearLayers();
+      filtered.forEach(f => addFieldMarker(f));
+
+      if (filtered.length > 0 && markersLayer.getLayers().length > 0) {
+        const group = new L.featureGroup(markersLayer.getLayers());
+        fieldsMap.fitBounds(group.getBounds().pad(0.1));
+      }
+    });
 
   // Listen for auth state changes
   onAuthStateChanged(auth, (user) => {
@@ -647,3 +731,56 @@ export function initializeFieldsSection() {
     }
   }
 }
+
+window.addEventListener('resize', () => {
+  if (fieldsMap) {
+    setTimeout(() => fieldsMap.invalidateSize(), 300);
+  }
+});
+
+
+// ---------- Register button / iframe toggle ----------
+function setupRegisterToggle() {
+  console.log('[fields-map] setupRegisterToggle() trying...');
+
+  const registerBtn = document.getElementById('registerFieldBtn');
+  const fieldsDefault = document.getElementById('fieldsDefault');
+  const fieldsRegister = document.getElementById('fieldsRegister');
+  const registerFrame = document.getElementById('registerFieldFrame');
+  const backBtn = document.getElementById('backToFields');
+
+  // If elements are not yet in DOM, retry after a short delay
+  if (!registerBtn || !fieldsDefault || !fieldsRegister || !registerFrame || !backBtn) {
+    console.warn('[fields-map] elements not ready, retrying in 300ms...');
+    setTimeout(setupRegisterToggle, 300);
+    return;
+  }
+
+  console.log('[fields-map] All elements found — toggle setup ready.');
+
+  registerBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    console.log('[fields-map] Register button clicked');
+    registerFrame.src = '../../frontend/Handler/Register-field.html';
+    fieldsDefault.classList.add('hidden');
+    fieldsRegister.classList.remove('hidden');
+  });
+
+  backBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    console.log('[fields-map] Back button clicked');
+    fieldsRegister.classList.add('hidden');
+    fieldsDefault.classList.remove('hidden');
+    registerFrame.src = '';
+
+    setTimeout(() => {
+      if (window.fieldsMap && typeof window.fieldsMap.invalidateSize === 'function') {
+        window.fieldsMap.invalidateSize();
+        console.log('[fields-map] map.invalidateSize() called');
+      }
+    }, 300);
+  });
+}
+
+// Run after everything is loaded
+window.addEventListener('load', setupRegisterToggle);
