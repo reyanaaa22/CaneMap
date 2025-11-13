@@ -854,7 +854,7 @@ const tooltipHtml = `
             if (field.raw?.userId === userId || field.applicantName === localStorage.getItem('farmerName')) {
                 joinBtn.textContent = 'Check My Field';
                 joinBtn.onclick = () => {
-                    window.location.href = '../Handler/your_field_path.html';
+                    window.location.href = '../../frontend/Handler/dashboard.html';
                 };
             } else {
                 // If handler but not owner → hide
