@@ -262,9 +262,16 @@
 		const closeModalBtn = document.getElementById('closeModalBtn');
 		const cancelFormBtn = document.getElementById('cancelFormBtn');
 
-		createTaskBtn.addEventListener('click', () => {
-			modal.classList.add('active');
-		});
+document.addEventListener('DOMContentLoaded', () => {
+  const createTaskBtn = document.getElementById('createTaskBtn');
+  if (createTaskBtn) {
+    createTaskBtn.addEventListener('click', () => {
+      window.location.href = 'fields.html';
+    });
+  }
+});
+
+
 
 		closeModalBtn.addEventListener('click', () => {
 			modal.classList.remove('active');

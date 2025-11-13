@@ -151,7 +151,7 @@ document.addEventListener('click', (e) => {
             </span>
             <button class="inline-flex items-center gap-2 px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 text-[var(--cane-800)] hover:bg-gray-100 transition" type="button">
               <i class="fas fa-eye"></i>
-              View Details
+              Create/View Task
             </button>
           </div>
         </li>
@@ -470,7 +470,7 @@ document.addEventListener('click', (e) => {
           <p><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span></p>
         </div>
         <button onclick="viewFieldDetails('${field.id}')" style="background: #7ccf00; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; width: 100%; border: none; cursor: pointer;">
-          View Details
+          Create/View Task
         </button>
       </div>
     `;
@@ -543,7 +543,7 @@ document.addEventListener('click', (e) => {
             </button>
             <button class="inline-flex items-center gap-1.5 px-3 py-1.25 text-sm font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 transition" onclick="viewFieldDetails('${field.id}')">
               <i class="fas fa-eye"></i>
-              View Details
+              Create/View Task
             </button>
           </div>
         </div>
