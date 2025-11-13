@@ -1,6 +1,11 @@
 // Import Firebase from existing config
 import { auth, db } from '../Common/firebase-config.js';
-import { collection, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { collection, query, where, onSnapshot,  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  limit,
+  collectionGroup } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 
 // Initialize Leaflet Map for Fields Section
@@ -476,6 +481,23 @@ document.addEventListener('click', (e) => {
 
   }
 
+  // --- Fetch field details from Firestore nested structure ---
+  async function fetchFieldApplicationDetails(requestedBy, fieldId) {
+    try {
+      const fieldRef = doc(db, "field_applications", requestedBy, "fields", fieldId);
+      const snap = await getDoc(fieldRef);
+      if (snap.exists()) {
+        return { id: snap.id, ...snap.data() };
+      } else {
+        console.warn("No field data found for:", fieldId);
+        return null;
+      }
+    } catch (err) {
+      console.error("Failed to fetch field application details:", err);
+      return null;
+    }
+  }
+
   // Update fields list in sidebar
   function updateFieldsList() {
     const listContainer = document.getElementById('handlerFieldsList');
@@ -559,11 +581,570 @@ document.addEventListener('click', (e) => {
       highlightFieldInList(field.field_name || field.fieldName || '');
     };
 
-    // View field details
-    window.viewFieldDetails = function(fieldId) {
-      console.log('View details for field:', fieldId);
-      // Add your field details view logic here
-    };
+// ============================================================
+// View Field Details Modal (replaces stub)
+// ============================================================
+window.viewFieldDetails = async function(fieldId) {
+  try {
+    console.log('Opening Field Details modal for:', fieldId);
+
+    // --- Get field data (prefer in-memory store) ---
+    // fieldStore exists in this module (populated by loadUserFields)
+    let field = null;
+    // Try to find by id in fieldsData first (fast)
+    if (Array.isArray(fieldsData) && fieldsData.length) {
+      field = fieldsData.find(f => (f.id || f.field_id || f.fieldId) === fieldId);
+    }
+    // Then try fieldStore entries
+    if (!field && fieldStore && fieldStore.size) {
+      for (const item of fieldStore.values()) {
+        if ((item.id || item.field_id || item.fieldId) === fieldId) { field = item; break; }
+      }
+    }
+    // Final fallback: fetch field doc from Firestore
+    if (!field) {
+      try {
+        const fieldRef = doc(db, 'fields', fieldId);
+        const snap = await getDoc(fieldRef);
+        if (snap.exists()) field = { id: snap.id, ...(snap.data()||{}) };
+      } catch (err) {
+        console.warn('Failed to fetch field doc from Firestore:', err);
+      }
+    }
+
+    if (!field) {
+      alert('Field not found.');
+      return;
+    }
+
+    // --- Fetch additional field data from field_applications/{requestedBy}/fields/{fieldId} ---
+    let detailedField = null;
+
+    if (field.requestedBy) {
+      detailedField = await fetchFieldApplicationDetails(field.requestedBy, fieldId);
+    }
+
+    if (!detailedField) {
+      console.warn("No detailed field info found in field_applications path.");
+      detailedField = {};
+    }
+
+    // Use detailed data (fallback to base if missing)
+    const fieldName = detailedField.field_name || field.field_name || 'Unnamed Field';
+    const street = detailedField.street || '—';
+    const barangay = detailedField.barangay || '—';
+    const caneType = detailedField.sugarcane_variety || field.cane_type || 'N/A';
+    const area = detailedField.field_size || field.area_size || 'N/A';
+    const terrain = detailedField.terrain_type || 'N/A';
+
+    // Format address
+    const formattedAddress = `${street}, ${barangay}, Ormoc City`;
+
+    // --- Build modal DOM (centered) ---
+    // Remove any existing details modal first
+    const existing = document.getElementById('fieldDetailsModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+
+
+    modal.id = 'fieldDetailsModal';
+    modal.className = 'fixed inset-0 z-[20000] flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div id="fieldDetailsBackdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <section class="relative w-full max-w-[1300px] max-h-[90vh] overflow-auto rounded-2xl bg-white shadow-xl border border-[var(--cane-200)]">
+        <header class="flex items-start justify-between gap-4 p-6 border-b">
+          <div>
+          <h2 id="fd_name" class="text-2xl font-bold text-[var(--cane-900)] leading-tight">${escapeHtml(fieldName)}</h2>
+          <div id="fd_address" class="flex items-center gap-1.5 mt-1 text-sm text-[var(--cane-700)]">
+            <i class="fas fa-map-marker-alt text-[var(--cane-600)] opacity-80"></i>
+            <span>${escapeHtml(formattedAddress)}</span>
+          </div><div class="mt-2 text-xs text-[var(--cane-600)] flex flex-wrap gap-x-3 gap-y-1">
+            <span><strong>Type:</strong> ${escapeHtml(caneType)}</span>
+            <span><strong>Area:</strong> ${escapeHtml(String(area))} ha</span>
+            <span><strong>Terrain:</strong> ${escapeHtml(terrain)}</span>
+          </div>
+          </div>
+          <div class="ml-4 flex-shrink-0">
+            <div id="fd_status" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-[var(--cane-100)] text-[var(--cane-800)]"></div>
+          </div>
+        </header>
+
+
+<div class="p-6 modal-content">
+  <!-- LEFT COLUMN -->
+  <div class="space-y-5">
+
+    <!-- Weather Widget -->
+    <div id="fd_weather" class="rounded-lg p-5 relative">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-[var(--cane-900)] mb-1">Weather — Ormoc City</h3>
+          <p id="fd_weather_desc" class="text-xs text-[var(--cane-700)]">Loading weather...</p>
+        </div>
+        <div class="flex flex-col items-end">
+          <img id="fd_weather_icon" class="weather-icon mb-1" src="" alt="Weather icon" />
+          <div id="fd_weather_val" class="text-lg font-semibold text-[var(--cane-800)]">—°C</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Month Selector & View Toggle -->
+    <div class="flex items-center justify-between">
+      <h3 class="text-base font-bold text-[var(--cane-900)]">Month of <span id="fd_month_label">November</span></h3>
+      <div class="flex items-center gap-2">
+        <select id="fd_month_selector" class="text-xs">
+          <option value="0">January</option>
+          <option value="1">February</option>
+          <option value="2">March</option>
+          <option value="3">April</option>
+          <option value="4">May</option>
+          <option value="5">June</option>
+          <option value="6">July</option>
+          <option value="7">August</option>
+          <option value="8">September</option>
+          <option value="9">October</option>
+          <option value="10" selected>November</option>
+          <option value="11">December</option>
+        </select>
+        <select id="fd_week_selector"></select>
+
+      </div>
+    </div>
+
+    <!-- Field Tasks -->
+    <div class="fd_table_card p-3">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold">Field Tasks</h3>
+        <select id="fd_tasks_filter" class="text-xs rounded-md border px-2 py-1">
+          <option value="all">All</option>
+          <option value="todo">To Do</option>
+          <option value="pending">Pending</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div id="fd_tasks_container">
+        <p class="text-xs text-[var(--cane-600)]">Loading tasks...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="fd_table_card p-3">
+    <h3 class="text-sm font-semibold mb-2">Growth Tracker (Monthly)</h3>
+    <div id="fd_growth_container" class="text-xs text-[var(--cane-600)]">Loading growth tracker...</div>
+  </div>
+</div>
+
+
+        <footer class="flex items-center justify-end gap-3 p-6 border-t">
+          <button id="fd_create_task_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-sm text-[var(--cane-800)] hover:bg-gray-50 transition">
+            <i class="fas fa-plus"></i>
+            Create Task
+          </button>
+          <button id="fd_close_btn" class="px-4 py-2 rounded-lg font-semibold bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white shadow-lg">
+            Close
+          </button>
+        </footer>
+      </section>
+    `;
+
+  const monthSelector = modal.querySelector('#fd_month_selector');
+const weekSelector = modal.querySelector('#fd_week_selector');
+const monthLabel = modal.querySelector('#fd_month_label');
+
+function populateWeeks(monthIndex) {
+  if (!weekSelector) return;
+  weekSelector.innerHTML = '';
+  // Determine number of weeks in the month dynamically
+  const year = new Date().getFullYear();
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const weeksInMonth = Math.ceil((lastDay.getDate() + firstDay.getDay()) / 7);
+
+  for (let i = 1; i <= weeksInMonth; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.text = `Week ${i}`;
+    weekSelector.appendChild(option);
+  }
+
+  // Auto-select current week if month is current
+  const today = new Date();
+  if (today.getMonth() === parseInt(monthIndex)) {
+    const currentWeek = Math.ceil((today.getDate() + firstDay.getDay()) / 7);
+    weekSelector.value = currentWeek;
+  } else {
+    weekSelector.value = 1;
+  }
+}
+
+// Initial population
+populateWeeks(monthSelector.value);
+
+// ---------- WEEK SELECTION SUPPORT: compute date range for chosen month/week ----------
+function getWeekDateRange(monthIndex, weekNumber) {
+  const year = new Date().getFullYear();
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  // find first date in month that belongs to that week number
+  let start = new Date(firstDay);
+  while (Math.ceil((start.getDate() + firstDay.getDay()) / 7) < weekNumber && start <= lastDay) {
+    start.setDate(start.getDate() + 1);
+  }
+  // end date: last date that has same weekNumber (or month end)
+  let end = new Date(start);
+  while (Math.ceil((end.getDate() + firstDay.getDay()) / 7) === weekNumber && end <= lastDay) {
+    end.setDate(end.getDate() + 1);
+  }
+  end.setDate(end.getDate() - 1);
+  return { start, end };
+}
+
+
+function renderTasksForWeek(tasks = [], monthIndex = (new Date()).getMonth(), weekNumber = 1, filter = 'all') {
+  const { start, end } = getWeekDateRange(monthIndex, weekNumber);
+  const days = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(new Date(d));
+  }
+
+  const grouped = {};
+  tasks.forEach(t => {
+    if (filter !== 'all' && (t.status || '').toLowerCase() !== filter) return;
+    const scheduled = t.scheduled_at ? (t.scheduled_at.toDate ? t.scheduled_at.toDate() : new Date(t.scheduled_at)) : null;
+    const key = scheduled ? scheduled.toISOString().slice(0,10) : (t.date || 'unspecified');
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(t);
+  });
+
+  const cols = days.map(d => {
+    const key = d.toISOString().slice(0,10);
+    const items = grouped[key] || [];
+    const dayLabel = d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+    const inner = items.map(it => {
+      const title = it.title || it.task || 'Untitled task';
+      const time = it.scheduled_at ? (it.scheduled_at.toDate ? it.scheduled_at.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : new Date(it.scheduled_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})) : '';
+      const status = (it.status || 'todo').toLowerCase();
+      const statusBadge = status === 'done' ? '<span class="px-2 py-0.5 rounded text-xs">Done</span>' : (status === 'pending' ? '<span class="px-2 py-0.5 rounded text-xs">Pending</span>' : '<span class="px-2 py-0.5 rounded text-xs">To Do</span>');
+      return `<div class="mb-2 p-2 rounded border border-gray-100"><div class="text-sm font-semibold">${escapeHtml(title)}</div><div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div></div>`;
+    }).join('');
+    return `<div class="min-w-[140px] flex-shrink-0"><div class="text-xs font-semibold mb-2">${escapeHtml(dayLabel)}</div>${inner || '<div class="text-xs text-[var(--cane-500)]">No tasks</div>'}</div>`;
+  }).join('');
+
+  return `<div class="overflow-x-auto"><div class="flex gap-4 pb-2">${cols}</div></div>`;
+}
+
+// --- wire week selector changes to re-render tasks ---
+if (weekSelector) {
+  weekSelector.addEventListener('change', async () => {
+    try {
+      const mIdx = parseInt(monthSelector.value, 10);
+      const wNum = parseInt(weekSelector.value, 10);
+      const filterValue = modal.querySelector('#fd_tasks_filter')?.value || 'all';
+      const tasks = await fetchTasksForField(fieldId).catch(()=>[]);
+      const tasksContainer = modal.querySelector('#fd_tasks_container');
+      if (tasksContainer) tasksContainer.innerHTML = renderTasksForWeek(tasks, mIdx, wNum, filterValue === 'all' ? 'all' : filterValue);
+    } catch (err) {
+      console.error('Error re-rendering tasks for selected week:', err);
+    }
+  });
+}
+
+
+// Also re-run weeks when month changes
+monthSelector.addEventListener('change', async (e) => {
+  const idx = parseInt(e.target.value, 10);
+  populateWeeks(idx);
+  if (weekSelector) weekSelector.dispatchEvent(new Event('change'));
+});
+
+// Update weeks when month changes
+monthSelector.addEventListener('change', (e) => {
+  const idx = parseInt(e.target.value);
+  monthLabel.textContent = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ][idx];
+  populateWeeks(idx);
+});
+    // small helper to escape text (prevent popup html injection)
+    function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+    // Append modal
+    document.body.appendChild(modal);
+
+    // --- Month Selector + View Toggle (placed correctly inside modal) ---
+    const viewToggle = modal.querySelector('#fd_view_toggle');
+
+    if (monthSelector && viewToggle && monthLabel) {
+      // --- Auto-select current month and week ---
+      const now = new Date();
+      const currentMonthIndex = now.getMonth(); // 0-11
+      const monthNames = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+      ];
+
+      // Set default month in both selector and label
+      monthSelector.value = currentMonthIndex.toString();
+      monthLabel.textContent = monthNames[currentMonthIndex];
+
+      // Always default to weekly view (today's week)
+      viewToggle.value = 'weekly';
+
+      // Determine current week of the month (1–5)
+      function getWeekOfMonth(date) {
+        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+        const dayOfMonth = date.getDate();
+        const adjustedDate = dayOfMonth + firstDay.getDay();
+        return Math.ceil(adjustedDate / 7);
+      }
+
+      console.log(`📅 Auto-selected: ${monthNames[currentMonthIndex]}`);
+
+      monthSelector.addEventListener('change', (e) => {
+        const monthNames = [
+          "January","February","March","April","May","June",
+          "July","August","September","October","November","December"
+        ];
+        monthLabel.textContent = monthNames[parseInt(e.target.value)];
+      });
+
+      viewToggle.addEventListener('change', (e) => {
+        const view = e.target.value;
+        console.log("Switched to view:", view);
+      });
+    }
+
+    // scroll to top of modal content
+    modal.querySelector('section')?.scrollTo?.({ top: 0 });
+
+    // --- Status badge ---
+    const statusEl = modal.querySelector('#fd_status');
+    if (statusEl) {
+      const status = (field.status || 'active').toString().toLowerCase();
+      statusEl.textContent = (status.charAt(0).toUpperCase() + status.slice(1));
+      statusEl.classList.add('px-3','py-1');
+      // small color mapping for badge (tailwind-ish classes)
+      if (status.includes('review') || status.includes('active')) {
+        statusEl.style.background = 'rgba(124, 207, 0, 0.12)';
+        statusEl.style.color = '#166534';
+      } else if (status.includes('pending') || status.includes('edit')) {
+        statusEl.style.background = 'rgba(250, 204, 21, 0.12)';
+        statusEl.style.color = '#92400e';
+      } else {
+        statusEl.style.background = 'rgba(239, 68, 68, 0.08)';
+        statusEl.style.color = '#991b1b';
+      }
+    }
+
+    // --- Close handlers ---
+    modal.querySelector('#fd_close_btn')?.addEventListener('click', () => modal.remove());
+    // --- Open Create Task modal (small) ---
+    modal.querySelector('#fd_create_task_btn')?.addEventListener('click', (e) => {
+      // open the create-task small modal from the module
+      // window.openCreateTaskModal is set by create-task.js
+      if (typeof window.openCreateTaskModal === 'function') {
+        window.openCreateTaskModal(fieldId);
+      } else {
+        console.warn('Create Task module not loaded. Make sure create-task.js is included as a module in the page.');
+        alert('Create Task module not available.');
+      }
+    });
+    modal.querySelector('#fieldDetailsBackdrop')?.addEventListener('click', (e) => {
+      // close when clicking backdrop
+      if (e.target.id === 'fieldDetailsBackdrop') modal.remove();
+    });
+    const escHandler = (e) => { if (e.key === 'Escape') modal.remove(); };
+    document.addEventListener('keydown', escHandler);
+    modal.addEventListener('remove', () => { document.removeEventListener('keydown', escHandler); });
+
+    // --- Load weather (Open-Meteo free API) ---
+    (async () => {
+      try {
+        const lat = 11.0042, lon = 124.6035; // Ormoc City
+        // Use hourly/current weather from open-meteo
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`);
+        const json = await resp.json();
+        if (json && json.current_weather) {
+          const cw = json.current_weather;
+          const weatherIcon = modal.querySelector('#fd_weather_icon');
+          const code = cw.weathercode;
+          const weatherDesc = getWeatherDescription(code);
+          modal.querySelector('#fd_weather_desc').textContent = `${weatherDesc} • Wind ${Math.round(cw.windspeed)} km/h`;
+          modal.querySelector('#fd_weather_val').textContent = `${cw.temperature ?? '—'}°C`;
+          weatherIcon.src = getWeatherIconUrl(code);
+        } else {
+          modal.querySelector('#fd_weather_desc').textContent = 'Weather unavailable';
+          modal.querySelector('#fd_weather_val').textContent = '—';
+        }
+      } catch (err) {
+        console.warn('Weather fetch failed', err);
+        const descEl = modal.querySelector('#fd_weather_desc');
+        if (descEl) descEl.textContent = 'Failed to load weather';
+      }
+    })();
+
+    // --- Load field tasks (try multiple collection patterns) ---
+    async function fetchTasksForField(fid) {
+      // try subcollection: fields/{fid}/tasks
+      try {
+        const tasksRef = collection(db, 'fields', fid, 'tasks');
+        const snap = await getDocs(query(tasksRef, orderBy('scheduled_at', 'asc')));
+        if (!snap.empty) return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (err) {
+        console.debug('No subcollection tasks or query failed (fields/{id}/tasks):', err?.message || err);
+      }
+      // fallback: top-level tasks collection with fieldId property
+      try {
+        const tasksQuery = query(collection(db, 'tasks'), where('fieldId', '==', fid), orderBy('scheduled_at', 'asc'));
+        const snap = await getDocs(tasksQuery);
+        if (!snap.empty) return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (err) {
+        console.debug('Fallback tasks query failed:', err?.message || err);
+      }
+      return [];
+    }
+
+    // --- Load growth tracker (try several names) ---
+    async function fetchGrowthRecords(fid) {
+      const attempts = [
+        () => getDocs(collection(db, 'fields', fid, 'growth')),
+        () => getDocs(collection(db, 'fields', fid, 'growth_records')),
+        () => getDocs(collection(db, 'fields', fid, 'growth_tracker')),
+        () => getDocs(query(collection(db, 'growth_records'), where('fieldId', '==', fid), orderBy('month', 'desc'))),
+      ];
+      for (const attempt of attempts) {
+        try {
+          const snap = await attempt();
+          if (snap && snap.size !== undefined && snap.size > 0) {
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          }
+        } catch (err) {
+          // continue to next try
+        }
+      }
+      return [];
+    }
+
+    // render tasks into a weekly table (today's week). Each day column can grow vertically.
+    function renderTasksWeekly(tasks = [], filter = 'all') {
+      // compute current week (Mon..Sun) display keys (use local timezone)
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0 Sun .. 6 Sat
+      // compute start as Monday
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+      const days = [];
+      for (let i=0;i<7;i++){
+        const d = new Date(monday);
+        d.setDate(monday.getDate()+i);
+        days.push(d);
+      }
+
+      // group tasks by date (date-only)
+      const grouped = {};
+      tasks.forEach(t => {
+        if (filter !== 'all' && (t.status || '').toLowerCase() !== filter) return;
+        const scheduled = t.scheduled_at ? (t.scheduled_at.toDate ? t.scheduled_at.toDate() : new Date(t.scheduled_at)) : null;
+        const key = scheduled ? scheduled.toISOString().slice(0,10) : (t.date || 'unspecified');
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(t);
+      });
+
+      // build HTML (simple, vertical lists per day)
+      const cols = days.map(d => {
+        const key = d.toISOString().slice(0,10);
+        const items = grouped[key] || [];
+        const dayLabel = d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+        const inner = items.map(it => {
+          const title = it.title || it.task || 'Untitled task';
+          const time = it.scheduled_at ? (it.scheduled_at.toDate ? it.scheduled_at.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : new Date(it.scheduled_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})) : '';
+          const status = (it.status || 'todo').toLowerCase();
+          const statusBadge = status === 'done' ? '<span class="px-2 py-0.5 rounded text-xs">Done</span>' : (status === 'pending' ? '<span class="px-2 py-0.5 rounded text-xs">Pending</span>' : '<span class="px-2 py-0.5 rounded text-xs">To Do</span>');
+          return `<div class="mb-2 p-2 rounded border border-gray-100"><div class="text-sm font-semibold">${escapeHtml(title)}</div><div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div></div>`;
+        }).join('');
+        return `<div class="min-w-[140px] flex-shrink-0"><div class="text-xs font-semibold mb-2">${escapeHtml(dayLabel)}</div>${inner || '<div class="text-xs text-[var(--cane-500)]">No tasks</div>'}</div>`;
+      }).join('');
+
+      // make wrapper scrollable horizontally on small screens
+      return `<div class="overflow-x-auto"><div class="flex gap-4 pb-2">${cols}</div></div>`;
+    }
+
+    // render growth records (simple table by month)
+    function renderGrowthTable(records = []) {
+      if (!records || records.length === 0) return `<div class="text-xs text-[var(--cane-500)]">No growth data yet.</div>`;
+      // sort by month descending if have month property
+      records.sort((a,b) => {
+        const am = a.month || a.date || '';
+        const bm = b.month || b.date || '';
+        return (bm > am) ? 1 : ((bm < am) ? -1 : 0);
+      });
+      const rows = records.map(r => {
+        const month = r.month || r.label || (r.timestamp && (r.timestamp.toDate ? r.timestamp.toDate().toLocaleDateString() : new Date(r.timestamp).toLocaleDateString())) || 'Unknown';
+        const height = r.height || r.avg_height || r.growth_cm || '—';
+        const notes = r.notes || r.comment || '';
+        return `<tr class="border-b"><td class="px-2 py-2 text-xs">${escapeHtml(month)}</td><td class="px-2 py-2 text-xs">${escapeHtml(String(height))}</td><td class="px-2 py-2 text-xs">${escapeHtml(notes)}</td></tr>`;
+      }).join('');
+      return `<div class="overflow-auto"><table class="w-full text-xs"><thead><tr class="border-b"><th class="text-left px-2 py-2">Month</th><th class="text-left px-2 py-2">Height</th><th class="text-left px-2 py-2">Notes</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    // Fetch tasks + growth, render them
+    (async () => {
+      const tasksContainer = modal.querySelector('#fd_tasks_container');
+      const growthContainer = modal.querySelector('#fd_growth_container');
+      const filterSelect = modal.querySelector('#fd_tasks_filter');
+
+      try {
+        const [tasks, growth] = await Promise.all([
+          fetchTasksForField(fieldId).catch(()=>[]),
+          fetchGrowthRecords(fieldId).catch(()=>[])
+        ]);
+
+        const tasksFilter = modal.querySelector('#fd_tasks_filter');
+        const tasksContainer = modal.querySelector('#fd_tasks_container');
+
+        if (tasksFilter && tasksContainer) {
+          tasksFilter.addEventListener('change', async (e) => {
+            const filterValue = e.target.value; // "all", "todo", "pending", "done"
+            const tasks = await fetchTasksForField(fieldId); // fetch tasks for this field
+            renderTasksWeekly(tasks, filterValue); // re-render tasks with new filter
+          });
+        }
+
+        
+        const initialTasks = await fetchTasksForField(fieldId);
+        const initMonth = parseInt(monthSelector.value, 10);
+        const initWeek = parseInt(weekSelector.value, 10) || 1;
+        tasksContainer.innerHTML = renderTasksForWeek(initialTasks, initMonth, initWeek, (tasksFilter?.value) || 'all');
+
+
+        // default render with current filter
+        const currentFilter = (filterSelect?.value) || 'all';
+        tasksContainer.innerHTML = renderTasksWeekly(tasks, currentFilter === 'all' ? 'all' : currentFilter);
+        growthContainer.innerHTML = renderGrowthTable(growth);
+
+        // attach filter handler
+        filterSelect?.addEventListener('change', (e) => {
+          const val = e.target.value;
+          tasksContainer.innerHTML = renderTasksWeekly(tasks, val === 'all' ? 'all' : val);
+        });
+
+      } catch (err) {
+        console.error('Failed to load tasks/growth:', err);
+        if (tasksContainer) tasksContainer.innerHTML = '<div class="text-xs text-red-500">Failed to load tasks.</div>';
+        if (growthContainer) growthContainer.innerHTML = '<div class="text-xs text-red-500">Failed to load growth tracker.</div>';
+      }
+    })();
+
+    // done
+  } catch (outerErr) {
+    console.error('viewFieldDetails failed', outerErr);
+    alert('Failed to open field details: ' + (outerErr.message || outerErr));
+  }
+};
+
 
     // Show message
     function showMessage(message, type = 'info') {
@@ -738,49 +1319,23 @@ window.addEventListener('resize', () => {
   }
 });
 
-
-// ---------- Register button / iframe toggle ----------
-function setupRegisterToggle() {
-  console.log('[fields-map] setupRegisterToggle() trying...');
-
-  const registerBtn = document.getElementById('registerFieldBtn');
-  const fieldsDefault = document.getElementById('fieldsDefault');
-  const fieldsRegister = document.getElementById('fieldsRegister');
-  const registerFrame = document.getElementById('registerFieldFrame');
-  const backBtn = document.getElementById('backToFields');
-
-  // If elements are not yet in DOM, retry after a short delay
-  if (!registerBtn || !fieldsDefault || !fieldsRegister || !registerFrame || !backBtn) {
-    console.warn('[fields-map] elements not ready, retrying in 300ms...');
-    setTimeout(setupRegisterToggle, 300);
-    return;
-  }
-
-  console.log('[fields-map] All elements found — toggle setup ready.');
-
-  registerBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    console.log('[fields-map] Register button clicked');
-    registerFrame.src = '../../frontend/Handler/Register-field.html';
-    fieldsDefault.classList.add('hidden');
-    fieldsRegister.classList.remove('hidden');
-  });
-
-  backBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    console.log('[fields-map] Back button clicked');
-    fieldsRegister.classList.add('hidden');
-    fieldsDefault.classList.remove('hidden');
-    registerFrame.src = '';
-
-    setTimeout(() => {
-      if (window.fieldsMap && typeof window.fieldsMap.invalidateSize === 'function') {
-        window.fieldsMap.invalidateSize();
-        console.log('[fields-map] map.invalidateSize() called');
-      }
-    }, 300);
-  });
+function getWeatherDescription(code) {
+  const map = {
+    0: "Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing Rime Fog",
+    51: "Light Drizzle", 53: "Drizzle", 55: "Dense Drizzle",
+    61: "Slight Rain", 63: "Moderate Rain", 65: "Heavy Rain",
+    71: "Slight Snowfall", 73: "Moderate Snow", 75: "Heavy Snow",
+    95: "Thunderstorm", 96: "Thunderstorm w/ Hail", 99: "Severe Thunderstorm"
+  };
+  return map[code] || "Unknown";
+}
+function getWeatherIconUrl(code) {
+  if ([0,1].includes(code)) return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
+  if ([2,3].includes(code)) return "https://cdn-icons-png.flaticon.com/512/1163/1163661.png";
+  if ([45,48].includes(code)) return "https://cdn-icons-png.flaticon.com/512/4005/4005901.png";
+  if ([61,63,65].includes(code)) return "https://cdn-icons-png.flaticon.com/512/3313/3313888.png";
+  if ([95,96,99].includes(code)) return "https://cdn-icons-png.flaticon.com/512/1779/1779940.png";
+  return "https://cdn-icons-png.flaticon.com/512/869/869869.png";
 }
 
-// Run after everything is loaded
-window.addEventListener('load', setupRegisterToggle);

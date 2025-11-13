@@ -1,4 +1,146 @@
 <style>
+/* ============ FIELD DETAILS MODAL LAYOUT ============ */
+#fieldDetailsModal section {
+  scrollbar-gutter: stable;
+}
+
+/* Desktop / large screens */
+#fieldDetailsModal .modal-content {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+/* --- MOBILE / SMALL SCREEN FIX --- */
+@media (max-width: 1024px) {
+  #fieldDetailsModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1rem;
+  }
+
+  /* Ensure both tables fit screen width */
+  #fieldDetailsModal .fd_table_card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Prevent horizontal overflow */
+  #fieldDetailsModal section {
+    width: 95%;
+    max-width: 95%;
+    margin: auto;
+    border-radius: 1rem;
+  }
+
+  /* Make sure weather + tasks + growth stack properly */
+  #fd_weather,
+  #fd_tasks_container,
+  #fd_growth_container {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Ensure uniform space on sides */
+  #fieldDetailsModal .p-6 {
+    padding: 1rem;
+  }
+
+  /* Adjust close button area */
+  #fieldDetailsModal footer {
+    padding: 1rem;
+  }
+}
+
+/* Weather Card Styling */
+#fd_weather {
+  background: linear-gradient(135deg, #e8f5e9, #ffffff);
+  border: 1px solid var(--cane-200);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+#fd_weather:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* Month + Week + View Selectors (unified design) */
+#fd_month_selector,
+#fd_week_selector,
+#fd_view_toggle {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background-color: white;
+  color: #333;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+#fd_month_selector:hover,
+#fd_week_selector:hover,
+#fd_view_toggle:hover {
+  border-color: var(--cane-500);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* Card Design */
+.fd_table_card {
+  background: #fff;
+  border: 1px solid var(--cane-200);
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.fd_table_card h3 {
+  font-weight: 600;
+  color: var(--cane-900);
+}
+
+#fd_address {
+  color: var(--cane-500);
+  font-size: 0.800rem;
+}
+
+#fd_address i {
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+#fd_address:hover i {
+  transform: scale(1.15);
+  color: var(--cane-700);
+}
+
+#fd_week_display {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Close Button */
+#fd_close_btn {
+  background: var(--cane-700);
+  color: white;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 128, 0, 0.2);
+  transition: all 0.25s ease;
+}
+#fd_close_btn:hover {
+  background: var(--cane-800);
+  box-shadow: 0 6px 16px rgba(0, 128, 0, 0.25);
+}
+
+/* Weather Icon */
+.weather-icon {
+  width: 48px;
+  height: 48px;
+}
+
+  #fieldDetailsModal section { scrollbar-gutter: stable; }
+  #fieldDetailsModal .shadow-lg { box-shadow: 0 10px 30px rgba(16, 185, 129, 0.12); }
+  
   #fieldsDefault {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
@@ -212,3 +354,4 @@
 </div>
 
 
+<script type="module" src="/backend/Handler/create-task.js"></script>
