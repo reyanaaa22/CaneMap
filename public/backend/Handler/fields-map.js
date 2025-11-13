@@ -653,7 +653,7 @@ window.viewFieldDetails = async function(fieldId) {
     modal.className = 'fixed inset-0 z-[20000] flex items-center justify-center p-4';
     modal.innerHTML = `
       <div id="fieldDetailsBackdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-      <section class="relative w-full max-w-[1300px] max-h-[90vh] overflow-auto rounded-2xl bg-white shadow-xl border border-[var(--cane-200)]">
+      <section class="relative w-full max-w-[1300px] max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-xl border border-[var(--cane-200)] flex flex-col">
         <header class="flex items-start justify-between gap-4 p-6 border-b">
           <div>
           <h2 id="fd_name" class="text-2xl font-bold text-[var(--cane-900)] leading-tight">${escapeHtml(fieldName)}</h2>
@@ -675,20 +675,6 @@ window.viewFieldDetails = async function(fieldId) {
 <div class="p-6 modal-content">
   <!-- LEFT COLUMN -->
   <div class="space-y-5">
-
-    <!-- Weather Widget -->
-    <div id="fd_weather" class="rounded-lg p-5 relative">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-semibold text-[var(--cane-900)] mb-1">Weather — Ormoc City</h3>
-          <p id="fd_weather_desc" class="text-xs text-[var(--cane-700)]">Loading weather...</p>
-        </div>
-        <div class="flex flex-col items-end">
-          <img id="fd_weather_icon" class="weather-icon mb-1" src="" alt="Weather icon" />
-          <div id="fd_weather_val" class="text-lg font-semibold text-[var(--cane-800)]">—°C</div>
-        </div>
-      </div>
-    </div>
 
     <!-- Month Selector & View Toggle -->
     <div class="flex items-center justify-between">
@@ -749,6 +735,115 @@ window.viewFieldDetails = async function(fieldId) {
         </footer>
       </section>
     `;
+
+// --- New Responsive Scroll Behavior ---
+const modalStyle = document.createElement('style');
+modalStyle.textContent = `
+  /* Base modal layout */
+  #fieldDetailsModal section {
+    display: flex;
+    flex-direction: column;
+    height: 90vh;
+    overflow: hidden; /* lock global scroll */
+  }
+
+  /* Header & footer always visible */
+  #fieldDetailsModal header,
+  #fieldDetailsModal footer {
+    flex: 0 0 auto;
+    z-index: 5;
+    background: white;
+  }
+
+  /* Modal content fills available height */
+  #fieldDetailsModal .modal-content {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 20px;
+    overflow: hidden; /* hide default scroll */
+  }
+
+  /* Field tasks scrollable only on DESKTOP */
+  @media (min-width: 769px) {
+    #fieldDetailsModal #fd_tasks_container {
+      overflow-y: auto;
+      max-height: calc(90vh - 240px); /* header + other UI height */
+      padding-right: 8px;
+      padding-bottom: 24px; /* gap before footer */
+    }
+    #fieldDetailsModal .modal-content {
+      overflow: hidden;
+    }
+  }
+
+  /* MOBILE: make full body scrollable */
+  @media (max-width: 768px) {
+    #fieldDetailsModal .modal-content {
+      flex-direction: column;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 24px;
+    }
+    #fieldDetailsModal #fd_tasks_container {
+      overflow: visible;
+      max-height: none;
+    }
+  }
+
+  /* Extra spacing between Field Tasks and footer */
+  #fieldDetailsModal #fd_tasks_container {
+    margin-bottom: 16px;
+  }
+`;
+
+modalStyle.textContent += `
+  /* MOBILE FIX: keep month header, tasks header, and date row fixed */
+  @media (max-width: 768px) {
+    #fieldDetailsModal .modal-content {
+      flex-direction: column;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 24px;
+      scroll-behavior: smooth;
+    }
+
+    /* 1️⃣ Keep the "Month of November" + dropdowns fixed */
+    #fieldDetailsModal .modal-content > .space-y-5 > div:first-child {
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 30;
+    }
+
+    /* 2️⃣ Keep "Field Tasks" title + filter sticky (just below month selector) */
+    #fieldDetailsModal .fd_table_card > div:first-child {
+      position: sticky;
+      top: 48px;
+      background: white;
+      z-index: 25;
+    }
+
+    /* 3️⃣ Keep the full date-row (Mon–Sun) fixed */
+    #fieldDetailsModal #fd_tasks_container > div.overflow-x-auto {
+      position: sticky;
+      top: 90px;
+      background: white;
+      z-index: 20;
+    }
+
+    /* 4️⃣ Allow only tasks content + growth tracker to scroll */
+    #fieldDetailsModal #fd_tasks_container,
+    #fieldDetailsModal #fd_growth_container {
+      overflow: visible;
+      max-height: none;
+    }
+  }
+`;
+
+
+
+modal.appendChild(modalStyle);
+
 
   const monthSelector = modal.querySelector('#fd_month_selector');
 const weekSelector = modal.querySelector('#fd_week_selector');
@@ -828,13 +923,69 @@ function renderTasksForWeek(tasks = [], monthIndex = (new Date()).getMonth(), we
       const time = it.scheduled_at ? (it.scheduled_at.toDate ? it.scheduled_at.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : new Date(it.scheduled_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})) : '';
       const status = (it.status || 'todo').toLowerCase();
       const statusBadge = status === 'done' ? '<span class="px-2 py-0.5 rounded text-xs">Done</span>' : (status === 'pending' ? '<span class="px-2 py-0.5 rounded text-xs">Pending</span>' : '<span class="px-2 py-0.5 rounded text-xs">To Do</span>');
-      return `<div class="mb-2 p-2 rounded border border-gray-100"><div class="text-sm font-semibold">${escapeHtml(title)}</div><div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div></div>`;
+      return `<div class="fd_task_item mb-2 p-2 rounded border border-gray-100">
+  <div class="text-sm font-semibold">${escapeHtml(title)}</div>
+  <div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div>
+</div>
+`;
     }).join('');
     return `<div class="min-w-[140px] flex-shrink-0"><div class="text-xs font-semibold mb-2">${escapeHtml(dayLabel)}</div>${inner || '<div class="text-xs text-[var(--cane-500)]">No tasks</div>'}</div>`;
   }).join('');
 
   return `<div class="overflow-x-auto"><div class="flex gap-4 pb-2">${cols}</div></div>`;
 }
+
+function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMobile = 5) {
+  try {
+    const tasksContainer = modalEl.querySelector('#fd_tasks_container');
+    const modalBody = modalEl.querySelector('.fd_modal_body') || modalEl.querySelector('#fd_modal_body');
+    if (!tasksContainer) return;
+
+    const firstItem = tasksContainer.querySelector('.fd_task_item');
+    if (!firstItem) {
+      setTimeout(() => adjustTasksContainerVisibleCount(modalEl, visibleDesktop, visibleMobile), 120);
+      return;
+    }
+
+    const style = window.getComputedStyle(firstItem);
+    const marginTop = parseFloat(style.marginTop || 0);
+    const marginBottom = parseFloat(style.marginBottom || 0);
+    const itemHeight = Math.ceil(firstItem.getBoundingClientRect().height + marginTop + marginBottom);
+
+    const isDesktop = window.matchMedia('(min-width: 769px)').matches;
+    const visibleCount = isDesktop ? visibleDesktop : visibleMobile;
+    const maxH = (itemHeight * visibleCount) + 8;
+
+    // Desktop: only task list scrolls
+    if (isDesktop) {
+      tasksContainer.style.overflowY = 'auto';
+      tasksContainer.style.maxHeight = `${maxH}px`;
+      tasksContainer.style.paddingRight = '8px';
+      tasksContainer.style.webkitOverflowScrolling = '';
+      if (modalBody) {
+        modalBody.style.overflowY = 'visible';
+        modalBody.style.maxHeight = '';
+      }
+    }
+    // Mobile: entire modal body scrolls (tasks + growth)
+    else {
+      if (modalBody) {
+        modalBody.style.overflowY = 'auto';
+        modalBody.style.maxHeight = '75vh'; // limit height to 75% of screen
+        modalBody.style.webkitOverflowScrolling = 'touch';
+      }
+      // remove overflow from task container
+      tasksContainer.style.overflowY = 'visible';
+      tasksContainer.style.maxHeight = 'unset';
+    }
+
+  } catch (err) {
+    console.warn('adjustTasksContainerVisibleCount error', err);
+  }
+}
+
+
+// call adjust after renders (see next step where to call)
 
 // --- wire week selector changes to re-render tasks ---
 if (weekSelector) {
@@ -874,6 +1025,17 @@ monthSelector.addEventListener('change', (e) => {
 
     // Append modal
     document.body.appendChild(modal);
+
+    // update visible count on resize / orientation change
+    const resizeHandler = () => adjustTasksContainerVisibleCount(modal, 4, 5);
+    window.addEventListener('resize', resizeHandler);
+    window.addEventListener('orientationchange', resizeHandler);
+    // remove listeners when modal is removed
+    modal.addEventListener('remove', () => {
+      window.removeEventListener('resize', resizeHandler);
+      window.removeEventListener('orientationchange', resizeHandler);
+    });
+
 
     // --- Month Selector + View Toggle (placed correctly inside modal) ---
     const viewToggle = modal.querySelector('#fd_view_toggle');
@@ -1066,7 +1228,11 @@ monthSelector.addEventListener('change', (e) => {
           const time = it.scheduled_at ? (it.scheduled_at.toDate ? it.scheduled_at.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : new Date(it.scheduled_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})) : '';
           const status = (it.status || 'todo').toLowerCase();
           const statusBadge = status === 'done' ? '<span class="px-2 py-0.5 rounded text-xs">Done</span>' : (status === 'pending' ? '<span class="px-2 py-0.5 rounded text-xs">Pending</span>' : '<span class="px-2 py-0.5 rounded text-xs">To Do</span>');
-          return `<div class="mb-2 p-2 rounded border border-gray-100"><div class="text-sm font-semibold">${escapeHtml(title)}</div><div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div></div>`;
+          return `<div class="fd_task_item mb-2 p-2 rounded border border-gray-100">
+  <div class="text-sm font-semibold">${escapeHtml(title)}</div>
+  <div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div>
+</div>
+`;
         }).join('');
         return `<div class="min-w-[140px] flex-shrink-0"><div class="text-xs font-semibold mb-2">${escapeHtml(dayLabel)}</div>${inner || '<div class="text-xs text-[var(--cane-500)]">No tasks</div>'}</div>`;
       }).join('');
@@ -1121,11 +1287,14 @@ monthSelector.addEventListener('change', (e) => {
         const initMonth = parseInt(monthSelector.value, 10);
         const initWeek = parseInt(weekSelector.value, 10) || 1;
         tasksContainer.innerHTML = renderTasksForWeek(initialTasks, initMonth, initWeek, (tasksFilter?.value) || 'all');
-
+        // apply visible-limit
+        adjustTasksContainerVisibleCount(modal, 4, 5);
 
         // default render with current filter
         const currentFilter = (filterSelect?.value) || 'all';
         tasksContainer.innerHTML = renderTasksWeekly(tasks, currentFilter === 'all' ? 'all' : currentFilter);
+        // apply visible-limit again (in case different renderer used)
+        adjustTasksContainerVisibleCount(modal, 4, 5);
         growthContainer.innerHTML = renderGrowthTable(growth);
 
         // attach filter handler

@@ -78,6 +78,23 @@ async function populateDriverDropdown(modal, fieldId) {
   const dropdownList = modal.querySelector('#ct_driver_dropdown_list');
   dropdownList.innerHTML = '';
 
+  dropdownList.innerHTML = '';
+
+  const clearDiv = document.createElement('div');
+  clearDiv.className = 'px-3 py-2 text-green-500 hover:bg-gray-100 cursor-pointer font-medium transition duration-200 transform hover:scale-105';
+  clearDiv.textContent = 'Clear';
+  clearDiv.addEventListener('click', () => {
+    dropdownBtn.textContent = 'Select driver';
+    dropdownBtn.dataset.driverId = '';
+    dropdownList.classList.add('hidden');
+    
+    // Clear driver error if any
+    const driverErrorEl = modal.querySelector('#ct_driver_error');
+    driverErrorEl.textContent = '';
+    driverErrorEl.classList.add('hidden');
+  });
+  dropdownList.appendChild(clearDiv);
+
   const drivers = await fetchDriversForField(fieldId);
 
   if (drivers.length === 0) {
@@ -331,73 +348,136 @@ allWorkersCheck.addEventListener('change', () => {
   el('#ct_backdrop').addEventListener('click',(e)=>{ if(e.target.id==='ct_backdrop') modal.remove(); });
 
   // --- Save button ---
-  el('#ct_save').addEventListener('click', async ()=>{
-    modal.querySelectorAll('.ct_field_error').forEach(e=>e.remove());
-    const title = el('#ct_title').value.trim();
-    const details = el('#ct_details').value.trim();
-    const isWeek = weekCheck.checked;
-    const date = dateInput.value;
-    const workersCount = parseInt(workerInput.value,10)||0;
+el('#ct_save').addEventListener('click', async () => {
+  modal.querySelectorAll('.ct_field_error').forEach(e => e.remove());
+  const title = el('#ct_title').value.trim();
+  const details = el('#ct_details').value.trim();
+  const isWeek = weekCheck.checked;
+  const date = dateInput.value;
+  const workersCount = parseInt(workerInput.value, 10) || 0;
 
-    if(!title){ el('#ct_title').focus(); el('#ct_title').insertAdjacentHTML('afterend','<div class="ct_field_error text-xs text-red-500 mt-1">Please enter a Title.</div>'); return; }
-    if(!details){ el('#ct_details').focus(); el('#ct_details').insertAdjacentHTML('afterend','<div class="ct_field_error text-xs text-red-500 mt-1">Please enter Details.</div>'); return; }
-    const deadlineErrorEl = el('#ct_deadline_error');
+  // --- Validation ---
+  if (!title) {
+    el('#ct_title').focus();
+    el('#ct_title').insertAdjacentHTML('afterend', '<div class="ct_field_error text-xs text-red-500 mt-1">Please enter a Title.</div>');
+    return;
+  }
+  if (!details) {
+    el('#ct_details').focus();
+    el('#ct_details').insertAdjacentHTML('afterend', '<div class="ct_field_error text-xs text-red-500 mt-1">Please enter Details.</div>');
+    return;
+  }
 
-    // Clear previous error
-    deadlineErrorEl.textContent = '';
-    deadlineErrorEl.classList.add('hidden');
+  const deadlineErrorEl = el('#ct_deadline_error');
+  deadlineErrorEl.textContent = '';
+  deadlineErrorEl.classList.add('hidden');
+  if (!isWeek && !date) {
+    dateInput.focus();
+    deadlineErrorEl.textContent = 'Please set a Deadline date or check "This week".';
+    deadlineErrorEl.classList.remove('hidden');
+    return;
+  }
 
-    if(!isWeek && !date){
-        dateInput.focus();
-        deadlineErrorEl.textContent = 'Please set a Deadline date or check "This week".';
-        deadlineErrorEl.classList.remove('hidden');
-        return;
-    }
-
-    if(!assignType){ showAssignError('Please select Worker or Driver.'); return; }
-    if(assignType==='worker' && !allWorkersCheck.checked && workersCount <= 0){
-        const errorEl = el('#ct_worker_error');
-        errorEl.textContent = 'Please specify the number of workers needed.';
-        errorEl.classList.remove('hidden');
-        workerInput.focus();
-        return;
-    } else {
-        el('#ct_worker_error').textContent = '';
-        el('#ct_worker_error').classList.add('hidden');
-    }
+  if (!assignType) { showAssignError('Please select Worker or Driver.'); return; }
+  if (assignType === 'worker' && !allWorkersCheck.checked && workersCount <= 0) {
+    const errorEl = el('#ct_worker_error');
+    errorEl.textContent = 'Please specify the number of workers needed.';
+    errorEl.classList.remove('hidden');
+    workerInput.focus();
+    return;
+  }
+  if (assignType === 'driver' && !anyDriverCheck.checked && !el('#ct_driver_dropdown_btn').dataset.driverId) {
     const driverErrorEl = el('#ct_driver_error');
-    driverErrorEl.textContent = '';
-    driverErrorEl.classList.add('hidden');
+    driverErrorEl.textContent = 'Please select a driver or check "Any available driver".';
+    driverErrorEl.classList.remove('hidden');
+    return;
+  }
 
-    if(assignType==='driver' && !anyDriverCheck.checked && !el('#ct_driver_dropdown_btn').dataset.driverId){
-        driverErrorEl.textContent = 'Please select a driver or check "Any available driver".';
-        driverErrorEl.classList.remove('hidden');
-        return;
-    }
+  // --- Confirmation Modal ---
+  const confirmModal = document.createElement('div');
+  confirmModal.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+  confirmModal.innerHTML = `
+    <div class="bg-white rounded-xl p-6 max-w-[360px] w-full text-center shadow">
+      <h3 class="text-lg font-semibold mb-4">Are you sure?</h3>
+      <p class="text-sm text-gray-600 mb-6">Do you want to save this task?</p>
+      <div class="flex justify-center gap-3">
+        <button id="confirmCancel" class="px-4 py-2 rounded border hover:bg-gray-50">Cancel</button>
+        <button id="confirmOk" class="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(confirmModal);
 
-    let scheduledAt = isWeek ? Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() + ((7-new Date().getDay())%7)))) : Timestamp.fromDate(new Date(date+'T'+(timeInput.value||'00:00')+':00'));
-    if(isWeek){ const d = scheduledAt.toDate(); d.setHours(23,59,0,0); scheduledAt = Timestamp.fromDate(d); }
+  const removeConfirm = () => confirmModal.remove();
 
-    const payload = { title, details, scheduled_at:scheduledAt, created_by:currentUserId, created_at:serverTimestamp(), assign_type:assignType, status:'todo', metadata:{} };
+  confirmModal.querySelector('#confirmCancel').addEventListener('click', removeConfirm);
 
-    if(assignType==='worker'){ payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount; }
-    if(assignType==='driver'){ payload.metadata.driver = anyDriverCheck.checked ? {id:'any',fullname:'Any available driver'} : {id:el('#ct_driver_dropdown_btn').dataset.driverId, fullname:el('#ct_driver_dropdown_btn').textContent}; }
-    if(Object.keys(payload.metadata).length===0) delete payload.metadata;
+  confirmModal.querySelector('#confirmOk').addEventListener('click', async () => {
+    removeConfirm();
 
-    const saveBtn = el('#ct_save'); saveBtn.disabled=true; saveBtn.textContent='Saving...';
-    const res = await saveTaskToFirestore(fieldId,payload);
-    saveBtn.disabled=false; saveBtn.textContent='Save';
+    // --- Prepare payload ---
+    let scheduledAt = isWeek
+      ? Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() + ((7 - new Date().getDay()) % 7))))
+      : Timestamp.fromDate(new Date(date + 'T' + (timeInput.value || '00:00') + ':00'));
+    if (isWeek) { const d = scheduledAt.toDate(); d.setHours(23, 59, 0, 0); scheduledAt = Timestamp.fromDate(d); }
 
-    if(res.ok){
-      const toast = document.createElement('div');
-      toast.className='fixed right-6 bottom-6 bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-medium';
-      toast.textContent='✅ Task saved successfully!';
-      document.body.appendChild(toast);
-      setTimeout(()=>toast.remove(),2500);
+    const payload = {
+      title,
+      details,
+      scheduled_at: scheduledAt,
+      created_by: currentUserId,
+      created_at: serverTimestamp(),
+      assign_type: assignType,
+      status: 'todo',
+      metadata: {}
+    };
+
+    if (assignType === 'worker') payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount;
+    if (assignType === 'driver') payload.metadata.driver = anyDriverCheck.checked
+      ? { id: 'any', fullname: 'Any available driver' }
+      : { id: el('#ct_driver_dropdown_btn').dataset.driverId, fullname: el('#ct_driver_dropdown_btn').textContent };
+
+    if (Object.keys(payload.metadata).length === 0) delete payload.metadata;
+
+    // --- Save Task ---
+    const saveBtn = el('#ct_save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    const res = await saveTaskToFirestore(fieldId, payload);
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+
+    if (res.ok) {
+      // --- Centered Success Message ---
+      const successModal = document.createElement('div');
+      successModal.className = 'fixed inset-0 z-[24000] flex items-center justify-center';
+      successModal.innerHTML = `
+        <div class="bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg text-center animate-fadeIn">
+          Task saved successfully!
+        </div>
+      `;
+      document.body.appendChild(successModal);
+
+      // Remove after 2.5 seconds
+      setTimeout(() => successModal.remove(), 1900);
+
+      // Close the create task modal
       modal.remove();
-      document.dispatchEvent(new CustomEvent('task:created',{detail:{fieldId}}));
-    } else { alert('Save failed: '+(res.errors?.join(' | ')||'')); }
+
+      // Dispatch custom event
+      document.dispatchEvent(new CustomEvent('task:created', { detail: { fieldId } }));
+    } else {
+      alert('Save failed: ' + (res.errors?.join(' | ') || ''));
+    }
   });
+});
+
+// Close driver dropdown if clicking outside
+document.addEventListener('click', (e) => {
+  if (!dropdownBtn.contains(e.target) && !dropdownList.contains(e.target)) {
+    dropdownList.classList.add('hidden');
+  }
+});
 
   return modal;
 }
