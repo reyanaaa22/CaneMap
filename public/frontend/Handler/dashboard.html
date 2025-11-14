@@ -6,6 +6,30 @@
     <title>CaneMap - Field Handlers Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
 <script>
+  // Bind handler name in header and sidebar from localStorage (no backend changes)
+  (function(){
+    function getDisplayName(){
+      try {
+        const nick = localStorage.getItem('farmerNickname');
+        const name = localStorage.getItem('farmerName');
+        const email = localStorage.getItem('userEmail');
+        return (nick && nick.trim()) || (name && name.trim()) || (email ? email.split('@')[0] : 'Handler');
+      } catch(_) { return 'Handler'; }
+    }
+    function apply(){
+      const display = getDisplayName();
+      const headerEl = document.getElementById('topUserNameHeader');
+      if (headerEl) headerEl.textContent = display;
+      const sideEl = document.getElementById('sidebarUserName');
+      if (sideEl && sideEl.textContent && sideEl.textContent.toLowerCase().includes('loading')) sideEl.textContent = display;
+    }
+    document.addEventListener('DOMContentLoaded', apply);
+    window.addEventListener('storage', function(e){
+      if (['farmerNickname','farmerName','userEmail'].includes(e.key)) apply();
+    });
+  })();
+</script>
+<script>
     // Minimal desktop collapse logic (no impact on mobile overlay behavior)
     (function(){
         const btn = document.getElementById('handlerCollapseSidebarBtn');
@@ -396,11 +420,37 @@
  </head>
 <body class="min-h-screen bg-gray-100">
 
+    <!-- Header (aligned with Worker/SRA) -->
+    <header class="shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600));">
+        <div class="container mx-auto px-6 py-3 lg:pl-64">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4"></div>
+                <div class="text-center"></div>
+                <div class="flex items-center space-x-4">
+                    <!-- Placeholder for future header actions if needed -->
+                    <div class="relative">
+                        <button class="text-white hover:text-gray-200 transition-colors">
+                            <i class="fas fa-bell text-lg"></i>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <div class="flex items-center space-x-2 text-white">
+                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
+                                <i class="fas fa-user text-white text-sm"></i>
+                            </div>
+                            <span class="font-medium" id="topUserNameHeader">Handler</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
     <div class="flex relative">
   <!-- Sidebar (fixed overlay) -->
-  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-[#1B5E20] z-50">
+  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-gray-900 z-50">
             <!-- Profile Section -->
-            <div class="p-6 border-b border-white">
+            <div class="p-6 border-b border-white/10">
                 <div class="flex items-center justify-between mb-4">
                     <!-- Desktop collapse button -->
                     <button id="handlerCollapseSidebarBtn" class="hidden lg:inline-flex items-center justify-center text-white/80 hover:text-white p-2 rounded" title="Collapse sidebar">
@@ -536,28 +586,9 @@
 
   <main id="handlerMain" class="flex-1 px-0 lg:px-4 lg:ml-64">
         <div id="dashboard" class="content-section">
-        <!-- Top Header with Notification and Profile (styled like Worker/SRA) -->
-        <div class="flex items-center justify-between px-4 lg:px-6 py-4 mb-6 rounded-lg shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600)); color: white;">
-            <h2 class="text-2xl lg:text-3xl font-extrabold">Dashboard</h2>
-            <div class="flex items-center space-x-6 text-white">
-                <!-- Notification Bell -->
-                <div class="relative">
-                    <button id="topNotificationBell" class="relative text-white hover:text-gray-200 transition-colors">
-                        <i class="fas fa-bell text-xl"></i>
-                        <span id="topNotificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold hidden">0</span>
-                    </button>
-                </div>
-                <!-- Profile Name -->
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center shadow-md border border-white/30">
-                        <i class="fas fa-user text-white text-sm"></i>
-                    </div>
-                    <div>
-                        <p id="topUserName" class="text-sm font-semibold">Loading...</p>
-                        <p class="text-xs opacity-90">Field Handler</p>
-                    </div>
-                </div>
-            </div>
+        <!-- Page Title (simple, since global header exists) -->
+        <div class="px-4 lg:px-0 py-4 mb-2">
+            <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-900">Dashboard</h2>
         </div>
 
         <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
@@ -603,16 +634,17 @@
         <div id="dashboard-panels" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
                       <!-- Join Request panel -->
                       <div class="section-card rounded-xl p-6">
-                          <div class="mb-4 p-3 rounded-lg flex items-center justify-between" style="background-color: #E8F5E9;">
-                              <h3 class="text-lg font-bold flex items-center" style="color: var(--text-dark);">
-                                  <i class="fas fa-user-plus mr-3" style="color: var(--primary-medium);"></i>
-                                  Join Requests
+                          <div class="mb-4 p-3 rounded-lg flex items-center justify-between bg-[var(--cane-50)]">
+                              <h3 class="text-lg font-bold flex items-center text-[var(--cane-900)]">
+                                <i class="fas fa-user-plus mr-3" style="color: var(--primary-medium);"></i>
+                                Join Requests
                               </h3>
                               <button id="refreshJoinRequests" class="px-3 py-1.5 text-sm rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" title="Refresh join requests">
                                   <i class="fas fa-sync-alt mr-1"></i>Refresh
                               </button>
                           </div>
 
+                          <!-- Dynamic Container -->
                           <!-- ✅ Dynamic Container -->
                           <div id="joinRequestsList" class="space-y-3"></div>
             </div>
