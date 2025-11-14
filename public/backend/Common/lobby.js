@@ -1251,31 +1251,67 @@ const tooltipHtml = `
         frame.src = ""; // unload page
     }
 
-    // Listen for messages from Driver_Rental.html
-    window.addEventListener("message", (e) => {
+// Listen for messages from Driver_Rental.html
+window.addEventListener("message", (e) => {
     try {
         if (!e || !e.data) return;
         const t = e.data.type;
 
-        // Close/cleanup rental modal events
         if (t === "driver_rental_cancel" || t === "driver_rental_published_close" || t === "driver_rental_published") {
-        try { closeDriverRentalModal(); } catch(_) {}
-        return;
+            closeDriverRentalModal();
+            return;
         }
 
-        // Open Driver Badge page when iframe asks for it
         if (t === "open_driver_badge") {
-        try { closeDriverRentalModal(); } catch(_) {}
-        // Use an absolute path that matches your served files.
-        // Change to '/public/frontend/Driver/Driver_Badge.html' if your dev server serves the project root.
-        window.location.href = '/public/frontend/Driver/Driver_Badge.html';
-        return;
+            closeDriverRentalModal();
+            window.location.href = '/public/frontend/Driver/Driver_Badge.html';
+            return;
         }
 
-    } catch (err) {
-        console.warn('lobby.js message handler error', err);
-    }
-    });
+        if (t === "driver_rental_stopped") {
+            console.log("📌 Rental stopped – closing rental popup...");
+
+            // A) Remove iframe overlays
+            document.querySelectorAll(`
+                #popupOverlay,
+                .modal-backdrop,
+                .overlay,
+                .fixed.inset-0,
+                .bg-black,
+                .bg-opacity-40,
+                .bg-opacity-50,
+                .bg-black\\/50,
+                .bg-black\\/40,
+                .bg-black\\/60
+            `).forEach(el => el.remove());
+
+            // B) Clean up iframe
+            const iframe = document.getElementById("popupIframe");
+            if (iframe) {
+                iframe.src = "about:blank";
+                iframe.remove();
+            }
+
+            // C) Fallback internal frame cleanup
+            const fallbackFrame = document.getElementById("driverRentalFrame");
+            if (fallbackFrame) {
+                fallbackFrame.src = "";
+                fallbackFrame.remove();
+            }
+
+            // D) Close main modal wrapper (your driver rental container)
+            closeDriverRentalModal();
+
+            // E) Refresh rental button
+            try { refreshDriverRentalButton(); } catch (_) {}
+
+            console.log("✅ Rental modal closed completely.");
+        }
+
+            } catch (err) {
+                console.warn('lobby.js message handler error', err);
+            }
+        });
 
         // Initialize everything when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -1614,76 +1650,163 @@ const tooltipHtml = `
                     regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
                 }
             }
-            // --- DRIVER: Hide Register Field & Show Rental Button ---
+            
+            // ---------- DRIVER: Hide Register Field & Show Rental Button (ENHANCED) ----------
             const driverRentalBtn = document.getElementById('btnDriverRental');
-            const roleNow = (localStorage.getItem('userRole') || '').toLowerCase();
 
-            driverRentalBtn.onclick = () => {
-            // create overlay with iframe so the rental page is shown as a centered modal
+            // helper: refresh the driver rental button according to Drivers_Badge.open_for_rental
+            async function refreshDriverRentalButton() {
             try {
-                // prevent duplicates
-                if (document.getElementById('driverRentalOverlay')) return;
+                const userId = localStorage.getItem('userId');
+                if (!userId || !driverRentalBtn) return;
 
-                const overlay = document.createElement('div');
-                overlay.id = 'driverRentalOverlay';
-                overlay.style.position = 'fixed';
-                overlay.style.inset = '0';
-                overlay.style.zIndex = '12000';
-                overlay.style.display = 'flex';
-                overlay.style.alignItems = 'center';
-                overlay.style.justifyContent = 'center';
-                overlay.style.background = 'rgba(0,0,0,0.45)';
+                const { db } = await import('./firebase-config.js');
+                const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
 
-                const wrapper = document.createElement('div');
-                wrapper.style.width = '95%';
-                wrapper.style.maxWidth = '900px';
-                wrapper.style.height = '85vh';
-                wrapper.style.borderRadius = '12px';
-                wrapper.style.overflow = 'hidden';
-                wrapper.style.background = 'white';
-                wrapper.style.boxShadow = '0 10px 40px rgba(2,6,5,0.2)';
+                const badgeRef = doc(db, 'Drivers_Badge', userId);
+                const snap = await getDoc(badgeRef);
 
-                const iframe = document.createElement('iframe');
-                iframe.src = './Driver/Driver_Rental.html'; // adjust if path differs
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-                iframe.style.border = 'none';
-                iframe.loading = 'eager';
-                iframe.id = 'driverRentalIframe';
-
-                // close helper
-                function closeOverlay() {
-                if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                // re-check register button state after close (in case role changed)
-                try { /* re-run any UI-checks you already have */ checkRegisterFieldButton && checkRegisterFieldButton(); } catch(_) {}
+                // Default: hide button if not driver role or if element missing
+                if (!snap.exists()) {
+                driverRentalBtn.style.display = 'none';
+                driverRentalBtn.dataset.rentalState = 'none';
+                return;
                 }
 
-                // Listen for messages from iframe page (Driver_Rental.html)
-                function onMessage(ev) {
-                if (!ev.data) return;
-                if (ev.data.type === 'driver_rental_published' || ev.data.type === 'driver_rental_published_close') {
-                    // close overlay & refresh UI
-                    closeOverlay();
-                    window.removeEventListener('message', onMessage);
-                    // optional toast
-                    try { showToast && showToast('Your vehicle is now open for rental', 'green'); } catch(_) {}
-                }
-                if (ev.data.type === 'driver_rental_cancel') {
-                    closeOverlay();
-                    window.removeEventListener('message', onMessage);
-                }
-                }
-                window.addEventListener('message', onMessage);
+                const data = snap.data();
+                const isOpen = !!data.open_for_rental;
+                const stoppedAt = data.rental_stopped_at || null;
 
-                wrapper.appendChild(iframe);
-                overlay.appendChild(wrapper);
-                document.body.appendChild(overlay);
+                // Update visual: separate styles for Open / Stop (keeps your theme)
+                if (isOpen) {
+                driverRentalBtn.style.display = 'inline-block';
+                driverRentalBtn.innerHTML = `<span class="driver-rental-stop">Stop Rental</span>`;
+                driverRentalBtn.classList.remove('btn-open-rental'); // optional if you have classes
+                driverRentalBtn.classList.add('btn-stop-rental');
+                driverRentalBtn.dataset.rentalState = 'open';
+                driverRentalBtn.title = 'Click to stop your rental listing';
+                } else {
+                // check 30-day lockout logic (optional but recommended)
+                const MILLIS_30D = 30 * 24 * 60 * 60 * 1000;
+                let reopenAllowed = true;
+                if (stoppedAt) {
+                    try {
+                    const stoppedMs = stoppedAt.toDate ? stoppedAt.toDate().getTime() : new Date(stoppedAt).getTime();
+                    if (!isNaN(stoppedMs)) reopenAllowed = (Date.now() - stoppedMs) >= MILLIS_30D;
+                    } catch (_) { reopenAllowed = true; }
+                }
+
+                driverRentalBtn.style.display = 'inline-block';
+                driverRentalBtn.innerHTML = `<span class="driver-rental-open">Open for Rental</span>`;
+                driverRentalBtn.classList.remove('btn-stop-rental');
+                driverRentalBtn.classList.add('btn-open-rental');
+                driverRentalBtn.dataset.rentalState = reopenAllowed ? 'closed' : 'locked';
+                driverRentalBtn.title = reopenAllowed ? 'Click to open your truck(s) for rental' : 'You recently stopped a rental. Please wait 30 days.';
+                // visually disable when locked (you can refine styling)
+                if (!reopenAllowed) {
+                    driverRentalBtn.setAttribute('disabled', 'disabled');
+                    driverRentalBtn.classList.add('opacity-60','cursor-not-allowed');
+                } else {
+                    driverRentalBtn.removeAttribute('disabled');
+                    driverRentalBtn.classList.remove('opacity-60','cursor-not-allowed');
+                }
+                }
             } catch (err) {
-                console.error('Failed to open Driver Rental modal:', err);
-                // fallback: navigate
-                window.location.href = './Driver/Driver_Rental.html';
+                console.error('refreshDriverRentalButton failed', err);
             }
-            };
+            }
+
+            // helper to open the rental iframe modal. mode: 'open' | 'stop'
+            function openDriverRentalIframe(mode = 'open') {
+            // reuse your existing overlay + iframe creation (keep consistent with file)
+            // The file creates an overlay and iframe; we will reuse the same IDs if present:
+            const wrapper = document.getElementById('driverRentalModalWrapper') || document.getElementById('popupOverlay') || null;
+            const frame = document.getElementById('driverRentalFrame') || document.getElementById('popupIframe') || null;
+
+            // If your project creates the overlay dynamically, fall back to the existing function
+            if (typeof openDriverRentalModal === 'function') {
+                // set src then open overlay; if stop mode, we will postMessage after load
+                const src = "../Driver/Driver_Rental.html";
+                const finalSrc = mode === 'stop' ? (src + '?mode=stop') : src;
+                try {
+                // If you already have a wrapper/frame, use them
+                if (frame) frame.src = finalSrc;
+                if (wrapper) { wrapper.classList.remove('hidden'); wrapper.classList.add('flex'); }
+                // If there is an existing global openDriverRentalModal, call it to ensure compatibility
+                try { openDriverRentalModal(); } catch(_) {}
+                } catch(_) {}
+            } else {
+                // fallback: create the overlay (lightweight)
+                const overlayId = 'driverRentalModalWrapper';
+                let w = document.getElementById(overlayId);
+                if (!w) {
+                w = document.createElement('div');
+                w.id = overlayId;
+                Object.assign(w.style, { position: 'fixed', inset: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 12000, background: 'rgba(0,0,0,0.45)' });
+                const f = document.createElement('iframe');
+                f.id = 'driverRentalFrame';
+                f.style.width = '920px';
+                f.style.height = '640px';
+                f.style.border = '0';
+                w.appendChild(f);
+                document.body.appendChild(w);
+                }
+                const f = document.getElementById('driverRentalFrame');
+                f.src = "../Driver/Driver_Rental.html" + (mode === 'stop' ? '?mode=stop' : '');
+                w.classList.remove('hidden'); w.classList.add('flex');
+            }
+
+            // If stop mode, when iframe loads, send it a message to open the STOP modal
+            if (mode === 'stop') {
+                const tryPost = () => {
+                const frameEl = document.getElementById('driverRentalFrame') || document.getElementById('popupIframe') || document.querySelector('iframe[src*="Driver_Rental.html"]');
+                if (!frameEl) return;
+                // When iframe content is available, postMessage to it (it will listen and call showStop())
+                frameEl.contentWindow && frameEl.contentWindow.postMessage({ type: 'show_stop_modal' }, '*');
+                };
+                // try a few times in case iframe takes time to load
+                setTimeout(tryPost, 300);
+                setTimeout(tryPost, 800);
+                setTimeout(tryPost, 1500);
+            }
+            }
+
+            // Attach click handler to header button (handles open vs stop)
+            if (driverRentalBtn) {
+            // initialize state
+            refreshDriverRentalButton();
+
+            driverRentalBtn.addEventListener('click', (ev) => {
+                ev && ev.preventDefault && ev.preventDefault();
+                const state = driverRentalBtn.dataset.rentalState;
+
+                if (state === 'open') {
+                // show STOP confirmation flow inside iframe
+                openDriverRentalIframe('stop');
+                } else if (state === 'closed') {
+                // open the normal "Open for Rental" flow
+                openDriverRentalIframe('open');
+                } else if (state === 'locked') {
+                alert('You recently stopped a rental. Please wait 30 days before opening again.');
+                } else {
+                // fallback: open the normal modal
+                openDriverRentalIframe('open');
+                }
+            });
+            }
+
+            // Refresh the button when the page regains focus (in case user changed rental state)
+            window.addEventListener('focus', () => { try { refreshDriverRentalButton(); } catch(_) {} });
+
+            // Listen for messages from iframe to refresh UI after publish/stop
+            window.addEventListener('message', (ev) => {
+            if (!ev || !ev.data) return;
+            const t = ev.data.type;
+            if (t === 'driver_rental_published' || t === 'driver_rental_stopped') {
+                // refresh the button to reflect updated Drivers_Badge
+                setTimeout(() => { try { refreshDriverRentalButton(); } catch(_) {} }, 400);
+            }
+            });
 
             // ---------------------- Real-time Pending Field menu control ----------------------
             let unsubscribeFieldWatcher = null;
