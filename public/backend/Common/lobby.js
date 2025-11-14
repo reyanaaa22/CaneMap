@@ -1235,6 +1235,48 @@ const tooltipHtml = `
         // Call this on load
         watchPendingConflicts(localStorage.getItem('userId'));
 
+        function openDriverRentalModal() {
+    const wrapper = document.getElementById('driverRentalModalWrapper');
+    const frame = document.getElementById('driverRentalFrame');
+    frame.src = "../Driver/Driver_Rental.html";
+    wrapper.classList.remove("hidden");
+    wrapper.classList.add("flex");
+}
+
+    function closeDriverRentalModal() {
+        const wrapper = document.getElementById('driverRentalModalWrapper');
+        const frame = document.getElementById('driverRentalFrame');
+        wrapper.classList.add("hidden");
+        wrapper.classList.remove("flex");
+        frame.src = ""; // unload page
+    }
+
+    // Listen for messages from Driver_Rental.html
+    window.addEventListener("message", (e) => {
+    try {
+        if (!e || !e.data) return;
+        const t = e.data.type;
+
+        // Close/cleanup rental modal events
+        if (t === "driver_rental_cancel" || t === "driver_rental_published_close" || t === "driver_rental_published") {
+        try { closeDriverRentalModal(); } catch(_) {}
+        return;
+        }
+
+        // Open Driver Badge page when iframe asks for it
+        if (t === "open_driver_badge") {
+        try { closeDriverRentalModal(); } catch(_) {}
+        // Use an absolute path that matches your served files.
+        // Change to '/public/frontend/Driver/Driver_Badge.html' if your dev server serves the project root.
+        window.location.href = '/public/frontend/Driver/Driver_Badge.html';
+        return;
+        }
+
+    } catch (err) {
+        console.warn('lobby.js message handler error', err);
+    }
+    });
+
         // Initialize everything when page loads
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => { initMap(); }, 100);
@@ -1414,13 +1456,29 @@ const tooltipHtml = `
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 4000);
                 // Also hide/show Register Field button dynamically
-                try {
-                    const regBtn = document.getElementById('btnRegisterField');
-                    if (regBtn) {
-                        if (role === 'sra') regBtn.style.display = 'none';
-                        else regBtn.style.display = '';
+            try {
+                const regBtn = document.getElementById('btnRegisterField');
+                const driverBtn = document.getElementById('btnDriverRental');
+
+                if (role === 'driver') {
+                    // driver mode
+                    if (regBtn) regBtn.style.display = 'none';
+                    if (driverBtn) {
+                        driverBtn.style.display = 'block';
+                        driverBtn.onclick = () => openDriverRentalModal();
                     }
-                } catch(_) {}
+                } 
+                else if (role === 'sra') {
+                    if (regBtn) regBtn.style.display = 'none';
+                    if (driverBtn) driverBtn.style.display = 'none';
+                }
+                else {
+                    // handler / worker / others
+                    if (regBtn) regBtn.style.display = '';
+                    if (driverBtn) driverBtn.style.display = 'none';
+                }
+
+            } catch(_) {}
                 });
             } catch (err) {
                 console.error('🔥 Error setting up live role listener:', err);
@@ -1519,6 +1577,28 @@ const tooltipHtml = `
                 }
             }
 
+            window.addEventListener('message', (ev) => {
+                if (!ev.data) return;
+
+                // When Driver_Rental.html finishes publishing
+                if (ev.data.type === 'driver_rental_published' || ev.data.type === 'driver_rental_published_close') {
+
+                    // If you want to refresh UI after publish
+                    try {
+                        checkRegisterFieldButton && checkRegisterFieldButton();
+                    } catch(_){}
+
+                    // OPTIONAL toast UI (if you have your own)
+                    try {
+                        showToast && showToast('Your vehicle is now open for rental!', 'green');
+                    } catch(_){}
+                }
+
+                // When user cancels the rental modal
+                if (ev.data.type === 'driver_rental_cancel') {
+                    console.log('Driver rental modal closed.');
+                }
+                });
             // Wire buttons to absolute paths within frontend
             const regBtn = document.getElementById('btnRegisterField');
             if (regBtn) {
@@ -1534,9 +1614,76 @@ const tooltipHtml = `
                     regBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Handler/Register-field.html'; });
                 }
             }
-            const applyBtn = document.getElementById('btnApplyDriver');
-            if (applyBtn) applyBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Driver/Driver_Badge.html'; });
+            // --- DRIVER: Hide Register Field & Show Rental Button ---
+            const driverRentalBtn = document.getElementById('btnDriverRental');
+            const roleNow = (localStorage.getItem('userRole') || '').toLowerCase();
 
+            driverRentalBtn.onclick = () => {
+            // create overlay with iframe so the rental page is shown as a centered modal
+            try {
+                // prevent duplicates
+                if (document.getElementById('driverRentalOverlay')) return;
+
+                const overlay = document.createElement('div');
+                overlay.id = 'driverRentalOverlay';
+                overlay.style.position = 'fixed';
+                overlay.style.inset = '0';
+                overlay.style.zIndex = '12000';
+                overlay.style.display = 'flex';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.background = 'rgba(0,0,0,0.45)';
+
+                const wrapper = document.createElement('div');
+                wrapper.style.width = '95%';
+                wrapper.style.maxWidth = '900px';
+                wrapper.style.height = '85vh';
+                wrapper.style.borderRadius = '12px';
+                wrapper.style.overflow = 'hidden';
+                wrapper.style.background = 'white';
+                wrapper.style.boxShadow = '0 10px 40px rgba(2,6,5,0.2)';
+
+                const iframe = document.createElement('iframe');
+                iframe.src = './Driver/Driver_Rental.html'; // adjust if path differs
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                iframe.loading = 'eager';
+                iframe.id = 'driverRentalIframe';
+
+                // close helper
+                function closeOverlay() {
+                if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                // re-check register button state after close (in case role changed)
+                try { /* re-run any UI-checks you already have */ checkRegisterFieldButton && checkRegisterFieldButton(); } catch(_) {}
+                }
+
+                // Listen for messages from iframe page (Driver_Rental.html)
+                function onMessage(ev) {
+                if (!ev.data) return;
+                if (ev.data.type === 'driver_rental_published' || ev.data.type === 'driver_rental_published_close') {
+                    // close overlay & refresh UI
+                    closeOverlay();
+                    window.removeEventListener('message', onMessage);
+                    // optional toast
+                    try { showToast && showToast('Your vehicle is now open for rental', 'green'); } catch(_) {}
+                }
+                if (ev.data.type === 'driver_rental_cancel') {
+                    closeOverlay();
+                    window.removeEventListener('message', onMessage);
+                }
+                }
+                window.addEventListener('message', onMessage);
+
+                wrapper.appendChild(iframe);
+                overlay.appendChild(wrapper);
+                document.body.appendChild(overlay);
+            } catch (err) {
+                console.error('Failed to open Driver Rental modal:', err);
+                // fallback: navigate
+                window.location.href = './Driver/Driver_Rental.html';
+            }
+            };
 
             // ---------------------- Real-time Pending Field menu control ----------------------
             let unsubscribeFieldWatcher = null;
