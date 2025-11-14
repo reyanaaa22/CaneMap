@@ -216,6 +216,18 @@ function toggleSidebar() {
     }
 }
 
+// Desktop collapse/expand (icon-only) toggle
+function toggleSidebarCollapse() {
+    const isDesktop = window.innerWidth >= 1024; // lg breakpoint
+    const body = document.body;
+    const mainWrapper = document.getElementById('mainWrapper');
+    if (!isDesktop || !mainWrapper) return;
+    const collapsing = !body.classList.contains('sidebar-collapsed');
+    body.classList.toggle('sidebar-collapsed');
+    // Adjust main content margin to match 5rem when collapsed, 16rem when expanded
+    mainWrapper.style.marginLeft = collapsing ? '5rem' : '16rem';
+}
+
 function closeSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
@@ -326,6 +338,7 @@ function setupEventListeners() {
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
     const overlay = document.getElementById('sidebarOverlay');
+    const collapseBtn = document.getElementById('collapseSidebarBtn');
     
     if (hamburgerBtn) {
         hamburgerBtn.addEventListener('click', toggleSidebar);
@@ -337,6 +350,12 @@ function setupEventListeners() {
     
     if (overlay) {
         overlay.addEventListener('click', closeSidebar);
+    }
+    if (collapseBtn) {
+        collapseBtn.addEventListener('click', function(e){
+            e.preventDefault();
+            toggleSidebarCollapse();
+        });
     }
     
     // Navigation menu
@@ -374,6 +393,11 @@ function setupEventListeners() {
     window.addEventListener('resize', function() {
         if (window.innerWidth >= 1024) {
             closeSidebar();
+            // Reset mainWrapper margin to default when resizing
+            const mainWrapper = document.getElementById('mainWrapper');
+            if (mainWrapper) {
+                mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
+            }
         }
     });
 }
@@ -386,3 +410,4 @@ window.toggleSidebar = toggleSidebar;
 window.closeSidebar = closeSidebar;
 window.showSection = showSection;
 window.toggleProfileDropdown = toggleProfileDropdown;
+window.toggleSidebarCollapse = toggleSidebarCollapse;

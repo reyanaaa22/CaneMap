@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CaneMap - Field Handlers Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+<script>
+    // Minimal desktop collapse logic (no impact on mobile overlay behavior)
+    (function(){
+        const btn = document.getElementById('handlerCollapseSidebarBtn');
+        const main = document.getElementById('handlerMain');
+        function toggleCollapse(){
+            if (!main || window.innerWidth < 1024) return;
+            const collapsing = !document.body.classList.contains('sidebar-collapsed');
+            document.body.classList.toggle('sidebar-collapsed');
+            main.style.marginLeft = collapsing ? '5rem' : '16rem';
+        }
+        if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); toggleCollapse(); });
+        window.addEventListener('resize', function(){
+            if (!main) return;
+            if (window.innerWidth >= 1024) {
+                main.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
+            }
+        });
+    })();
+</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 
@@ -354,6 +374,15 @@
             filter: brightness(0.95);
         }
 
+        /* Desktop collapsed sidebar */
+        body.sidebar-collapsed #sidebar { width: 5rem; }
+        body.sidebar-collapsed #sidebar .nav-item span { display: none; }
+        body.sidebar-collapsed #sidebar .nav-item { justify-content: center; }
+        body.sidebar-collapsed #sidebar .nav-item i { margin: 0; }
+        body.sidebar-collapsed #sidebar .space-x-3 { gap: 0; }
+        body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
+        body.sidebar-collapsed #sidebar #sidebarUserRole { display: none; }
+        body.sidebar-collapsed #sidebar .px-4.text-xs { display: none; }
     </style>
  </head>
 <body class="min-h-screen bg-gray-100">
@@ -363,6 +392,14 @@
   <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-[#1B5E20] z-50">
             <!-- Profile Section -->
             <div class="p-6 border-b border-white">
+                <div class="flex items-center justify-between mb-4">
+                    <!-- Desktop collapse button -->
+                    <button id="handlerCollapseSidebarBtn" class="hidden lg:inline-flex items-center justify-center text-white/80 hover:text-white p-2 rounded" title="Collapse sidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <!-- Mobile close placeholder kept empty to avoid layout shift -->
+                    <span class="lg:hidden"></span>
+                </div>
                 <div class="flex items-center space-x-3 mb-4">
                     <div class="w-14 h-14 bg-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md ring-2 ring-white/10">
                         <i class="fas fa-user text-white text-xl"></i>
@@ -488,7 +525,7 @@
             </div>
         </aside>
 
-  <main class="flex-1 px-0 lg:px-4 lg:ml-64">
+  <main id="handlerMain" class="flex-1 px-0 lg:px-4 lg:ml-64">
         <div id="dashboard" class="content-section">
         <!-- Top Header with Notification and Profile -->
         <div class="flex items-center justify-between px-4 lg:px-0 py-4 mb-6">

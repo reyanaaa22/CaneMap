@@ -91,6 +91,17 @@
         .sidebar-overlay {
             transition: opacity 0.3s ease-in-out;
         }
+        /* Desktop collapsed sidebar */
+        body.sidebar-collapsed #sidebar { width: 5rem; }
+        body.sidebar-collapsed #sidebar .nav-item span { display: none; }
+        body.sidebar-collapsed #sidebar .nav-item { justify-content: center; }
+        body.sidebar-collapsed #sidebar .nav-item i { margin: 0; }
+        body.sidebar-collapsed #sidebar .ml-6 { display: none; }
+        body.sidebar-collapsed #sidebar .text-xs, 
+        body.sidebar-collapsed #sidebar .text-gray-400, 
+        body.sidebar-collapsed #sidebar .text-white.font-semibold { display: none; }
+        body.sidebar-collapsed #sidebar .space-x-3 { gap: 0; }
+        body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
         
         /* FullCalendar customization */
         .fc {
@@ -286,7 +297,7 @@
     </header>
 
     <!-- Main Content with Sidebar -->
-    <div class="flex relative lg:ml-64">
+    <div id="mainWrapper" class="flex relative lg:ml-64">
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
         
@@ -294,10 +305,17 @@
         <div id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0">
             <div class="p-6">
                 <!-- Close button for mobile -->
-                <div class="flex justify-end lg:hidden mb-4">
-                    <button id="closeSidebarBtn" class="text-gray-400 hover:text-white">
-                        <i class="fas fa-times text-xl"></i>
+                <div class="flex justify-between items-center mb-4">
+                    <!-- Desktop collapse button -->
+                    <button id="collapseSidebarBtn" class="hidden lg:inline-flex items-center justify-center text-gray-300 hover:text-white p-2 rounded" title="Collapse sidebar">
+                        <i class="fas fa-bars"></i>
                     </button>
+                    <!-- Close button for mobile -->
+                    <div class="lg:hidden">
+                        <button id="closeSidebarBtn" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Worker Profile (compact) -->

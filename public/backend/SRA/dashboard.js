@@ -954,6 +954,17 @@ import { showPopupMessage } from '../Common/ui-popup.js';
             }
         }
 
+        // Desktop collapse/expand (icon-only) toggle
+        function toggleSidebarCollapse() {
+            const isDesktop = window.innerWidth >= 1024; // lg breakpoint
+            const body = document.body;
+            const main = document.getElementById('sraMain');
+            if (!isDesktop || !main) return;
+            const collapsing = !body.classList.contains('sidebar-collapsed');
+            body.classList.toggle('sidebar-collapsed');
+            main.style.marginLeft = collapsing ? '5rem' : '16rem';
+        }
+
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -970,6 +981,7 @@ import { showPopupMessage } from '../Common/ui-popup.js';
             const hamburgerBtn = document.getElementById('hamburgerBtn');
             const closeSidebarBtn = document.getElementById('closeSidebarBtn');
             const overlay = document.getElementById('sidebarOverlay');
+            const collapseBtn = document.getElementById('sraCollapseSidebarBtn');
             
             if (closeSidebarBtn) {
                 closeSidebarBtn.addEventListener('click', closeSidebar);
@@ -977,6 +989,12 @@ import { showPopupMessage } from '../Common/ui-popup.js';
             
             if (overlay) {
                 overlay.addEventListener('click', closeSidebar);
+            }
+            if (collapseBtn) {
+                collapseBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    toggleSidebarCollapse();
+                });
             }
             
             // Navigation menu
@@ -1011,6 +1029,10 @@ import { showPopupMessage } from '../Common/ui-popup.js';
             window.addEventListener('resize', function() {
                 if (window.innerWidth >= 1024) {
                     closeSidebar();
+                    const main = document.getElementById('sraMain');
+                    if (main) {
+                        main.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
+                    }
                 }
             });
 
@@ -1105,3 +1127,4 @@ import { showPopupMessage } from '../Common/ui-popup.js';
         window.showSection = showSection;
         window.toggleSidebar = toggleSidebar;
         window.closeSidebar = closeSidebar;
+        window.toggleSidebarCollapse = toggleSidebarCollapse;
