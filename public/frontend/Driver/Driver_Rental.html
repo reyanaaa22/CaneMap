@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Driver — Open for Rental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Small visual tweaks to match your app theme */
+    :root{--cane-700:#166534;--cane-800:#14532d;--cane-900:#052e16;--cane-50:#f8faf9}
+    body{background:transparent;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .card-shadow{box-shadow:0 8px 26px rgba(4,12,10,0.12)}
+    label{font-size:0.85rem;color:var(--cane-900);font-weight:600}
+    .field-note{font-size:0.82rem;color:#6b7280}
+  </style>
+</head>
+<body class="p-6 bg-[var(--cane-50)]">
+  <main class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-2xl p-6 card-shadow">
+      <header class="flex items-start justify-between gap-4">
+        <div>
+          <h1 class="text-xl font-bold text-[var(--cane-800)]">Open Your Truck(s) for Rental</h1>
+          <p class="text-sm text-[var(--cane-700)] mt-1">Fill and confirm the details below to list your vehicle as available for rental.</p>
+        </div>
+        <div class="text-sm">
+          <button id="closeBtn" class="px-3 py-1 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Close</button>
+        </div>
+      </header>
+
+      <section class="mt-5 grid grid-cols-1 gap-5">
+        <div class="bg-[var(--cane-50)] border border-[var(--cane-200)] rounded-lg p-4">
+          <p class="font-semibold text-[var(--cane-800)]">Quick question</p>
+          <p class="text-sm text-[var(--cane-700)] mt-1">Do you want to make your truck(s) available for rental? If yes, confirm the details below and tap <strong>OK, Open for Rental</strong>.</p>
+        </div>
+
+        <form id="rentalForm" class="space-y-4">
+        <div>
+            <label>Contact Number</label>
+            <input id="contactNumber" 
+                class="mt-2 block w-full rounded-lg border border-[var(--cane-200)] p-3 bg-white" />
+
+            <p class="text-xs text-gray-500 mt-1">
+                This number will be used by renters to contact you.
+            </p>
+        </div>
+        <div class="mt-4">
+            <label>Address</label>
+            <input id="address" 
+                disabled
+                class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+        </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label>Birth date</label>
+              <input id="birthDate" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+            <div>
+              <label>Vehicle type</label>
+              <input id="vehicleType" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label>Model</label>
+              <input id="vehicleModel" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+            </div>
+            <div>
+              <label>Color</label>
+              <input id="vehicleColor" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+            </div>
+            <div>
+              <label>Year</label>
+              <input id="vehicleYear" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+            </div>
+          </div>
+
+            <div class="pt-2">
+                <label class="text-sm font-semibold">Notes</label>
+
+                <p class="field-note mt-1">
+                    All fields above are pulled from your Driver Badge.
+                    <button id="editBadgeBtn"
+                            class="underline text-[var(--cane-800)] hover:text-[var(--cane-700)] ml-1">
+                        Click here to edit your profile.
+                    </button>
+                </p>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="btnOpenRental" type="button" 
+                        class="px-4 py-2 rounded-lg bg-[var(--cane-700)] 
+                            text-white font-semibold hover:bg-[var(--cane-800)] shadow">
+                    OK, Open for Rental
+                </button>
+
+                <button id="btnCancel" type="button" 
+                        class="px-4 py-2 rounded-lg border border-[var(--cane-300)] 
+                            text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
+                    Cancel
+                </button>
+            </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- Terms Modal (hidden by default) -->
+    <div id="termsModal" class="fixed inset-0 z-[12000] flex items-center justify-center bg-black/50 opacity-0 pointer-events-none transition-opacity">
+      <div class="bg-white rounded-xl max-w-2xl w-[95%] md:w-3/4 p-6 card-shadow">
+        <h3 class="text-lg font-bold text-[var(--cane-800)]">Short Terms & Privacy</h3>
+        <div class="mt-3 text-sm text-[var(--cane-700)] max-h-64 overflow-auto">
+          <p><strong>1.</strong> You acknowledge you are the owner or authorised operator of the vehicle listed.</p>
+          <p class="mt-2"><strong>2.</strong> Rental transactions, pricing, and insurance are handled outside this platform unless otherwise agreed.</p>
+          <p class="mt-2"><strong>3.</strong> You accept to keep your contact details up-to-date and to respond to rental inquiries promptly.</p>
+          <p class="mt-2"><strong>4.</strong> The platform may show your vehicle to prospective renters; you remain responsible for vetting and agreeing terms.</p>
+        </div>
+        <div class="mt-4 flex items-center space-x-3">
+          <input type="checkbox" id="agreeTerms" />
+          <label for="agreeTerms" class="text-sm text-[var(--cane-800)]">I agree to the terms above.</label>
+        </div>
+        <div class="mt-5 flex justify-end gap-3">
+          <button id="termsCancel" class="px-4 py-2 rounded-lg border">Back</button>
+          <button id="termsConfirm" class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white">Confirm & Publish</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success toast/modal -->
+    <div id="successOverlay" class="fixed inset-0 z-[13000] flex items-center justify-center bg-black/40 opacity-0 pointer-events-none transition-opacity">
+      <div class="bg-white rounded-xl p-6 text-center card-shadow max-w-sm w-[90%]">
+        <h3 class="text-lg font-bold text-[var(--cane-800)]">You're Live ✅</h3>
+        <p class="mt-2 text-sm text-[var(--cane-700)]">Your vehicle is now open for rental. Renters can contact you using the details on your profile.</p>
+        <div class="mt-4">
+          <button id="successOk" class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white">Great</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    // IMPORTANT: adjust the import path to your firebase-config.js as needed
+    import { db } from '../../backend/Common/firebase-config.js';
+    import { doc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+
+    const userId = localStorage.getItem('userId');
+    const contactEl = document.getElementById('contactNumber');
+    const addrEl = document.getElementById('address');
+    const birthEl = document.getElementById('birthDate');
+    const typeEl = document.getElementById('vehicleType');
+    const modelEl = document.getElementById('vehicleModel');
+    const colorEl = document.getElementById('vehicleColor');
+    const yearEl = document.getElementById('vehicleYear');
+
+    const btnOpen = document.getElementById('btnOpenRental');
+    const btnCancel = document.getElementById('btnCancel');
+    const closeBtn = document.getElementById('closeBtn');
+
+    const termsModal = document.getElementById('termsModal');
+    const termsConfirm = document.getElementById('termsConfirm');
+    const termsCancel = document.getElementById('termsCancel');
+    const agreeCheckbox = document.getElementById('agreeTerms');
+
+    const successOverlay = document.getElementById('successOverlay');
+    const successOk = document.getElementById('successOk');
+    const editBadgeBtn = document.getElementById("editBadgeBtn");
+
+    function showTerms(){ termsModal.classList.remove('opacity-0'); termsModal.classList.remove('pointer-events-none'); }
+    function hideTerms(){ termsModal.classList.add('opacity-0'); termsModal.classList.add('pointer-events-none'); }
+    function showSuccess(){ successOverlay.classList.remove('opacity-0'); successOverlay.classList.remove('pointer-events-none'); }
+    function hideSuccess(){ successOverlay.classList.add('opacity-0'); successOverlay.classList.add('pointer-events-none'); }
+
+    // populate from Drivers_Badge collection
+    async function populate() {
+      try {
+        if (!userId) return;
+        const ref = doc(db, 'Drivers_Badge', userId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const d = snap.data();
+        contactEl.value = d.contact_number || d.contact || '';
+        addrEl.value = d.address || '';
+        birthEl.value = d.birth_date || '';
+        typeEl.value = d.vehicle_type || d.vehicle_types || '';
+        modelEl.value = d.vehicle_model || '';
+        colorEl.value = d.vehicle_color || '';
+        yearEl.value = d.vehicle_year || '';
+      } catch (err) {
+        console.error('populate failed', err);
+      }
+    }
+
+    // open terms when user clicks OK
+    btnOpen.addEventListener('click', function(){ showTerms(); });
+    btnCancel.addEventListener('click', function(){
+      // if inside iframe and parent expects postMessage
+      try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'driver_rental_cancel' }, '*'); } catch(_){}
+      window.close && window.close();
+    });
+    closeBtn.addEventListener('click', () => { try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'driver_rental_cancel' }, '*'); } catch(_){}; window.close && window.close(); });
+
+    editBadgeBtn.addEventListener("click", () => {
+        // Tell the parent (lobby) to open Driver Badge page
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: "open_driver_badge" }, "*");
+            } else {
+                // fallback if no iframe — use absolute path so dev server resolves correctly
+                window.location.href = '/public/frontend/Driver/Driver_Badge.html';
+            }
+        } catch (err) {
+            console.error("Navigation failed", err);
+        }
+    });
+
+    termsCancel.addEventListener('click', hideTerms);
+
+    termsConfirm.addEventListener('click', async function(){
+      if (!agreeCheckbox.checked) { alert('Please agree to the terms first.'); return; }
+      try {
+        termsConfirm.disabled = true;
+        // update Drivers_Badge doc with open_for_rental flag and rental metadata
+        const ref = doc(db, 'Drivers_Badge', userId);
+        await updateDoc(ref, {
+            contact_number: contactEl.value,        
+            open_for_rental: true,                
+            rental_published_at: serverTimestamp()  
+        });
+
+        hideTerms();
+        showSuccess();
+
+        // notify parent to refresh UI (lobby) and close iframe overlay
+        try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'driver_rental_published' }, '*'); } catch(_){}
+
+      } catch (err) {
+        console.error('Failed to publish rental', err);
+        alert('Failed to publish rental. Please try again.');
+      } finally {
+        termsConfirm.disabled = false;
+      }
+    });
+
+    successOk.addEventListener('click', function(){
+      hideSuccess();
+      try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'driver_rental_published_close' }, '*'); } catch(_){}
+      // If opened as standalone tab, close
+      window.close && window.close();
+    });
+
+    // initial populate
+    populate();
+
+  </script>
+</body>
+</html>

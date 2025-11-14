@@ -603,9 +603,20 @@ header nav .flex.items-center.justify-between > .relative {
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                     <button id="btnRegisterField" class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold" onclick="window.location.href = '../Handler/Register-field.html'">
-                         + Register a Field
-                     </button>
+                <!-- Register field (existing) -->
+                <button id="btnRegisterField"
+                        class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold"
+                        onclick="window.location.href = './Handler/Register-field.html'">
+                + Register a Field
+                </button>
+
+                <!-- Driver-only: Rental button (hidden by default, will be shown for drivers) -->
+                <button id="btnDriverRental"
+                        class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold"
+                        style="display:none;"
+                        aria-hidden="true">
+                🚚 Open for Rental
+                </button>
                      <!-- Profile Dropdown -->
                      <div class="relative">
                          <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-[var(--cane-100)] transition-all duration-300">
@@ -1321,6 +1332,14 @@ header nav .flex.items-center.justify-between > .relative {
             </div>
         </div>
     </div>
+
+    <div id="driverRentalModalWrapper"
+        class="fixed inset-0 bg-black/50 z-[12000] hidden items-center justify-center">
+        <iframe id="driverRentalFrame"
+                class="w-[95%] max-w-3xl h-[85vh] bg-white rounded-xl shadow-lg"
+                src=""></iframe>
+    </div>
+
     <!-- Backend Common scripts -->
             <script type="module" src="../../backend/Common/firebase-config.js"></script>
             <!-- Load lobby.js after firebase-config; cache-bust for development -->
