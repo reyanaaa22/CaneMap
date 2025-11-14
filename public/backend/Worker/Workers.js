@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     setupEventListeners();
+    // Set initial header padding based on sidebar state
+    try { applyHeaderPadding(); } catch(_) {}
 });
 
 async function initAuthSession() {
@@ -226,6 +228,7 @@ function toggleSidebarCollapse() {
     body.classList.toggle('sidebar-collapsed');
     // Adjust main content margin to match 5rem when collapsed, 16rem when expanded
     mainWrapper.style.marginLeft = collapsing ? '5rem' : '16rem';
+    applyHeaderPadding();
 }
 
 function closeSidebar() {
@@ -264,17 +267,27 @@ function showSection(sectionId) {
     
     // Update active nav item
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('bg-[var(--cane-600)]', 'text-white');
+        item.classList.remove('bg-[var(--cane-600)]', 'bg-gray-800', 'text-white');
         item.classList.add('text-gray-300');
     });
-    
+
     const activeNavItem = document.querySelector(`[data-section="${targetId}"]`);
     if (activeNavItem) {
         activeNavItem.classList.remove('text-gray-300');
-        activeNavItem.classList.add('bg-[var(--cane-600)]', 'text-white');
+        activeNavItem.classList.add('bg-gray-800', 'text-white');
     }
     
     currentSection = targetId;
+    // Ensure layout aligns with sidebar state on desktop after section switch
+    try {
+        if (window.innerWidth >= 1024) {
+            const mainWrapper = document.getElementById('mainWrapper');
+            if (mainWrapper) {
+                mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
+            }
+            if (typeof applyHeaderPadding === 'function') applyHeaderPadding();
+        }
+    } catch(_) {}
 }
 
 // Profile dropdown functionality
@@ -327,20 +340,20 @@ async function toggleNotifications() {
 // Logout function
 async function logout() {
     try {
-        await showPopupMessage('Signing you out...', 'info', { autoClose: true, timeout: 800 });
-        try { await signOut(auth); } catch (_) {}
-        try {
-            localStorage.removeItem('userId');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('farmerName');
-            localStorage.removeItem('farmerNickname');
-            localStorage.removeItem('farmerContact');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('pendingWorker');
-            localStorage.removeItem('pendingDriver');
-        } catch(_) {}
-    } finally {
-        window.location.href = '../Common/lobby.html';
+        showWorkerToast('Logging out… Redirecting to sign-in page');
+        setTimeout(async function(){
+            const target = '/frontend/Common/farmers_login.html';
+            try { await signOut(auth); } catch (_) {}
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+            } catch(_) {}
+            try { window.location.replace(target); } catch(_) { window.location.href = target; }
+            setTimeout(function(){ try { window.location.replace(target); } catch(_) { window.location.href = target; } }, 800);
+        }, 1000);
+    } catch (_) {
+        const target = '/frontend/Common/farmers_login.html';
+        window.location.href = target;
     }
 }
 
@@ -389,6 +402,15 @@ function setupEventListeners() {
     if (profileBtn) {
         profileBtn.addEventListener('click', toggleProfileDropdown);
     }
+    // Header dropdown items
+    const goSettingsBtn = document.getElementById('workerGoSettings');
+    if (goSettingsBtn) {
+        goSettingsBtn.addEventListener('click', function(e){ e.preventDefault(); showSection('settings'); toggleProfileDropdown(); });
+    }
+    const logoutBtn = document.getElementById('workerLogoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e){ e.preventDefault(); logout(); });
+    }
     
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
@@ -411,6 +433,7 @@ function setupEventListeners() {
                 mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
             }
         }
+        applyHeaderPadding();
     });
 }
 
@@ -424,3 +447,22 @@ window.showSection = showSection;
 window.toggleProfileDropdown = toggleProfileDropdown;
 window.toggleSidebarCollapse = toggleSidebarCollapse;
 window.toggleSubmenu = toggleSubmenu;
+window.applyHeaderPadding = applyHeaderPadding;
+
+// Worker custom logout popup controls (HTML lives in Workers.html)
+function showWorkerToast(msg){
+    const overlay = document.getElementById('workerToastOverlay');
+    const card = document.getElementById('workerToastCard');
+    const msgEl = document.getElementById('workerToastMsg');
+    if (!overlay || !card) return;
+    if (msgEl) msgEl.textContent = msg || 'Logging out…';
+    overlay.classList.remove('opacity-0','invisible');
+    card.classList.remove('opacity-0','invisible','scale-95');
+    card.classList.add('opacity-100','scale-100');
+    setTimeout(function(){
+        overlay.classList.add('opacity-0');
+        card.classList.add('opacity-0','scale-95');
+        setTimeout(function(){ overlay.classList.add('invisible'); card.classList.add('invisible'); }, 180);
+    }, 1000);
+}
+window.showWorkerToast = showWorkerToast;

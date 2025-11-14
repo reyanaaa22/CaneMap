@@ -102,6 +102,16 @@
         body.sidebar-collapsed #sidebar .text-white.font-semibold { display: none; }
         body.sidebar-collapsed #sidebar .space-x-3 { gap: 0; }
         body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
+        /* Ensure content/header shift with sidebar state on desktop */
+        @media (min-width: 1024px) {
+            body:not(.sidebar-collapsed) #mainWrapper { margin-left: 16rem !important; }
+            body.sidebar-collapsed #mainWrapper { margin-left: 5rem !important; }
+            body:not(.sidebar-collapsed) #workerHeaderContainer { padding-left: 16rem !important; }
+            body.sidebar-collapsed #workerHeaderContainer { padding-left: 5rem !important; }
+            /* Also pad the main content so sections never sit under the fixed sidebar */
+            body:not(.sidebar-collapsed) #mainContent { padding-left: 0 !important; }
+            body.sidebar-collapsed #mainContent { padding-left: 0 !important; }
+        }
         
         /* FullCalendar customization */
         .fc {
@@ -238,7 +248,7 @@
 <body class="bg-gray-100 min-h-screen">
     <!-- Header -->
     <header class="shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600));">
-        <div class="container mx-auto px-6 py-3 lg:pl-64">
+        <div id="workerHeaderContainer" class="container mx-auto px-6 py-3 lg:pl-64">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4"></div>
                 <div class="text-center">
@@ -274,16 +284,16 @@
                                     <p class="text-sm font-medium text-[var(--cane-900)]" id="dropdownUserName">Worker Name</p>
                                     <p class="text-xs text-[var(--cane-600)]" id="dropdownUserType">Worker</p>
                                 </div>
-                                <a href="../Common/profile-settings.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
+                                <button id="workerGoSettings" class="flex w-full items-center px-4 py-2 text-left text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
                                     <i class="fas fa-cog mr-3 text-[var(--cane-500)]"></i>
                                     Settings
-                                </a>
+                                </button>
                                 <a href="../Common/profile-settings.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-700)] transition-colors">
                                     <i class="fas fa-user-edit mr-3 text-[var(--cane-500)]"></i>
                                     Profile Information
                                 </a>
                                 <div class="border-t border-[var(--cane-100)] mt-2">
-                                    <button onclick="logout()" class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                    <button id="workerLogoutBtn" class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                         <i class="fas fa-sign-out-alt mr-3"></i>
                                         Logout
                                     </button>
@@ -337,9 +347,6 @@
                         <i class="fas fa-gauge-high w-5 h-5"></i>
                         <span>Dashboard</span>
                     </a>
-                    <div class="ml-6 mt-2 space-y-1">
-                        <a href="#" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors" data-section="dashboard-overview">Overview</a>
-                    </div>
 
                     <!-- Fields (single link) -->
                     <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors nav-item" data-section="available-fields">
@@ -376,7 +383,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <main class="flex-1 px-4 lg:px-6 py-8">
+        <main id="mainContent" class="flex-1 px-4 lg:px-6 py-8">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
                 <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Dashboard</h2>
@@ -614,6 +621,22 @@
 
     <!-- Workers Dashboard JavaScript -->
     <script type="module" src="../../backend/Worker/Workers.js"></script>
+
+    <!-- Custom popup for logout message (Worker) -->
+    <div id="workerToastOverlay" class="fixed inset-0 bg-black/40 opacity-0 invisible transition-opacity duration-200 z-[90]"></div>
+    <div id="workerToastCard" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-xl shadow-2xl border border-[var(--cane-200)] opacity-0 scale-95 invisible transition-all duration-200 z-[100]">
+      <div class="px-5 pt-5 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow">
+            <i class="fas fa-sign-out-alt"></i>
+          </div>
+          <div>
+            <p id="workerToastMsg" class="text-[var(--cane-900)] font-semibold">Logging out…</p>
+            <p class="text-sm text-[var(--cane-700)]">Redirecting to sign-in page</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script>
       // Initialize FullCalendar instances
