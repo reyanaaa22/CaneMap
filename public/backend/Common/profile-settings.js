@@ -229,7 +229,7 @@ function init() {
     buildMissingFieldsUI(userDocCache || {});
     showSensitiveForRole(role);
     // Ensure read-only state by default; enable only when Edit is toggled
-    toggleEditMode(false);
+    toggleEditMode(true);
   });
 }
 
