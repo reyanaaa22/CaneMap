@@ -244,9 +244,20 @@ function showSection(sectionId) {
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.add('hidden');
     });
-    
-    // Show selected section
-    const selectedSection = document.getElementById(sectionId);
+
+    // Resolve to a valid section id if missing
+    let targetId = sectionId;
+    if (!document.getElementById(targetId)) {
+        const fallback = {
+            'transport': 'transport-routes',
+            'settings': 'dashboard',
+            'dashboard-overview': 'dashboard'
+        };
+        targetId = fallback[sectionId] || 'dashboard';
+    }
+
+    // Show selected (or fallback) section
+    const selectedSection = document.getElementById(targetId);
     if (selectedSection) {
         selectedSection.classList.remove('hidden');
     }
@@ -257,13 +268,13 @@ function showSection(sectionId) {
         item.classList.add('text-gray-300');
     });
     
-    const activeNavItem = document.querySelector(`[data-section="${sectionId}"]`);
+    const activeNavItem = document.querySelector(`[data-section="${targetId}"]`);
     if (activeNavItem) {
         activeNavItem.classList.remove('text-gray-300');
         activeNavItem.classList.add('bg-[var(--cane-600)]', 'text-white');
     }
     
-    currentSection = sectionId;
+    currentSection = targetId;
 }
 
 // Profile dropdown functionality
@@ -298,7 +309,8 @@ function navigateToSection(section) {
             console.log('Navigating to tasks/activity section');
             break;
         case 'joins':
-            console.log('Navigating to pending joins section');
+            showSection('activity');
+            console.log('Navigating to pending joins -> activity section');
             break;
         default:
             console.log('Unknown section:', section);
@@ -411,3 +423,4 @@ window.closeSidebar = closeSidebar;
 window.showSection = showSection;
 window.toggleProfileDropdown = toggleProfileDropdown;
 window.toggleSidebarCollapse = toggleSidebarCollapse;
+window.toggleSubmenu = toggleSubmenu;

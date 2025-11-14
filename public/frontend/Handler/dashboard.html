@@ -61,9 +61,18 @@
             --cane-800: #166534;
             --cane-900: #14532d;
         }
-        .section-card { background: var(--neutral-light); border: 1px solid var(--neutral-medium); }
-        .metric-card { background: var(--neutral-light); border: 1px solid var(--neutral-medium); }
-        .metric-card:hover { box-shadow: 0 4px 15px rgba(27,94,32,.2); transform: translateY(-1px); }
+        .section-card { 
+            background: linear-gradient(135deg, #ffffff, var(--cane-50)); 
+            border: 1px solid var(--cane-200); 
+            transition: all 0.3s ease;
+        }
+        .section-card:hover { box-shadow: 0 8px 25px rgba(94,165,0,0.15); transform: translateY(-2px); }
+        .metric-card { 
+            background: linear-gradient(135deg, #ffffff, var(--cane-50));
+            border: 1px solid var(--cane-200);
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover { box-shadow: 0 4px 15px rgba(94,165,0,0.2); transform: translateY(-1px); }
         .inner-box { background: var(--primary-light); border: 1px solid var(--neutral-medium); }
         /* Sidebar animation */
         #sidebar { transition: transform 300ms ease, opacity 300ms ease; }
@@ -527,25 +536,25 @@
 
   <main id="handlerMain" class="flex-1 px-0 lg:px-4 lg:ml-64">
         <div id="dashboard" class="content-section">
-        <!-- Top Header with Notification and Profile -->
-        <div class="flex items-center justify-between px-4 lg:px-0 py-4 mb-6">
-            <h2 class="text-3xl font-extrabold text-gray-900">Dashboard</h2>
-            <div class="flex items-center space-x-6">
+        <!-- Top Header with Notification and Profile (styled like Worker/SRA) -->
+        <div class="flex items-center justify-between px-4 lg:px-6 py-4 mb-6 rounded-lg shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600)); color: white;">
+            <h2 class="text-2xl lg:text-3xl font-extrabold">Dashboard</h2>
+            <div class="flex items-center space-x-6 text-white">
                 <!-- Notification Bell -->
                 <div class="relative">
-                    <button id="topNotificationBell" class="relative text-gray-600 hover:text-gray-900 transition-colors">
+                    <button id="topNotificationBell" class="relative text-white hover:text-gray-200 transition-colors">
                         <i class="fas fa-bell text-xl"></i>
                         <span id="topNotificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold hidden">0</span>
                     </button>
                 </div>
                 <!-- Profile Name -->
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center shadow-md">
+                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                         <i class="fas fa-user text-white text-sm"></i>
                     </div>
                     <div>
-                        <p id="topUserName" class="text-sm font-semibold text-gray-900">Loading...</p>
-                        <p class="text-xs text-gray-500">Field Handler</p>
+                        <p id="topUserName" class="text-sm font-semibold">Loading...</p>
+                        <p class="text-xs opacity-90">Field Handler</p>
                     </div>
                 </div>
             </div>
@@ -553,39 +562,39 @@
 
         <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="metric-card rounded-xl p-6" style="background-color:#E5F2C7; border-color:#D1E3AC;">
+            <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);"><i class="fas fa-map text-xl" style="color: var(--primary-medium);"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)]"><i class="fas fa-map text-white text-xl"></i></div>
                     <div>
-                        <p class="text-sm font-medium" style="color: var(--text-medium);">Total Fields</p>
-                        <p id="mFields" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
+                        <p class="text-sm font-medium text-[var(--cane-700)]">Total Fields</p>
+                        <p id="mFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6" style="background-color:#D9EEDB; border-color:#C2E0C3;">
+            <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, var(--primary-light), var(--primary-lighter));"><i class="fas fa-users text-white text-xl"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)]"><i class="fas fa-users text-white text-xl"></i></div>
                     <div>
-                        <p class="text-sm font-medium" style="color: var(--text-medium);">Active Workers</p>
-                        <p id="mWorkers" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
+                        <p class="text-sm font-medium text-[var(--cane-700)]">Active Workers</p>
+                        <p id="mWorkers" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6" style="background-color:#FFE4A8; border-color:#F3D27F;">
+            <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, var(--accent-orange), #FF9800);"><i class="fas fa-clock text-white text-xl"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-300)] to-[var(--cane-400)]"><i class="fas fa-clock text-white text-xl"></i></div>
                     <div>
-                        <p class="text-sm font-medium" style="color: var(--text-medium);">Pending Task</p>
-                        <p id="mTasks" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
+                        <p class="text-sm font-medium text-[var(--cane-700)]">Pending Task</p>
+                        <p id="mTasks" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6" style="background-color:#D6EAFB; border-color:#BFD9F4;">
+            <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB);"><i class="fas fa-user-plus text-xl" style="color: #1976D2;"></i></div>
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)]"><i class="fas fa-user-plus text-white text-xl"></i></div>
                     <div>
-                        <p class="text-sm font-medium" style="color: var(--text-medium);">Join Request</p>
-                        <p id="mRequests" class="text-2xl font-semibold" style="color: var(--text-dark);">0</p>
+                        <p class="text-sm font-medium text-[var(--cane-700)]">Join Request</p>
+                        <p id="mRequests" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
