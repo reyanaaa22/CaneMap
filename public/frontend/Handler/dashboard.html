@@ -49,6 +49,11 @@
     applyHeaderPadding();
   }
 
+  function isMenuOpen(){
+    const menu = document.getElementById('handlerHeaderMenu');
+    return menu && menu.classList.contains('opacity-100');
+  }
+
   function openMenu(open){
     const menu = document.getElementById('handlerHeaderMenu');
     if (!menu) return;
@@ -73,9 +78,16 @@
   }
 
   function doLogout(){
-    try { if (window.signOut && window.auth) window.signOut(window.auth); } catch(_) {}
-    try { localStorage.clear(); sessionStorage.clear(); } catch(_) {}
-    window.location.href = '../Common/farmers_login.html';
+    showHandlerToast('Logging out… Redirecting to sign-in page');
+    setTimeout(function(){
+      const target = '/frontend/Common/farmers_login.html';
+      try { if (window.signOut && window.auth) window.signOut(window.auth); } catch(_) {}
+      try { localStorage.clear(); sessionStorage.clear(); } catch(_) {}
+      // Use replace to avoid returning via back button
+      try { window.location.replace(target); } catch(_) { window.location.href = target; }
+      // Safety fallback force redirect
+      setTimeout(function(){ try { window.location.replace(target); } catch(_) { window.location.href = target; } }, 800);
+    }, 1100);
   }
 
   document.addEventListener('DOMContentLoaded', function(){
@@ -87,7 +99,9 @@
     const menuBtn = document.getElementById('handlerHeaderMenuBtn');
     const goSettingsBtn = document.getElementById('handlerGoSettings');
     const logoutBtn = document.getElementById('handlerLogout');
-    if (menuBtn) menuBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openMenu(true); });
+    const menuEl = document.getElementById('handlerHeaderMenu');
+    if (menuEl) menuEl.addEventListener('click', function(e){ e.stopPropagation(); });
+    if (menuBtn) menuBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openMenu(!isMenuOpen()); });
     if (goSettingsBtn) goSettingsBtn.addEventListener('click', function(e){ e.preventDefault(); goSettingsNav(); });
     if (logoutBtn) logoutBtn.addEventListener('click', function(e){ e.preventDefault(); doLogout(); });
     // Close on outside click
@@ -104,6 +118,41 @@
     applyHeaderPadding();
   });
 })();
+</script>
+
+<!-- Custom popup for logout message -->
+<div id="handlerToastOverlay" class="fixed inset-0 bg-black/40 opacity-0 invisible transition-opacity duration-200 z-[90]"></div>
+<div id="handlerToastCard" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-xl shadow-2xl border border-[var(--cane-200)] opacity-0 scale-95 invisible transition-all duration-200 z-[100]">
+  <div class="px-5 pt-5 pb-4">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow">
+        <i class="fas fa-sign-out-alt"></i>
+      </div>
+      <div>
+        <p id="handlerToastMsg" class="text-[var(--cane-900)] font-semibold">Logging out…</p>
+        <p class="text-sm text-[var(--cane-700)]">Redirecting to sign-in page</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showHandlerToast(msg){
+    var overlay = document.getElementById('handlerToastOverlay');
+    var card = document.getElementById('handlerToastCard');
+    var msgEl = document.getElementById('handlerToastMsg');
+    if (!overlay || !card) return;
+    if (msgEl) msgEl.textContent = msg || 'Logging out…';
+    overlay.classList.remove('opacity-0','invisible');
+    card.classList.remove('opacity-0','invisible','scale-95');
+    card.classList.add('opacity-100','scale-100');
+    // Auto-hide after a second; do not re-hide overlay if redirect happens
+    setTimeout(function(){
+      overlay.classList.add('opacity-0');
+      card.classList.add('opacity-0','scale-95');
+      setTimeout(function(){ overlay.classList.add('invisible'); card.classList.add('invisible'); }, 180);
+    }, 1000);
+  }
 </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -496,7 +545,7 @@
                             <span class="font-medium" id="topUserNameHeader">Handler</span>
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
-                        <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right">
+                        <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right z-50">
                             <button id="handlerGoSettings" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</button>
                             <button id="handlerLogout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
                         </div>
