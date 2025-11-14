@@ -97,11 +97,13 @@
 
     // Header dropdown bindings
     const menuBtn = document.getElementById('handlerHeaderMenuBtn');
+    const goProfileBtn = document.getElementById('handlerGoProfile');
     const goSettingsBtn = document.getElementById('handlerGoSettings');
     const logoutBtn = document.getElementById('handlerLogout');
     const menuEl = document.getElementById('handlerHeaderMenu');
     if (menuEl) menuEl.addEventListener('click', function(e){ e.stopPropagation(); });
     if (menuBtn) menuBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openMenu(!isMenuOpen()); });
+    if (goProfileBtn) goProfileBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '/frontend/Common/profile-settings.html'; });
     if (goSettingsBtn) goSettingsBtn.addEventListener('click', function(e){ e.preventDefault(); goSettingsNav(); });
     if (logoutBtn) logoutBtn.addEventListener('click', function(e){ e.preventDefault(); doLogout(); });
     // Close on outside click
@@ -546,6 +548,7 @@
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right z-50">
+                            <button id="handlerGoProfile" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile Information</button>
                             <button id="handlerGoSettings" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</button>
                             <button id="handlerLogout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
                         </div>
