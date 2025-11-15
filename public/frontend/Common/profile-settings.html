@@ -26,15 +26,15 @@
         .expandable.expanded { max-height: 1600px; opacity: 1; transform: translateY(0); }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <main class="container mx-auto px-4 py-6 md:py-8">
+<body class="min-h-screen bg-gradient-to-br from-[var(--cane-50)] via-white to-[var(--cane-100)]">
+    <main class="w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <div class="flex items-center justify-between mb-4 md:mb-6">
             <a href="/frontend/Handler/dashboard.html" class="inline-flex items-center gap-2 text-[var(--cane-800)] hover:text-[var(--cane-900)]">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span class="font-semibold">Back to Dashboard</span>
             </a>
         </div>
-        <div class="w-full max-w-5xl md:max-w-6xl mx-auto bg-white border border-[var(--cane-200)] rounded-2xl shadow-green-md p-6 sm:p-8 md:p-10">
+        <div class="w-full mx-auto bg-white/90 backdrop-blur-sm border border-[var(--cane-200)] rounded-2xl shadow-green-md p-6 sm:p-8 md:p-10">
             <div class="flex items-center justify-between mb-4">
                 <h1 class="text-2xl sm:text-3xl font-bold text-[var(--cane-950)]">Profile Information</h1>
                 <div class="flex items-center gap-2">
@@ -53,12 +53,20 @@
             </div>
 
             <!-- Read-only Profile View (default visible) -->
-            <section id="viewPanel" class="bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-6">
+            <section id="viewPanel" class="bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-6 transition-opacity duration-300">
+              <div class="flex justify-end mb-2">
+                <button id="viewUpdateBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 sm:px-4 py-2 rounded-lg">
+                  <i class="fa-solid fa-arrow-rotate-right"></i>
+                  <span>Update Profile Information</span>
+                </button>
+              </div>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Left: Photo (read-only) -->
                 <div class="flex md:block items-center md:items-start md:space-y-3">
-                  <div class="mx-auto md:mx-0">
-                    <img id="viewProfilePhoto" alt="Profile Photo" class="w-28 h-28 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-[var(--cane-50)]" src=""/>
+                  <div class="mx-auto md:mx-0 relative">
+                    <button id="viewPhotoBtn" class="rounded-full overflow-hidden border-4 border-[var(--cane-200)] shadow-md bg-[var(--cane-50)] focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                      <img id="viewProfilePhoto" alt="Profile Photo" class="w-28 h-28 rounded-full object-cover" src=""/>
+                    </button>
                   </div>
                   <p id="viewDisplayName" class="mt-2 text-base font-semibold text-[var(--cane-900)] md:mt-3 text-center md:text-left"></p>
                 </div>
@@ -104,6 +112,15 @@
                     </button>
                   </div>
                 </div>
+              </div>
+            </section>
+
+            <section id="documentsPanel" class="bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-bold text-[var(--cane-900)]">Additional Documents</h2>
+              </div>
+              <div id="documentsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="col-span-1 sm:col-span-2 text-sm text-[var(--cane-700)]">No documents uploaded.</div>
               </div>
             </section>
 
@@ -165,7 +182,7 @@
                 </div>
             </section>
 
-            <div id="editPanelWrap" class="hidden">
+            <div id="editPanelWrap" class="hidden transition-opacity duration-300">
             <section id="editPanel" class="expandable expanded bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6">
                 <h2 class="text-lg font-bold text-[var(--cane-900)] mb-4">Personal</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -173,8 +190,9 @@
                   <div class="flex md:block items-center md:items-start md:space-y-3">
                     <div class="mx-auto md:mx-0">
                       <img id="profilePhoto" alt="Profile Photo" class="w-28 h-28 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-[var(--cane-50)]" src=""/>
-                      <div class="mt-3">
-                        <button id="photoUploadBtn" class="bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 py-1.5 text-xs rounded shadow-md" title="Change photo">CHANGE PHOTO</button>
+                      <div class="mt-3 flex items-center gap-2">
+                        <button id="photoUploadBtn" class="bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 py-1.5 text-xs rounded shadow-md" title="Upload photo"><i class="fa-solid fa-upload"></i><span class="ml-1">Upload</span></button>
+                        <button id="photoCameraBtn" class="bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 py-1.5 text-xs rounded shadow-md" title="Take selfie"><i class="fa-solid fa-camera"></i><span class="ml-1">Selfie</span></button>
                       </div>
                     </div>
                     <input id="photoFileInput" type="file" accept="image/*" class="hidden" />
@@ -221,19 +239,9 @@
                     </div>
                   </div>
                 </div>
-                <div class="mt-6 p-4 bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)] rounded-xl border border-[var(--cane-200)]">
-                    <h3 class="text-sm font-bold text-[var(--cane-900)] mb-2">Change Password (optional)</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <input id="in_newpass" type="password" placeholder="New Password" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
-                        <input id="in_newpass2" type="password" placeholder="Retype New Password" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
-                    </div>
-                    <p class="text-xs text-[var(--cane-700)] mt-2">Note: Password saving is not wired yet.</p>
-                </div>
-                <div class="flex justify-end mt-4">
-                    <button id="editSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] shadow-md">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Save Changes</span>
-                    </button>
+                <div class="flex justify-between md:justify-end gap-2 mt-4">
+                    <button id="editCancelBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-800)] bg-white"><i class="fa-solid fa-xmark"></i><span>Cancel</span></button>
+                    <button id="editSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] shadow-md"><i class="fa-solid fa-floppy-disk"></i><span>Save Changes</span></button>
                 </div>
             </section>
             </div>
@@ -274,14 +282,14 @@
         function showView(){
           var v = qs('viewPanel');
           var ewrap = qs('editPanelWrap');
-          if (v) v.classList.remove('hidden');
+          if (v){ v.classList.add('opacity-0'); v.classList.remove('hidden'); requestAnimationFrame(function(){ v.classList.remove('opacity-0'); }); }
           if (ewrap) ewrap.classList.add('hidden');
         }
         function showEdit(){
           var v = qs('viewPanel');
           var ewrap = qs('editPanelWrap');
           if (v) v.classList.add('hidden');
-          if (ewrap) ewrap.classList.remove('hidden');
+          if (ewrap){ ewrap.classList.add('opacity-0'); ewrap.classList.remove('hidden'); requestAnimationFrame(function(){ ewrap.classList.remove('opacity-0'); }); }
         }
 
         document.addEventListener('DOMContentLoaded', function(){
@@ -293,6 +301,8 @@
           setTimeout(syncView, 1200);
           var btn = qs('viewEditBtn');
           if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); showEdit(); });
+          var pbtn = qs('viewPhotoBtn');
+          if (pbtn) pbtn.addEventListener('click', function(e){ e.preventDefault(); var pm = document.getElementById('photoModal'); var img = document.getElementById('photoModalImg'); var vimg = document.getElementById('viewProfilePhoto'); if (img && vimg) img.src = vimg.src; if(pm){ pm.classList.remove('hidden'); pm.classList.add('flex'); } });
         });
         // Also expose for future use if needed
         window.__profileViewSync = syncView;
@@ -335,8 +345,115 @@
         </div>
     </div>
 
+    <!-- Cancel Modal -->
+    <div id="cancelModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md border border-[var(--cane-200)]">
+            <h3 class="text-lg font-bold text-[var(--cane-900)] mb-2">Discard Changes?</h3>
+            <p class="text-sm text-[var(--cane-700)] mb-4">Unsaved changes will be lost. Continue?</p>
+            <div class="flex justify-end gap-2">
+                <button id="cancelNo" class="px-4 py-2 rounded-lg border border-[var(--cane-300)]">Stay</button>
+                <button id="cancelYes" class="px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white">Discard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Preview Modal -->
+    <div id="photoModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-4 w-full max-w-2xl border border-[var(--cane-200)]">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">Profile Photo</h3>
+                <button id="photoModalClose" class="text-[var(--cane-800)]"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <img id="photoModalImg" alt="Full Photo" class="w-full max-h-[70vh] object-contain rounded-xl" />
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-4 w-full max-w-xl border border-[var(--cane-200)]">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-bold text-[var(--cane-900)]">Take a Selfie</h3>
+                <button id="cameraClose" class="text-[var(--cane-800)]"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3">
+                <video id="cameraVideo" autoplay playsinline class="w-full rounded-xl bg-black"></video>
+                <div class="flex justify-end gap-2">
+                    <button id="cameraCapture" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg"><i class="fa-solid fa-camera"></i><span>Capture</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Profile Information Modal -->
+    <div id="updateInfoModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-2xl p-6 w-full max-w-2xl border border-[var(--cane-200)]">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-bold text-[var(--cane-900)]">Update Profile Information</h3>
+          <button id="updateModalCancelBtn" class="text-[var(--cane-800)]"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <div class="grid grid-cols-3 gap-2 items-center"><div class="text-xs text-gray-600">Full Name</div><div class="col-span-2 font-semibold" id="modal_ro_fullname">-</div></div>
+            <div class="grid grid-cols-3 gap-2 items-center"><div class="text-xs text-gray-600">Email</div><div class="col-span-2 font-semibold" id="modal_ro_email">-</div></div>
+            <div class="grid grid-cols-3 gap-2 items-center"><div class="text-xs text-gray-600">Contact</div><div class="col-span-2 font-semibold" id="modal_ro_contact">-</div></div>
+            <div class="grid grid-cols-3 gap-2 items-center"><div class="text-xs text-gray-600">Location</div><div class="col-span-2 font-semibold" id="modal_ro_location">-</div></div>
+          </div>
+          <div id="updateModalFields" class="grid grid-cols-1 gap-3"></div>
+        </div>
+        <div class="flex justify-end mt-4">
+          <button id="updateModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Update</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="../backend/Common/firebase-config.js"></script>
     <script type="module" src="../backend/Common/profile-settings.js"></script>
+    <script>
+      (function(){
+        function qs(id){ return document.getElementById(id); }
+        function openM(el){ if(!el) return; el.classList.remove('hidden'); el.classList.add('flex'); }
+        function closeM(el){ if(!el) return; el.classList.add('hidden'); el.classList.remove('flex'); }
+        function showView(){ var v=document.getElementById('viewPanel'); var e=document.getElementById('editPanelWrap'); if(v) v.classList.remove('hidden'); if(e) e.classList.add('hidden'); }
+        document.addEventListener('DOMContentLoaded', function(){
+          var closePhoto = qs('photoModalClose'); if (closePhoto) closePhoto.addEventListener('click', function(){ closeM(qs('photoModal')); });
+          var cancelBtn = qs('editCancelBtn'); if (cancelBtn) cancelBtn.addEventListener('click', function(){ openM(qs('cancelModal')); });
+          var cancelNo = qs('cancelNo'); if (cancelNo) cancelNo.addEventListener('click', function(){ closeM(qs('cancelModal')); });
+          var cancelYes = qs('cancelYes'); if (cancelYes) cancelYes.addEventListener('click', function(){ closeM(qs('cancelModal')); showView(); });
+          var camBtn = qs('photoCameraBtn'); var streamRef = null;
+          function stopStream(){ try { streamRef?.getTracks()?.forEach(function(t){ t.stop(); }); } catch(e){} }
+          if (camBtn) camBtn.addEventListener('click', async function(){
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+              streamRef = stream;
+              qs('cameraVideo').srcObject = stream;
+              openM(qs('cameraModal'));
+            } catch (e) {
+              alert('Camera access denied or unavailable');
+            }
+          });
+          var camClose = qs('cameraClose'); if (camClose) camClose.addEventListener('click', function(){ closeM(qs('cameraModal')); stopStream(); });
+          var camCap = qs('cameraCapture'); if (camCap) camCap.addEventListener('click', function(){
+            var video = qs('cameraVideo'); if (!video) return;
+            var canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 480;
+            var ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            var dataUrl = canvas.toDataURL('image/png');
+            var byteString = atob(dataUrl.split(',')[1]); var mimeString = 'image/png';
+            var ab = new ArrayBuffer(byteString.length); var ia = new Uint8Array(ab);
+            for (var i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+            var blob = new Blob([ab], { type: mimeString });
+            var file = new File([blob], 'selfie.png', { type: 'image/png' });
+            var dt = new DataTransfer(); dt.items.add(file);
+            var fileInput = qs('photoFileInput'); if (fileInput) fileInput.files = dt.files;
+            var img = qs('profilePhoto'); if (img) img.src = dataUrl;
+            closeM(qs('cameraModal')); stopStream();
+          });
+        });
+      })();
+    </script>
 </body>
 </html>
 

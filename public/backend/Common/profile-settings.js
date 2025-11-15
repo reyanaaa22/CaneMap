@@ -5,12 +5,11 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gst
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 const ui = {
-  updateBtn: document.getElementById('updateBtn'),
-  editBtn: document.getElementById('editBtn'),
-  updatePanel: document.getElementById('updatePanel'),
+  updateBtn: document.getElementById('viewUpdateBtn'),
+  viewEditBtn: document.getElementById('viewEditBtn'),
   editPanel: document.getElementById('editPanel'),
-  updateFields: document.getElementById('updateFields'),
-  updateSaveBtn: document.getElementById('updateSaveBtn'),
+  updateFields: document.getElementById('updateModalFields'),
+  updateSaveBtn: document.getElementById('updateModalSaveBtn'),
   editSaveBtn: document.getElementById('editSaveBtn'),
   ro: {
     fullname: document.getElementById('ro_fullname'),
@@ -45,6 +44,8 @@ const ui = {
   confirmNo: document.getElementById('confirmNo'),
   successModal: document.getElementById('successModal'),
   successOk: document.getElementById('successOk'),
+  updateModal: document.getElementById('updateInfoModal'),
+  updateModalCancelBtn: document.getElementById('updateModalCancelBtn'),
   verifyModal: document.getElementById('verifyModal'),
   attemptsLabel: document.getElementById('attemptsLabel'),
   verifyPassword: document.getElementById('verifyPassword'),
@@ -135,7 +136,7 @@ function buildMissingFieldsUI(data) {
   const completed = isAdditionalInfoComplete(data);
   if (data.profileCompleted || completed) {
     setUpdateButtonHidden(true);
-    if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
+    setEditEnabled(true);
     return;
   }
   const missing = [];
@@ -147,9 +148,10 @@ function buildMissingFieldsUI(data) {
   // Show Update button only when at least one required additional field is missing; otherwise hide forever
   if (missing.length === 0) {
     setUpdateButtonHidden(true);
-    if (ui.updatePanel) setExpanded(ui.updatePanel, false);
+    setEditEnabled(true);
   } else {
     setUpdateButtonHidden(false);
+    setEditEnabled(false);
   }
 }
 
@@ -228,24 +230,24 @@ function init() {
     populateEditInputs(userDocCache || {}, user);
     buildMissingFieldsUI(userDocCache || {});
     showSensitiveForRole(role);
-    // Ensure read-only state by default; enable only when Edit is toggled
-    toggleEditMode(true);
+    toggleEditMode(false);
   });
 }
 
-ui.editBtn?.addEventListener('click', () => {
+ui.viewEditBtn?.addEventListener('click', () => {
   const nowExpanded = !ui.editPanel.classList.contains('expanded');
   setExpanded(ui.editPanel, nowExpanded);
-  if (nowExpanded) setExpanded(ui.updatePanel, false);
-  // Toggle edit mode styles and controls
   toggleEditMode(nowExpanded);
 });
 
 ui.updateBtn?.addEventListener('click', () => {
-  const nowExpanded = !ui.updatePanel.classList.contains('expanded');
-  setExpanded(ui.updatePanel, nowExpanded);
-  if (nowExpanded) setExpanded(ui.editPanel, false);
+  openModal(ui.updateModal);
+  try {
+    const map = [['ro_fullname','modal_ro_fullname'],['ro_email','modal_ro_email'],['ro_contact','modal_ro_contact'],['ro_location','modal_ro_location']];
+    map.forEach(([from,to])=>{ const a=document.getElementById(from); const b=document.getElementById(to); if(a&&b) b.textContent=a.textContent||'-'; });
+  } catch(e) {}
 });
+ui.updateModalCancelBtn?.addEventListener('click', () => closeModal(ui.updateModal));
 
 ui.photo.btn?.addEventListener('click', () => ui.photo.file.click());
 ui.photo.file?.addEventListener('change', () => {
@@ -277,12 +279,12 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
   userDocCache = refreshed || userDocCache;
   populateReadOnly(userDocCache || {}, user);
   buildMissingFieldsUI(userDocCache || {});
-  setExpanded(ui.updatePanel, false);
+  closeModal(ui.updateModal);
   if (updatePayload.nickname) localStorage.setItem('farmerNickname', updatePayload.nickname);
   // Permanently hide Update button after first completion
   setUpdateButtonHidden(true);
-  if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
-  toggleEditMode(false);
+  setEditEnabled(true);
+  try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
 });
 
 ui.editSaveBtn?.addEventListener('click', async () => {
@@ -417,6 +419,17 @@ function toggleEditMode(isEditing) {
   });
   // Disable file input when not editing
   if (ui.photo && ui.photo.file) ui.photo.file.disabled = !isEditing;
+}
+
+function setEditEnabled(enabled) {
+  const btn = ui.viewEditBtn;
+  if (!btn) return;
+  btn.disabled = !enabled;
+  if (enabled) {
+    btn.classList.remove('opacity-50','cursor-not-allowed','pointer-events-none');
+  } else {
+    btn.classList.add('opacity-50','cursor-not-allowed','pointer-events-none');
+  }
 }
 
 function setUpdateButtonHidden(hidden) {
