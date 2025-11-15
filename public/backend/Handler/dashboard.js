@@ -5,6 +5,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp, orderBy, limit, onSnapshot, collectionGroup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { initializeFieldsSection } from "./fields-map.js";
+import { initializeRentDriverSection } from "./rent-driver.js";
+
 import { initializeHandlerWorkersSection } from "./worker.js";
 
 const NAME_PLACEHOLDERS = new Set([
@@ -872,7 +874,8 @@ document.addEventListener("DOMContentLoaded", () => {
     'workers': 'sections/workers.html',
     'analytics': 'sections/analytics.html',
     'reports': 'sections/reports.html',
-    'settings': 'sections/settings.html'
+    'settings': 'sections/settings.html',
+    'rentDriver': 'sections/rent-driver.html'
   };
 
   // Track loaded sections
@@ -903,6 +906,12 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
           initializeFieldsSection();
         }, 100);
+      }
+
+      // Initialize rent driver when it's loaded
+      if (sectionId === 'rentDriver') {
+          console.log('🚚 Rent Driver section loaded, initializing UI...');
+          initializeRentDriverSection();
       }
 
       if (sectionId === 'workers') {

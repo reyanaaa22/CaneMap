@@ -1,0 +1,27 @@
+<!-- sections/rent-driver.html -->
+<div class="p-6">
+  <div class="mb-4">
+    <h2 class="text-2xl font-extrabold text-[var(--cane-900)]">Rent a Driver</h2>
+    <p class="text-sm text-[var(--cane-700)] mt-1">
+      Browse drivers available for rental in Ormoc City. Click a card to view details or start renting.
+    </p>
+  </div>
+
+  <!-- Search / Filters row (optional later) -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <input id="driverSearchInput" placeholder="Search drivers or vehicle..." class="rounded-lg p-3 border border-[var(--neutral-medium)] min-w-[12rem]" />
+      <select id="vehicleFilter" class="rounded-lg p-3 border border-[var(--neutral-medium)]">
+        <option value="">All vehicle types</option>
+      </select>
+    </div>
+    <div class="text-sm text-[var(--cane-700)]"></div>
+  </div>
+
+<!-- Grid -->
+<div id="rentDriverGridMain" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+<!-- No results placeholder -->
+<div id="rentDriverEmptyMain" class="p-6 text-gray-500 hidden">No drivers available for rental in Ormoc City.</div>
+</div>
+
