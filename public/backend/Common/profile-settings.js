@@ -46,6 +46,7 @@ const ui = {
   successOk: document.getElementById('successOk'),
   updateModal: document.getElementById('updateInfoModal'),
   updateModalCancelBtn: document.getElementById('updateModalCancelBtn'),
+  updateModalCancelSecondaryBtn: document.getElementById('updateModalCancelSecondaryBtn'),
   verifyModal: document.getElementById('verifyModal'),
   attemptsLabel: document.getElementById('attemptsLabel'),
   verifyPassword: document.getElementById('verifyPassword'),
@@ -57,6 +58,49 @@ const ui = {
 let userDocCache = null;
 let role = 'worker';
 let remainingAttempts = 3;
+
+function normalizeRole(r){
+  const s = (r || '').toLowerCase();
+  switch (s) {
+    case 'field worker':
+    case 'farmer':
+    case 'worker':
+      return 'worker';
+    case 'field handler':
+    case 'handler':
+      return 'handler';
+    case 'driver':
+    case 'driver_field':
+    case 'driver-field':
+      return 'driver';
+    case 'sra':
+    case 'sra officer':
+    case 'sra_officer':
+      return 'sra';
+    case 'admin':
+    case 'system_admin':
+    case 'system admin':
+      return 'admin';
+    default:
+      return 'worker';
+  }
+}
+
+const DASHBOARD_PATH = {
+  worker: '/frontend/Worker/Workers.html',
+  handler: '/frontend/Handler/dashboard.html',
+  driver: '/frontend/Driver/Driver_Dashboard.html',
+  sra: '/frontend/SRA/SRA_Dashboard.html',
+  admin: '/frontend/System_Admin/dashboard.html'
+};
+
+function setBackLink(roleName){
+  try {
+    const a = document.getElementById('backToDashboard');
+    const p = DASHBOARD_PATH[normalizeRole(roleName)] || DASHBOARD_PATH.worker;
+    if (a) a.href = p;
+  } catch(_) {}
+}
 
 function setExpanded(element, expanded) {
   if (!element) return;
@@ -118,6 +162,26 @@ function populateReadOnly(data, user) {
   if (roAddress) roAddress.textContent = data.address || '-';
   const photoUrl = data.photoURL || user?.photoURL || '';
   ui.photo.img.src = photoUrl || `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><rect width='100%' height='100%' fill='%23ecfcca'/><g fill='%235ea500'><circle cx='64' cy='48' r='22'/><rect x='28' y='80' width='72' height='28' rx='14'/></g></svg>`)}`;
+  const v_fullname = document.getElementById('v_fullname');
+  const v_email = document.getElementById('v_email');
+  const v_contact = document.getElementById('v_contact');
+  const v_location = document.getElementById('v_location');
+  const v_nickname = document.getElementById('v_nickname');
+  const v_gender = document.getElementById('v_gender');
+  const v_birthday = document.getElementById('v_birthday');
+  const v_address = document.getElementById('v_address');
+  const v_photo = document.getElementById('viewProfilePhoto');
+  const v_dn = document.getElementById('viewDisplayName');
+  if (v_fullname) v_fullname.textContent = fullname;
+  if (v_email) v_email.textContent = email;
+  if (v_contact) v_contact.textContent = contact;
+  if (v_location) v_location.textContent = [barangay, municipality].filter(Boolean).join(', ') || '-';
+  if (v_nickname) v_nickname.textContent = data.nickname || '-';
+  if (v_gender) v_gender.textContent = data.gender || '-';
+  if (v_birthday) v_birthday.textContent = data.birthday || '-';
+  if (v_address) v_address.textContent = data.address || '-';
+  if (v_photo) v_photo.src = ui.photo.img.src;
+  if (v_dn) v_dn.textContent = fullname;
 }
 
 function populateEditInputs(data, user) {
@@ -174,8 +238,9 @@ async function ensureUserDoc(uid, base) {
 }
 
 function getRoleFromDoc(docData) {
-  if (docData?.role) return docData.role;
-  return 'worker';
+  const fromDoc = docData?.role;
+  const fromStorage = localStorage.getItem('userRole');
+  return normalizeRole(fromDoc || fromStorage || 'worker');
 }
 
 function showSensitiveForRole(roleName) {
@@ -213,9 +278,10 @@ function init() {
   let authResolved = false;
   const redirectTimerId = setTimeout(() => {
     if (!authResolved) {
-              window.location.href = '../frontend/Handler/farmers_login.html';
+             window.location.href = '/frontend/Common/farmers_login.html';
     }
   }, 2000);
+  setBackLink(localStorage.getItem('userRole'));
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -226,11 +292,13 @@ function init() {
     const docData = await fetchUserDoc(user.uid);
     userDocCache = docData || {};
     role = getRoleFromDoc(userDocCache);
+    setBackLink(role);
     populateReadOnly(userDocCache || {}, user);
     populateEditInputs(userDocCache || {}, user);
     buildMissingFieldsUI(userDocCache || {});
     showSensitiveForRole(role);
     toggleEditMode(false);
+    try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
   });
 }
 
@@ -248,13 +316,14 @@ ui.updateBtn?.addEventListener('click', () => {
   } catch(e) {}
 });
 ui.updateModalCancelBtn?.addEventListener('click', () => closeModal(ui.updateModal));
+ui.updateModalCancelSecondaryBtn?.addEventListener('click', () => closeModal(ui.updateModal));
 
 ui.photo.btn?.addEventListener('click', () => ui.photo.file.click());
 ui.photo.file?.addEventListener('change', () => {
   const f = ui.photo.file.files?.[0];
   if (f) {
     const reader = new FileReader();
-    reader.onload = e => { ui.photo.img.src = e.target.result; };
+    reader.onload = e => { ui.photo.img.src = e.target.result; const v_photo = document.getElementById('viewProfilePhoto'); if (v_photo) v_photo.src = e.target.result; };
     reader.readAsDataURL(f);
   }
 });
