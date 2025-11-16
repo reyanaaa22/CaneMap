@@ -165,20 +165,24 @@ async function loadDashboardStats() {
             console.log('⚠️ Could not load active users:', error.message);
         }
         
-        // Get failed logins today
+        // Get failed logins (sum from users.failedLoginAttempts + failed_logins collection count)
         let failedLogins = 0;
         try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const failedLoginsQuery = query(
-                collection(db, 'admin_security_logs'),
-                where('eventType', '==', 'failed_login'),
-                where('timestamp', '>=', today)
-            );
-            const failedLoginsSnapshot = await getDocs(failedLoginsQuery);
-            failedLogins = failedLoginsSnapshot.size;
-            console.log(`📊 Failed logins: ${failedLogins}`);
+            // Count failedLoginAttempts from all users
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            let userFailedAttempts = 0;
+            usersSnapshot.forEach(doc => {
+                const data = doc.data();
+                userFailedAttempts += (data.failedLoginAttempts || 0);
+            });
+
+            // Count documents in failed_logins collection (for non-existent user attempts)
+            const failedLoginsSnapshot = await getDocs(collection(db, 'failed_logins'));
+            const nonExistentUserAttempts = failedLoginsSnapshot.size;
+
+            // Total failed logins = user attempts + non-existent user attempts
+            failedLogins = userFailedAttempts + nonExistentUserAttempts;
+            console.log(`📊 Failed logins: ${failedLogins} (${userFailedAttempts} from users + ${nonExistentUserAttempts} from non-existent users)`);
         } catch (error) {
             console.log('⚠️ Could not load failed logins:', error.message);
         }

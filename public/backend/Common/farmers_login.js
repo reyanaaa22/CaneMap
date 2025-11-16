@@ -5,8 +5,8 @@ import {
   sendEmailVerification 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-import { 
-  doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp 
+import {
+  doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp, addDoc
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
@@ -269,7 +269,7 @@ async function login() {
             status: 'verified',
             createdAt: serverTimestamp(),
             lastLogin: serverTimestamp(),
-            failedLogins: 0,
+            failedLoginAttempts: 0,
             uid: user.uid
           });
           resolvedDoc = await getDoc(userRef);
@@ -285,16 +285,16 @@ async function login() {
           status: 'verified',
           createdAt: serverTimestamp(),
           lastLogin: serverTimestamp(),
-          failedLogins: 0,
+          failedLoginAttempts: 0,
           uid: user.uid
         });
         resolvedDoc = await getDoc(userRef);
       }
     } else {
-      await setDoc(userRef, { 
-        lastLogin: serverTimestamp(), 
+      await setDoc(userRef, {
+        lastLogin: serverTimestamp(),
         status: "verified",
-        failedLogins: 0 // reset failed login count
+        failedLoginAttempts: 0 // reset failed login count on successful login
       }, { merge: true });
     }
 
@@ -339,7 +339,7 @@ async function login() {
     const code = (error && error.code) || "";
 
     // ✅ Record failed login attempt if email exists
-      if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+      if (code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/user-not-found") {
         try {
           const emailKey = email.toLowerCase();
           const usersRef = collection(db, "users");
@@ -347,26 +347,33 @@ async function login() {
           const snapshot = await getDocs(q);
 
           if (!snapshot.empty) {
+            // User exists: increment failedLoginAttempts
             const userDoc = snapshot.docs[0].ref;
             const userData = snapshot.docs[0].data();
-            const failedCount = (userData.failedLogins || 0) + 1;
+            const failedCount = (userData.failedLoginAttempts || 0) + 1;
 
             await setDoc(
               userDoc,
               {
-                email: emailKey,
-                failedLogins: failedCount,
-                last_failed_login: new Date().toISOString(),
+                failedLoginAttempts: failedCount,
+                lastFailedLogin: serverTimestamp(),
               },
               { merge: true }
             );
 
             console.log(`✅ Recorded failed login for ${emailKey}. Count: ${failedCount}`);
           } else {
-            console.warn("⚠️ No user found for failed login:", emailKey);
+            // User doesn't exist: create failed_logins document
+            const failedLoginsRef = collection(db, "failed_logins");
+            await addDoc(failedLoginsRef, {
+              email: emailKey,
+              timestamp: serverTimestamp(),
+              ipAddress: "unknown" // Could be enhanced with actual IP detection
+            });
+            console.log(`✅ Recorded failed login attempt for non-existent user: ${emailKey}`);
           }
         } catch (err) {
-          console.error("Error recording last failed login:", err);
+          console.error("Error recording failed login:", err);
         }
       }
 
