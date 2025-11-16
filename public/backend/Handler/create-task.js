@@ -1,7 +1,7 @@
 // create-task.js
 import { db, auth } from '../Common/firebase-config.js';
 import {
-  collection, doc, addDoc, getDocs, query, where, orderBy, getDoc, collectionGroup, serverTimestamp, Timestamp
+  collection, doc, addDoc, updateDoc, getDocs, query, where, orderBy, getDoc, collectionGroup, serverTimestamp, Timestamp
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 
@@ -10,6 +10,17 @@ onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; });
 
 // Helper to escape html
 function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+async function updateFieldVariety(fieldId, variety) {
+  if (!variety || !currentUserId) return;
+  try {
+    const fieldRef = doc(db, 'field_applications', currentUserId, 'fields', fieldId);
+    await updateDoc(fieldRef, { sugarcane_variety: variety });
+    console.log(`Field ${fieldId} sugarcane_variety updated to ${variety}`);
+  } catch (err) {
+    console.error('Failed to update field variety:', err);
+  }
+}
 
 // Save task to Firestore (subcollection + top-level fallback)
 async function saveTaskToFirestore(fieldId, payload) {
@@ -128,6 +139,7 @@ async function populateDriverDropdown(modal, fieldId) {
   dropdownBtn.addEventListener('click', () => {
     dropdownList.classList.toggle('hidden');
   });
+  
 }
 
 // Main function to open modal
@@ -162,9 +174,72 @@ export async function openCreateTaskModal(fieldId) {
           <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
         </div>
 
+        <!-- TASK TYPE DROPDOWN -->
         <div>
-          <label class="text-xs font-semibold text-[var(--cane-700)]">Title</label>
-          <input id="ct_title" type="text" placeholder="e.g. Fertilizer application" class="w-full px-3 py-2 border rounded-md text-sm" />
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Task Type</label>
+          <select id="ct_title" 
+              class="w-full px-3 py-2 border rounded-md text-sm">
+              <option value="">Select task...</option>
+              <option value="plowing">Plowing</option>
+              <option value="harrowing">Harrowing</option>
+              <option value="furrowing">Furrowing</option>
+              <option value="planting">Planting (0 DAP)</option>
+              <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
+              <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
+              <option value="spraying">Spraying</option>
+              <option value="others">Others</option>
+          </select>
+        </div>
+
+        <!-- PLANTING → SHOW VARIETY -->
+        <div id="ct_variety_section" class="hidden mt-3">
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Sugarcane Variety</label>
+          <select id="sugarcane_variety"
+              class="form-select w-full px-3 py-2 border rounded-md text-sm">
+              <option value="">Select variety...</option>
+              <option value="PSR 07-195">PSR 07-195</option>
+              <option value="PSR 03-171">PSR 03-171</option>
+              <option value="Phil 93-1601">Phil 93-1601</option>
+              <option value="Phil 94-0913">Phil 94-0913</option>
+              <option value="Phil 92-0577">Phil 92-0577</option>
+              <option value="Phil 92-0051">Phil 92-0051</option>
+              <option value="Phil 99-1793">Phil 99-1793</option>
+              <option value="VMC 84-524">VMC 84-524</option>
+              <option value="LCP 85-384">LCP 85-384</option>
+              <option value="BZ 148">BZ 148</option>
+          </select>
+        </div>
+
+        <!-- BASAL FERTILIZER -->
+        <div id="ct_basal_section" class="hidden mt-3">
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Fertilizer Type</label>
+          <input id="basal_type" type="text" placeholder="e.g. 14-14-14" 
+                class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
+
+          <label class="text-xs font-semibold text-[var(--cane-700)] mt-2 block">Amount per Hectare</label>
+          <input id="basal_amount" type="number" placeholder="kg/ha"
+                class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
+        </div>
+
+        <!-- MAIN FERTILIZATION -->
+        <div id="ct_mainfert_section" class="hidden mt-3">
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Amount per Hectare</label>
+          <input id="mainfert_amount" type="number" placeholder="kg/ha"
+                class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
+        </div>
+
+        <!-- SPRAYING -->
+        <div id="ct_spraying_section" class="hidden mt-3">
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Spray Type</label>
+          <input id="spray_type" type="text" placeholder="e.g. Herbicide, Insecticide..."
+                class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
+        </div>
+
+        <!-- OTHERS -->
+        <div id="ct_other_section" class="hidden mt-3">
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Specify Task</label>
+          <input id="other_title" type="text" placeholder="Enter task..."
+                class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
         </div>
 
         <div>
@@ -208,6 +283,7 @@ export async function openCreateTaskModal(fieldId) {
             </div>
             <div id="ct_driver_error" class="text-xs text-red-500 mt-1 hidden"></div>
           </div>
+          
         </div>
       </div>
 
@@ -220,6 +296,47 @@ export async function openCreateTaskModal(fieldId) {
 
   document.body.appendChild(modal);
   const el = s => modal.querySelector(s);
+
+  // Extra sections
+  const varietySec = el("#ct_variety_section");
+  const varietySelect = el('#sugarcane_variety');
+  // Update Firestore immediately when sugarcane variety changes
+  varietySelect.addEventListener('change', async () => {
+    const selectedVariety = varietySelect.value;
+    if (!selectedVariety) return;
+
+    try {
+      await updateFieldVariety(fieldId, selectedVariety);
+      console.log(`Variety for field ${fieldId} set to ${selectedVariety}`);
+    } catch (err) {
+      console.error('Error updating variety:', err);
+    }
+  });
+
+  const basalSec = el("#ct_basal_section");
+  const mainfertSec = el("#ct_mainfert_section");
+  const sprayingSec = el("#ct_spraying_section");
+  const otherSec = el("#ct_other_section");
+
+  const taskTitle = el("#ct_title");
+
+  // Show/hide extra fields based on task type
+  taskTitle.addEventListener("change", () => {
+    const v = taskTitle.value;
+
+    // Hide all first
+    varietySec.classList.add("hidden");
+    basalSec.classList.add("hidden");
+    mainfertSec.classList.add("hidden");
+    sprayingSec.classList.add("hidden");
+    otherSec.classList.add("hidden");
+
+    if (v === "planting") varietySec.classList.remove("hidden");
+    if (v === "basal_fertilizer") basalSec.classList.remove("hidden");
+    if (v === "main_fertilization") mainfertSec.classList.remove("hidden");
+    if (v === "spraying") sprayingSec.classList.remove("hidden");
+    if (v === "others") otherSec.classList.remove("hidden");
+  });
 
   // --- Variables ---
   const btnWorker = el('#ct_btn_worker');
@@ -237,6 +354,7 @@ export async function openCreateTaskModal(fieldId) {
   const dropdownList = el('#ct_driver_dropdown_list');
   const driverErrorEl = el('#ct_driver_error');
 
+  
   // Clear driver error when a driver is selected from the dropdown
   dropdownList.addEventListener('click', () => {
     driverErrorEl.textContent = '';
@@ -421,16 +539,39 @@ el('#ct_save').addEventListener('click', async () => {
       : Timestamp.fromDate(new Date(date + 'T' + (timeInput.value || '00:00') + ':00'));
     if (isWeek) { const d = scheduledAt.toDate(); d.setHours(23, 59, 0, 0); scheduledAt = Timestamp.fromDate(d); }
 
-    const payload = {
-      title,
-      details,
-      scheduled_at: scheduledAt,
-      created_by: currentUserId,
-      created_at: serverTimestamp(),
-      assign_type: assignType,
-      status: 'todo',
-      metadata: {}
-    };
+  const payload = {
+    title: taskTitle.value === "others" ? el("#other_title").value : taskTitle.value,
+    details,
+    scheduled_at: scheduledAt,
+    created_by: currentUserId,
+    created_at: serverTimestamp(),
+    assign_type: assignType,
+    status: 'todo',
+    metadata: {}
+  };
+
+  // Planting
+  if (taskTitle.value === "planting") {
+    payload.metadata.variety = el("#sugarcane_variety").value;
+  }
+  
+
+  // Basal Fertilizer
+  if (taskTitle.value === "basal_fertilizer") {
+    payload.metadata.fertilizer_type = el("#basal_type").value;
+    payload.metadata.amount_per_hectare = el("#basal_amount").value;
+  }
+
+  // Main Fertilization
+  if (taskTitle.value === "main_fertilization") {
+    payload.metadata.amount_per_hectare = el("#mainfert_amount").value;
+  }
+
+  // Spraying
+  if (taskTitle.value === "spraying") {
+    payload.metadata.spray_type = el("#spray_type").value;
+  }
+
 
     if (assignType === 'worker') payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount;
     if (assignType === 'driver') payload.metadata.driver = anyDriverCheck.checked
@@ -447,6 +588,7 @@ el('#ct_save').addEventListener('click', async () => {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Save';
 
+    
     if (res.ok) {
       // --- Centered Success Message ---
       const successModal = document.createElement('div');

@@ -718,7 +718,7 @@ window.viewFieldDetails = async function(fieldId) {
 
   <!-- RIGHT COLUMN -->
   <div class="fd_table_card p-3">
-    <h3 class="text-sm font-semibold mb-2">Growth Tracker (Monthly)</h3>
+    <h3 class="text-sm font-semibold mb-2">Growth Tracker</h3>
     <div id="fd_growth_container" class="text-xs text-[var(--cane-600)]">Loading growth tracker...</div>
   </div>
 </div>
