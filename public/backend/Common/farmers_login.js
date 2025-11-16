@@ -1,8 +1,10 @@
-import { 
-  signInWithEmailAndPassword, 
-  setPersistence, 
-  browserLocalPersistence, 
-  sendEmailVerification 
+import {
+  signInWithEmailAndPassword,
+  setPersistence,
+  browserLocalPersistence,
+  sendEmailVerification,
+  signOut,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 import {
@@ -10,7 +12,39 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
-import { auth, db } from "./firebase-config.js"; 
+import { auth, db } from "./firebase-config.js";
+
+// Sign out any existing System Admin session to prevent role conflicts
+(async () => {
+  try {
+    // Wait for auth to initialize
+    await new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        unsubscribe();
+        resolve(user);
+      });
+      // Timeout after 2 seconds
+      setTimeout(() => {
+        unsubscribe();
+        resolve(null);
+      }, 2000);
+    });
+
+    if (auth.currentUser) {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (userDoc.exists() && userDoc.data().role === 'system_admin') {
+        console.log('🔒 Signing out System Admin to prevent role conflicts');
+        await signOut(auth);
+        // Clear admin session storage
+        sessionStorage.removeItem('admin_user');
+        localStorage.removeItem('admin_session');
+        console.log('✅ System Admin signed out successfully');
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ Could not check/sign out system admin:', err);
+  }
+})(); 
 
 let alertBox = document.getElementById("alertBox");
 let alertOverlay = document.getElementById("alertOverlay");
@@ -250,21 +284,21 @@ async function login() {
       // Fallback: try to find a users doc by email (some older records used random IDs)
       try {
   const usersRef = collection(db, 'users');
-  const q = query(usersRef, where('email', '==', user.email));
+  const q = query(usersRef, where('email', '==', user.email.toLowerCase()));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           // use the first matching doc
           resolvedDoc = snapshot.docs[0];
           // also copy/merge this doc into users/{uid} so future lookups are consistent
           try {
-            await setDoc(userRef, { ...resolvedDoc.data(), uid: user.uid, lastLogin: serverTimestamp(), status: 'verified' }, { merge: true });
+            await setDoc(userRef, { ...resolvedDoc.data(), uid: user.uid, email: user.email.toLowerCase(), lastLogin: serverTimestamp(), status: 'verified' }, { merge: true });
           } catch (e) { console.warn('Could not copy existing user doc into users/{uid}:', e); }
         } else {
           // No existing doc by email — create a fresh farmer doc
           await setDoc(userRef, {
             fullname: user.displayName,
             name: user.displayName,
-            email: user.email,
+            email: user.email.toLowerCase(),
             role: 'farmer',
             status: 'verified',
             createdAt: serverTimestamp(),
@@ -280,7 +314,7 @@ async function login() {
         await setDoc(userRef, {
           fullname: user.displayName,
           name: user.displayName,
-          email: user.email,
+          email: user.email.toLowerCase(),
           role: 'farmer',
           status: 'verified',
           createdAt: serverTimestamp(),
@@ -337,20 +371,27 @@ async function login() {
     } catch (error) {
     setButtonState({ loading: false, label: DEFAULT_BUTTON_TEXT, disabled: false });
     const code = (error && error.code) || "";
+    console.log(`❌ Login failed with error code: ${code}`);
 
     // ✅ Record failed login attempt if email exists
       if (code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/user-not-found") {
+        console.log(`🔍 Recording failed login for email: ${email}`);
         try {
           const emailKey = email.toLowerCase();
           const usersRef = collection(db, "users");
           const q = query(usersRef, where("email", "==", emailKey));
           const snapshot = await getDocs(q);
 
+          console.log(`📊 Users query result: ${snapshot.size} documents found`);
+
           if (!snapshot.empty) {
             // User exists: increment failedLoginAttempts
             const userDoc = snapshot.docs[0].ref;
             const userData = snapshot.docs[0].data();
-            const failedCount = (userData.failedLoginAttempts || 0) + 1;
+            const currentCount = userData.failedLoginAttempts || 0;
+            const failedCount = currentCount + 1;
+
+            console.log(`⬆️ Incrementing failed attempts from ${currentCount} to ${failedCount}`);
 
             await setDoc(
               userDoc,
@@ -364,17 +405,21 @@ async function login() {
             console.log(`✅ Recorded failed login for ${emailKey}. Count: ${failedCount}`);
           } else {
             // User doesn't exist: create failed_logins document
+            console.log(`👤 User not found in database, creating failed_logins document`);
             const failedLoginsRef = collection(db, "failed_logins");
-            await addDoc(failedLoginsRef, {
+            const docRef = await addDoc(failedLoginsRef, {
               email: emailKey,
               timestamp: serverTimestamp(),
               ipAddress: "unknown" // Could be enhanced with actual IP detection
             });
-            console.log(`✅ Recorded failed login attempt for non-existent user: ${emailKey}`);
+            console.log(`✅ Recorded failed login attempt for non-existent user: ${emailKey}, doc ID: ${docRef.id}`);
           }
         } catch (err) {
-          console.error("Error recording failed login:", err);
+          console.error("❌ Error recording failed login:", err);
+          console.error("Error details:", err.message, err.code);
         }
+      } else {
+        console.log(`⚠️ Error code ${code} not tracked for failed login attempts`);
       }
 
       // --- Friendly error messages ---

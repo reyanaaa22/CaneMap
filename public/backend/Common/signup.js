@@ -183,7 +183,7 @@ form.addEventListener('submit', async (e) => {
       role: "farmer",
       status: "pending",
       lastLogin: null,
-      failedLogins: 0,
+      failedLoginAttempts: 0,
       createdAt: serverTimestamp()
     });
     

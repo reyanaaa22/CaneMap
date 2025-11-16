@@ -112,7 +112,7 @@ exports.createSRA = functions.https.onRequest(async (req, res) => {
       emailVerified: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       lastLogin: null,
-      failedLogins: 0,
+      failedLoginAttempts: 0,
       uid: user.uid
     });
 

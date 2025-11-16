@@ -536,11 +536,11 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-center text-sm">
-                    <span class="text-green-600 font-medium">+12%</span>
+                    <span id="totalUsersGrowth" class="font-medium">+0%</span>
                     <span class="text-gray-500 ml-2">from last month</span>
                 </div>
             </div>
-            
+
                     <!-- Active Users -->
                     <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
                         <div class="flex items-center justify-between">
@@ -553,11 +553,11 @@
                             </div>
                         </div>
                         <div class="mt-4 flex items-center text-sm">
-                            <span class="text-green-600 font-medium">+8%</span>
+                            <span id="activeUsersGrowth" class="font-medium">+0%</span>
                             <span class="text-gray-500 ml-2">from last month</span>
                         </div>
                     </div>
-            
+
             <!-- Failed Logins -->
             <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
                 <div class="flex items-center justify-between">
@@ -570,11 +570,11 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-center text-sm">
-                    <span class="text-red-600 font-medium">+3</span>
+                    <span id="failedLoginsToday" class="text-red-600 font-medium">+0</span>
                     <span class="text-gray-500 ml-2">today</span>
                 </div>
             </div>
-            
+
             <!-- Driver Badges -->
             <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
                 <div class="flex items-center justify-between">
@@ -587,7 +587,7 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-center text-sm">
-                    <span class="text-green-600 font-medium">+5</span>
+                    <span id="driverBadgesThisWeek" class="text-green-600 font-medium">+0</span>
                     <span class="text-gray-500 ml-2">this week</span>
                 </div>
             </div>
@@ -900,36 +900,15 @@
         function showDashboardContent() {
             // Show the main dashboard content
             const mainContent = document.querySelector('main');
-            mainContent.style.height = '100vh';
-            mainContent.style.overflow = 'hidden';
+            mainContent.style.height = 'auto';
+            mainContent.style.overflow = 'auto';
             mainContent.innerHTML = `
-                <!-- Analytics Charts Section -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
-                    <!-- User Growth Chart -->
-                    <div class="bg-white rounded-xl shadow-lg fade-in">
-                        <div class="p-6 border-b border-gray-200">
-                            <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
-                            <p class="text-sm text-gray-600">Monthly user registration trends</p>
-                        </div>
-                        <div class="p-4 h-64">
-                            <canvas id="userGrowthChart" width="400" height="200"></canvas>
-                        </div>
-                        </div>
-                        
-                    <!-- User Role Distribution Chart -->
-                    <div class="bg-white rounded-xl shadow-lg fade-in">
-                        <div class="p-6 border-b border-gray-200">
-                            <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
-                            <p class="text-sm text-gray-600">Current user roles breakdown</p>
-                        </div>
-                        <div class="p-4 h-64">
-                            <canvas id="userRoleChart" width="400" height="200"></canvas>
-                        </div>
-                    </div>
+                <!-- Dashboard Title -->
+                <div class="mb-6 mt-2">
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
                 </div>
-                
 
-                <!-- Dashboard Stats -->
+                <!-- Dashboard Stats (Top Row) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4 mb-6">
                     <!-- Total Users -->
                     <div class="bg-white rounded-xl p-6 shadow-lg fade-in">
@@ -943,11 +922,11 @@
                             </div>
                         </div>
                         <div class="mt-4 flex items-center text-sm">
-                            <span class="text-green-600 font-medium">+12%</span>
+                            <span id="totalUsersGrowth2" class="font-medium">+0%</span>
                             <span class="text-gray-500 ml-2">from last month</span>
                         </div>
                     </div>
-            
+
                     <!-- Active Users -->
                     <div class="bg-white rounded-xl p-6 card-shadow-lg fade-in border border-gray-100">
                             <div class="flex items-center justify-between">
@@ -960,11 +939,11 @@
                             </div>
                         </div>
                         <div class="mt-4 flex items-center text-sm">
-                            <span class="text-green-600 font-medium">+8%</span>
+                            <span id="activeUsersGrowth2" class="font-medium">+0%</span>
                             <span class="text-gray-500 ml-2">from last month</span>
                         </div>
                     </div>
-                    
+
                     <!-- Failed Logins -->
                     <div class="bg-white rounded-xl p-6 card-shadow-lg fade-in border border-gray-100">
                             <div class="flex items-center justify-between">
@@ -977,11 +956,11 @@
                             </div>
                         </div>
                         <div class="mt-4 flex items-center text-sm">
-                            <span class="text-red-600 font-medium">+3</span>
+                            <span id="failedLoginsToday2" class="text-red-600 font-medium">+0</span>
                             <span class="text-gray-500 ml-2">today</span>
                         </div>
                     </div>
-                    
+
                     <!-- Driver Badges -->
                     <div class="bg-white rounded-xl p-6 card-shadow-lg fade-in border border-gray-100">
                         <div class="flex items-center justify-between">
@@ -994,18 +973,63 @@
                             </div>
                         </div>
                         <div class="mt-4 flex items-center text-sm">
-                            <span class="text-green-600 font-medium">+5</span>
+                            <span id="driverBadgesThisWeek2" class="text-green-600 font-medium">+0</span>
                             <span class="text-gray-500 ml-2">this week</span>
                         </div>
                     </div>
                 </div>
 
+                <!-- Analytics Charts Section (Bottom Row) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- User Growth Chart -->
+                    <div class="bg-white rounded-xl shadow-lg fade-in">
+                        <div class="p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-gray-900">User Growth Over Time</h2>
+                            <p class="text-sm text-gray-600">New users per month</p>
+                        </div>
+                        <div class="p-4 h-64">
+                            <canvas id="userGrowthChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- User Role Distribution Chart -->
+                    <div class="bg-white rounded-xl shadow-lg fade-in">
+                        <div class="p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-gray-900">User Role Distribution</h2>
+                            <p class="text-sm text-gray-600">Current user roles breakdown</p>
+                        </div>
+                        <div class="p-4 h-64">
+                            <canvas id="userRoleChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
             `;
-            
+
             // Re-initialize the dashboard functionality
+            console.log('📊 Re-initializing dashboard after tab switch...');
+
+            // Load stats first
             if (typeof loadDashboardStats === 'function') {
-                loadDashboardStats();
+                loadDashboardStats().then(() => {
+                    console.log('✅ Dashboard stats loaded');
+                }).catch(err => {
+                    console.error('❌ Error loading dashboard stats:', err);
+                });
             }
+
+            // Then load charts (after a small delay to ensure canvas elements are in DOM)
+            setTimeout(() => {
+                if (typeof loadAnalyticsCharts === 'function') {
+                    loadAnalyticsCharts().then(() => {
+                        console.log('✅ Analytics charts loaded');
+                    }).catch(err => {
+                        console.error('❌ Error loading analytics charts:', err);
+                    });
+                } else {
+                    console.warn('⚠️ loadAnalyticsCharts function not found');
+                }
+            }, 100);
         }
         
         // Placeholder functions for other sections

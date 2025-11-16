@@ -28,10 +28,68 @@ let currentPage = 1;
 let itemsPerPage = 10;
 let filteredUsers = [];
 
+// Chart instances - track so we can destroy them when switching tabs
+let userGrowthChartInstance = null;
+let userRoleChartInstance = null;
+
+// Wait for Firebase Auth to be ready
+function waitForAuth() {
+    return new Promise((resolve) => {
+        // Check if already signed in
+        if (auth.currentUser) {
+            console.log('✅ Auth already ready:', auth.currentUser.email);
+            resolve(auth.currentUser);
+            return;
+        }
+
+        // Check sessionStorage for admin_user as fallback
+        const sessionUser = sessionStorage.getItem('admin_user');
+        if (sessionUser) {
+            console.log('📦 Found admin_user in sessionStorage, waiting for auth...');
+        }
+
+        // Wait for auth state to change
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            console.log('🔄 Auth state changed:', user ? user.email : 'null');
+            unsubscribe(); // Unsubscribe after first call
+
+            if (user) {
+                resolve(user);
+            } else {
+                // Check sessionStorage one more time
+                if (sessionUser) {
+                    console.warn('⚠️ Auth is null but sessionStorage has admin_user - auth state may not have persisted');
+                }
+                resolve(null);
+            }
+        });
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+            console.warn('⏱️ Auth wait timeout after 5 seconds');
+            unsubscribe();
+            resolve(auth.currentUser || null);
+        }, 5000);
+    });
+}
+
 // Initialize dashboard
 async function initializeDashboard() {
     try {
         console.log('🔄 Initializing dashboard...');
+
+        // WAIT for Firebase Auth to be ready
+        console.log('⏳ Waiting for Firebase Auth state...');
+        const user = await waitForAuth();
+
+        if (!user) {
+            console.error('❌ No authenticated user - redirecting to login');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        console.log('✅ Firebase Auth ready:', user.email);
+
         // DIAGNOSTIC: Log auth state and attempt to fetch user doc for debugging permission errors
         try {
             console.log('Auth object (auth.currentUser):', auth && auth.currentUser);
@@ -62,55 +120,109 @@ try {
     const adminUid = auth.currentUser.uid;
     const adminEmail = auth.currentUser.email;
 
-    const adminRef = doc(db, "users", adminUid);
-    const adminSnap = await getDoc(adminRef);
+    console.log(`🔍 Checking system admin document for UID: ${adminUid}`);
 
-    if (!adminSnap.exists()) {
-        await setDoc(adminRef, {
-            name: "CaneMap System Admin",
-            email: adminEmail,
-            role: "system_admin",
-            status: "verified",
-            emailVerified: true,
-            createdAt: serverTimestamp()
-        });
-        console.log("✅ System admin Firestore document created automatically.");
+    const adminRef = doc(db, "users", adminUid);
+    let adminSnap;
+
+    try {
+        adminSnap = await getDoc(adminRef);
+    } catch (readError) {
+        console.warn(`⚠️ Could not read admin doc (might not exist yet):`, readError.message);
+        // Try to create it
+        adminSnap = null;
+    }
+
+    // ONLY create/update system admin doc if the logged-in user is actually the system admin email
+    const SYSTEM_ADMIN_EMAIL = "canemapteam@gmail.com";
+
+    if (adminEmail !== SYSTEM_ADMIN_EMAIL) {
+        console.error(`❌ ERROR: Non-admin user (${adminEmail}) is logged in on admin dashboard!`);
+        console.error(`This should not happen. The system admin email should be ${SYSTEM_ADMIN_EMAIL}.`);
+        console.error(`Redirecting to farmer login page...`);
+
+        // Sign out the farmer/non-admin user
+        const { signOut } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js');
+        await signOut(auth);
+        sessionStorage.removeItem('admin_user');
+        localStorage.removeItem('admin_session');
+
+        // Redirect to farmer login
+        window.location.href = '../Common/farmers_login.html';
+        return;
+    }
+
+    if (!adminSnap || !adminSnap.exists()) {
+        console.log(`📝 Creating system admin Firestore document...`);
+        try {
+            await setDoc(adminRef, {
+                name: "CaneMap System Admin",
+                email: adminEmail,
+                role: "system_admin",
+                status: "verified",
+                emailVerified: true,
+                createdAt: serverTimestamp(),
+                failedLoginAttempts: 0
+            });
+            console.log("✅ System admin Firestore document created successfully.");
+        } catch (createError) {
+            console.error("❌ Failed to create system admin doc:", createError);
+            console.error("Error details:", createError.message, createError.code);
+            // Don't throw - allow dashboard to load anyway
+        }
     } else {
         const data = adminSnap.data();
+        console.log(`✅ System admin document exists with role: ${data.role}`);
         if (data.role !== "system_admin") {
-            await updateDoc(adminRef, { role: "system_admin" });
-            console.log("⚙️ Updated role to system_admin for existing admin record.");
-        } else {
-            console.log("✅ System admin Firestore document already exists.");
+            console.log(`⚙️ Updating role from "${data.role}" to "system_admin" for ${SYSTEM_ADMIN_EMAIL}`);
+            try {
+                await updateDoc(adminRef, { role: "system_admin" });
+                console.log("✅ Role updated to system_admin.");
+            } catch (updateError) {
+                console.warn("⚠️ Could not update role:", updateError.message);
+            }
         }
     }
 } catch (e) {
     console.error("❌ Failed to verify/create system admin doc:", e);
+    console.error("Error details:", e.message, e.code);
+    // Don't throw - allow dashboard to load anyway
 }
 
-        // Check if user is logged in
+        // Check if user is logged in - check both auth and sessionStorage
+        console.log('📦 Checking admin user in sessionStorage...');
         const adminUser = sessionStorage.getItem('admin_user');
+        const adminSession = localStorage.getItem('admin_session');
+
+        console.log('Admin user in sessionStorage:', adminUser ? 'Found' : 'Not found');
+        console.log('Admin session in localStorage:', adminSession ? 'Found' : 'Not found');
+
         if (!adminUser) {
-            console.log('⚠️ No admin user found, using default values');
+            console.log('⚠️ No admin user found in sessionStorage, using default values');
             // Set default admin name
             const adminNameEl = document.getElementById('adminName');
             const dropdownAdminNameEl = document.getElementById('dropdownAdminName');
             const sidebarAdminNameEl = document.getElementById('sidebarAdminName');
-            
+
             if (adminNameEl) adminNameEl.textContent = 'System Admin';
             if (dropdownAdminNameEl) dropdownAdminNameEl.textContent = 'System Admin';
             if (sidebarAdminNameEl) sidebarAdminNameEl.textContent = 'System Admin';
         } else {
-            currentUser = JSON.parse(adminUser);
-            
-            // Update admin name in header and sidebar
-            const adminNameEl = document.getElementById('adminName');
-            const dropdownAdminNameEl = document.getElementById('dropdownAdminName');
-            const sidebarAdminNameEl = document.getElementById('sidebarAdminName');
-            
-            if (adminNameEl) adminNameEl.textContent = currentUser.name;
-            if (dropdownAdminNameEl) dropdownAdminNameEl.textContent = currentUser.name;
-            if (sidebarAdminNameEl) sidebarAdminNameEl.textContent = currentUser.name;
+            try {
+                currentUser = JSON.parse(adminUser);
+                console.log('✅ Loaded admin user from sessionStorage:', currentUser.name || currentUser.email);
+
+                // Update admin name in header and sidebar
+                const adminNameEl = document.getElementById('adminName');
+                const dropdownAdminNameEl = document.getElementById('dropdownAdminName');
+                const sidebarAdminNameEl = document.getElementById('sidebarAdminName');
+
+                if (adminNameEl) adminNameEl.textContent = currentUser.name;
+                if (dropdownAdminNameEl) dropdownAdminNameEl.textContent = currentUser.name;
+                if (sidebarAdminNameEl) sidebarAdminNameEl.textContent = currentUser.name;
+            } catch (e) {
+                console.error('❌ Error parsing admin_user from sessionStorage:', e);
+            }
         }
         
         // Load dashboard data
@@ -138,29 +250,81 @@ async function loadDashboardStats() {
     try {
         console.log('🔄 Loading dashboard stats...');
         
-        // Get total users
+        // Get total users and calculate growth
         let totalUsers = 0;
+        let totalUsersGrowth = 0;
         try {
             const usersSnapshot = await getDocs(collection(db, 'users'));
             totalUsers = usersSnapshot.size;
-            console.log(`📊 Total users: ${totalUsers}`);
+
+            // Calculate users created in last 30 days vs previous 30 days
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+            let usersLastMonth = 0;
+            let usersPreviousMonth = 0;
+
+            usersSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.createdAt && data.createdAt.toDate) {
+                    const createdDate = data.createdAt.toDate();
+                    if (createdDate >= thirtyDaysAgo) {
+                        usersLastMonth++;
+                    } else if (createdDate >= sixtyDaysAgo && createdDate < thirtyDaysAgo) {
+                        usersPreviousMonth++;
+                    }
+                }
+            });
+
+            // Calculate percentage growth
+            if (usersPreviousMonth > 0) {
+                totalUsersGrowth = ((usersLastMonth - usersPreviousMonth) / usersPreviousMonth) * 100;
+            } else if (usersLastMonth > 0) {
+                totalUsersGrowth = 100; // 100% growth if there were 0 users before
+            }
+
+            console.log(`📊 Total users: ${totalUsers}, Growth: ${totalUsersGrowth.toFixed(1)}%`);
         } catch (error) {
             console.log('⚠️ Could not load users collection:', error.message);
         }
         
-        // Get active users (logged in within last 30 days)
+        // Get active users (logged in within last 30 days) and calculate growth
         let activeUsers = 0;
+        let activeUsersGrowth = 0;
         try {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            
-            const activeUsersQuery = query(
-                collection(db, 'users'),
-                where('lastLogin', '>=', thirtyDaysAgo)
-            );
-            const activeUsersSnapshot = await getDocs(activeUsersQuery);
-            activeUsers = activeUsersSnapshot.size;
-            console.log(`📊 Active users: ${activeUsers}`);
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+
+            let activeUsersLastMonth = 0;
+            let activeUsersPreviousMonth = 0;
+
+            usersSnapshot.forEach(doc => {
+                const data = doc.data();
+                const lastLogin = data.lastLogin && data.lastLogin.toDate ? data.lastLogin.toDate() : null;
+
+                // Count active users (logged in within last 30 days)
+                if (lastLogin && lastLogin >= thirtyDaysAgo) {
+                    activeUsers++;
+                    activeUsersLastMonth++;
+                }
+                // Count users active in previous month (30-60 days ago)
+                else if (lastLogin && lastLogin >= sixtyDaysAgo && lastLogin < thirtyDaysAgo) {
+                    activeUsersPreviousMonth++;
+                }
+            });
+
+            // Calculate percentage growth
+            if (activeUsersPreviousMonth > 0) {
+                activeUsersGrowth = ((activeUsersLastMonth - activeUsersPreviousMonth) / activeUsersPreviousMonth) * 100;
+            } else if (activeUsersLastMonth > 0) {
+                activeUsersGrowth = 100;
+            }
+
+            console.log(`📊 Active users: ${activeUsers}, Growth: ${activeUsersGrowth.toFixed(1)}%`);
         } catch (error) {
             console.log('⚠️ Could not load active users:', error.message);
         }
@@ -201,17 +365,103 @@ async function loadDashboardStats() {
             console.log('⚠️ Could not load driver badges:', error.message);
         }
         
+        // Calculate failed logins TODAY
+        let failedLoginsToday = 0;
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Count failed_logins from today
+            const failedLoginsSnapshot = await getDocs(collection(db, 'failed_logins'));
+            failedLoginsSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.timestamp && data.timestamp.toDate) {
+                    const loginDate = data.timestamp.toDate();
+                    if (loginDate >= today) {
+                        failedLoginsToday++;
+                    }
+                }
+            });
+            console.log(`📊 Failed logins today: ${failedLoginsToday}`);
+        } catch (error) {
+            console.log('⚠️ Could not calculate failed logins today:', error.message);
+        }
+
+        // Calculate driver badges THIS WEEK
+        let driverBadgesThisWeek = 0;
+        try {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+            const driverBadgesSnapshot = await getDocs(collection(db, 'Drivers_Badge'));
+            driverBadgesSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.createdAt && data.createdAt.toDate) {
+                    const createdDate = data.createdAt.toDate();
+                    if (createdDate >= oneWeekAgo && data.status === 'approved') {
+                        driverBadgesThisWeek++;
+                    }
+                }
+            });
+            console.log(`📊 Driver badges this week: ${driverBadgesThisWeek}`);
+        } catch (error) {
+            console.log('⚠️ Could not calculate driver badges this week:', error.message);
+        }
+
         // Update UI
         const totalUsersEl = document.getElementById('totalUsers');
         const activeUsersEl = document.getElementById('activeUsers');
         const failedLoginsEl = document.getElementById('failedLogins');
         const driverBadgesEl = document.getElementById('driverBadges');
-        
+
         if (totalUsersEl) totalUsersEl.textContent = totalUsers;
         if (activeUsersEl) activeUsersEl.textContent = activeUsers;
         if (failedLoginsEl) failedLoginsEl.textContent = failedLogins;
         if (driverBadgesEl) driverBadgesEl.textContent = driverBadges;
-        
+
+        // Update growth metrics
+        const totalUsersGrowthEl = document.getElementById('totalUsersGrowth');
+        const totalUsersGrowthEl2 = document.getElementById('totalUsersGrowth2');
+        const activeUsersGrowthEl = document.getElementById('activeUsersGrowth');
+        const activeUsersGrowthEl2 = document.getElementById('activeUsersGrowth2');
+        const failedLoginsTodayEl = document.getElementById('failedLoginsToday');
+        const failedLoginsTodayEl2 = document.getElementById('failedLoginsToday2');
+        const driverBadgesThisWeekEl = document.getElementById('driverBadgesThisWeek');
+        const driverBadgesThisWeekEl2 = document.getElementById('driverBadgesThisWeek2');
+
+        // Format and display growth percentages
+        const formatGrowth = (growth) => {
+            const formatted = growth > 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
+            return formatted;
+        };
+
+        const getGrowthColor = (growth) => {
+            if (growth > 0) return 'text-green-600';
+            if (growth < 0) return 'text-red-600';
+            return 'text-gray-600';
+        };
+
+        if (totalUsersGrowthEl) {
+            totalUsersGrowthEl.textContent = formatGrowth(totalUsersGrowth);
+            totalUsersGrowthEl.className = `font-medium ${getGrowthColor(totalUsersGrowth)}`;
+        }
+        if (totalUsersGrowthEl2) {
+            totalUsersGrowthEl2.textContent = formatGrowth(totalUsersGrowth);
+            totalUsersGrowthEl2.className = `font-medium ${getGrowthColor(totalUsersGrowth)}`;
+        }
+        if (activeUsersGrowthEl) {
+            activeUsersGrowthEl.textContent = formatGrowth(activeUsersGrowth);
+            activeUsersGrowthEl.className = `font-medium ${getGrowthColor(activeUsersGrowth)}`;
+        }
+        if (activeUsersGrowthEl2) {
+            activeUsersGrowthEl2.textContent = formatGrowth(activeUsersGrowth);
+            activeUsersGrowthEl2.className = `font-medium ${getGrowthColor(activeUsersGrowth)}`;
+        }
+        if (failedLoginsTodayEl) failedLoginsTodayEl.textContent = `+${failedLoginsToday}`;
+        if (failedLoginsTodayEl2) failedLoginsTodayEl2.textContent = `+${failedLoginsToday}`;
+        if (driverBadgesThisWeekEl) driverBadgesThisWeekEl.textContent = `+${driverBadgesThisWeek}`;
+        if (driverBadgesThisWeekEl2) driverBadgesThisWeekEl2.textContent = `+${driverBadgesThisWeek}`;
+
         console.log('✅ Dashboard stats loaded successfully');
         
         // Load analytics charts
@@ -496,95 +746,171 @@ function renderActivityLogs() {
 
 // Set up real-time listeners
 function setupRealtimeListeners() {
-    // Listen for new users
-    const usersListener = onSnapshot(collection(db, 'users'), (snapshot) => {
-        loadUsers();
-        loadDashboardStats();
-    });
-    
-    // Listen for new activity logs
-    const activityListener = onSnapshot(
-        query(collection(db, 'security_logs'), orderBy('timestamp', 'desc'), limit(20)),
-        (snapshot) => {
-            loadActivityLogs();
-            loadDashboardStats();
-        }
-    );
+    try {
+        // Listen for new users with error handling
+        const usersListener = onSnapshot(
+            collection(db, 'users'),
+            (snapshot) => {
+                console.log('📊 Users snapshot updated:', snapshot.size);
+                loadUsers();
+                loadDashboardStats();
+            },
+            (error) => {
+                console.error('❌ Users snapshot error:', error);
+                if (error.code === 'permission-denied') {
+                    console.error('Permission denied - check Firestore rules and auth state');
+                }
+            }
+        );
+
+        // Listen for failed_logins collection with error handling
+        const failedLoginsListener = onSnapshot(
+            collection(db, 'failed_logins'),
+            (snapshot) => {
+                console.log('🔒 Failed logins snapshot updated:', snapshot.size);
+                loadDashboardStats(); // Refresh stats when failed logins change
+            },
+            (error) => {
+                console.error('❌ Failed logins snapshot error:', error);
+            }
+        );
+
+        // Listen for new activity logs with error handling
+        const activityListener = onSnapshot(
+            query(collection(db, 'admin_security_logs'), orderBy('timestamp', 'desc'), limit(20)),
+            (snapshot) => {
+                console.log('📋 Activity logs snapshot updated:', snapshot.size);
+                loadActivityLogs();
+                loadDashboardStats();
+            },
+            (error) => {
+                console.error('❌ Activity logs snapshot error:', error);
+                console.log('Note: admin_security_logs collection may not exist yet');
+            }
+        );
+
+        console.log('✅ Real-time listeners set up successfully');
+    } catch (error) {
+        console.error('❌ Error setting up real-time listeners:', error);
+    }
 }
 
 // Set up event listeners
 function setupEventListeners() {
-    // Profile dropdown
-    const profileBtn = document.getElementById('adminProfileBtn');
-    const profileDropdown = document.getElementById('adminProfileDropdown');
-    
-    profileBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        profileDropdown.classList.toggle('opacity-0');
-        profileDropdown.classList.toggle('invisible');
-        profileDropdown.classList.toggle('scale-95');
-        profileDropdown.classList.toggle('scale-100');
-    });
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', () => {
-        profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
-        profileDropdown.classList.remove('scale-100');
-    });
-    
-    // User filters
-    document.getElementById('roleFilter').addEventListener('change', filterUsers);
-    document.getElementById('statusFilter').addEventListener('change', filterUsers);
-    document.getElementById('userSearch').addEventListener('input', filterUsers);
-    
-    // Pagination
-    document.getElementById('prevPage').addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderUsersTable();
+    try {
+        console.log('🔧 Setting up event listeners...');
+
+        // Profile dropdown
+        const profileBtn = document.getElementById('adminProfileBtn');
+        const profileDropdown = document.getElementById('adminProfileDropdown');
+
+        if (profileBtn && profileDropdown) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown.classList.toggle('opacity-0');
+                profileDropdown.classList.toggle('invisible');
+                profileDropdown.classList.toggle('scale-95');
+                profileDropdown.classList.toggle('scale-100');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+                profileDropdown.classList.remove('scale-100');
+            });
+            console.log('✅ Profile dropdown listeners attached');
+        } else {
+            console.warn('⚠️ Profile dropdown elements not found');
         }
-    });
-    
-    document.getElementById('nextPage').addEventListener('click', () => {
-        const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-        if (currentPage < totalPages) {
-            currentPage++;
-            renderUsersTable();
+
+        // User filters (only if they exist on the current page)
+        const roleFilter = document.getElementById('roleFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const userSearch = document.getElementById('userSearch');
+
+        if (roleFilter) roleFilter.addEventListener('change', filterUsers);
+        if (statusFilter) statusFilter.addEventListener('change', filterUsers);
+        if (userSearch) userSearch.addEventListener('input', filterUsers);
+
+        if (roleFilter || statusFilter || userSearch) {
+            console.log('✅ User filter listeners attached');
         }
-    });
-    
-    
-    // Edit user form
-    document.getElementById('editUserForm').addEventListener('submit', handleEditUser);
-    
-    // Delegate Change PIN form submission (content injected in HTML)
-    document.addEventListener('submit', (e) => {
-        const form = e.target;
-        if (form && form.id === 'changePinForm') {
-            e.preventDefault();
-            handleChangePin(form);
+
+        // Pagination (only if they exist)
+        const prevPage = document.getElementById('prevPage');
+        const nextPage = document.getElementById('nextPage');
+
+        if (prevPage) {
+            prevPage.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderUsersTable();
+                }
+            });
         }
-    });
+
+        if (nextPage) {
+            nextPage.addEventListener('click', () => {
+                const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderUsersTable();
+                }
+            });
+        }
+
+        if (prevPage || nextPage) {
+            console.log('✅ Pagination listeners attached');
+        }
+
+        // Edit user form (only if it exists)
+        const editUserForm = document.getElementById('editUserForm');
+        if (editUserForm) {
+            editUserForm.addEventListener('submit', handleEditUser);
+            console.log('✅ Edit user form listener attached');
+        }
+
+        // Delegate Change PIN form submission (content injected in HTML)
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (form && form.id === 'changePinForm') {
+                e.preventDefault();
+                handleChangePin(form);
+            }
+        });
+
+        console.log('✅ Event listeners setup complete');
+    } catch (error) {
+        console.error('❌ Error setting up event listeners:', error);
+    }
 }
 
 // Filter users
 function filterUsers() {
-    const roleFilter = document.getElementById('roleFilter').value;
-    const statusFilter = document.getElementById('statusFilter').value;
-    const searchTerm = document.getElementById('userSearch').value.toLowerCase();
-    
-    filteredUsers = users.filter(user => {
-        const matchesRole = !roleFilter || user.role === roleFilter;
-        const matchesStatus = !statusFilter || user.status === statusFilter;
-        const matchesSearch = !searchTerm || 
-            (user.name && user.name.toLowerCase().includes(searchTerm)) ||
-            (user.email && user.email.toLowerCase().includes(searchTerm));
-        
-        return matchesRole && matchesStatus && matchesSearch;
-    });
-    
-    currentPage = 1;
-    renderUsersTable();
+    try {
+        const roleFilterEl = document.getElementById('roleFilter');
+        const statusFilterEl = document.getElementById('statusFilter');
+        const userSearchEl = document.getElementById('userSearch');
+
+        const roleFilter = roleFilterEl ? roleFilterEl.value : '';
+        const statusFilter = statusFilterEl ? statusFilterEl.value : '';
+        const searchTerm = userSearchEl ? userSearchEl.value.toLowerCase() : '';
+
+        filteredUsers = users.filter(user => {
+            const matchesRole = !roleFilter || user.role === roleFilter;
+            const matchesStatus = !statusFilter || user.status === statusFilter;
+            const matchesSearch = !searchTerm ||
+                (user.name && user.name.toLowerCase().includes(searchTerm)) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm));
+
+            return matchesRole && matchesStatus && matchesSearch;
+        });
+
+        currentPage = 1;
+        renderUsersTable();
+    } catch (error) {
+        console.error('❌ Error filtering users:', error);
+    }
 }
 
 // Update pagination
@@ -804,30 +1130,37 @@ async function loadAnalyticsCharts() {
 function createUserGrowthChart(users) {
     const ctx = document.getElementById('userGrowthChart');
     if (!ctx) return;
-    
+
+    // Destroy existing chart instance before creating a new one
+    if (userGrowthChartInstance) {
+        console.log('🗑️ Destroying existing user growth chart');
+        userGrowthChartInstance.destroy();
+        userGrowthChartInstance = null;
+    }
+
     // Generate last 12 months data
     const months = [];
     const userCounts = [];
     const now = new Date();
-    
+
     for (let i = 11; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthName = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         months.push(monthName);
-        
+
         // Count users created in this month
         const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
         const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        
+
         const usersInMonth = users.filter(user => {
             const userDate = user.createdAt;
             return userDate >= monthStart && userDate <= monthEnd;
         }).length;
-        
+
         userCounts.push(usersInMonth);
     }
-    
-    new Chart(ctx, {
+
+    userGrowthChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: months,
@@ -883,7 +1216,14 @@ function createUserGrowthChart(users) {
 function createUserRoleChart(users) {
     const ctx = document.getElementById('userRoleChart');
     if (!ctx) return;
-    
+
+    // Destroy existing chart instance before creating a new one
+    if (userRoleChartInstance) {
+        console.log('🗑️ Destroying existing user role chart');
+        userRoleChartInstance.destroy();
+        userRoleChartInstance = null;
+    }
+
     // Count users by role
     const roleCounts = {
         farmer: 0,
@@ -891,21 +1231,21 @@ function createUserRoleChart(users) {
         sra: 0,
         admin: 0
     };
-    
+
     users.forEach(user => {
         const role = user.role || 'worker';
         if (roleCounts.hasOwnProperty(role)) {
             roleCounts[role]++;
         }
     });
-    
-    const labels = Object.keys(roleCounts).map(role => 
+
+    const labels = Object.keys(roleCounts).map(role =>
         role.charAt(0).toUpperCase() + role.slice(1) + 's'
     );
     const data = Object.values(roleCounts);
     const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#ef4444'];
-    
-    new Chart(ctx, {
+
+    userRoleChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
@@ -1444,6 +1784,8 @@ async function addSampleData() {
 
 window.initializeDashboard = initializeDashboard;
 window.addSampleData = addSampleData;
+window.loadDashboardStats = loadDashboardStats;
+window.loadAnalyticsCharts = loadAnalyticsCharts;
 
 // expose badge delete helper globally
 window.confirmDeleteBadge = confirmDeleteBadge;
