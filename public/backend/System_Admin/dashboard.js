@@ -280,11 +280,11 @@ async function loadDashboardStats() {
             // Calculate percentage growth
             if (usersPreviousMonth > 0) {
                 totalUsersGrowth = ((usersLastMonth - usersPreviousMonth) / usersPreviousMonth) * 100;
-            } else if (usersLastMonth > 0) {
-                totalUsersGrowth = 100; // 100% growth if there were 0 users before
+            } else {
+                totalUsersGrowth = null; // No previous data to compare
             }
 
-            console.log(`📊 Total users: ${totalUsers}, Growth: ${totalUsersGrowth.toFixed(1)}%`);
+            console.log(`📊 Total users: ${totalUsers}, Growth: ${totalUsersGrowth !== null ? totalUsersGrowth.toFixed(1) + '%' : 'N/A'}`);
         } catch (error) {
             console.log('⚠️ Could not load users collection:', error.message);
         }
@@ -320,11 +320,11 @@ async function loadDashboardStats() {
             // Calculate percentage growth
             if (activeUsersPreviousMonth > 0) {
                 activeUsersGrowth = ((activeUsersLastMonth - activeUsersPreviousMonth) / activeUsersPreviousMonth) * 100;
-            } else if (activeUsersLastMonth > 0) {
-                activeUsersGrowth = 100;
+            } else {
+                activeUsersGrowth = null; // No previous data to compare
             }
 
-            console.log(`📊 Active users: ${activeUsers}, Growth: ${activeUsersGrowth.toFixed(1)}%`);
+            console.log(`📊 Active users: ${activeUsers}, Growth: ${activeUsersGrowth !== null ? activeUsersGrowth.toFixed(1) + '%' : 'N/A'}`);
         } catch (error) {
             console.log('⚠️ Could not load active users:', error.message);
         }
@@ -431,11 +431,13 @@ async function loadDashboardStats() {
 
         // Format and display growth percentages
         const formatGrowth = (growth) => {
+            if (growth === null) return '—'; // No previous data
             const formatted = growth > 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
             return formatted;
         };
 
         const getGrowthColor = (growth) => {
+            if (growth === null) return 'text-gray-500'; // No data color
             if (growth > 0) return 'text-green-600';
             if (growth < 0) return 'text-red-600';
             return 'text-gray-600';
