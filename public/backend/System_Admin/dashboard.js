@@ -365,24 +365,41 @@ async function loadDashboardStats() {
             console.log('⚠️ Could not load driver badges:', error.message);
         }
         
-        // Calculate failed logins TODAY
+        // Calculate failed logins TODAY (from both registered and unknown users)
         let failedLoginsToday = 0;
         try {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Count failed_logins from today
+            // Count failed_logins from unknown users (failed_logins collection)
             const failedLoginsSnapshot = await getDocs(collection(db, 'failed_logins'));
+            let unknownUserFailures = 0;
             failedLoginsSnapshot.forEach(doc => {
                 const data = doc.data();
                 if (data.timestamp && data.timestamp.toDate) {
                     const loginDate = data.timestamp.toDate();
                     if (loginDate >= today) {
-                        failedLoginsToday++;
+                        unknownUserFailures++;
                     }
                 }
             });
-            console.log(`📊 Failed logins today: ${failedLoginsToday}`);
+
+            // Count registered users who had failed logins today (lastFailedLogin >= today)
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            let registeredUserFailures = 0;
+            usersSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.lastFailedLogin && data.lastFailedLogin.toDate) {
+                    const lastFailedDate = data.lastFailedLogin.toDate();
+                    if (lastFailedDate >= today && data.failedLoginAttempts > 0) {
+                        // Count each individual failed attempt from today
+                        registeredUserFailures += data.failedLoginAttempts;
+                    }
+                }
+            });
+
+            failedLoginsToday = unknownUserFailures + registeredUserFailures;
+            console.log(`📊 Failed logins today: ${failedLoginsToday} (${unknownUserFailures} unknown + ${registeredUserFailures} registered)`);
         } catch (error) {
             console.log('⚠️ Could not calculate failed logins today:', error.message);
         }

@@ -116,9 +116,9 @@
         
         /* Chevron arrow animations */
         .fa-chevron-down {
-                transition: color 0.3s ease;
-            }
-            
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+
         .fa-chevron-down.rotated {
             transform: rotate(180deg);
         }
@@ -195,6 +195,9 @@
         .sidebar-collapsed .sidebar-logo h2,
         .sidebar-collapsed .nav-item-text,
         .sidebar-collapsed .sidebar-footer {
+            display: none;
+        }
+        .sidebar-collapsed nav .fa-chevron-down {
             display: none;
         }
         .sidebar-collapsed .nav-item {
@@ -307,7 +310,7 @@
                                 <i class="fas fa-user-shield text-gray-900 text-sm"></i>
                         </div>
                             <span class="font-semibold" id="adminName">Admin</span>
-                            <i class="fas fa-chevron-down text-sm ml-1 text-gray-900"></i>
+                            <i class="fas fa-chevron-down text-sm ml-1 text-gray-900" id="profileChevron"></i>
                         </button>
                         
                         <!-- Profile Dropdown -->
@@ -352,9 +355,6 @@
                     </div>
                     <h2 class="nav-item-text text-xl font-bold text-white">CaneMap</h2>
                     </div>
-                    <button onclick="toggleSidebar()" class="hidden lg:inline-flex items-center justify-center text-white/80 hover:text-white p-2 rounded" title="Collapse sidebar">
-                        <i class="fas fa-bars"></i>
-                    </button>
                 </div>
             </div>
         </div>
@@ -771,29 +771,53 @@
                 initializeDashboard();
                 initializeSidebarState();
                 if (window.wireAddUserModal) window.wireAddUserModal();
+
+                // Initialize profile dropdown
+                initializeProfileDropdown();
             });
         
         // Enhanced Sidebar functions
         function toggleSubmenu(menuId) {
+            // Auto-expand sidebar if collapsed
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            if (isCollapsed) {
+                toggleSidebar();
+                // Wait for sidebar animation before showing submenu
+                setTimeout(() => {
+                    toggleSubmenuInternal(menuId);
+                }, 100);
+            } else {
+                toggleSubmenuInternal(menuId);
+            }
+        }
+
+        function toggleSubmenuInternal(menuId) {
             const submenu = document.getElementById(menuId + '-submenu');
+            const arrow = document.getElementById(menuId + '-arrow');
             const group = submenu.closest('div[data-expanded]');
-            
+
             if (submenu.classList.contains('hidden')) {
                 submenu.classList.remove('hidden');
                 group.setAttribute('data-expanded', 'true');
-                
+
+                // Rotate chevron
+                if (arrow) arrow.classList.add('rotated');
+
                 // Add smooth animation
                 submenu.style.maxHeight = '0';
                 submenu.style.overflow = 'hidden';
                 submenu.style.transition = 'max-height 0.3s ease-out';
-                
+
                 setTimeout(() => {
                     submenu.style.maxHeight = submenu.scrollHeight + 'px';
                 }, 10);
             } else {
                 submenu.style.maxHeight = '0';
                 group.setAttribute('data-expanded', 'false');
-                
+
+                // Rotate chevron back
+                if (arrow) arrow.classList.remove('rotated');
+
                 setTimeout(() => {
                     submenu.classList.add('hidden');
                     submenu.style.maxHeight = '';
@@ -1411,11 +1435,25 @@ async function showBadgeRequestsContent() {
                 if (main) main.style.marginLeft = '5rem';
                 if (header) header.style.left = '5rem';
                 
-                // Collapse all submenus
-                document.querySelectorAll('.submenu, .inner-submenu').forEach(menu => {
+                // Collapse all submenus and reset chevrons
+                document.querySelectorAll('[id$="-submenu"], [id$="-inner-submenu"]').forEach(menu => {
+                    // Don't add hidden, just close with maxHeight
                     menu.style.maxHeight = '0';
-                    menu.style.opacity = '0';
-                    menu.style.overflow = 'hidden';
+                    menu.style.transition = 'max-height 0.3s ease-out';
+
+                    setTimeout(() => {
+                        menu.classList.add('hidden');
+                    }, 300);
+
+                    // Reset chevron rotation
+                    const menuId = menu.id.replace('-submenu', '').replace('-inner-submenu', '');
+                    const arrow = document.getElementById(menuId + '-arrow') || document.getElementById(menuId + '-inner-arrow');
+                    if (arrow) arrow.classList.remove('rotated');
+
+                    // Reset data-expanded attribute
+                    const group = menu.closest('div[data-expanded]');
+                    if (group) group.setAttribute('data-expanded', 'false');
+
                     if (menu.previousElementSibling) {
                         menu.previousElementSibling.classList.remove('active');
                     }
@@ -1468,12 +1506,65 @@ async function showBadgeRequestsContent() {
         window.addEventListener('resize', function() {
             const isMobile = window.innerWidth <= 768;
             initializeSidebarState();
-            
+
             const hamburgerIcon = document.querySelector('.hamburger-icon i');
             if (hamburgerIcon) {
                 hamburgerIcon.className = isMobile ? 'fas fa-bars text-sm' : 'fas fa-bars text-sm';
             }
         });
+
+        // Profile dropdown toggle with chevron rotation
+        let profileDropdownInitialized = false;
+        function initializeProfileDropdown() {
+            // Prevent double initialization
+            if (profileDropdownInitialized) return;
+            profileDropdownInitialized = true;
+
+            const adminProfileBtn = document.getElementById('adminProfileBtn');
+            const adminProfileDropdown = document.getElementById('adminProfileDropdown');
+            const profileChevron = document.getElementById('profileChevron');
+
+            if (adminProfileBtn && adminProfileDropdown) {
+                console.log('✅ Profile dropdown initialized');
+
+                // Simple toggle - check state at the moment of click
+                adminProfileBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation(); // Prevent duplicate handlers
+
+                    // Use toggle for simplicity
+                    const isCurrentlyOpen = adminProfileDropdown.classList.contains('visible');
+                    console.log('Profile clicked, will ' + (isCurrentlyOpen ? 'close' : 'open'));
+
+                    if (isCurrentlyOpen) {
+                        // Close dropdown
+                        adminProfileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+                        adminProfileDropdown.classList.remove('opacity-100', 'visible', 'scale-100');
+                        if (profileChevron) profileChevron.classList.remove('rotated');
+                    } else {
+                        // Open dropdown
+                        adminProfileDropdown.classList.remove('opacity-0', 'invisible', 'scale-95');
+                        adminProfileDropdown.classList.add('opacity-100', 'visible', 'scale-100');
+                        if (profileChevron) profileChevron.classList.add('rotated');
+                    }
+                }, { capture: true }); // Use capture to catch it early
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!adminProfileDropdown.contains(e.target) && !adminProfileBtn.contains(e.target)) {
+                        const isOpen = adminProfileDropdown.classList.contains('visible');
+                        if (isOpen) {
+                            adminProfileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+                            adminProfileDropdown.classList.remove('opacity-100', 'visible', 'scale-100');
+                            if (profileChevron) profileChevron.classList.remove('rotated');
+                        }
+                    }
+                });
+            } else {
+                console.error('❌ Profile dropdown elements not found');
+            }
+        }
         
         // Close mobile sidebar when clicking outside
         document.addEventListener('click', function(event) {
