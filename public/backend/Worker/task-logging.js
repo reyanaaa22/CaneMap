@@ -223,6 +223,63 @@ class TaskLoggingManager {
         }
     }
 
+    // ========================================
+    // ✅ TASK LOGIC VALIDATION (Soft warnings only)
+    // ========================================
+    async checkTaskLogic(taskName, fieldData) {
+        try {
+            const taskLower = taskName.toLowerCase();
+
+            // Helper: Calculate DAP if planting date exists
+            const calculateDAP = (plantingDate) => {
+                if (!plantingDate) return null;
+                const planting = plantingDate.toDate ? plantingDate.toDate() : new Date(plantingDate);
+                const today = new Date();
+                const diffTime = today.getTime() - planting.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays >= 0 ? diffDays : null;
+            };
+
+            // VALIDATION 1: Harvesting too early (< 200 DAP)
+            if ((taskLower.includes('harvest') || taskLower.includes('cutting')) && fieldData.plantingDate) {
+                const currentDAP = calculateDAP(fieldData.plantingDate);
+                if (currentDAP !== null && currentDAP < 200) {
+                    return `⚠️ Notice: This field is only ${currentDAP} days old.\n\n` +
+                           `Sugarcane is typically harvested at 300-400 days after planting (DAP).\n` +
+                           `Harvesting this early would result in very low sugar content and poor yield.`;
+                }
+            }
+
+            // VALIDATION 2: Planting when already planted
+            if ((taskLower.includes('plant') && !taskLower.includes('replant')) && fieldData.plantingDate) {
+                const plantingDateStr = fieldData.plantingDate.toDate
+                    ? fieldData.plantingDate.toDate().toLocaleDateString()
+                    : new Date(fieldData.plantingDate).toLocaleDateString();
+
+                return `⚠️ Notice: This field was already planted on ${plantingDateStr}.\n\n` +
+                       `Are you logging a replanting or correcting the planting date?`;
+            }
+
+            // VALIDATION 3: Post-harvest tasks when field is harvested
+            if (fieldData.status === 'harvested' &&
+                !taskLower.includes('harvest') &&
+                !taskLower.includes('cleanup') &&
+                !taskLower.includes('ratoon')) {
+
+                return `⚠️ Notice: This field was already harvested.\n\n` +
+                       `Are you logging cleanup work or ratooning activities?`;
+            }
+
+            // No warnings - task seems reasonable
+            return null;
+
+        } catch (error) {
+            console.error('Error checking task logic:', error);
+            // Don't block on validation errors
+            return null;
+        }
+    }
+
     // Update task logs display in the UI
     updateTaskLogsDisplay() {
         const taskLogsContainer = document.getElementById('task-logs-container');
@@ -297,6 +354,17 @@ class TaskLoggingManager {
             // Validate required fields
             if (!taskName || !taskStatus) {
                 throw new Error('Please fill in all required fields.');
+            }
+
+            // ========================================
+            // ✅ SOFT VALIDATION: Warn on obvious errors (non-blocking)
+            // ========================================
+            const validationWarning = await this.checkTaskLogic(taskName, this.fieldData);
+            if (validationWarning) {
+                const proceed = confirm(validationWarning + '\n\nDo you want to continue logging this task?');
+                if (!proceed) {
+                    return { success: false, message: 'Task logging cancelled.' };
+                }
             }
 
             // Handle file uploads

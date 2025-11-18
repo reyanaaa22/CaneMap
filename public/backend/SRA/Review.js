@@ -2,10 +2,11 @@
 // Previously: expected top-level apps and different image-field names.
 // Now: uses collectionGroup('fields'), keeps DocumentReference, and tolerates multiple image field names.
 
-import { db } from '../Common/firebase-config.js';
+console.log('🔥🔥🔥 Review.js MODULE LOADED - VERSION 2.0 WITH DEBUG LOGS 🔥🔥🔥');
+
+import { db, auth } from '../Common/firebase-config.js';
 import {
   collection,
-  collectionGroup,
   query,
   orderBy,
   where,
@@ -15,7 +16,7 @@ import {
   addDoc,
   serverTimestamp,
   getDoc,
-  onSnapshot 
+  onSnapshot
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 // small helper to create DOM nodes
@@ -41,15 +42,17 @@ function pickFirst(obj, keys = []) {
   return null;
 }
 
-// ---------- Fetch all field_applications/{uid}/fields/{fieldId} ----------
+// ---------- Fetch all fields from top-level collection ----------
 async function fetchApplications(status = 'all') {
   let fieldSnap;
   try {
-    // Fetch all "fields" subcollections across all field_applications
-    const fieldQ = query(collectionGroup(db, 'fields'));
+    // ✅ Query top-level 'fields' collection only
+    const fieldQ = query(collection(db, 'fields'));
     fieldSnap = await getDocs(fieldQ);
+
+    console.log(`📊 Fetched ${fieldSnap.docs.length} field(s) from top-level collection`);
   } catch (e) {
-    console.warn('collectionGroup(fields) read failed:', e);
+    console.warn('fields collection read failed:', e);
     fieldSnap = { docs: [] };
   }
 
@@ -117,38 +120,33 @@ const landTitle = pickFirst(raw, [
 };
 
 // Convert to normalized apps
-// Convert to normalized apps
 let allFields = fieldSnap.docs.map(normalize);
 
 // 🔹 Enrich each with applicant name from users collection if only UID is present
 const userCache = {};
 
 for (const app of allFields) {
-  // 1️⃣ Extract UID directly from Firestore path
-  // Example path: field_applications/abc123/fields/xyz789
-  const pathParts = app.path.split('/');
-  const userIdFromPath = pathParts.length >= 2 ? pathParts[1] : null;
+  // ✅ Get userId from field data (userId or requestedBy field)
+  let possibleUid = app.raw.userId || app.raw.requestedBy || null;
 
-  let possibleUid = null;
-  // Prefer data first (if applicantName looks like UID)
+  // If applicantName looks like a UID, use it
   if (
     app.applicantName &&
     app.applicantName.length < 25 &&
-    !app.applicantName.includes(' ')
+    !app.applicantName.includes(' ') &&
+    !app.applicantName.includes('@')
   ) {
     possibleUid = app.applicantName;
-  } else if (userIdFromPath) {
-    possibleUid = userIdFromPath;
   }
 
   if (possibleUid) {
-    // 2️⃣ Use cached name if available
+    // Use cached name if available
     if (userCache[possibleUid]) {
       app.applicantName = userCache[possibleUid];
       continue;
     }
 
-    // 3️⃣ Lookup Firestore /users/{uid}
+    // Lookup Firestore /users/{uid}
     try {
       const userRef = doc(db, 'users', possibleUid);
       const userSnap = await getDoc(userRef);
@@ -492,51 +490,34 @@ async function ensureLeafletLoaded() {
 
 // ---------- Update status (now supports nested doc updates using the DocumentReference kept earlier) ----------
 async function updateStatus(appOrId, status) {
-  // appOrId can be either the whole app object (preferred) or an id string (legacy)
+  // appOrId can be either the whole app object (preferred) or an id string
   try {
     let docRefToUpdate = null;
+    let fieldId = null;
+
     if (typeof appOrId === 'object' && appOrId.docRef) {
       docRefToUpdate = appOrId.docRef;
+      fieldId = appOrId.id;
     } else if (typeof appOrId === 'string') {
-      // try to update top-level doc first
-      try { docRefToUpdate = doc(db, 'field_applications', appOrId); } catch (_) { docRefToUpdate = null; }
+      // ✅ Direct reference to fields collection
+      docRefToUpdate = doc(db, 'fields', appOrId);
+      fieldId = appOrId;
     }
 
-    // If we couldn't find a docRef, try to find the doc by id in the collectionGroup (last resort)
     if (!docRefToUpdate) {
-      // search for doc with matching id in collectionGroup
-      const groupSnap = await getDocs(query(collectionGroup(db, 'fields'), where('__name__', '==', appOrId)));
-      if (groupSnap.docs.length) docRefToUpdate = groupSnap.docs[0].ref;
+      throw new Error('No document reference provided for update.');
     }
 
-    // If we still don't have docRef, and we were given an object with path, create one
-    if (!docRefToUpdate && typeof appOrId === 'object' && appOrId.path) {
-      const pathParts = appOrId.path.split('/'); // path like 'field_applications/{uid}/fields/{fieldId}'
-      docRefToUpdate = doc(db, ...pathParts);
-    }
-
-    // If we have a docRef — perform the update
-    if (docRefToUpdate) {
+    // ✅ Update the fields document
     await updateDoc(docRefToUpdate, {
       status,
       statusUpdatedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
-    } else {
-      // fallback: try update top-level doc by id (legacy)
-      if (typeof appOrId === 'string') {
-        try {
-          await updateDoc(doc(db, 'field_applications', appOrId), { status, statusUpdatedAt: serverTimestamp() });
-        } catch (e) {
-          throw new Error('Could not locate document to update: ' + (e.message || e));
-        }
-      } else {
-        throw new Error('No document reference provided for update.');
-      }
-    }
+    console.log(`✅ Field ${fieldId} status updated to: ${status}`);
 
-    // If we changed to 'reviewed', do the same side effects you already had:
+    // If we changed to 'reviewed', perform additional actions
     if (status === 'reviewed') {
       let appData = null;
       try {
@@ -548,23 +529,18 @@ async function updateStatus(appOrId, status) {
         const applicantUid =
           appData.requestedBy || appData.userId || appData.requester || appData.applicantName;
 
-        // 🟢 Add to top-level "fields" collection
+        // ✅ Add review metadata to same document
         try {
-          await addDoc(collection(db, 'fields'), {
-            userId: applicantUid,
-            barangay: appData.barangay || appData.location,
-            size: appData.field_size || appData.size || appData.fieldSize,
-            terrain: appData.terrain_type || appData.terrain,
-            lat: appData.latitude || appData.lat,
-            lng: appData.longitude || appData.lng,
-            registeredAt: serverTimestamp(),
-            applicantName: appData.applicantName || 'Unknown'
+          await updateDoc(docRefToUpdate, {
+            reviewedAt: serverTimestamp(),
+            reviewedBy: auth.currentUser?.uid || 'unknown'
           });
+          console.log(`✅ Field ${fieldId} marked as reviewed`);
         } catch (e) {
-          console.warn('Adding to top-level fields collection failed:', e);
+          console.warn('Adding review metadata failed:', e);
         }
 
-        // 🟢 Update applicant’s role → "handler"
+        // 🟢 Update applicant's role → "handler"
         try {
           if (applicantUid) {
             const userRef = doc(db, 'users', applicantUid);
@@ -700,8 +676,8 @@ let unsubscribeListener = null;
 function startRealtimeUpdates(status = 'all') {
   if (unsubscribeListener) unsubscribeListener(); // stop old listener
   const q = status === 'all'
-    ? collectionGroup(db, 'fields')
-    : query(collectionGroup(db, 'fields'), where('status', '==', status));
+    ? collection(db, 'fields')
+    : query(collection(db, 'fields'), where('status', '==', status));
 
   unsubscribeListener = onSnapshot(q, async () => {
     await render(status);
@@ -802,16 +778,53 @@ function openFullscreenImage(src) {
   document.body.appendChild(overlay);
 }
 
+// Update subtitle based on filter
+function updateSubtitle(filterValue) {
+  const subtitle = document.getElementById('fieldDocsSubtitle');
+  if (!subtitle) return;
+
+  const subtitleMap = {
+    'all': 'All Applications',
+    'pending': 'Pending Applications',
+    'to edit': 'Applications To Edit',
+    'reviewed': 'Reviewed Applications'
+  };
+
+  subtitle.textContent = subtitleMap[filterValue] || 'All Applications';
+}
+
 // Public init
 export const SRAReview = {
   async init() {
+    // Wait for auth to be ready
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.warn('⚠️ SRAReview.init() called but user not authenticated yet. Waiting...');
+      // Wait for auth state to settle
+      await new Promise((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          if (user) {
+            unsubscribe();
+            resolve();
+          }
+        });
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          unsubscribe();
+          resolve();
+        }, 5000);
+      });
+    }
+
     const statusSelect = document.getElementById('fieldDocsStatus');
     if (statusSelect) {
       statusSelect.addEventListener('change', (e) => {
         const val = e.target.value;
+        updateSubtitle(val); // 🔥 Update subtitle when filter changes
         startRealtimeUpdates(val);
       });
     }
+    updateSubtitle('all'); // 🔥 Set initial subtitle
     await render('all');
     startRealtimeUpdates('all'); // 🟢 Live listener starts
   }

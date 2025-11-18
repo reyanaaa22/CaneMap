@@ -17,25 +17,35 @@ export function showPopupMessage(message = '', type = 'info', options = {}) {
       container.style.alignItems = 'center';
       container.style.justifyContent = 'center';
       container.style.zIndex = '9999';
-      container.style.pointerEvents = 'none';
+      container.style.pointerEvents = 'auto'; // CHANGED: Block all clicks behind popup
       document.body.appendChild(container);
+    } else {
+      // PREVENT STACKING: Clear any existing popups before showing new one
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
     }
 
     // Modal card
     const card = document.createElement('div');
     card.className = 'cmp-popup-card';
     card.style.pointerEvents = 'auto';
+    card.style.position = 'relative';
+    card.style.zIndex = '10000'; // Ensure card is above overlay
     card.style.minWidth = '320px';
     card.style.maxWidth = '90%';
     card.style.margin = '0 16px';
     card.style.borderRadius = '12px';
     card.style.padding = '18px 18px';
     card.style.boxShadow = '0 10px 30px rgba(2,6,23,0.35)';
-    card.style.backdropFilter = 'blur(6px)';
-    card.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,250,250,0.92))';
+    card.style.background = '#ffffff'; // Solid white for crisp readability
+    card.style.border = '1px solid rgba(0,0,0,0.1)';
     card.style.display = 'flex';
     card.style.alignItems = 'center';
     card.style.gap = '12px';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.9)';
+    card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
 
     // Icon
     const icon = document.createElement('div');
@@ -65,7 +75,8 @@ export function showPopupMessage(message = '', type = 'info', options = {}) {
     msg.style.flex = '1 1 auto';
     msg.style.color = 'rgb(17 24 39)';
     msg.style.fontSize = '15px';
-    msg.style.lineHeight = '1.25';
+    msg.style.lineHeight = '1.5';
+    msg.style.fontWeight = '500'; // Medium weight for better readability
     msg.textContent = message;
 
     // Action button
@@ -83,13 +94,14 @@ export function showPopupMessage(message = '', type = 'info', options = {}) {
     card.appendChild(msg);
     card.appendChild(btn);
 
-    // Add subtle overlay behind card
+    // Add subtle overlay behind card (lighter and cleaner)
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.inset = '0';
-    overlay.style.background = 'rgba(3,7,18,0.36)';
-    overlay.style.backdropFilter = 'blur(3px)';
+    overlay.style.background = 'rgba(0,0,0,0.25)'; // Much lighter overlay
     overlay.style.zIndex = '9998';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.2s ease';
 
     // Container wrapper to stack overlay + card
     const wrapper = document.createElement('div');
@@ -104,9 +116,30 @@ export function showPopupMessage(message = '', type = 'info', options = {}) {
 
     container.appendChild(wrapper);
 
+    // Trigger fade-in animation
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+      card.style.opacity = '1';
+      card.style.transform = 'scale(1)';
+    });
+
     function cleanup() {
-      if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
-      resolve();
+      // Fade out before removing
+      overlay.style.opacity = '0';
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.95)';
+
+      setTimeout(() => {
+        if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+
+        // ✅ FIX: Remove container completely if it has no children
+        // This prevents the invisible container from blocking pointer events
+        if (container && container.childNodes.length === 0 && container.parentNode) {
+          container.parentNode.removeChild(container);
+        }
+
+        resolve();
+      }, 200); // Wait for fade-out animation
     }
 
     btn.addEventListener('click', cleanup);
@@ -139,7 +172,7 @@ export function showConfirm(message = '', options = {}) {
       container.style.display = 'flex';
       container.style.alignItems = 'center';
       container.style.justifyContent = 'center';
-      container.style.zIndex = '9999';
+      container.style.zIndex = '100000';
       document.body.appendChild(container);
     }
 
@@ -154,6 +187,8 @@ export function showConfirm(message = '', options = {}) {
     card.style.display = 'flex';
     card.style.flexDirection = 'column';
     card.style.gap = '12px';
+    card.style.position = 'relative';
+    card.style.zIndex = '100001'; /* Card above overlay */
 
     const msg = document.createElement('div');
     msg.style.color = 'rgb(17 24 39)';
@@ -190,8 +225,8 @@ export function showConfirm(message = '', options = {}) {
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.inset = '0';
-    overlay.style.background = 'rgba(3,7,18,0.36)';
-    overlay.style.zIndex = '9998';
+    overlay.style.background = 'rgba(0,0,0,0.7)'; /* Darker overlay to cover modal behind */
+    overlay.style.zIndex = '99998';
 
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
@@ -199,20 +234,51 @@ export function showConfirm(message = '', options = {}) {
     wrapper.style.display = 'flex';
     wrapper.style.alignItems = 'center';
     wrapper.style.justifyContent = 'center';
-    wrapper.style.zIndex = '9999';
+    wrapper.style.zIndex = '99999';
     wrapper.appendChild(overlay);
     wrapper.appendChild(card);
+
+    // Allow clicking wrapper background to close
+    wrapper.addEventListener('click', (e) => {
+      // Only close if clicking directly on wrapper (not overlay or card)
+      if (e.target === wrapper) {
+        cleanup(false);
+      }
+    });
 
     container.appendChild(wrapper);
 
     function cleanup(result) {
       if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+      // Also remove the container if it's empty
+      if (container && container.children.length === 0) {
+        container.remove();
+      }
       resolve(result);
     }
 
-    cancel.addEventListener('click', () => cleanup(false));
-    confirm.addEventListener('click', () => cleanup(true));
-    overlay.addEventListener('click', () => cleanup(false));
+    cancel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cleanup(false);
+    });
+    confirm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cleanup(true);
+    });
+
+    // Click on overlay (background) closes the dialog
+    overlay.addEventListener('click', (e) => {
+      // Only close if clicking directly on overlay, not on card
+      if (e.target === overlay) {
+        cleanup(false);
+      }
+    });
+
+    // Prevent clicks on card from closing dialog
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
     document.addEventListener('keydown', function esc(e) {
       if (e.key === 'Escape') {
         document.removeEventListener('keydown', esc);

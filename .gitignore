@@ -69,3 +69,35 @@ node_modules
 
 # dataconnect generated files
 .dataconnect
+
+# Test and temporary files
+test-*.js
+fix-*.js
+*-test.js
+*-temp.js
+*.test.html
+emulator-data/
+
+# Tailwind CSS (keep config, ignore source if needed)
+# public/css/input.css is kept in git
+# public/css/output.css is kept in git (production file)
+
+# IDE and editor files
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Admin service account keys (security)
+functions/admin-users.json
+**/service-account-*.json
+**/firebase-adminsdk-*.json
+
+# MD files
+REQUIREMENTS.md

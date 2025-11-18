@@ -73,13 +73,15 @@ export function initializeHandlerWorkersSection() {
     drivers: [],
     requests: [],
     search: '',
-    filter: 'all'
+    filter: 'all',
+    fieldFilter: 'all', // New: filter by specific field
+    availableFields: [] // List of fields handler owns
   };
 
   const FILTER_LABELS = {
-    all: 'All Farmers',
-    farmers: 'Workers', // Changed from 'Farmers' to 'Workers'
-    drivers: 'Drivers'
+    all: 'All Workers',
+    farmers: 'Workers Only',
+    drivers: 'Drivers Only'
   };
 
   const refs = {};
@@ -107,6 +109,9 @@ export function initializeHandlerWorkersSection() {
     refs.dropdownMenu = document.getElementById('filterDropdownMenu');
     refs.dropdownLabel = document.getElementById('filterDropdownLabel');
     refs.dropdownItems = refs.dropdownMenu ? Array.from(refs.dropdownMenu.querySelectorAll('.filter-dropdown-item')) : [];
+    refs.fieldFilterButton = document.getElementById('fieldFilterButton');
+    refs.fieldFilterMenu = document.getElementById('fieldFilterMenu');
+    refs.fieldFilterLabel = document.getElementById('fieldFilterLabel');
     refs.farmersCount = document.getElementById('farmersCount');
     refs.driversCount = document.getElementById('driversCount');
     refs.requestsCount = document.getElementById('requestsCount');
@@ -120,57 +125,162 @@ export function initializeHandlerWorkersSection() {
     });
   }
 
+  async function populateFieldFilter() {
+    if (!refs.fieldFilterMenu) return;
+
+    try {
+      const handlerId = getUserId();
+      const fieldIds = await getHandlerFieldIds(handlerId);
+
+      // Fetch field details
+      const fields = [];
+      for (const fieldId of fieldIds) {
+        try {
+          const fieldRef = doc(db, 'fields', fieldId);
+          const fieldSnap = await getDoc(fieldRef);
+          if (fieldSnap.exists()) {
+            fields.push({
+              id: fieldId,
+              name: fieldSnap.data().fieldName || fieldSnap.data().name || 'Unknown Field'
+            });
+          }
+        } catch (err) {
+          console.warn(`Could not fetch field ${fieldId}:`, err);
+        }
+      }
+
+      state.availableFields = fields;
+
+      // Populate dropdown
+      const fieldOptions = [
+        `<button data-field-id="all" class="field-filter-item flex w-full items-center justify-between px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] active">
+          <span class="inline-flex items-center gap-2"><i class="fas fa-border-all"></i>All Fields</span>
+          <i class="fas fa-check"></i>
+        </button>`,
+        ...fields.map(f => `
+          <button data-field-id="${f.id}" class="field-filter-item flex w-full items-center justify-between px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
+            <span class="inline-flex items-center gap-2"><i class="fas fa-map-marker-alt"></i>${f.name}</span>
+            <i class="fas fa-check"></i>
+          </button>
+        `)
+      ].join('');
+
+      refs.fieldFilterMenu.innerHTML = fieldOptions;
+
+      // Attach click handlers
+      refs.fieldFilterMenu.querySelectorAll('.field-filter-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fieldId = btn.dataset.fieldId;
+          state.fieldFilter = fieldId;
+
+          // Update UI
+          refs.fieldFilterLabel.textContent = fieldId === 'all' ? 'All Fields' : fields.find(f => f.id === fieldId)?.name || 'All Fields';
+          refs.fieldFilterMenu.querySelectorAll('.field-filter-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.fieldId === fieldId);
+          });
+          refs.fieldFilterMenu.classList.add('hidden');
+
+          renderWorkers();
+        });
+      });
+
+    } catch (err) {
+      console.error('Error populating field filter:', err);
+    }
+  }
+
   function collectWorkers(){
-    const farmers = state.farmers.map(f => ({
-      id: f.id,
-      type: 'farmers',
-      label: 'Worker', // Changed from 'Farmer' to 'Worker'
-      icon: 'fas fa-user text-[var(--cane-700)]',
-      name: f.name || 'Unnamed Worker',
-      contact: f.phone || '—',
-      detail: f.barangay || '—',
-      since: f.since
-    }));
+    // Combine all workers and drivers
+    const allRecords = [...state.farmers, ...state.drivers];
 
-    const drivers = state.drivers.map(d => ({
-      id: d.id,
-      type: 'drivers',
-      label: 'Driver',
-      icon: 'fas fa-truck text-[#0f609b]',
-      name: d.name || 'Unnamed Driver',
-      contact: d.phone || '—',
-      detail: d.plate || '—',
-      since: d.since
-    }));
+    // Group by userId to deduplicate
+    const groupedByUser = new Map();
 
-    return [...farmers, ...drivers];
+    allRecords.forEach(record => {
+      if (!groupedByUser.has(record.id)) {
+        groupedByUser.set(record.id, {
+          id: record.id,
+          name: record.name || 'Unnamed User',
+          contact: record.phone || '—',
+          barangay: record.barangay,
+          plate: record.plate,
+          since: record.since,
+          fields: [] // Array of {fieldId, fieldName, role}
+        });
+      }
+
+      // Add this field assignment to the user's record
+      groupedByUser.get(record.id).fields.push({
+        fieldId: record.fieldId,
+        fieldName: record.fieldName,
+        role: record.role
+      });
+    });
+
+    // Convert Map to array
+    return Array.from(groupedByUser.values());
   }
 
   function updateSummaryCounts(){
-    if (refs.farmersCount) refs.farmersCount.textContent = state.farmers.length;
-    if (refs.driversCount) refs.driversCount.textContent = state.drivers.length;
+    const workers = collectWorkers();
+
+    // Count unique users who have at least one worker role
+    const workerCount = workers.filter(w =>
+      w.fields.some(f => f.role?.toLowerCase() === 'worker')
+    ).length;
+
+    // Count unique users who have at least one driver role
+    const driverCount = workers.filter(w =>
+      w.fields.some(f => f.role?.toLowerCase() === 'driver')
+    ).length;
+
+    if (refs.farmersCount) refs.farmersCount.textContent = workerCount;
+    if (refs.driversCount) refs.driversCount.textContent = driverCount;
   }
 
   function renderWorkers() {
     if (!refs.workersTbody) return;
 
-    const records = collectWorkers()
-      .filter(worker => state.filter === 'all' || worker.type === state.filter)
-      .filter(worker => {
-        if (!state.search) return true;
-        const searchTerm = state.search.toLowerCase().trim();
-        if (!searchTerm) return true;
+    let records = collectWorkers();
+
+    // Apply search filter
+    if (state.search) {
+      const searchTerm = state.search.toLowerCase().trim();
+      records = records.filter(worker => {
         const searchableText = [
           worker.name,
-          worker.detail,
-          worker.label,
-          worker.type
+          worker.barangay,
+          worker.plate,
+          ...worker.fields.map(f => f.fieldName)
         ]
           .filter(Boolean)
           .join(' ')
           .toLowerCase();
         return searchableText.includes(searchTerm);
       });
+    }
+
+    // Apply type filter (workers vs drivers)
+    if (state.filter !== 'all') {
+      records = records.filter(worker => {
+        if (state.filter === 'farmers') {
+          // Show if they have at least one worker role
+          return worker.fields.some(f => f.role?.toLowerCase() === 'worker');
+        } else if (state.filter === 'drivers') {
+          // Show if they have at least one driver role
+          return worker.fields.some(f => f.role?.toLowerCase() === 'driver');
+        }
+        return true;
+      });
+    }
+
+    // Apply field filter
+    if (state.fieldFilter !== 'all') {
+      records = records.filter(worker => {
+        // Show if they have at least one assignment in the selected field
+        return worker.fields.some(f => f.fieldId === state.fieldFilter);
+      });
+    }
 
     if (records.length === 0) {
       refs.workersTbody.innerHTML =
@@ -178,26 +288,50 @@ export function initializeHandlerWorkersSection() {
       return;
     }
 
-    const rows = records.map(worker => `
-      <tr class="group transition-all hover:bg-[var(--cane-50)] border-t border-[var(--cane-100)]">
-        <td class="py-4 pl-5">
-          <span class="inline-flex items-center gap-2 font-semibold text-[var(--cane-800)]">
-            <i class="${worker.icon}"></i>
-            ${worker.label}
-          </span>
-        </td>
-        <td class="py-4">
-          <div class="font-semibold text-[var(--cane-950)]">${worker.name}</div>
-          ${worker.since ? `<div class="text-xs text-[var(--cane-600)]">Since ${fmtDate(worker.since)}</div>` : ''}
-        </td>
-        <td class="py-4 pr-5 text-right">
-          <button class="see-details-btn bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-            data-id="${worker.id}">
-            See Details
-          </button>
-        </td>
-      </tr>
-    `).join('');
+    const rows = records.map(worker => {
+      // Filter field badges based on field filter
+      let fieldsToShow = worker.fields;
+      if (state.fieldFilter !== 'all') {
+        fieldsToShow = worker.fields.filter(f => f.fieldId === state.fieldFilter);
+      }
+
+      // Filter badges based on type filter
+      if (state.filter === 'farmers') {
+        fieldsToShow = fieldsToShow.filter(f => f.role?.toLowerCase() === 'worker');
+      } else if (state.filter === 'drivers') {
+        fieldsToShow = fieldsToShow.filter(f => f.role?.toLowerCase() === 'driver');
+      }
+
+      // Create field badges
+      const fieldBadges = fieldsToShow.map(f => {
+        const roleLabel = f.role?.toLowerCase() === 'driver' ? 'Driver' : 'Worker';
+        const roleColor = f.role?.toLowerCase() === 'driver' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+        return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${roleColor}">
+          <i class="fas fa-map-marker-alt"></i>
+          ${f.fieldName || 'Unknown Field'} (${roleLabel})
+        </span>`;
+      }).join(' ');
+
+      return `
+        <tr class="group transition-all hover:bg-[var(--cane-50)] border-t border-[var(--cane-100)]">
+          <td class="py-4 pl-4">
+            <div class="font-semibold text-[var(--cane-950)]">${worker.name}</div>
+            ${worker.since ? `<div class="text-xs text-[var(--cane-500)] mt-0.5">Since ${fmtDate(worker.since)}</div>` : ''}
+          </td>
+          <td class="py-4">
+            <div class="flex flex-wrap gap-1.5">
+              ${fieldBadges || '<span class="text-xs text-gray-400">No assignments</span>'}
+            </div>
+          </td>
+          <td class="py-4 pr-4 text-right">
+            <button class="see-details-btn bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-all duration-200"
+              data-id="${worker.id}">
+              See Details
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
     refs.workersTbody.innerHTML = rows;
 
@@ -329,21 +463,23 @@ export function initializeHandlerWorkersSection() {
 
         if (requesterUserId) {
           const notifRef = doc(collection(db, "notifications"));
-          const notifTitle =
-            action === "approve"
-              ? "Field Registration Approved!"
-              : "Field Registration Rejected!";
-          const notifMessage =
-            action === "approve"
-              ? `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been approved by the handler. You can now check your joined fields <a href="../../frontend/Worker/join-field.html" target="_blank" class="notif-link">here</a>.`
-              : `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been rejected by the handler. Please contact your handler for more information.`;
+          const fieldName = requestData.fieldName || "a field";
+          const notifType = action === "approve" ? "join_approved" : "join_rejected";
+          const notifTitle = action === "approve"
+            ? "Join Request Approved"
+            : "Join Request Rejected";
+          const notifMessage = action === "approve"
+            ? `Your join request for ${fieldName} has been approved! You can now access the field.`
+            : `Your join request for ${fieldName} has been rejected. Please contact your handler for more information.`;
 
           await setDoc(notifRef, {
             userId: requesterUserId,
+            type: notifType,
             title: notifTitle,
             message: notifMessage,
-            status: "unread",
-            timestamp: serverTimestamp(),
+            read: false,
+            createdAt: serverTimestamp(),
+            relatedEntityId: requestData.fieldId || requestData.field_id,
           });
 
           console.log(`📨 Notification sent to ${requesterUserId} (${notifTitle})`);
@@ -406,10 +542,27 @@ export function initializeHandlerWorkersSection() {
       });
     }
 
+    // Field filter dropdown
+    if (refs.fieldFilterButton && refs.fieldFilterMenu) {
+      refs.fieldFilterButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        refs.fieldFilterMenu.classList.toggle('hidden');
+        if (refs.dropdownMenu) refs.dropdownMenu.classList.add('hidden'); // Close other dropdown
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!refs.fieldFilterButton.contains(event.target) && !refs.fieldFilterMenu.contains(event.target)) {
+          refs.fieldFilterMenu.classList.add('hidden');
+        }
+      });
+    }
+
+    // Type filter dropdown
     if (refs.dropdownButton && refs.dropdownMenu) {
       refs.dropdownButton.addEventListener('click', (event) => {
         event.stopPropagation();
         refs.dropdownMenu.classList.toggle('hidden');
+        if (refs.fieldFilterMenu) refs.fieldFilterMenu.classList.add('hidden'); // Close other dropdown
       });
 
       document.addEventListener('click', (event) => {
@@ -447,26 +600,23 @@ export function initializeHandlerWorkersSection() {
       // Get all approved join requests for handler's fields
       let allApprovedRequests = [];
       try {
-        const joinFieldsQuery = query(collectionGroup(db, "join_fields"));
+        const joinFieldsQuery = query(
+          collection(db, "field_joins"),
+          where("handlerId", "==", uid),
+          where("status", "==", "approved")
+        );
         const joinFieldsSnap = await getDocs(joinFieldsQuery);
-        
-        allApprovedRequests = joinFieldsSnap.docs
-          .map(doc => {
-            const data = doc.data();
-            const fieldId = data.fieldId || data.field_id || data.fieldID || doc.id;
-            const userId = data.userId || data.user_id || data.user_uid || "";
-            return {
-              userId: userId,
-              fieldId: fieldId,
-              role: data.joinAs || data.role || data.requested_role || "worker",
-              status: data.status || "pending",
-              requestedAt: data.requestedAt || data.requested_at || data.createdAt
-            };
-          })
-          .filter(req => {
-            // Only include approved requests for handler's fields
-            return req.fieldId && handlerFieldIds.has(req.fieldId) && req.status === "approved";
-          });
+
+        allApprovedRequests = joinFieldsSnap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            userId: data.userId,
+            fieldId: data.fieldId,
+            role: data.assignedAs || data.joinAs || data.role || "worker",
+            status: data.status,
+            requestedAt: data.requestedAt
+          };
+        });
       } catch (err) {
         console.warn('Could not fetch approved join requests:', err);
       }
@@ -479,13 +629,13 @@ export function initializeHandlerWorkersSection() {
       // Fetch user details from users collection
       const workers = [];
       const drivers = [];
-      
+
       await Promise.all(
         approvedUserIds.map(async (userId) => {
           try {
             const userSnap = await getDoc(doc(db, "users", userId));
             if (!userSnap.exists()) return;
-            
+
             const userData = userSnap.data();
             const userRole = (userData.role || "").toLowerCase();
 
@@ -502,13 +652,12 @@ export function initializeHandlerWorkersSection() {
               }
             }
 
-            
-            // Only include users with role "worker" or "driver"
-            if (userRole !== "worker" && userRole !== "driver") return;
-            
-            // Find the approved request for this user
-            const approvedReq = allApprovedRequests.find(req => req.userId === userId);
-            const requestedRole = approvedReq?.role || userRole;
+
+            // REMOVED filter - now allows farmers to be shown as workers/drivers based on field_joins role
+            // This supports: farmer can be worker on one field, driver on another field
+
+            // Find ALL approved requests for this user (they might work on multiple fields)
+            const userApprovedRequests = allApprovedRequests.filter(req => req.userId === userId);
             
             const userName = resolveValue(
               [userData.nickname, userData.name, userData.fullname, userData.fullName, userData.displayName, userData.email],
@@ -528,31 +677,49 @@ const address =
       )
     : userData.barangay || badgeData.barangay || "—";
 
-      const userInfo = {
-        id: userId,
-        name: userName,
-        phone: resolveValue(
-          [
-            userData.phone,
-            userData.phoneNumber,
-            userData.contact,
-            userData.mobile,
-            badgeData.contact_number,
-            badgeData.contactNumber,
-          ],
-          CONTACT_PLACEHOLDERS
-        ) || "—",
-        barangay: address || "—",
-        plate: userData.plate || badgeData.vehiclePlate || badgeData.plate || "—",
-        since: approvedReq?.requestedAt
-          ? (approvedReq.requestedAt.toDate ? approvedReq.requestedAt.toDate().toISOString() : approvedReq.requestedAt)
-          : new Date().toISOString(),
-      };
-            
-            if (requestedRole.toLowerCase() === "driver" || userRole === "driver") {
-              drivers.push(userInfo);
-            } else {
-              workers.push(userInfo);
+            // Process each field this user works on
+            for (const req of userApprovedRequests) {
+              // Fetch field name
+              let fieldName = 'Unknown Field';
+              try {
+                const fieldRef = doc(db, 'fields', req.fieldId);
+                const fieldSnap = await getDoc(fieldRef);
+                if (fieldSnap.exists()) {
+                  fieldName = fieldSnap.data().fieldName || fieldSnap.data().name || 'Unknown Field';
+                }
+              } catch (err) {
+                console.warn(`Could not fetch field ${req.fieldId}:`, err);
+              }
+
+              const userInfo = {
+                id: userId,
+                name: userName,
+                phone: resolveValue(
+                  [
+                    userData.phone,
+                    userData.phoneNumber,
+                    userData.contact,
+                    userData.mobile,
+                    badgeData.contact_number,
+                    badgeData.contactNumber,
+                  ],
+                  CONTACT_PLACEHOLDERS
+                ) || "—",
+                barangay: address || "—",
+                plate: userData.plate || badgeData.vehiclePlate || badgeData.plate || "—",
+                since: req.requestedAt
+                  ? (req.requestedAt.toDate ? req.requestedAt.toDate().toISOString() : req.requestedAt)
+                  : new Date().toISOString(),
+                fieldId: req.fieldId, // Store field ID
+                fieldName: fieldName, // Store field name
+                role: req.role // Store role for THIS specific field
+              };
+
+              if (req.role.toLowerCase() === "driver") {
+                drivers.push(userInfo);
+              } else {
+                workers.push(userInfo);
+              }
             }
           } catch (err) {
             console.warn(`Failed to fetch user ${userId}:`, err);
@@ -604,14 +771,7 @@ const address =
         console.warn("Could not fetch fields by registered_by:", err.message);
       }
       
-      // Also check field_applications subcollection
-      try {
-        const nestedFieldsQuery = query(collection(db, `field_applications/${handlerId}/fields`));
-        const nestedSnap = await getDocs(nestedFieldsQuery);
-        nestedSnap.docs.forEach(doc => fieldIds.add(doc.id));
-      } catch (err) {
-        console.warn("Could not fetch nested fields:", err.message);
-      }
+      // field_applications subcollection removed - all fields now in top-level fields collection
     } catch (err) {
       console.error("Error getting handler field IDs:", err);
     }
@@ -678,8 +838,12 @@ const address =
     }
 
     try {
-      // Listen to all join_fields documents via collectionGroup
-      const joinFieldsQuery = query(collectionGroup(db, "join_fields"));
+      // Listen to field_joins for this handler
+      const uid = localStorage.getItem('userId');
+      const joinFieldsQuery = query(
+        collection(db, "field_joins"),
+        where("handlerId", "==", uid)
+      );
       unsubscribeJoinRequests = onSnapshot(joinFieldsQuery, async (snapshot) => {
         console.log('🔄 Join requests updated in real-time');
         await loadJoinRequests();
@@ -698,6 +862,7 @@ const address =
     grabRefs();
     syncFilterUI(state.filter);
     attachEvents();
+    await populateFieldFilter();
     await refresh();
     setupJoinRequestsListener();
   }
@@ -973,19 +1138,11 @@ async function loadJoinRequestsForHandler(handlerId) {
       console.warn("Could not fetch fields by registered_by:", err.message);
     }
     
-    // Also check field_applications subcollection
-    let nestedFields = [];
-    try {
-      const nestedFieldsQuery = query(collection(db, `field_applications/${handlerId}/fields`));
-      const nestedSnap = await getDocs(nestedFieldsQuery);
-      nestedFields = nestedSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (err) {
-      console.warn("Could not fetch nested fields:", err.message);
-    }
+    // field_applications subcollection removed - all fields now in top-level fields collection
 
     // Merge all fields and remove duplicates
     const allFieldsMap = new Map();
-    [...fieldsFromUserId, ...fieldsFromLandownerId, ...fieldsFromRegisteredBy, ...nestedFields].forEach(field => {
+    [...fieldsFromUserId, ...fieldsFromLandownerId, ...fieldsFromRegisteredBy].forEach(field => {
       if (field.id) {
         allFieldsMap.set(field.id, field);
       }
@@ -998,41 +1155,38 @@ async function loadJoinRequestsForHandler(handlerId) {
       return [];
     }
 
-    // Step 2: Query join_fields using collectionGroup
+    // Step 2: Query field_joins for this handler's pending requests
     let allJoinRequests = [];
-    
+
     try {
-      const joinFieldsQuery = query(collectionGroup(db, "join_fields"));
+      const joinFieldsQuery = query(
+        collection(db, "field_joins"),
+        where("handlerId", "==", handlerId),
+        where("status", "==", "pending")
+      );
       const joinFieldsSnap = await getDocs(joinFieldsQuery);
-      
-      // Process and filter join requests
-      allJoinRequests = joinFieldsSnap.docs
-        .map(doc => {
-          const data = doc.data();
-          const fieldId = data.fieldId || data.field_id || data.fieldID || doc.id;
-          const userId = data.userId || data.user_id || data.user_uid || "";
-          
-          return {
-            id: doc.id,
-            refPath: doc.ref.path,
-            fieldId: fieldId,
-            userId: userId,
-            user_uid: userId,
-            fieldName: data.fieldName || data.field_name || "",
-            street: data.street || "",
-            barangay: data.barangay || "",
-            role: data.joinAs || data.role || data.requested_role || "worker",
-            status: data.status || "pending",
-            requestedAt: data.requestedAt || data.requested_at || data.createdAt || data.created_at
-          };
-        })
-        .filter(req => {
-          // Filter: Only include PENDING requests for fields owned by this handler
-          return req.fieldId && handlerFieldIds.has(req.fieldId) && req.status === "pending";
-        });
-      
+
+      // Process join requests
+      allJoinRequests = joinFieldsSnap.docs.map(doc => {
+        const data = doc.data();
+
+        return {
+          id: doc.id,
+          refPath: doc.ref.path,
+          fieldId: data.fieldId,
+          userId: data.userId,
+          user_uid: data.userId,
+          fieldName: data.fieldName || "",
+          street: data.street || "",
+          barangay: data.barangay || "",
+          role: data.assignedAs || data.joinAs || data.role || "worker",
+          status: data.status,
+          requestedAt: data.requestedAt
+        };
+      });
+
     } catch (err) {
-      console.error("❌ Error fetching join requests via collectionGroup:", err);
+      console.error("❌ Error fetching join requests:", err);
       return [];
     }
 
@@ -1122,8 +1276,11 @@ async function loadJoinRequestsForUser(){
   const userId = localStorage.getItem('userId');
   if (!userId) return [];
 
-  const joinFieldsRef = collection(db, `field_joins/${userId}/join_fields`);
-  const q = query(joinFieldsRef, where('status', 'in', ['pending', 'approved']));
+  const q = query(
+    collection(db, 'field_joins'),
+    where('userId', '==', userId),
+    where('status', 'in', ['pending', 'approved'])
+  );
   const snapshot = await getDocs(q);
 
   const fieldCache = new Map();

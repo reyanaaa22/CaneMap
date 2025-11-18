@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CaneMap - Field Handlers Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome first to prevent icon flash -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="/css/output.css">
 <script>
   // Bind handler name in header and sidebar from localStorage (no backend changes)
   (function(){
@@ -66,21 +69,11 @@
     }
   }
 
-  function goSettingsNav(){
-    // Prefer calling showSection if available; fallback to clicking sidebar link
-    if (typeof window.showSection === 'function') {
-      window.showSection('settings');
-    } else {
-      const link = document.querySelector('.nav-item[data-section="settings"]');
-      if (link) link.click();
-    }
-    openMenu(false);
-  }
 
   function doLogout(){
     showHandlerToast('Logging out… Redirecting to sign-in page');
     setTimeout(function(){
-      const target = '/frontend/Common/farmers_login.html';
+      const target = '../Common/farmers_login.html';
       try { if (window.signOut && window.auth) window.signOut(window.auth); } catch(_) {}
       try { localStorage.clear(); sessionStorage.clear(); } catch(_) {}
       // Use replace to avoid returning via back button
@@ -98,13 +91,11 @@
     // Header dropdown bindings
     const menuBtn = document.getElementById('handlerHeaderMenuBtn');
     const goProfileBtn = document.getElementById('handlerGoProfile');
-    const goSettingsBtn = document.getElementById('handlerGoSettings');
     const logoutBtn = document.getElementById('handlerLogout');
     const menuEl = document.getElementById('handlerHeaderMenu');
     if (menuEl) menuEl.addEventListener('click', function(e){ e.stopPropagation(); });
     if (menuBtn) menuBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openMenu(!isMenuOpen()); });
-    if (goProfileBtn) goProfileBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '/frontend/Common/profile-settings.html'; });
-    if (goSettingsBtn) goSettingsBtn.addEventListener('click', function(e){ e.preventDefault(); goSettingsNav(); });
+    if (goProfileBtn) goProfileBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Common/profile-settings.html'; });
     if (logoutBtn) logoutBtn.addEventListener('click', function(e){ e.preventDefault(); doLogout(); });
     // Close on outside click
     document.addEventListener('click', function(){ openMenu(false); });
@@ -122,32 +113,61 @@
 })();
 </script>
 
-<!-- Custom popup for logout message -->
+<!-- Custom popup for toast messages -->
 <div id="handlerToastOverlay" class="fixed inset-0 bg-black/40 opacity-0 invisible transition-opacity duration-200 z-[90]"></div>
 <div id="handlerToastCard" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-xl shadow-2xl border border-[var(--cane-200)] opacity-0 scale-95 invisible transition-all duration-200 z-[100]">
   <div class="px-5 pt-5 pb-4">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow">
+      <div id="handlerToastIcon" class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow">
         <i class="fas fa-sign-out-alt"></i>
       </div>
       <div>
         <p id="handlerToastMsg" class="text-[var(--cane-900)] font-semibold">Logging out…</p>
-        <p class="text-sm text-[var(--cane-700)]">Redirecting to sign-in page</p>
+        <p id="handlerToastSubMsg" class="text-sm text-[var(--cane-700)]">Redirecting to sign-in page</p>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  function showHandlerToast(msg){
+  function showHandlerToast(msg, type){
     var overlay = document.getElementById('handlerToastOverlay');
     var card = document.getElementById('handlerToastCard');
     var msgEl = document.getElementById('handlerToastMsg');
+    var subMsgEl = document.getElementById('handlerToastSubMsg');
+    var iconEl = document.getElementById('handlerToastIcon');
+
     if (!overlay || !card) return;
+
+    // Update message
     if (msgEl) msgEl.textContent = msg || 'Logging out…';
+
+    // Update icon and submessage based on type
+    if (type === 'success') {
+      if (iconEl) {
+        iconEl.className = 'w-9 h-9 rounded-full flex items-center justify-center bg-green-600 text-white shadow';
+        iconEl.innerHTML = '<i class="fas fa-check"></i>';
+      }
+      if (subMsgEl) subMsgEl.textContent = '';
+    } else if (type === 'error') {
+      if (iconEl) {
+        iconEl.className = 'w-9 h-9 rounded-full flex items-center justify-center bg-red-600 text-white shadow';
+        iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+      }
+      if (subMsgEl) subMsgEl.textContent = '';
+    } else {
+      // Default/logout style
+      if (iconEl) {
+        iconEl.className = 'w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow';
+        iconEl.innerHTML = '<i class="fas fa-sign-out-alt"></i>';
+      }
+      if (subMsgEl) subMsgEl.textContent = 'Redirecting to sign-in page';
+    }
+
     overlay.classList.remove('opacity-0','invisible');
     card.classList.remove('opacity-0','invisible','scale-95');
     card.classList.add('opacity-100','scale-100');
+
     // Auto-hide after a second; do not re-hide overlay if redirect happens
     setTimeout(function(){
       overlay.classList.add('opacity-0');
@@ -156,8 +176,7 @@
     }, 1000);
   }
 </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -185,6 +204,7 @@
             --cane-50: #f0fdf4;
             --cane-100: #dcfce7;
             --cane-200: #bbf7d0;
+            --cane-300: #86efac;
             --cane-400: #4ade80;
             --cane-500: #22c55e;
             --cane-600: #16a34a;
@@ -534,10 +554,37 @@
                 <div class="flex items-center space-x-4"></div>
                 <div class="text-center"></div>
                 <div class="flex items-center space-x-4">
-                    <!-- Notification icon -->
-                    <button class="text-white hover:text-gray-200 transition-colors">
-                        <i class="fas fa-bell text-lg"></i>
-                    </button>
+                    <!-- Back to Lobby Button -->
+                    <a href="../Common/lobby.html" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors px-3 py-2 rounded-lg hover:bg-white/10" title="Back to Lobby">
+                        <i class="fas fa-home text-lg"></i>
+                        <span class="hidden md:inline text-sm font-medium">Lobby</span>
+                    </a>
+
+                    <!-- Notification Bell with Dropdown -->
+                    <div class="relative">
+                        <button id="notificationBellBtn" class="relative text-white hover:text-gray-200 transition-colors p-2">
+                            <i class="fas fa-bell text-lg"></i>
+                            <!-- Notification Badge -->
+                            <span id="notificationBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </button>
+
+                        <!-- Notification Dropdown -->
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+                            <!-- Dropdown Header -->
+                            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                                <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
+                                <button id="notificationRefreshBtn" class="text-[var(--cane-700)] hover:text-[var(--cane-800)] text-xs">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+
+                            <!-- Notifications List -->
+                            <div id="notificationList" class="overflow-y-auto max-h-80">
+                                <div class="p-4 text-sm text-gray-500 text-center">Loading notifications...</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Header profile dropdown -->
                     <div class="relative">
                         <button id="handlerHeaderMenuBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
@@ -549,7 +596,6 @@
                         </button>
                         <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right z-50">
                             <button id="handlerGoProfile" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile Information</button>
-                            <button id="handlerGoSettings" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</button>
                             <button id="handlerLogout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
                         </div>
                     </div>
@@ -657,7 +703,7 @@
                     <div class="mb-4">
                         <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="workers">
                             <i class="fas fa-users w-5 h-5"></i>
-                            <span>Workers</span>
+                            <span>Team</span>
                         </a>
                     </div>
 
@@ -673,7 +719,7 @@
                     <div class="mb-4">
                         <a href="#" id="navRentDriver"
                         class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors"
-                        data-section="rentDriver"  
+                        data-section="rentDriver"
                         title="Rent a Driver">
 
                             <i class="fas fa-truck-moving w-5 h-5"></i>
@@ -691,19 +737,12 @@
 
                     <!-- Reports -->
                     <div class="mb-4">
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="reports">
-                        <i class="fas fa-chart-bar w-5 h-5"></i>
-                        <span>Reports</span>
-                    </a>
-                    </div>
-
-                    <!-- Settings -->
-                    <div class="mb-4">
-                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="settings">
-                            <i class="fas fa-cog w-5 h-5"></i>
-                            <span>Settings</span>
+                        <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg transition-colors" data-section="reports">
+                            <i class="fas fa-file-alt w-5 h-5"></i>
+                            <span>Reports</span>
                         </a>
                     </div>
+
                 </nav>
             </div>
         </aside>
@@ -715,14 +754,23 @@
             <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-900">Dashboard</h2>
         </div>
 
-        <!-- Metrics row (Total Fields, Active Workers, Pending Task, Join Request) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Metrics row (Total Fields, Pending Review, Active Workers, Pending Task, Join Request) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
             <div class="metric-card rounded-xl p-6">
                 <div class="flex items-center">
                     <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)]"><i class="fas fa-map text-white text-xl"></i></div>
                     <div>
                         <p class="text-sm font-medium text-[var(--cane-700)]">Total Fields</p>
                         <p id="mFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-yellow-400 to-yellow-500"><i class="fas fa-hourglass-half text-white text-xl"></i></div>
+                    <div>
+                        <p class="text-sm font-medium text-[var(--cane-700)]">Pending Review</p>
+                        <p id="mPendingFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
                     </div>
                 </div>
             </div>
@@ -755,6 +803,22 @@
             </div>
         </div>
 
+        <!-- Task Warnings Panel (Critical & Overdue Tasks) -->
+        <div id="taskWarningsPanel" class="hidden mb-6">
+            <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-5 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold flex items-center text-red-800">
+                        <i class="fas fa-exclamation-triangle mr-3 text-red-600"></i>
+                        Task Warnings
+                    </h3>
+                    <button id="dismissWarnings" class="text-sm text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-times-circle"></i> Dismiss
+                    </button>
+                </div>
+                <div id="taskWarningsList" class="space-y-3"></div>
+            </div>
+        </div>
+
         <div id="dashboard-panels" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
                       <!-- Join Request panel -->
                       <div class="section-card rounded-xl p-6">
@@ -775,79 +839,137 @@
 
             <!-- Recent Activity Logs panel -->
             <div class="section-card rounded-xl p-6">
-                <h3 class="text-lg font-bold mb-4 flex items-center" style="color: var(--text-dark);"><i class="fas fa-stream mr-3" style="color: var(--primary-medium);"></i>Recent Activity Logs</h3>
-                <div class="space-y-4">
-                    <div class="bg-white border rounded-lg p-4 flex items-start justify-between shadow-sm" style="border-color: var(--neutral-medium);">
-                        <div class="flex items-start space-x-3">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--neutral-medium);"><i class="fas fa-user" style="color: var(--text-medium);"></i></div>
-                            <div>
-                                <p class="font-semibold" style="color: var(--text-dark);">Anna Reyes</p>
-                                <p class="text-sm leading-tight" style="color: var(--text-medium);">Fertilization Task - Lot A1<br/>Applied organic fertilizer to section A. Weather conditions favorable.</p>
-                                <div class="mt-2 flex items-center space-x-4 text-sm">
-                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-image mr-1"></i>View Photos</button>
-                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-comment mr-1"></i>Add Comment</button>
-                                </div>
-                            </div>
-                        </div>
-                        <span class="text-xs px-2 py-1 rounded" style="background-color: #E8F5E9; color: var(--primary-medium);">Completed</span>
-                    </div>
+                <div class="mb-4 p-3 rounded-lg flex items-center justify-between bg-[var(--cane-50)]">
+                    <h3 class="text-lg font-bold flex items-center text-[var(--cane-900)]">
+                        <i class="fas fa-stream mr-3" style="color: var(--primary-medium);"></i>
+                        Recent Activity Logs
+                    </h3>
+                </div>
 
-                    <div class="bg-white border rounded-lg p-4 flex items-start justify-between shadow-sm" style="border-color: var(--neutral-medium);">
-                        <div class="flex items-start space-x-3">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--neutral-medium);"><i class="fas fa-user" style="color: var(--text-medium);"></i></div>
-                            <div>
-                                <p class="font-semibold" style="color: var(--text-dark);">Carl Ramos</p>
-                                <p class="text-sm leading-tight" style="color: var(--text-medium);">Weeding Task - Lot B2<br/>Started weeding in section B. Approximately 60% completed.</p>
-                                <div class="mt-2 flex items-center space-x-4 text-sm">
-                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-image mr-1"></i>View Photos</button>
-                                    <button class="hover:underline" style="color: var(--text-medium);"><i class="fas fa-comment mr-1"></i>Add Comment</button>
-                                </div>
-                            </div>
-                        </div>
-                        <span class="text-xs px-2 py-1 rounded" style="background-color: #FFF3E0; color: #F57C00;">In Progress</span>
+                <!-- Dynamic container for activity logs -->
+                <div id="activityLogsList" class="space-y-4">
+                    <div class="text-center py-8">
+                        <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">No recent activity logs</p>
+                        <p class="text-sm text-gray-400 mt-1">Activity from workers will appear here</p>
                     </div>
                 </div>
             </div>
         </div>
         </div>
 
-        <!-- Tasks Section (Loaded Dynamically) -->
-        <div id="tasks" class="content-section hidden"></div>
+        <!-- Tasks Section (REQ-4: All Tasks Management) -->
+        <div id="tasks" class="content-section hidden">
+            <div class="px-4 lg:px-0 py-4 mb-2">
+                <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-900">All Tasks</h2>
+                <p class="text-gray-600 text-sm mt-1">Manage all tasks across all your fields</p>
+            </div>
 
-        <!-- Reports Section (Loaded Dynamically) -->
-        <div id="reports" class="content-section hidden"></div>
+            <!-- Filter Bar -->
+            <div class="bg-white rounded-xl p-4 shadow-sm mb-6 flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <label for="tasksFilter" class="text-sm font-medium text-gray-700">Filter:</label>
+                    <select id="tasksFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <option value="all">All Tasks</option>
+                        <option value="pending">Pending</option>
+                        <option value="done">Done</option>
+                    </select>
+                </div>
+                <div class="ml-auto">
+                    <span id="tasksCount" class="text-sm text-gray-600">Loading...</span>
+                </div>
+            </div>
 
-        <!-- Analytics Section (Loaded Dynamically) -->
-        <div id="analytics" class="content-section hidden"></div>
+            <!-- Tasks Table -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Task</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Field</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Scheduled</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                                    <i class="fas fa-tasks text-3xl mb-2 text-gray-400"></i>
+                                    <p>Loading tasks...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- Fields Section (Loaded Dynamically) -->
         <div id="fields" class="content-section hidden"></div>
 
-        
+        <!-- Analytics Section (Loaded Dynamically) -->
+        <div id="analytics" class="content-section hidden"></div>
+
+        <!-- Reports Section (Loaded Dynamically) -->
+        <div id="reports" class="content-section hidden"></div>
+
         <!-- Workers Section (Loaded Dynamically) -->
         <div id="workers" class="content-section hidden"></div>
 
         <!-- Rent Driver Section (Loaded Dynamically) -->
         <div id="rentDriver" class="content-section hidden"></div>
-
-        <!-- Settings Section (Loaded Dynamically) -->
-        <div id="settings" class="content-section hidden"></div>
         </main>
     </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script type="module" src="../../backend/Handler/dashboard.js"></script>
+<script type="module" src="../../backend/Handler/dashboard.js?v=1763446084"></script>
 <script>
     // Handle active menu item styling
     document.addEventListener('DOMContentLoaded', function() {
         const navItems = document.querySelectorAll('.nav-item');
-        
+
         navItems.forEach(item => {
             item.addEventListener('click', function(e) {
+                e.preventDefault();
+
                 // Remove active class from all items
                 navItems.forEach(i => i.classList.remove('active'));
                 // Add active class to clicked item
                 this.classList.add('active');
+
+                // Get the section to show
+                const section = this.dataset.section;
+
+                // Hide all sections
+                document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+
+                // Show the clicked section
+                const targetSection = document.getElementById(section);
+                if (targetSection) {
+                    targetSection.classList.remove('hidden');
+
+                    // Initialize section-specific functionality
+                    if (section === 'tasks' && typeof window.initializeTasksSection === 'function') {
+                        const user = window.auth?.currentUser;
+                        if (user) {
+                            window.initializeTasksSection(user.uid);
+                        }
+                    }
+
+                    if (section === 'fields' && typeof window.initializeFieldsSection === 'function') {
+                        window.initializeFieldsSection();
+                    }
+
+                    if (section === 'workers' && typeof window.initializeHandlerWorkersSection === 'function') {
+                        window.initializeHandlerWorkersSection();
+                    }
+
+                    if (section === 'rentDriver' && typeof window.initializeRentDriverSection === 'function') {
+                        window.initializeRentDriverSection();
+                    }
+                }
             });
         });
         

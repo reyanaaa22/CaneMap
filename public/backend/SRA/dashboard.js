@@ -1,5 +1,204 @@
+console.log('🔥🔥🔥 SRA DASHBOARD.JS LOADED - VERSION 3.0 WITH IMPORT LOGGING 🔥🔥🔥');
 
 import { showPopupMessage } from '../Common/ui-popup.js';
+import { notifyReportApproval, notifyReportRejection } from '../Common/notifications.js';
+
+// =============================
+// 🔔 Notifications Bell (Same as Handler Dashboard)
+// =============================
+
+function formatRelativeTime(ts) {
+  const date = ts && ts.toDate ? ts.toDate() : ts ? new Date(ts) : new Date();
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) > 1 ? "s" : ""} ago`;
+  return date.toLocaleDateString();
+}
+
+let notificationsUnsub = null;
+
+async function initNotifications(userId) {
+  const { db } = await import('../Common/firebase-config.js');
+  const { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+  const bellBtn = document.getElementById("notificationBellBtn");
+  const dropdown = document.getElementById("notificationDropdown");
+  const badge = document.getElementById("notificationBadge");
+  const list = document.getElementById("notificationList");
+  const refreshBtn = document.getElementById("notificationRefreshBtn");
+
+  if (!bellBtn || !dropdown || !badge || !list) return;
+
+  const closeDropdown = (event) => {
+    if (!dropdown.contains(event.target) && !bellBtn.contains(event.target)) {
+      dropdown.classList.add("hidden");
+    }
+  };
+
+  bellBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    dropdown.classList.toggle("hidden");
+  });
+
+  document.addEventListener("click", closeDropdown);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") dropdown.classList.add("hidden");
+  });
+
+  // Helper function to format notification titles
+  const getNotificationTitle = (notification) => {
+    // If there's an explicit title, use it
+    if (notification.title) return notification.title;
+
+    // Otherwise, generate title from type
+    const typeToTitle = {
+      'report_requested': 'Report Requested',
+      'report_approved': 'Report Approved',
+      'report_rejected': 'Report Rejected',
+      'field_approved': 'Field Registration Approved',
+      'field_rejected': 'Field Registration Rejected',
+      'field_registration': 'New Field Registration',
+      'badge_approved': 'Driver Badge Approved',
+      'badge_rejected': 'Driver Badge Rejected'
+    };
+
+    return typeToTitle[notification.type] || 'Notification';
+  };
+
+  const renderNotifications = (docs = []) => {
+    // Fix: use 'read' boolean field instead of 'status' string field
+    const unread = docs.filter((doc) => !doc.read);
+
+    if (unread.length > 0) {
+      badge.textContent = String(unread.length);
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+
+    if (docs.length === 0) {
+      list.innerHTML = '<div class="p-4 text-sm text-gray-500 text-center">No notifications yet.</div>';
+      return;
+    }
+
+    list.innerHTML = docs
+      .map((item) => {
+        const title = getNotificationTitle(item);
+        const message = item.message || "";
+        const meta = formatRelativeTime(item.timestamp || item.createdAt);
+        const isRead = item.read === true;
+        const statusClass = isRead ? "bg-gray-100" : "bg-[var(--cane-50)]";
+        const safeMessage = typeof message === "string" ? message : "";
+
+        return `<button data-id="${item.id}" class="w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 focus:outline-none ${statusClass}">
+          <div class="flex items-start gap-2">
+            <div class="mt-1 h-2 w-2 rounded-full ${isRead ? "bg-gray-300" : "bg-[var(--cane-600)]"}"></div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-semibold text-[var(--cane-900)]">${title}</p>
+                <span class="text-xs text-[var(--cane-600)]">${meta}</span>
+              </div>
+              <p class="mt-1 text-sm text-[var(--cane-700)] leading-snug">${safeMessage}</p>
+            </div>
+          </div>
+        </button>`;
+      })
+      .join("");
+
+    Array.from(list.querySelectorAll("button[data-id]"))
+      .forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const notificationId = btn.dataset.id;
+          try {
+            await updateDoc(doc(db, "notifications", notificationId), {
+              read: true,
+              readAt: serverTimestamp()
+            });
+            console.log(`✅ Marked notification ${notificationId} as read`);
+          } catch (err) {
+            console.warn("Failed to update notification status", err);
+          }
+        });
+      });
+  };
+
+  const fetchNotifications = () => {
+    if (notificationsUnsub) notificationsUnsub();
+
+    const notificationsRef = collection(db, "notifications");
+
+    // SRA needs TWO queries: personal notifications AND broadcast notifications for role 'sra'
+    let personalNotifs = [];
+    let broadcastNotifs = [];
+
+    // Query 1: Personal notifications
+    const personalQuery = query(
+      notificationsRef,
+      where("userId", "==", userId),
+      orderBy("timestamp", "desc"),
+      limit(25)
+    );
+
+    // Query 2: Broadcast notifications for SRA role
+    const broadcastQuery = query(
+      notificationsRef,
+      where("role", "==", "sra"),
+      orderBy("timestamp", "desc"),
+      limit(25)
+    );
+
+    // Subscribe to personal notifications
+    const unsubPersonal = onSnapshot(personalQuery, (snapshot) => {
+      personalNotifs = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      mergeAndRender();
+    }, (error) => {
+      console.error("Personal notifications stream failed", error);
+    });
+
+    // Subscribe to broadcast notifications
+    const unsubBroadcast = onSnapshot(broadcastQuery, (snapshot) => {
+      broadcastNotifs = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      mergeAndRender();
+    }, (error) => {
+      console.error("Broadcast notifications stream failed", error);
+    });
+
+    // Merge and render function
+    const mergeAndRender = () => {
+      // Combine both arrays and remove duplicates by ID
+      const allNotifs = [...personalNotifs, ...broadcastNotifs];
+      const uniqueNotifs = Array.from(new Map(allNotifs.map(n => [n.id, n])).values());
+
+      // Sort by timestamp (newest first)
+      uniqueNotifs.sort((a, b) => {
+        const ta = a.timestamp && a.timestamp.seconds ? a.timestamp.seconds : 0;
+        const tb = b.timestamp && b.timestamp.seconds ? b.timestamp.seconds : 0;
+        return tb - ta;
+      });
+
+      console.log(`🔔 SRA notifications loaded: ${personalNotifs.length} personal + ${broadcastNotifs.length} broadcast = ${uniqueNotifs.length} total`);
+      renderNotifications(uniqueNotifs.slice(0, 25)); // Limit to 25 after merging
+    };
+
+    // Store both unsubscribe functions
+    notificationsUnsub = () => {
+      unsubPersonal();
+      unsubBroadcast();
+    };
+  };
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      fetchNotifications();
+    });
+  }
+
+  fetchNotifications();
+}
 
     // Global variables
         let currentSection = 'dashboard';
@@ -37,42 +236,18 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                         if (headerName) headerName.textContent = display;
                         if (sideName) sideName.textContent = display;
                         
-                    //Recent Field Applications loader ---
+                    //Recent Field Applications loader with REAL-TIME updates
                         try {
                         const list = document.getElementById("recentAppsList");
                         if (list) {
                             list.innerHTML = `<p class="text-gray-500 text-sm italic">Loading recent field applications...</p>`;
 
                             // import Firestore helpers (we re-import same helpers so this block is self-contained)
-                            const { collection, collectionGroup, getDocs, query, orderBy, doc, getDoc } =
+                            const { collection, collectionGroup, getDocs, onSnapshot, query, orderBy, doc, getDoc } =
                             await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
 
                             // helper to resolve applicant name from uid if needed
                             const userCache = {};
-
-                            // 1) fetch nested 'fields' documents (existing implementation)
-                            let nestedSnap;
-                            try {
-                            const qNested = query(collectionGroup(db, "fields"), orderBy("submittedAt", "desc"));
-                            nestedSnap = await getDocs(qNested);
-                            } catch (err) {
-                            console.warn("⚠️ Missing index for ordered collectionGroup('fields'), loading unsorted nested fields.", err);
-                            nestedSnap = await getDocs(collectionGroup(db, "fields"));
-                            }
-
-                            // 2) fetch top-level field_applications documents (if you store apps at top-level)
-                            let topSnap;
-                            try {
-                            const qTop = query(collection(db, "field_applications"), orderBy("submittedAt", "desc"));
-                            topSnap = await getDocs(qTop);
-                            } catch (err) {
-                            // if top-level doesn't exist or no index, fallback to empty result
-                            try {
-                                topSnap = await getDocs(collection(db, "field_applications"));
-                            } catch (e) {
-                                topSnap = { docs: [] };
-                            }
-                            }
 
                             // normalize function (lightweight; keep fields consistent)
                             function normalizeDoc(d, isNested = false) {
@@ -113,92 +288,96 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                             };
                             }
 
-                            // convert nested docs -> promises to resolve applicantNames
-                            const nestedApps = nestedSnap.docs.map(d => normalizeDoc(d, true));
-                            const topApps = topSnap.docs.map(d => normalizeDoc(d, false));
+                            // 🔥 Set up REAL-TIME listener using onSnapshot for top-level fields collection
+                            try {
+                                const fieldsQuery = query(collection(db, "fields"), orderBy("createdAt", "desc"));
+                                onSnapshot(fieldsQuery, async (fieldsSnap) => {
+                                    console.log('🔄 Recent Apps: Real-time update triggered');
+                                    const fieldApps = fieldsSnap.docs.map(d => normalizeDoc(d, false));
 
-                            // combine and resolve applicant names (do user lookups in series to avoid too many parallel reads)
-                            const all = [...nestedApps, ...topApps];
-
-                            for (const a of all) {
-                            const cand = a._applicantCandidate;
-                            if (cand && typeof cand === 'string' && cand.length < 40 && !cand.includes(' ')) {
-                                // likely a UID — resolve
-                                const resolved = await (async () => {
-                                if (userCache[cand]) return userCache[cand];
-                                try {
-                                    const uSnap = await getDoc(doc(db, "users", cand));
-                                    if (uSnap.exists()) {
-                                    const u = uSnap.data();
-                                    const display = u.name || u.fullName || u.displayName || u.email || cand;
-                                    userCache[cand] = display;
-                                    return display;
+                                    // Resolve applicant names
+                                    const all = fieldApps;
+                                    for (const a of all) {
+                                        const cand = a._applicantCandidate;
+                                        if (cand && typeof cand === 'string' && cand.length < 40 && !cand.includes(' ')) {
+                                            const resolved = await (async () => {
+                                                if (userCache[cand]) return userCache[cand];
+                                                try {
+                                                    const uSnap = await getDoc(doc(db, "users", cand));
+                                                    if (uSnap.exists()) {
+                                                        const u = uSnap.data();
+                                                        const display = u.name || u.fullName || u.displayName || u.email || cand;
+                                                        userCache[cand] = display;
+                                                        return display;
+                                                    }
+                                                } catch (err) {
+                                                    return cand;
+                                                }
+                                                return cand;
+                                            })();
+                                            a.applicantName = resolved || cand;
+                                        } else {
+                                            a.applicantName = cand || '—';
+                                        }
                                     }
-                                } catch (err) {
-                                    return cand;
-                                }
-                                return cand;
-                                })();
-                                a.applicantName = resolved || cand;
-                            } else {
-                                a.applicantName = cand || '—';
-                            }
-                            }
 
-                            // Deduplicate by path (nested) or by id (top-level) — keep latest by createdAt
-                            const byKey = {};
-                            for (const a of all) {
-                            const key = a.path || a.id || JSON.stringify([a.fieldName, a.barangay, a.createdAt]);
-                            if (!byKey[key] || new Date(a.createdAt) > new Date(byKey[key].createdAt)) {
-                                byKey[key] = a;
-                            }
-                            }
-                            const applications = Object.values(byKey);
+                                    // ✅ All fields from top-level collection (no filtering needed)
+                                    // Deduplicate by userId + field details
+                                    const byKey = {};
+                                    for (const a of all) {
+                                        const userId = a.raw.userId || a.raw.requestedBy || 'unknown';
+                                        const key = `${userId}|${a.fieldName}|${a.barangay}|${a.street}`.toLowerCase();
+                                        if (!byKey[key] || new Date(a.createdAt) > new Date(byKey[key].createdAt)) {
+                                            byKey[key] = a;
+                                        }
+                                    }
+                                    const applications = Object.values(byKey);
+                                    applications.sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt));
 
-                            // Sort newest-first by createdAt
-                            applications.sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt));
-
-                            // Render only the three most recent applications
-                            list.innerHTML = "";
-                            const visible = applications.slice(0, 3);
-                            for (const app of visible) {
-                            const card = document.createElement("div");
-                            card.className = "flex justify-between items-center bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition";
-                            const displayCreated = formatFullDate(app.createdAt || app.raw?.updatedAt || app.raw?.statusUpdatedAt);
-                            card.innerHTML = `
-                            <div>
-                                <p class="font-semibold text-[var(--cane-900)]">${app.applicantName}</p>
-                                <p class="text-sm text-[var(--cane-700)]">
-                                ${app.fieldName ? app.fieldName + ' · ' : ''}Brgy. ${app.barangay}${app.street ? ' · ' + app.street : ''}
-                                </p>
-                                <p class="text-xs text-green-600 font-medium mt-0.5">${displayCreated}</p>
-                            </div>
-                            <span class="text-xs font-medium px-2 py-1 rounded-full ${
-                                app.status === "reviewed"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-700"
-                            }">${app.status}</span>
-                            `;
-                            // optional: click the card to open Review page for the item
-                            card.addEventListener('click', async (e) => {
-                                e.stopPropagation();
-                                // open Review Applications section and initialize Review.js
-                                try {
-                                // show review section (this already exists elsewhere in your file)
-                                const container = document.getElementById('fieldDocsContainer');
-                                if (container && container.childElementCount === 0) {
-                                    const html = await fetch('SRA_FieldDocuments.html').then(r => r.text());
-                                    container.innerHTML = html;
-                                }
-                                const mod = await import('./Review.js');
-                                if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
-                                    mod.SRAReview.init();
-                                }
-                                showSection('field-documents');
-                                } catch (_) {}
-                            });
-
-                            list.appendChild(card);
+                                    // Render
+                                    list.innerHTML = "";
+                                    const visible = applications.slice(0, 3);
+                                    for (const app of visible) {
+                                        const card = document.createElement("div");
+                                        card.className = "flex justify-between items-center bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition cursor-pointer";
+                                        const displayCreated = formatFullDate(app.createdAt || app.raw?.updatedAt || app.raw?.statusUpdatedAt);
+                                        card.innerHTML = `
+                                        <div>
+                                            <p class="font-semibold text-[var(--cane-900)]">${app.applicantName}</p>
+                                            <p class="text-sm text-[var(--cane-700)]">
+                                            ${app.fieldName ? app.fieldName + ' · ' : ''}Brgy. ${app.barangay}${app.street ? ' · ' + app.street : ''}
+                                            </p>
+                                            <p class="text-xs text-green-600 font-medium mt-0.5">${displayCreated}</p>
+                                        </div>
+                                        <span class="text-xs font-medium px-2 py-1 rounded-full ${
+                                            app.status === "reviewed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-700"
+                                        }">${app.status}</span>
+                                        `;
+                                        card.addEventListener('click', async (e) => {
+                                            e.stopPropagation();
+                                            try {
+                                                const container = document.getElementById('fieldDocsContainer');
+                                                if (container && container.childElementCount === 0) {
+                                                    const cacheBust = `?v=${Date.now()}`;
+                                                    const html = await fetch(`SRA_FieldDocuments.html${cacheBust}`).then(r => r.text());
+                                                    container.innerHTML = html;
+                                                }
+                                                const mod = await import(`./Review.js${cacheBust}`);
+                                                if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                                                    mod.SRAReview.init();
+                                                }
+                                                showSection('field-documents');
+                                            } catch (_) {}
+                                        });
+                                        list.appendChild(card);
+                                    }
+                                }, (error) => {
+                                    console.error("Recent apps real-time listener failed:", error);
+                                    if (list) list.innerHTML = `<p class="text-red-500 text-sm">Failed to load recent field applications.</p>`;
+                                });
+                            } catch (err) {
+                                console.error("Recent apps setup failed:", err);
+                                if (list) list.innerHTML = `<p class="text-red-500 text-sm">Failed to load recent field applications.</p>`;
                             }
                         }
                         } catch (err) {
@@ -215,19 +394,12 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                                     const elTotal = document.getElementById('metricTotalSubmissions');
                                                     const elPending = document.getElementById('metricPendingReview');
                                                     const elReviewedToday = document.getElementById('metricReviewedToday');
-                                                    const ts = data.statusUpdatedAt || data.submittedAt || data.createdAt;
-                        if (data.status === "reviewed" && ts) {
-                        const dt = ts.toDate ? ts.toDate() : ts;
-                        const today = new Date();
-                        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                        if (dt >= startOfDay) reviewedToday++;
-                        }
+                                                    const elActiveFields = document.getElementById('metricActiveFields');
 
-                            const elActiveFields = document.getElementById('metricActiveFields');
+                            // ✅ Total Submissions - count from top-level fields collection
+                            function recomputeTotals(fieldsSnap){
+                                const allDocs = fieldsSnap.docs;
 
-                            // Total Submissions (field_applications count)
-                            function recomputeTotals(topSnap, nestedSnap){
-                                const allDocs = [...topSnap.docs, ...nestedSnap.docs];
                                 if (elTotal) elTotal.textContent = String(allDocs.length);
                                 if (elPending) {
                                     let pendingCount = 0;
@@ -238,12 +410,13 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                     });
                                     elPending.textContent = String(pendingCount);
                                 }
+                                console.log(`📊 Dashboard Metrics: ${allDocs.length} total submissions, ${elPending ? elPending.textContent : '?'} pending`);
                             }
-                            let lastTop = { docs: [] }, lastNested = { docs: [] };
-                            onSnapshot(query(collection(db, 'field_applications')), (snap) => { lastTop = snap; recomputeTotals(lastTop, lastNested); });
-                            onSnapshot(query(collectionGroup(db, 'fields')), (snap) => { lastNested = snap; recomputeTotals(lastTop, lastNested); });
 
-                            // Reviewed Today: status==='reviewed' with statusUpdatedAt today
+                            // ✅ Listen to top-level fields collection
+                            onSnapshot(collection(db, 'fields'), (snap) => { recomputeTotals(snap); });
+
+                            // ✅ Reviewed Today: status==='reviewed' with statusUpdatedAt today
                             function computeReviewedToday(docs){
                                 const today = new Date();
                                 const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
@@ -252,23 +425,24 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                 let count = 0;
                                 docs.forEach(docu => {
                                     const data = docu.data();
-                                    const ts = data.statusUpdatedAt || data.submittedAt || data.createdAt;
+                                    const ts = data.statusUpdatedAt || data.reviewedAt || data.submittedAt || data.createdAt;
                                     const t = ts && ts.seconds ? new Date(ts.seconds * 1000) : (ts ? new Date(ts) : null);
                                     if (t && t >= start && t <= end) count += 1;
                                 });
                                 return count;
                             }
-                            let rTop = { docs: [] }, rNested = { docs: [] };
-                            onSnapshot(query(collection(db, 'field_applications'), where('status', '==', 'reviewed')), (snap) => {
-                                rTop = snap; if (elReviewedToday) elReviewedToday.textContent = String(computeReviewedToday([...rTop.docs, ...rNested.docs]));
-                            });
-                            onSnapshot(query(collectionGroup(db, 'fields'), where('status', '==', 'reviewed')), (snap) => {
-                                rNested = snap; if (elReviewedToday) elReviewedToday.textContent = String(computeReviewedToday([...rTop.docs, ...rNested.docs]));
+
+                            // ✅ Listen to reviewed fields from top-level collection
+                            onSnapshot(query(collection(db, 'fields'), where('status', '==', 'reviewed')), (snap) => {
+                                if (elReviewedToday) elReviewedToday.textContent = String(computeReviewedToday(snap.docs));
                             });
 
-                            // Active Fields: count from 'fields' collection
-                            onSnapshot(query(collection(db, 'fields')), (snap) => {
-                                if (elActiveFields) elActiveFields.textContent = String(snap.size);
+                            // Active Fields: count reviewed and active fields from top-level 'fields' collection
+                            onSnapshot(query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active'])), (snap) => {
+                                if (elActiveFields) {
+                                    elActiveFields.textContent = String(snap.size);
+                                    console.log(`📊 Active Fields: ${snap.size} (reviewed and active)`);
+                                }
                             });
                         } catch(_) {}
 
@@ -287,21 +461,14 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                     return null;
                                 }
 
-                                // ---------- Fetch reviewed/approved fields (collectionGroup from nested fields) ----------
-                                async function fetchApprovedFields() {
-                                    try {
-                                        const { db } = await import('../Common/firebase-config.js');
-                                        const { collectionGroup, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                                // ---------- Process snapshot into field objects ----------
+                                async function processFieldsSnapshot(snap) {
+                                    if (snap.empty) {
+                                        console.warn('⚠️ No reviewed fields found.');
+                                        return [];
+                                    }
 
-                                        // Fetch from nested field_applications/{uid}/fields where status === 'reviewed'
-                                        const q = query(collectionGroup(db, 'fields'), where('status', '==', 'reviewed'));
-                                        const snap = await getDocs(q);
-                                        if (snap.empty) {
-                                            console.warn('⚠️ No reviewed fields found.');
-                                            return [];
-                                        }
-
-                                        const fields = snap.docs.map(d => {
+                                    const fields = snap.docs.map(d => {
                                             const data = d.data();
                                             const lat = pickFirst(data, ['lat', 'latitude']);
                                             const lng = pickFirst(data, ['lng', 'longitude']);
@@ -354,31 +521,33 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                             }
                                         }
 
-                                        console.info(`✅ fetched ${fields.length} reviewed fields from nested field_applications/*/fields`);
+                                        console.info(`✅ Processed ${fields.length} reviewed fields`);
                                         return fields;
-                                    } catch (e) {
-                                        console.error('fetchApprovedFields() failed:', e);
-                                        return [];
-                                    }
                                 }
 
-                                // ---------- Show reviewed fields on map (tooltips + click opens modal) ----------
-                                async function showApprovedFieldsOnMap(map) {
+                                // ---------- Show reviewed fields on map with REAL-TIME updates ----------
+                                let currentMarkerGroup = null; // Store marker group to clear on updates
+
+                                async function renderFieldsOnMap(map, fields) {
                                     try {
                                         const caneIcon = L.icon({
-                                            // You may need to adjust this path depending on your folder structure:
-                                            // - If the dashboard page lives in frontend/SRA, use '../../frontend/img/PIN.png'
-                                            // - If the path is different, change to appropriate relative path.
                                             iconUrl: '../../frontend/img/PIN.png',
                                             iconSize: [32, 32],
                                             iconAnchor: [16, 30],
                                             popupAnchor: [0, -28]
                                         });
 
-                                        const markerGroup = L.layerGroup().addTo(map);
-                                        const fields = await fetchApprovedFields();
+                                        // Clear existing markers
+                                        if (currentMarkerGroup) {
+                                            map.removeLayer(currentMarkerGroup);
+                                        }
+
+                                        // Create new marker group
+                                        currentMarkerGroup = L.layerGroup().addTo(map);
+
                                         if (!Array.isArray(fields) || fields.length === 0) {
                                             console.warn('⚠️ No reviewed fields to display.');
+                                            window.__caneMarkers = [];
                                             return;
                                         }
 
@@ -387,7 +556,7 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                         fields.forEach(f => {
                                             if (!f.lat || !f.lng) return;
 
-                                            const marker = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(markerGroup);
+                                            const marker = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(currentMarkerGroup);
 
                                             const tooltipHtml = `
                                             <div style="font-size:12px; line-height:1.4; max-width:250px; color:#14532d;">
@@ -413,7 +582,30 @@ import { showPopupMessage } from '../Common/ui-popup.js';
 
                                         console.info(`✅ Displayed ${fields.length} reviewed field markers on map.`);
                                     } catch (err) {
-                                        console.error('showApprovedFieldsOnMap() failed:', err);
+                                        console.error('renderFieldsOnMap() failed:', err);
+                                    }
+                                }
+
+                                // ---------- Setup REAL-TIME listener for approved fields ----------
+                                async function setupRealtimeFieldsListener(map) {
+                                    try {
+                                        const { db } = await import('../Common/firebase-config.js');
+                                        const { collection, onSnapshot, query, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+                                        // Listen to reviewed and active fields in real-time (top-level collection)
+                                        const q = query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active']));
+
+                                        onSnapshot(q, async (snap) => {
+                                            console.log('🗺️ Map: Real-time update triggered, processing fields...');
+                                            const fields = await processFieldsSnapshot(snap);
+                                            await renderFieldsOnMap(map, fields);
+                                        }, (error) => {
+                                            console.error('❌ Map real-time listener failed:', error);
+                                        });
+
+                                        console.info('✅ Real-time map listener initialized');
+                                    } catch (err) {
+                                        console.error('setupRealtimeFieldsListener() failed:', err);
                                     }
                                 }
 
@@ -601,8 +793,8 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                     map.setMaxBounds(bounds);
                                     map.on('drag', () => map.panInsideBounds(bounds, { animate: true }));
 
-                                    // show reviewed field pins
-                                    await showApprovedFieldsOnMap(map);
+                                    // 🔥 Setup REAL-TIME listener for reviewed field pins
+                                    setupRealtimeFieldsListener(map);
 
                                     // unified search (uses same input/button IDs used in other pages)
                                     const input = document.getElementById('mapSearchInput');
@@ -713,6 +905,11 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                         }
 
 
+                        // Initialize notifications bell (same as handler dashboard)
+                        initNotifications(user.uid);
+
+                        // OLD NOTIFICATIONS CODE - NOW USING BELL
+                        /*
                         // Live notifications (for SRA officer)
                         try {
                             const nList = document.getElementById('notificationsList');
@@ -724,14 +921,61 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                             if (nList && badge) {
                                 nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4">Loading notifications…</div>';
                                 const notiRef = collection(db, 'notifications');
-                                // Scope: SRA-wide notifications (no userId) or targeted to this officer role
-                                const nq = query(notiRef, orderBy('createdAt', 'desc'));
-                                const { onSnapshot } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-                                onSnapshot(nq, (nsnap) => {
-                                    let docs = nsnap.docs
-                                      .map(d => ({ id: d.id, ...d.data() }))
-                                      .filter(n => !n.userId || n.role === 'sra');
-                                    badge.textContent = String(docs.length);
+                                const { onSnapshot, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                                const currentUserId = user.uid;
+
+                                // Merge notifications from TWO sources:
+                                // 1. Personal notifications (userId)
+                                // 2. Broadcast notifications (role: 'sra')
+                                let personalNotifs = [];
+                                let broadcastNotifs = [];
+
+                                // Query 1: Personal notifications
+                                const personalQuery = query(notiRef, where('userId', '==', currentUserId), orderBy('timestamp', 'desc'), limit(50));
+
+                                // Query 2: Broadcast notifications for SRA role
+                                const broadcastQuery = query(notiRef, where('role', '==', 'sra'), orderBy('timestamp', 'desc'), limit(50));
+
+                                // Function to merge and render all notifications
+                                const mergeAndRender = () => {
+                                    // Merge both arrays and remove duplicates by ID
+                                    const allNotifs = [...personalNotifs, ...broadcastNotifs];
+                                    const uniqueNotifs = Array.from(new Map(allNotifs.map(n => [n.id, n])).values());
+
+                                    // Sort by timestamp (newest first)
+                                    uniqueNotifs.sort((a, b) => {
+                                        const ta = a.timestamp && a.timestamp.seconds ? a.timestamp.seconds : 0;
+                                        const tb = b.timestamp && b.timestamp.seconds ? b.timestamp.seconds : 0;
+                                        return tb - ta;
+                                    });
+
+                                    renderAllNotifications(uniqueNotifs);
+                                };
+
+                                // Subscribe to personal notifications
+                                onSnapshot(personalQuery, (nsnap) => {
+                                    personalNotifs = nsnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                                    console.log(`✅ SRA Personal Notifications: ${personalNotifs.length}`);
+                                    mergeAndRender();
+                                });
+
+                                // Subscribe to broadcast notifications
+                                onSnapshot(broadcastQuery, (nsnap) => {
+                                    broadcastNotifs = nsnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                                    console.log(`✅ SRA Broadcast Notifications: ${broadcastNotifs.length}`);
+                                    mergeAndRender();
+                                });
+
+                                // Render function that handles merged notifications
+                                const renderAllNotifications = (docs) => {
+                                    const unreadCount = docs.filter(d => !d.read && d.status !== 'read').length;
+                                    badge.textContent = String(unreadCount);
+                                    console.log(`✅ SRA Notifications Merged Results:`);
+                                    console.log(`   - Total notifications: ${docs.length}`);
+                                    console.log(`   - Unread notifications: ${unreadCount}`);
+                                    if (docs.length > 0) {
+                                        console.log(`   - Sample notification:`, docs[0]);
+                                    }
                                     if (docs.length === 0) {
                                         nList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-4 text-center">No notifications</div>';
                                         if (bellList) bellList.innerHTML = '<div class="text-sm text-[var(--cane-700)] p-3">No notifications</div>';
@@ -741,23 +985,38 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                     nList.innerHTML = '';
                                     if (bellList) bellList.innerHTML = '';
                                     docs.slice(0, 8).forEach(n => {
+                                        const isRead = n.read === true || n.status === 'read';
                                         const row = document.createElement('div');
                                         row.className = 'flex items-start space-x-3';
-                                        row.innerHTML = '<div class="w-2 h-2 bg-[var(--cane-500)] rounded-full mt-2"></div>'+
-                                            '<div><p class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||'Notification')+'</p>'+
-                                            '<p class="text-xs text-[var(--cane-600)]">'+formatRelativeTime(n.createdAt)+'</p></div>';
+                                        row.innerHTML = `<div class="w-2 h-2 ${isRead ? 'bg-gray-400' : 'bg-[var(--cane-500)]'} rounded-full mt-2"></div>`+
+                                            '<div><p class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||n.message||'Notification')+'</p>'+
+                                            '<p class="text-xs text-[var(--cane-600)]">'+formatRelativeTime(n.timestamp)+'</p></div>';
                                         nList.appendChild(row);
                                     });
                                     // Bell popup items
                                     docs.slice(0, 6).forEach(n => {
                                         if (!bellList) return;
+                                        const isRead = n.read === true || n.status === 'read';
                                         const row = document.createElement('a');
                                         row.href = '#';
-                                        row.className = 'block px-4 py-2 hover:bg-[var(--cane-50)]';
-                                        row.innerHTML = '<div class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||'Notification')+'</div>'+
-                                            '<div class="text-xs text-[var(--cane-600)]">'+(n.type||'info')+' · '+formatRelativeTime(n.createdAt)+'</div>';
-                                        row.addEventListener('click', (e)=>{
+                                        row.className = `block px-4 py-2 hover:bg-[var(--cane-50)] ${isRead ? 'opacity-60' : ''}`;
+                                        row.innerHTML = '<div class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||n.message||'Notification')+'</div>'+
+                                            '<div class="text-xs text-[var(--cane-600)]">'+(n.type||'info')+' · '+formatRelativeTime(n.timestamp)+'</div>';
+                                        row.addEventListener('click', async (e)=>{
                                             e.preventDefault();
+                                            // Mark as read
+                                            if (!isRead) {
+                                                try {
+                                                    const { updateDoc, doc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                                                    await updateDoc(doc(db, 'notifications', n.id), {
+                                                        read: true,
+                                                        readAt: serverTimestamp(),
+                                                        status: 'read'
+                                                    });
+                                                } catch(err) {
+                                                    console.error('Failed to mark notification as read:', err);
+                                                }
+                                            }
                                             showSection('notifications');
                                             const popup = document.getElementById('bellPopup'); if (popup) popup.classList.add('hidden');
                                         });
@@ -779,8 +1038,8 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                         const sort = notifSort ? notifSort.value : 'newest';
                                         filtered.sort((a,b)=>{
                                             if (sort === 'oldest') {
-                                                const ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-                                                const tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+                                                const ta = a.timestamp && a.timestamp.seconds ? a.timestamp.seconds : 0;
+                                                const tb = b.timestamp && b.timestamp.seconds ? b.timestamp.seconds : 0;
                                                 return ta - tb;
                                             }
                                             if (sort === 'type') {
@@ -789,31 +1048,46 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                             if (sort === 'title') {
                                                 return String(a.title||'').localeCompare(String(b.title||''));
                                             }
-                                            const ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-                                            const tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+                                            const ta = a.timestamp && a.timestamp.seconds ? a.timestamp.seconds : 0;
+                                            const tb = b.timestamp && b.timestamp.seconds ? b.timestamp.seconds : 0;
                                             return tb - ta;
                                         });
                                         notifContainer.innerHTML = '';
                                         filtered.forEach(n => {
+                                            const isRead = n.read === true || n.status === 'read';
                                             const row = document.createElement('div');
-                                            row.className = 'px-4 py-3 hover:bg-[var(--cane-50)] cursor-pointer';
+                                            row.className = `px-4 py-3 hover:bg-[var(--cane-50)] cursor-pointer ${isRead ? 'bg-gray-50' : ''}`;
                                             row.innerHTML = '<div class="flex items-start justify-between">'
-                                                +'<div>'
-                                                +'<div class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||'Notification')+'</div>'
-                                                +'<div class="text-xs text-[var(--cane-600)]">'+(n.type||'info')+' · '+formatRelativeTime(n.createdAt)+'</div>'
+                                                +'<div class="flex-1">'
+                                                +'<div class="text-sm font-medium text-[var(--cane-800)]">'+(n.title||n.message||'Notification')+'</div>'
+                                                +'<div class="text-xs text-[var(--cane-600)]">'+(n.type||'info')+' · '+formatRelativeTime(n.timestamp)+'</div>'
                                                 +'</div>'
+                                                +`<div class="ml-2"><div class="w-2 h-2 ${isRead ? 'bg-gray-400' : 'bg-[var(--cane-500)]'} rounded-full"></div></div>`
                                                 +'</div>'
                                                 +'<div class="text-sm text-[var(--cane-700)] mt-1 line-clamp-2">'+(n.message||'')+'</div>';
-                                            row.addEventListener('click', ()=>{
+                                            row.addEventListener('click', async ()=>{
+                                                // Mark as read
+                                                if (!isRead) {
+                                                    try {
+                                                        const { updateDoc, doc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+                                                        await updateDoc(doc(db, 'notifications', n.id), {
+                                                            read: true,
+                                                            readAt: serverTimestamp(),
+                                                            status: 'read'
+                                                        });
+                                                    } catch(err) {
+                                                        console.error('Failed to mark notification as read:', err);
+                                                    }
+                                                }
                                                 // Detail modal
                                                 const m = document.createElement('div');
                                                 m.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50';
                                                 m.innerHTML = '<div class="bg-white rounded-xl p-5 shadow-2xl max-w-md w-[92%]">'
                                                     +'<div class="flex items-center justify-between mb-2">'
-                                                    +'<div class="text-lg font-semibold">'+(n.title||'Notification')+'</div>'
+                                                    +'<div class="text-lg font-semibold">'+(n.title||n.message||'Notification')+'</div>'
                                                     +'<button id="closeNotifModalBtn" class="text-xl">&times;</button>'
                                                     +'</div>'
-                                                    +'<div class="text-xs text-[var(--cane-600)] mb-3">'+(n.type||'info')+' · '+formatRelativeTime(n.createdAt)+'</div>'
+                                                    +'<div class="text-xs text-[var(--cane-600)] mb-3">'+(n.type||'info')+' · '+formatRelativeTime(n.timestamp)+'</div>'
                                                     +'<div class="text-[var(--cane-900)] text-sm whitespace-pre-wrap">'+(n.message||'')+'</div>'
                                                     +'</div>';
                                                 document.body.appendChild(m);
@@ -825,9 +1099,610 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                                     if (notifContainer) renderNotifications();
                                     if (notifSearch) notifSearch.addEventListener('input', renderNotifications);
                                     if (notifSort) notifSort.addEventListener('change', renderNotifications);
-                                });
+                                };
+                                // End of renderAllNotifications function
                             }
-                        } catch(_) {}
+                        } catch(err) {
+                            console.error('❌ Error setting up SRA notifications:', err);
+                        }
+                        */
+
+                        // 🔥 Load SRA Reports with REAL-TIME updates
+                        try {
+                            const reportsTableBody = document.getElementById('sraReportsTableBody');
+                            const reportStatusFilter = document.getElementById('reportStatusFilter');
+
+                            if (reportsTableBody) {
+                                console.log('📊 Setting up real-time SRA reports listener...');
+
+                                // Cache for user and field names to avoid redundant lookups
+                                const nameCache = {
+                                    users: {},
+                                    fields: {}
+                                };
+
+                                async function loadSRAReports(statusFilter = null) {
+                                    reportsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading reports...</td></tr>';
+
+                                    try {
+                                        let reportsQuery;
+                                        if (statusFilter && statusFilter !== 'all') {
+                                            reportsQuery = query(
+                                                collection(db, 'reports'),
+                                                where('status', '==', statusFilter),
+                                                orderBy('submittedDate', 'desc')
+                                            );
+                                        } else {
+                                            reportsQuery = query(
+                                                collection(db, 'reports'),
+                                                orderBy('submittedDate', 'desc')
+                                            );
+                                        }
+
+                                        // 🔥 Real-time listener with optimization
+                                        onSnapshot(reportsQuery, async (snapshot) => {
+                                            // Prevent double-rendering from local writes
+                                            if (snapshot.metadata.hasPendingWrites) {
+                                                console.log('⏭️ Skipping render - pending local writes');
+                                                return;
+                                            }
+
+                                            console.log(`🔄 SRA Reports: Real-time update triggered (${snapshot.size} reports)`);
+                                            reportsTableBody.innerHTML = '';
+
+                                            if (snapshot.empty) {
+                                                reportsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">No reports found</td></tr>';
+                                                return;
+                                            }
+
+                                            for (const docSnap of snapshot.docs) {
+                                                const report = docSnap.data();
+                                                const reportId = docSnap.id;
+
+                                                // Get handler name with caching
+                                                let handlerName = 'Unknown Handler';
+                                                if (report.handlerId) {
+                                                    if (nameCache.users[report.handlerId]) {
+                                                        handlerName = nameCache.users[report.handlerId];
+                                                    } else {
+                                                        try {
+                                                            const handlerDoc = await getDoc(doc(db, 'users', report.handlerId));
+                                                            if (handlerDoc.exists()) {
+                                                                const handlerData = handlerDoc.data();
+                                                                handlerName = handlerData.name || handlerData.full_name || handlerData.fullName || handlerData.email || 'Unknown';
+                                                                nameCache.users[report.handlerId] = handlerName;
+                                                            }
+                                                        } catch (err) {
+                                                            console.warn('Failed to fetch handler name:', err);
+                                                        }
+                                                    }
+                                                }
+
+                                                // Format date
+                                                const dateStr = report.submittedDate
+                                                    ? report.submittedDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                    : '—';
+
+                                                // Get report type label
+                                                const reportTypeLabels = {
+                                                    'crop_planting_records': 'Crop Planting Records',
+                                                    'growth_updates': 'Growth Updates',
+                                                    'harvest_schedules': 'Harvest Schedules',
+                                                    'fertilizer_usage': 'Fertilizer Usage',
+                                                    'land_titles': 'Land Titles',
+                                                    'barangay_certifications': 'Barangay Certifications',
+                                                    'production_costs': 'Production Costs'
+                                                };
+                                                const reportTypeLabel = reportTypeLabels[report.reportType] || report.reportType || 'Unknown';
+
+                                                // Status badge
+                                                const statusColors = {
+                                                    'pending_review': 'bg-yellow-100 text-yellow-700',
+                                                    'approved': 'bg-green-100 text-green-700',
+                                                    'rejected': 'bg-red-100 text-red-700'
+                                                };
+                                                const statusLabels = {
+                                                    'pending_review': 'Pending Review',
+                                                    'approved': 'Approved',
+                                                    'rejected': 'Rejected'
+                                                };
+                                                const status = report.status || 'pending_review';
+                                                const statusColor = statusColors[status] || 'bg-gray-100 text-gray-700';
+                                                const statusLabel = statusLabels[status] || status;
+
+                                                const row = document.createElement('tr');
+                                                row.className = 'hover:bg-gray-50 border-b';
+                                                row.innerHTML = `
+                                                    <td class="py-3 px-4 text-sm text-gray-900">${dateStr}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-900">${handlerName}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-700">${reportTypeLabel}</td>
+                                                    <td class="py-3 px-4">
+                                                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor}">
+                                                            ${statusLabel}
+                                                        </span>
+                                                    </td>
+                                                    <td class="py-3 px-4 text-right">
+                                                        <button onclick="window.viewSRAReport('${reportId}')" class="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition mr-2">
+                                                            <i class="fas fa-eye mr-1"></i> View
+                                                        </button>
+                                                        ${status === 'pending_review' ? `
+                                                            <button onclick="window.approveSRAReport('${reportId}')" class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition mr-2">
+                                                                <i class="fas fa-check mr-1"></i> Approve
+                                                            </button>
+                                                            <button onclick="window.rejectSRAReport('${reportId}')" class="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition">
+                                                                <i class="fas fa-times mr-1"></i> Reject
+                                                            </button>
+                                                        ` : ''}
+                                                    </td>
+                                                `;
+                                                reportsTableBody.appendChild(row);
+                                            }
+                                        }, (error) => {
+                                            console.error('❌ SRA Reports listener error:', error);
+                                            reportsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-500">Error loading reports</td></tr>';
+                                        });
+
+                                    } catch (err) {
+                                        console.error('Error setting up SRA reports:', err);
+                                        reportsTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-500">Error loading reports</td></tr>';
+                                    }
+                                }
+
+                                // Load reports initially
+                                loadSRAReports();
+
+                                // Handle status filter change
+                                if (reportStatusFilter) {
+                                    reportStatusFilter.addEventListener('change', (e) => {
+                                        const filterValue = e.target.value;
+                                        loadSRAReports(filterValue === 'all' ? null : filterValue);
+                                    });
+                                }
+
+                                // Global functions for report actions
+                                window.viewSRAReport = async function(reportId) {
+                                    try {
+                                        const reportDoc = await getDoc(doc(db, 'reports', reportId));
+                                        if (!reportDoc.exists()) {
+                                            alert('Report not found');
+                                            return;
+                                        }
+
+                                        const report = reportDoc.data();
+                                        const reportTypeLabels = {
+                                            'crop_planting_records': 'Crop Planting Records',
+                                            'growth_updates': 'Growth Updates',
+                                            'harvest_schedules': 'Harvest Schedules',
+                                            'fertilizer_usage': 'Fertilizer Usage',
+                                            'land_titles': 'Land Titles',
+                                            'barangay_certifications': 'Barangay Certifications',
+                                            'production_costs': 'Production Costs'
+                                        };
+                                        const reportTypeLabel = reportTypeLabels[report.reportType] || report.reportType;
+
+                                        // Create modal
+                                        const modal = document.createElement('div');
+                                        modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/40';
+
+                                        let dataHTML = '';
+                                        if (report.data && typeof report.data === 'object') {
+                                            dataHTML = Object.entries(report.data).map(([key, value]) => {
+                                                const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                                return `
+                                                    <div class="flex justify-between py-2 border-b border-gray-200">
+                                                        <span class="font-medium text-gray-700">${label}:</span>
+                                                        <span class="text-gray-900">${Array.isArray(value) ? value.join(', ') : value}</span>
+                                                    </div>
+                                                `;
+                                            }).join('');
+                                        }
+
+                                        modal.innerHTML = `
+                                            <div class="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+                                                <div class="flex items-center justify-between mb-4">
+                                                    <h3 class="text-xl font-bold text-gray-900">${reportTypeLabel}</h3>
+                                                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                                                        <i class="fas fa-times text-xl"></i>
+                                                    </button>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <span class="inline-flex px-3 py-1 text-sm font-medium rounded-full ${report.status === 'approved' ? 'bg-green-100 text-green-700' : report.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}">
+                                                        ${report.status === 'approved' ? 'Approved' : report.status === 'rejected' ? 'Rejected' : 'Pending Review'}
+                                                    </span>
+                                                    <p class="text-sm text-gray-600 mt-2">Submitted: ${report.submittedDate ? report.submittedDate.toDate().toLocaleString() : 'Unknown'}</p>
+                                                </div>
+
+                                                <div class="space-y-2">
+                                                    ${dataHTML}
+                                                </div>
+
+                                                ${report.remarks ? `
+                                                    <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                                                        <p class="text-sm font-medium text-yellow-800">Remarks:</p>
+                                                        <p class="text-sm text-yellow-700 mt-1">${report.remarks}</p>
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        `;
+                                        document.body.appendChild(modal);
+                                    } catch (error) {
+                                        console.error('Error viewing report:', error);
+                                        alert('Failed to load report details');
+                                    }
+                                };
+
+                                window.approveSRAReport = async function(reportId) {
+                                    // Create styled approval modal
+                                    const modal = document.createElement('div');
+                                    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
+                                    modal.innerHTML = `
+                                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                                            <div class="p-6">
+                                                <div class="flex items-center gap-4 mb-4">
+                                                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                                                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="text-lg font-bold text-gray-900">Approve Report</h3>
+                                                        <p class="text-sm text-gray-600">This action will notify the handler</p>
+                                                    </div>
+                                                </div>
+
+                                                <p class="text-gray-700 mb-6">Are you sure you want to approve this report? The handler will be notified immediately.</p>
+
+                                                <div class="flex items-center justify-end gap-3">
+                                                    <button id="cancelApproveBtn" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition">
+                                                        Cancel
+                                                    </button>
+                                                    <button id="confirmApproveBtn" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition">
+                                                        <i class="fas fa-check mr-2"></i>Approve Report
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    document.body.appendChild(modal);
+
+                                    // Handle cancel
+                                    modal.querySelector('#cancelApproveBtn').addEventListener('click', () => {
+                                        modal.remove();
+                                    });
+
+                                    // Handle confirm
+                                    modal.querySelector('#confirmApproveBtn').addEventListener('click', async () => {
+                                        const confirmBtn = modal.querySelector('#confirmApproveBtn');
+                                        confirmBtn.disabled = true;
+                                        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Approving...';
+
+                                        try {
+                                            // Get report data first
+                                            const reportDoc = await getDoc(doc(db, 'reports', reportId));
+                                            if (!reportDoc.exists()) {
+                                                alert('Report not found');
+                                                modal.remove();
+                                                return;
+                                            }
+
+                                            const reportData = reportDoc.data();
+                                            const { updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+                                            await updateDoc(doc(db, 'reports', reportId), {
+                                                status: 'approved',
+                                                reviewedBy: user.uid,
+                                                reviewedAt: serverTimestamp()
+                                            });
+
+                                            // Get report type label
+                                            const reportTypeLabels = {
+                                                'crop_planting_records': 'Crop Planting Records',
+                                                'growth_updates': 'Growth Updates',
+                                                'harvest_schedules': 'Harvest Schedules',
+                                                'fertilizer_usage': 'Fertilizer Usage',
+                                                'land_titles': 'Land Titles',
+                                                'barangay_certifications': 'Barangay Certifications',
+                                                'production_costs': 'Production Costs'
+                                            };
+                                            const reportTypeLabel = reportTypeLabels[reportData.reportType] || reportData.reportType;
+
+                                            // Send notification to handler
+                                            if (reportData.handlerId) {
+                                                console.log(`📤 Sending approval notification to handler: ${reportData.handlerId}`);
+                                                try {
+                                                    await notifyReportApproval(reportData.handlerId, reportTypeLabel, reportId);
+                                                    console.log('✅ Approval notification sent successfully');
+                                                } catch (notifError) {
+                                                    console.error('❌ Failed to send approval notification:', notifError);
+                                                }
+                                            } else {
+                                                console.warn('⚠️ No handlerId found in report data');
+                                            }
+
+                                            // Remove modal
+                                            modal.remove();
+
+                                            // Show success message
+                                            const successDiv = document.createElement('div');
+                                            successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999]';
+                                            successDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Report approved successfully';
+                                            document.body.appendChild(successDiv);
+                                            setTimeout(() => successDiv.remove(), 3000);
+                                        } catch (error) {
+                                            console.error('Error approving report:', error);
+                                            modal.remove();
+                                            alert('Failed to approve report');
+                                        }
+                                    });
+                                };
+
+                                window.rejectSRAReport = async function(reportId) {
+                                    // Create styled rejection modal
+                                    const modal = document.createElement('div');
+                                    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
+                                    modal.innerHTML = `
+                                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                                            <div class="p-6">
+                                                <div class="flex items-center gap-4 mb-4">
+                                                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                                                        <i class="fas fa-times-circle text-2xl text-red-600"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="text-lg font-bold text-gray-900">Reject Report</h3>
+                                                        <p class="text-sm text-gray-600">Provide feedback to the handler</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                        Rejection Remarks (Optional)
+                                                    </label>
+                                                    <textarea id="rejectionRemarks" rows="4"
+                                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                                                              placeholder="Explain why this report is being rejected..."></textarea>
+                                                    <p class="text-xs text-gray-500 mt-1">The handler will see these remarks in their notification</p>
+                                                </div>
+
+                                                <div class="flex items-center justify-end gap-3">
+                                                    <button id="cancelRejectBtn" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition">
+                                                        Cancel
+                                                    </button>
+                                                    <button id="confirmRejectBtn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition">
+                                                        <i class="fas fa-times mr-2"></i>Reject Report
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    document.body.appendChild(modal);
+
+                                    const remarksTextarea = modal.querySelector('#rejectionRemarks');
+                                    remarksTextarea.focus();
+
+                                    // Handle cancel
+                                    modal.querySelector('#cancelRejectBtn').addEventListener('click', () => {
+                                        modal.remove();
+                                    });
+
+                                    // Handle confirm
+                                    modal.querySelector('#confirmRejectBtn').addEventListener('click', async () => {
+                                        const confirmBtn = modal.querySelector('#confirmRejectBtn');
+                                        const remarks = remarksTextarea.value.trim();
+
+                                        confirmBtn.disabled = true;
+                                        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Rejecting...';
+
+                                        try {
+                                            // Get report data first
+                                            const reportDoc = await getDoc(doc(db, 'reports', reportId));
+                                            if (!reportDoc.exists()) {
+                                                alert('Report not found');
+                                                modal.remove();
+                                                return;
+                                            }
+
+                                            const reportData = reportDoc.data();
+                                            const { updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+                                            await updateDoc(doc(db, 'reports', reportId), {
+                                                status: 'rejected',
+                                                reviewedBy: user.uid,
+                                                reviewedAt: serverTimestamp(),
+                                                remarks: remarks || ''
+                                            });
+
+                                            // Get report type label
+                                            const reportTypeLabels = {
+                                                'crop_planting_records': 'Crop Planting Records',
+                                                'growth_updates': 'Growth Updates',
+                                                'harvest_schedules': 'Harvest Schedules',
+                                                'fertilizer_usage': 'Fertilizer Usage',
+                                                'land_titles': 'Land Titles',
+                                                'barangay_certifications': 'Barangay Certifications',
+                                                'production_costs': 'Production Costs'
+                                            };
+                                            const reportTypeLabel = reportTypeLabels[reportData.reportType] || reportData.reportType;
+
+                                            // Send notification to handler
+                                            if (reportData.handlerId) {
+                                                console.log(`📤 Sending rejection notification to handler: ${reportData.handlerId}`);
+                                                try {
+                                                    await notifyReportRejection(reportData.handlerId, reportTypeLabel, reportId, remarks);
+                                                    console.log('✅ Rejection notification sent successfully');
+                                                } catch (notifError) {
+                                                    console.error('❌ Failed to send rejection notification:', notifError);
+                                                }
+                                            } else {
+                                                console.warn('⚠️ No handlerId found in report data');
+                                            }
+
+                                            // Remove modal
+                                            modal.remove();
+
+                                            // Show success message
+                                            const successDiv = document.createElement('div');
+                                            successDiv.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999]';
+                                            successDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Report rejected';
+                                            document.body.appendChild(successDiv);
+                                            setTimeout(() => successDiv.remove(), 3000);
+                                        } catch (error) {
+                                            console.error('Error rejecting report:', error);
+                                            modal.remove();
+                                            alert('Failed to reject report');
+                                        }
+                                    });
+                                };
+
+                                // Request Report Button Handler
+                                const requestReportBtn = document.getElementById('requestReportBtn');
+                                if (requestReportBtn) {
+                                    requestReportBtn.addEventListener('click', async () => {
+                                        await showRequestReportModal();
+                                    });
+                                }
+
+                                // Show Request Report Modal
+                                async function showRequestReportModal() {
+                                    const modal = document.createElement('div');
+                                    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
+                                    modal.innerHTML = `
+                                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                                            <div class="p-6">
+                                                <div class="flex items-center gap-4 mb-4">
+                                                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-[var(--cane-100)] flex items-center justify-center">
+                                                        <i class="fas fa-file-invoice text-2xl text-[var(--cane-600)]"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="text-lg font-bold text-gray-900">Request Report</h3>
+                                                        <p class="text-sm text-gray-600">Send notification to handler</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                        Select Handler <span class="text-red-500">*</span>
+                                                    </label>
+                                                    <select id="requestHandlerSelect" required
+                                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
+                                                        <option value="">Loading handlers...</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                        Report Type <span class="text-red-500">*</span>
+                                                    </label>
+                                                    <select id="requestReportTypeSelect" required
+                                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
+                                                        <option value="">Select report type</option>
+                                                        <option value="crop_planting_records">Crop Planting Records</option>
+                                                        <option value="growth_updates">Growth Updates</option>
+                                                        <option value="harvest_schedules">Harvest Schedules</option>
+                                                        <option value="fertilizer_usage">Fertilizer Usage</option>
+                                                        <option value="land_titles">Land Titles</option>
+                                                        <option value="barangay_certifications">Barangay Certifications</option>
+                                                        <option value="production_costs">Production Costs</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="flex items-center justify-end gap-3">
+                                                    <button id="cancelRequestBtn" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition">
+                                                        Cancel
+                                                    </button>
+                                                    <button id="confirmRequestBtn" class="px-4 py-2 rounded-lg bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold transition">
+                                                        <i class="fas fa-paper-plane mr-2"></i>Send Request
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    document.body.appendChild(modal);
+
+                                    // Load handlers
+                                    const handlerSelect = modal.querySelector('#requestHandlerSelect');
+                                    try {
+                                        const handlersQuery = query(
+                                            collection(db, 'users'),
+                                            where('role', '==', 'handler')
+                                        );
+                                        const handlersSnapshot = await getDocs(handlersQuery);
+
+                                        if (handlersSnapshot.empty) {
+                                            handlerSelect.innerHTML = '<option value="">No handlers found</option>';
+                                        } else {
+                                            handlerSelect.innerHTML = '<option value="">Select a handler</option>';
+                                            handlersSnapshot.forEach(doc => {
+                                                const handler = doc.data();
+                                                const handlerName = handler.name || handler.full_name || handler.email || 'Unknown Handler';
+                                                const option = document.createElement('option');
+                                                option.value = doc.id;
+                                                option.textContent = handlerName;
+                                                handlerSelect.appendChild(option);
+                                            });
+                                        }
+                                    } catch (error) {
+                                        console.error('Error loading handlers:', error);
+                                        handlerSelect.innerHTML = '<option value="">Error loading handlers</option>';
+                                    }
+
+                                    // Handle cancel
+                                    modal.querySelector('#cancelRequestBtn').addEventListener('click', () => {
+                                        modal.remove();
+                                    });
+
+                                    // Handle confirm
+                                    modal.querySelector('#confirmRequestBtn').addEventListener('click', async () => {
+                                        const handlerId = modal.querySelector('#requestHandlerSelect').value;
+                                        const reportType = modal.querySelector('#requestReportTypeSelect').value;
+                                        const confirmBtn = modal.querySelector('#confirmRequestBtn');
+
+                                        if (!handlerId || !reportType) {
+                                            alert('Please select both handler and report type');
+                                            return;
+                                        }
+
+                                        confirmBtn.disabled = true;
+                                        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+
+                                        try {
+                                            // Import notification function
+                                            const { notifyReportRequest } = await import('../Common/notifications.js');
+
+                                            const reportTypeLabels = {
+                                                'crop_planting_records': 'Crop Planting Records',
+                                                'growth_updates': 'Growth Updates',
+                                                'harvest_schedules': 'Harvest Schedules',
+                                                'fertilizer_usage': 'Fertilizer Usage',
+                                                'land_titles': 'Land Titles',
+                                                'barangay_certifications': 'Barangay Certifications',
+                                                'production_costs': 'Production Costs'
+                                            };
+
+                                            const reportLabel = reportTypeLabels[reportType] || reportType;
+                                            const message = `SRA requested a ${reportLabel} report from you`;
+
+                                            await notifyReportRequest(handlerId, reportType, message);
+
+                                            // Remove modal
+                                            modal.remove();
+
+                                            // Show success message
+                                            const successDiv = document.createElement('div');
+                                            successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999]';
+                                            successDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Report request sent to handler';
+                                            document.body.appendChild(successDiv);
+                                            setTimeout(() => successDiv.remove(), 3000);
+
+                                        } catch (error) {
+                                            console.error('Error sending report request:', error);
+                                            modal.remove();
+                                            alert('Failed to send report request');
+                                        }
+                                    });
+                                }
+                            }
+                        } catch (err) {
+                            console.error('❌ Failed to setup SRA reports:', err);
+                        }
                     } else {
                         // redirect to login if needed
                     }
@@ -903,16 +1778,7 @@ import { showPopupMessage } from '../Common/ui-popup.js';
             currentSection = sectionId;
         }
 
-        function formatRelativeTime(ts){
-            try{
-                const d = ts && ts.seconds ? new Date(ts.seconds*1000) : new Date(ts || Date.now());
-                const diff = Math.floor((Date.now() - d.getTime())/1000);
-                if (diff < 60) return `${diff}s ago`;
-                const m = Math.floor(diff/60); if (m < 60) return `${m} minute${m>1?'s':''} ago`;
-                const h = Math.floor(m/60); if (h < 24) return `${h} hour${h>1?'s':''} ago`;
-                const days = Math.floor(h/24); return `${days} day${days>1?'s':''} ago`;
-            }catch{ return ''; }
-        }
+        // formatRelativeTime function moved to top of file (line 10) to avoid duplication
 
         //  Friendly relative time formatter (replaces simple formatRelativeTime)
         function formatFullDate(ts) {
@@ -999,22 +1865,42 @@ import { showPopupMessage } from '../Common/ui-popup.js';
             
             // Navigation menu
             document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', function(e) {
+                item.addEventListener('click', async function(e) {
                         e.preventDefault();
                     const sectionId = this.getAttribute('data-section');
                     showSection(sectionId);
                     if (sectionId === 'field-documents') {
-                        // simple fetch to load the partial once
+                        // Load the partial and ALWAYS initialize Review.js
                         const container = document.getElementById('fieldDocsContainer');
-                        if (container && container.childElementCount === 0) {
-                            fetch('SRA_FieldDocuments.html')
-                                .then(r => r.text())
-                                .then(html => { 
-                                    container.innerHTML = html; 
-                                    // initialize dynamic review list
-                                    import('./Review.js').then(m => m.SRAReview.init());
-                                })
-                                .catch(() => { container.innerHTML = '<div class="text-[var(--cane-700)]">Unable to load field documents.</div>'; });
+                        if (container) {
+                            // Load HTML if not already loaded
+                            if (container.childElementCount === 0) {
+                                const cacheBust = `?v=${Date.now()}`;
+                                try {
+                                    const html = await fetch(`SRA_FieldDocuments.html${cacheBust}`).then(r => r.text());
+                                    container.innerHTML = html;
+                                } catch(err) {
+                                    console.error('❌ Failed to load SRA_FieldDocuments.html:', err);
+                                    container.innerHTML = '<div class="text-[var(--cane-700)]">Unable to load field documents.</div>';
+                                    return;
+                                }
+                            }
+
+                            // ALWAYS initialize/refresh Review.js (even if HTML was already loaded)
+                            console.log('🔥 ABOUT TO IMPORT Review.js (nav menu click)...');
+                            const cacheBust = `?v=${Date.now()}`;
+                            try {
+                                const mod = await import(`./Review.js${cacheBust}`);
+                                console.log('🔥 Review.js imported successfully (nav menu)!', mod);
+                                if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                                    console.log('🔥 Calling SRAReview.init() (nav menu)...');
+                                    mod.SRAReview.init();
+                                } else {
+                                    console.error('❌ SRAReview.init not found (nav menu)!', mod);
+                                }
+                            } catch(err) {
+                                console.error('❌ FAILED TO IMPORT Review.js (nav menu):', err);
+                            }
                         }
                     }
                     
@@ -1044,13 +1930,20 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                         showSection('field-documents');
                         const container = document.getElementById('fieldDocsContainer');
                         if (container && container.childElementCount === 0) {
-                            const html = await fetch('SRA_FieldDocuments.html').then(r => r.text());
+                            const cacheBust = `?v=${Date.now()}`;
+                            const html = await fetch(`SRA_FieldDocuments.html${cacheBust}`).then(r => r.text());
                             container.innerHTML = html;
                         }
                         // initialize/refresh review list
-                        const mod = await import('./Review.js');
+                        console.log('🔥 ABOUT TO IMPORT Review.js (recent card click)...');
+                        const cacheBust = `?v=${Date.now()}`;
+                        const mod = await import(`./Review.js${cacheBust}`);
+                        console.log('🔥 Review.js imported (recent card)!', mod);
                         if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                            console.log('🔥 Calling SRAReview.init() (recent card)...');
                             mod.SRAReview.init();
+                        } else {
+                            console.error('❌ SRAReview.init not found (recent card)!', mod);
                         }
                         // Ensure sidebar section highlights the Review menu
                         const activeNavItem = document.querySelector('[data-section="field-documents"]');
@@ -1066,37 +1959,7 @@ import { showPopupMessage } from '../Common/ui-popup.js';
                 });
             }
 
-            // Notifications card click-through
-            const notificationsCard = document.getElementById('notificationsCard');
-            if (notificationsCard) {
-                notificationsCard.addEventListener('click', function(){
-                    showSection('notifications');
-                });
-            }
-
-            // Bell popup interactions
-            const bellBtn = document.getElementById('headerBellBtn');
-            const bellPopup = document.getElementById('bellPopup');
-            const bellViewAll = document.getElementById('bellViewAll');
-            if (bellBtn && bellPopup) {
-                bellBtn.addEventListener('click', function(e){
-                    e.stopPropagation();
-                    bellPopup.classList.toggle('hidden');
-                });
-                document.addEventListener('click', function(e){
-                    if (!bellPopup.contains(e.target) && e.target !== bellBtn) {
-                        bellPopup.classList.add('hidden');
-                    }
-                });
-            }
-            if (bellViewAll) {
-                bellViewAll.addEventListener('click', function(e){
-                    e.preventDefault();
-                    showSection('notifications');
-                    const popup = document.getElementById('bellPopup');
-                    if (popup) popup.classList.add('hidden');
-                });
-            }
+            // OLD: Notifications card and bell popup removed (now using bell dropdown from initNotifications)
 
             // Logout modal controls
             const modal = document.getElementById('sraLogoutModal');

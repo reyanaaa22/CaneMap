@@ -7,6 +7,17 @@
     </p>
   </div>
 
+  <!-- Pending Rental Requests -->
+  <div id="pendingRentalsSection" class="mb-6 hidden">
+    <h3 class="text-lg font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+      <i class="fas fa-clock text-yellow-600"></i>
+      Pending Rental Requests
+    </h3>
+    <div id="pendingRentalsList" class="space-y-3 mb-6">
+      <!-- Pending rentals will be loaded here -->
+    </div>
+  </div>
+
   <!-- Search / Filters row (optional later) -->
   <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div class="flex items-center gap-3">
@@ -18,7 +29,11 @@
     <div class="text-sm text-[var(--cane-700)]"></div>
   </div>
 
-<!-- Grid -->
+<!-- Available Drivers -->
+<div class="mb-2">
+  <h3 class="text-lg font-bold text-[var(--cane-900)]">Available Drivers</h3>
+  <p class="text-sm text-[var(--cane-600)]">Drivers open for rental (not currently rented by you)</p>
+</div>
 <div id="rentDriverGridMain" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
 
 <!-- No results placeholder -->

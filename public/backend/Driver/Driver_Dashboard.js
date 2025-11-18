@@ -14,7 +14,9 @@ import {
   orderBy, // 🟢 Added this line
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { initializeDriverDashboard } from './driver-init.js';
+
 /*
   FUNCTION:
   - Fetch the current user's Firestore document (/users/{uid})
@@ -91,14 +93,14 @@ onAuthStateChanged(auth, async (user) => {
     const headerNameEl = document.getElementById("userName");
     const dropdownNameEl = document.getElementById("dropdownUserName");
     const sidebarNameEl = document.getElementById("sidebarUserName");
-    const workerNameEl = document.getElementById("workerName");
+    const sidebarRoleEl = document.getElementById("sidebarUserRole");
     const dropdownTypeEl = document.getElementById("dropdownUserType");
 
     if (headerNameEl) headerNameEl.textContent = firstName;
     if (dropdownNameEl) dropdownNameEl.textContent = fullName;
     if (sidebarNameEl) sidebarNameEl.textContent = fullName;
-    if (workerNameEl) workerNameEl.textContent = fullName;
-    if (dropdownTypeEl) dropdownTypeEl.textContent = data.role;
+    if (sidebarRoleEl) sidebarRoleEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+    if (dropdownTypeEl) dropdownTypeEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
 
     localStorage.setItem("userFullName", fullName);
     localStorage.setItem("userRole", role);
@@ -108,6 +110,9 @@ onAuthStateChanged(auth, async (user) => {
 
     // 🔔 Load notifications after user data loads
     loadDriverNotifications(user.uid);
+
+    // ✅ Initialize dashboard after authentication
+    initializeDriverDashboard();
   } catch (error) {
     console.error("❌ Error verifying role:", error);
   }
@@ -126,139 +131,146 @@ function updateNotifBadge(badge, count) {
   }
 }
 async function loadDriverNotifications(userId) {
-  const notifList = document.getElementById("allNotificationsList");
-  const badge = document.getElementById("notifBadgeCount");
-  let unreadCount = 0;
+  const notifList = document.getElementById("notificationsList");
+  const badge = document.getElementById("notificationCount");
 
   try {
-    // 🔍 Try userId field first
-    let q = query(
-    collection(db, "notifications"),
-    where("userId", "==", userId),
-    orderBy("timestamp", "desc") // 🟢 Sorts newest first
+    const q = query(
+      collection(db, "notifications"),
+      where("userId", "==", userId),
+      orderBy("timestamp", "desc")
     );
 
-onSnapshot(q, (snapshot) => {
-  notifList.innerHTML = "";
-  let unreadCount = 0;
+    onSnapshot(q, (snapshot) => {
+      notifList.innerHTML = "";
+      let unreadCount = 0;
 
-  if (snapshot.empty) {
-    notifList.innerHTML = `<p class="text-gray-500 text-sm text-center">No notifications yet.</p>`;
-    updateNotifBadge(badge, 0);
-    return;
-  }
+      if (snapshot.empty) {
+        notifList.innerHTML = `<div class="p-4 text-sm text-gray-500 text-center">No notifications yet.</div>`;
+        updateNotifBadge(badge, 0);
+        return;
+      }
 
-  snapshot.forEach((docSnap) => {
-    const notif = docSnap.data();
-    const read = notif.status === "read";
-    if (!read) unreadCount++;
+      snapshot.forEach((docSnap) => {
+        const notif = docSnap.data();
+        const read = notif.read === true;
+        if (!read) unreadCount++;
 
-    const card = document.createElement("div");
-    card.className = `notification-card ${
-      read ? "read bg-white" : "unread bg-gray-100"
-    } p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition cursor-pointer`;
+        const isRead = notif.read === true;
+        const statusClass = isRead ? 'bg-gray-100' : 'bg-[var(--cane-50)]';
+        const timestamp = notif.timestamp ? new Date(notif.timestamp.seconds * 1000) : new Date();
+        const timeAgo = formatRelativeTime(timestamp);
 
-    card.innerHTML = `
-      <div class="flex items-start gap-3">
-          <i class="fas ${
-          read ? "fa-envelope-open-text text-gray-400" : "fa-envelope text-[var(--cane-600)]"
-          } mt-1 text-base"></i>
-          <div class="flex-1">
-          <h4 class="text-sm ${
-              read ? "text-gray-800 font-medium" : "text-[var(--cane-950)] font-semibold"
-          }">${notif.title || "Notification"}</h4>
-          <p class="text-xs text-[var(--cane-800)]">${notif.message || "No message"}</p>
-          <p class="text-[10px] text-gray-400 mt-1">${
-              notif.timestamp
-              ? new Date(notif.timestamp.seconds * 1000).toLocaleString()
-              : ""
-          }</p>
+        const notifItem = document.createElement('button');
+        notifItem.className = `w-full text-left px-4 py-3 hover:bg-gray-50 focus:outline-none ${statusClass}`;
+        notifItem.innerHTML = `
+          <div class="flex items-start gap-2">
+            <div class="mt-1 h-2 w-2 rounded-full ${isRead ? 'bg-gray-300' : 'bg-[var(--cane-600)]'}"></div>
+            <div class="flex-1">
+              <p class="text-sm text-[var(--cane-700)] leading-snug">${notif.message || 'Notification'}</p>
+              <span class="text-xs text-[var(--cane-600)] mt-1 block">${timeAgo}</span>
+            </div>
           </div>
-      </div>
-    `;
-    notifList.appendChild(card);
+        `;
 
-    // Mark as read on click
-    card.addEventListener("click", async () => {
-      if (!read) {
-        await updateDoc(doc(db, "notifications", docSnap.id), { status: "read" });
-      }
+        notifItem.addEventListener('click', async () => {
+          if (!read) {
+            await updateDoc(doc(db, "notifications", docSnap.id), {
+              read: true,
+              readAt: serverTimestamp()
+            });
+          }
 
-      // 🟢 If notification message contains a "click here" keyword → go to Driver_Badge page
-      if (notif.message && notif.message.toLowerCase().includes("click here")) {
-        window.location.href = "../../frontend/Driver/Driver_Badge.html";
-      }
+          if (notif.message && notif.message.toLowerCase().includes("click here")) {
+            window.location.href = "../../frontend/Driver/Driver_Badge.html";
+          }
+        });
+
+        notifList.appendChild(notifItem);
+      });
+
+      updateNotifBadge(badge, unreadCount);
     });
-
-  });
-
-  updateNotifBadge(badge, unreadCount);
-});
-
-
-    // 🔴 Update badge count
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount;
-      badge.classList.remove("hidden");
-    } else {
-      badge.classList.add("hidden");
-    }
 
   } catch (error) {
     console.error("⚠️ Error loading notifications:", error);
-    notifList.innerHTML = `<p class="text-gray-500 text-sm text-center">Failed to load notifications.</p>`;
+    notifList.innerHTML = `<div class="p-4 text-sm text-gray-500 text-center">Failed to load notifications.</div>`;
   }
 }
 
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return '';
+  const now = new Date();
+  const diffMs = now - timestamp;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 // ============================================================
-// ⚙️ MODAL + BADGE EVENTS
+// ⚙️ NOTIFICATION DROPDOWN EVENTS
 // ============================================================
+
+function toggleNotifications() {
+  const dropdown = document.getElementById('notificationDropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('hidden');
+  }
+}
+
+// Close notification dropdown when clicking outside
+document.addEventListener('click', (event) => {
+  const dropdown = document.getElementById('notificationDropdown');
+  const notificationBtn = document.getElementById('notificationBtn');
+
+  // Only close if clicking outside both the button and dropdown
+  if (dropdown && notificationBtn) {
+    const clickedOutside = !dropdown.contains(event.target) && !notificationBtn.contains(event.target);
+    if (clickedOutside && !dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden');
+      console.log('Closed notification dropdown (clicked outside)');
+    }
+  }
+});
 
 document.addEventListener("DOMContentLoaded", () => {
-  const bell = document.getElementById("notifBellContainer");
-  const modal = document.getElementById("notifModal");
-  const closeBtn = document.getElementById("closeNotifModal");
+  const notificationBtn = document.getElementById("notificationBtn");
   const markAllBtn = document.getElementById("markAllReadBtn");
 
-  if (!bell || !modal) return;
-
-  // 🔘 Open modal
-  bell.addEventListener("click", () => {
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
+  // Toggle dropdown on bell click
+  notificationBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleNotifications();
+    console.log('Notification button clicked');
   });
 
-  // ❌ Close modal
-  closeBtn?.addEventListener("click", () => {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
-  });
-
-  // ✅ Mark all as read
-  // 🟢 Load notifications if user ID already stored
-  const userId = localStorage.getItem("userId");
-
-    // ✅ Mark all as read
-    markAllBtn?.addEventListener("click", async () => {
+  // Mark all as read
+  markAllBtn?.addEventListener("click", async () => {
+    const userId = localStorage.getItem("userId");
     if (!userId) return;
 
     let q = query(collection(db, "notifications"), where("userId", "==", userId));
     let snap = await getDocs(q);
-    if (snap.empty) {
-        q = query(collection(db, "notifications"), where("receiverId", "==", userId));
-        snap = await getDocs(q);
-    }
 
-    const unread = snap.docs.filter((d) => d.data().status !== "read");
+    const unread = snap.docs.filter((d) => !d.data().read);
     if (unread.length === 0) return;
 
-    // ✅ Corrected field to "status"
     await Promise.all(
-        unread.map((d) => updateDoc(doc(db, "notifications", d.id), { status: "read" }))
+      unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
+        read: true,
+        readAt: serverTimestamp()
+      }))
     );
 
     console.log("✅ All notifications marked as read.");
-    loadDriverNotifications(userId); // Refresh the list
-    });
-
+  });
 });
+
+window.toggleNotifications = toggleNotifications;

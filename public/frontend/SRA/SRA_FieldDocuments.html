@@ -16,8 +16,45 @@
   </div>
 
   <div class="inner-content-box rounded-lg">
-    <div class="border-b border-[var(--cane-200)] px-4 py-2 text-[var(--cane-800)] font-semibold">Pending Applications</div>
+    <div id="fieldDocsSubtitle" class="border-b border-[var(--cane-200)] px-4 py-2 text-[var(--cane-800)] font-semibold">All Applications</div>
     <div id="fieldDocsDynamic" class="min-h-[120px]"></div>
   </div>
 </div>
+
+<script>
+  // Update subtitle based on filter selection
+  (function() {
+    // Wait for DOM to be ready since this is loaded dynamically
+    function initializeSubtitleUpdater() {
+      const filterSelect = document.getElementById('fieldDocsStatus');
+      const subtitle = document.getElementById('fieldDocsSubtitle');
+
+      if (!filterSelect || !subtitle) {
+        // Elements not ready yet, try again
+        setTimeout(initializeSubtitleUpdater, 100);
+        return;
+      }
+
+      const updateSubtitle = () => {
+        const filterValue = filterSelect.value;
+        const subtitleMap = {
+          'all': 'All Applications',
+          'pending': 'Pending Applications',
+          'to edit': 'Applications To Edit',
+          'reviewed': 'Reviewed Applications'
+        };
+        subtitle.textContent = subtitleMap[filterValue] || 'All Applications';
+      };
+
+      // Update on filter change
+      filterSelect.addEventListener('change', updateSubtitle);
+
+      // Set initial subtitle based on current filter value
+      updateSubtitle();
+    }
+
+    // Start initialization
+    initializeSubtitleUpdater();
+  })();
+</script>
 

@@ -180,7 +180,7 @@ form.addEventListener('submit', async (e) => {
       contact: contact,
       address: address,
       birthday: birthday,
-      role: "farmer",
+      role: "farmer", // ✅ Farmers register fields and manage their land
       status: "pending",
       lastLogin: null,
       failedLoginAttempts: 0,

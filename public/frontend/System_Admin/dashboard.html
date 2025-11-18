@@ -6,7 +6,7 @@
     <title>CaneMap - System Admin Dashboard</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/output.css">
     
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -316,26 +316,12 @@
                         <!-- Profile Dropdown -->
                         <div id="adminProfileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-300 transform scale-95 origin-top-right z-50">
                             <div class="py-2">
-                                <div class="px-4 py-3 border-b border-gray-100">
-                                    <p class="text-sm font-semibold text-gray-900" id="dropdownAdminName">System Admin</p>
-                                    <p class="text-xs text-gray-600">Super Administrator</p>
-                    </div>
-                                <a href="profile_settings.html" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                    <i class="fas fa-user-cog mr-3 text-gray-500"></i>
-                                    Profile Settings
+                                <a href="#" onclick="logout()" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                    <i class="fas fa-sign-out-alt mr-3"></i>
+                                    Logout
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                    <i class="fas fa-cog mr-3 text-gray-500"></i>
-                                    System Settings
-                                </a>
-                                <div class="border-t border-gray-100 mt-2">
-                                    <a href="#" onclick="logout()" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                <i class="fas fa-sign-out-alt mr-3"></i>
-                Logout
-                                    </a>
-                </div>
-            </div>
                             </div>
+                        </div>
                             </div>
                         </div>
                     </div>
@@ -459,35 +445,11 @@
                 </a>
             </div>
             
-            <!-- Maintenance -->
+            <!-- Admin Tools -->
             <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('maintenance')" class="nav-item text-white hover:bg-gray-800/60" id="nav-maintenance">
-                    <i class="fas fa-tools"></i>
-                    <span class="ml-3">Maintenance</span>
-                </a>
-            </div>
-                
-            <!-- Reports -->
-            <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('reports')" class="nav-item text-white hover:bg-gray-800/60" id="nav-reports">
-                    <i class="fas fa-chart-bar"></i>
-                    <span class="ml-3">Reports</span>
-                </a>
-            </div>
-            
-            <!-- Settings -->
-            <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('settings')" class="nav-item text-white hover:bg-gray-800/60" id="nav-settings">
-                    <i class="fas fa-cog"></i>
-                    <span class="ml-3">Settings</span>
-                </a>
-            </div>
-                
-            <!-- Activity Log -->
-            <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('activity-log')" class="nav-item text-white hover:bg-gray-800/60" id="nav-activity-log">
-                    <i class="fas fa-history"></i>
-                    <span class="ml-3">Activity Log</span>
+                <a href="#" onclick="showSection('admin-tools')" class="nav-item text-white hover:bg-gray-800/60" id="nav-admin-tools">
+                    <i class="fas fa-toolbox"></i>
+                    <span class="ml-3">Admin Tools</span>
                 </a>
             </div>
             
@@ -499,21 +461,9 @@
                 </a>
             </div>
         </nav>
-        
-        <!-- Sidebar Footer -->
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 bg-gray-800/50 sidebar-footer">
-                    <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-lg">
-                    <i class="fas fa-user-shield text-white text-sm"></i>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-semibold text-white" id="sidebarAdminName">Admin</p>
-                    <p class="text-xs text-gray-400 font-medium">Super Administrator</p>
-            </div>
-                </div>
-                </div>
+
                         </div>
-                        
+
     <!-- Main Content -->
     <main class="main ml-64 pt-20 px-8 pb-8 transition-all duration-300 ease-in-out" id="mainContent">
         
@@ -588,7 +538,7 @@
                 </div>
                 <div class="mt-4 flex items-center text-sm">
                     <span id="driverBadgesThisWeek" class="text-green-600 font-medium">+0</span>
-                    <span class="text-gray-500 ml-2">this week</span>
+                    <span class="text-gray-500 ml-2">approved this week</span>
                 </div>
             </div>
         </div>
@@ -647,22 +597,25 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
                     <select id="editUserRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
                         <option value="farmer">Farmer</option>
+                        <option value="handler">Handler</option>
                         <option value="worker">Worker</option>
+                        <option value="driver">Driver</option>
                         <option value="sra">SRA Officer</option>
-                        <option value="admin">Admin</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1">Note: System Admin roles cannot be assigned through this form.</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                     <input type="tel" id="editUserPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select id="editUserStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="pending">Pending</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Account Status</label>
+                    <div class="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-gray-600">
+                        <span id="editUserStatusDisplay" class="font-medium">-</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        ℹ️ Status is automatically managed by the system (email verification). Cannot be edited manually.
+                    </p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Driver Badge</label>
@@ -709,7 +662,7 @@
     <script type="module" src="../../backend/System_Admin/badge_filter.js"></script>
     <script type="module" src="../../backend/System_Admin/Farmers.js"></script>
     <script type="module" src="../../backend/System_Admin/security.js"></script>
-    <script type="module" src="../../backend/System_Admin/maintenance.js"></script>
+    <script type="module" src="../../backend/System_Admin/admin_tools.js"></script>
     <script>
     // Activity Log Popup logic
     window.addEventListener('DOMContentLoaded', function() {
@@ -895,23 +848,8 @@
                 case 'security-settings':
                     showSecuritySettingsContent();
                     break;
-                case 'maintenance':
-                    showMaintenanceContent();
-                    break;
-                case 'system-settings':
-                    showSystemSettingsContent();
-                    break;
-                case 'backup-restore':
-                    showBackupRestoreContent();
-                    break;
-                case 'system-logs':
-                    showSystemLogsContent();
-                    break;
-                case 'reports':
-                    showReportsContent();
-                    break;
-                case 'settings':
-                    showSettingsContent();
+                case 'admin-tools':
+                    showAdminToolsContent();
                     break;
                 case 'help':
                     showHelpContent();
@@ -998,7 +936,7 @@
                         </div>
                         <div class="mt-4 flex items-center text-sm">
                             <span id="driverBadgesThisWeek2" class="text-green-600 font-medium">+0</span>
-                            <span class="text-gray-500 ml-2">this week</span>
+                            <span class="text-gray-500 ml-2">approved this week</span>
                         </div>
                     </div>
                 </div>
@@ -1065,13 +1003,17 @@
             const mainContent = document.querySelector('main');
             mainContent.style.height = '100vh';
             mainContent.style.overflow = 'auto';
-            fetch('partials/farmers.html')
+            fetch(`partials/farmers.html?v=${Date.now()}`)
                 .then(r => r.text())
                 .then(html => {
                     mainContent.innerHTML = html;
                     // Initialize the farmers management system
                     if (window.initializeFarmers) {
                         window.initializeFarmers();
+                    }
+                    // ✅ Refresh users data when switching to this tab
+                    if (typeof loadUsers === 'function') {
+                        loadUsers().then(() => console.log('✅ Users data refreshed')).catch(err => console.error('❌ Error refreshing users:', err));
                     }
                 })
                 .catch(() => {
@@ -1087,7 +1029,8 @@
             const mainContent = document.querySelector('main');
             mainContent.style.height = '100vh';
             mainContent.style.overflow = 'auto';
-            fetch('partials/sra_officers.html')
+            // Add cache busting to force reload latest version
+            fetch(`partials/sra_officers.html?v=${Date.now()}`)
                 .then(r => r.text())
                 .then(html => {
                     mainContent.innerHTML = html;
@@ -1199,12 +1142,22 @@ async function showBadgeRequestsContent() {
 
   try {
     // Load the HTML content
-    const response = await fetch('partials/badge_requests.html');
+    const response = await fetch(`partials/badge_requests.html?v=${Date.now()}`);
     const html = await response.text();
     mainContent.innerHTML = html;
 
     // Dynamically import the badge requests script
     await import('../../backend/System_Admin/badge_requests.js');
+
+    // ✅ Wait for next tick to ensure module is fully loaded
+    setTimeout(() => {
+      if (typeof window.fetchBadgeRequests === 'function') {
+        console.log('📊 Calling fetchBadgeRequests...');
+        window.fetchBadgeRequests();
+      } else {
+        console.error('❌ window.fetchBadgeRequests not found');
+      }
+    }, 10);
 
     console.log('✅ Badge Requests page loaded and script executed');
   } catch (err) {
@@ -1252,25 +1205,38 @@ async function showBadgeRequestsContent() {
                     <p class="text-gray-600">Activity log content will be implemented here.</p>
             </div>
             `;
+            // ✅ Refresh activity logs when switching to this tab
+            if (typeof loadActivityLogs === 'function') {
+                loadActivityLogs().then(() => console.log('✅ Activity logs refreshed')).catch(err => console.error('❌ Error refreshing activity logs:', err));
+            }
         }
-        
+
         function showFailedLoginsContent() {
             const mainContent = document.querySelector('main');
             mainContent.style.height = '100vh';
             mainContent.style.overflow = 'auto';
-            mainContent.innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Failed Login Attempts</h2>
-                    <p class="text-gray-600">Failed logins content will be implemented here.</p>
-                </div>
-            `;
+
+            fetch(`partials/failed_logins.html?v=${Date.now()}`)
+                .then(r => r.text())
+                .then(html => {
+                    mainContent.innerHTML = html;
+                    // Initialize failed logins table
+                    if (typeof loadFailedLogins === 'function') {
+                        loadFailedLogins();
+                    }
+                    // Set up event listeners for this section
+                    setupFailedLoginsListeners();
+                })
+                .catch(() => {
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load failed logins section.</p></div>';
+                });
         }
         
         function showSecuritySettingsContent() {
             const mainContent = document.querySelector('main');
             mainContent.style.height = '100vh';
             mainContent.style.overflow = 'auto';
-            fetch('partials/security.html')
+            fetch(`partials/security.html?v=${Date.now()}`)
                 .then(r => r.text())
                 .then(html => {
                     mainContent.innerHTML = html;
@@ -1287,24 +1253,24 @@ async function showBadgeRequestsContent() {
                 });
         }
         
-        function showMaintenanceContent() {
+        function showAdminToolsContent() {
             const mainContent = document.querySelector('main');
             mainContent.style.height = '100vh';
             mainContent.style.overflow = 'auto';
-            fetch('partials/maintenance.html')
+            fetch(`partials/admin_tools.html?v=${Date.now()}`)
                 .then(r => r.text())
                 .then(html => {
                     mainContent.innerHTML = html;
-                    // Initialize the maintenance management system
-                    if (window.initializeMaintenance) {
-                        window.initializeMaintenance();
+                    // Initialize admin tools
+                    if (window.initializeAdminTools) {
+                        window.initializeAdminTools();
                     }
                 })
                 .catch(() => {
                     const mainContent = document.querySelector('main');
                     mainContent.style.height = '100vh';
                     mainContent.style.overflow = 'auto';
-                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load maintenance section.</p></div>';
+                    mainContent.innerHTML = '<div class="bg-white rounded-xl shadow-lg p-8"><p class="text-red-600">Failed to load admin tools section.</p></div>';
                 });
         }
         

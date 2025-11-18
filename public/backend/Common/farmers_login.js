@@ -404,15 +404,44 @@ async function login() {
 
             console.log(`✅ Recorded failed login for ${emailKey}. Count: ${failedCount}`);
           } else {
-            // User doesn't exist: create failed_logins document
-            console.log(`👤 User not found in database, creating failed_logins document`);
+            // User doesn't exist: check if we already have a failed_logins record for this email
+            console.log(`👤 User not found in database, checking for existing failed_logins record`);
             const failedLoginsRef = collection(db, "failed_logins");
-            const docRef = await addDoc(failedLoginsRef, {
-              email: emailKey,
-              timestamp: serverTimestamp(),
-              ipAddress: "unknown" // Could be enhanced with actual IP detection
-            });
-            console.log(`✅ Recorded failed login attempt for non-existent user: ${emailKey}, doc ID: ${docRef.id}`);
+            const failedQuery = query(failedLoginsRef, where("email", "==", emailKey));
+            const failedSnapshot = await getDocs(failedQuery);
+
+            if (!failedSnapshot.empty) {
+              // Email already has failed login attempts - increment count
+              const existingDoc = failedSnapshot.docs[0].ref;
+              const existingData = failedSnapshot.docs[0].data();
+              const currentAttempts = existingData.attemptCount || 1;
+              const newAttempts = currentAttempts + 1;
+
+              console.log(`⬆️ Incrementing failed attempts for non-existent user from ${currentAttempts} to ${newAttempts}`);
+
+              await setDoc(
+                existingDoc,
+                {
+                  attemptCount: newAttempts,
+                  lastAttempt: serverTimestamp(),
+                  ipAddress: "unknown" // Could be enhanced with actual IP detection
+                },
+                { merge: true }
+              );
+
+              console.log(`✅ Updated failed login count for non-existent user: ${emailKey}. Count: ${newAttempts}`);
+            } else {
+              // First failed attempt for this email - create new record
+              console.log(`📝 Creating first failed_logins record for: ${emailKey}`);
+              const docRef = await addDoc(failedLoginsRef, {
+                email: emailKey,
+                attemptCount: 1,
+                firstAttempt: serverTimestamp(),
+                lastAttempt: serverTimestamp(),
+                ipAddress: "unknown" // Could be enhanced with actual IP detection
+              });
+              console.log(`✅ Created failed login record for non-existent user: ${emailKey}, doc ID: ${docRef.id}`);
+            }
           }
         } catch (err) {
           console.error("❌ Error recording failed login:", err);

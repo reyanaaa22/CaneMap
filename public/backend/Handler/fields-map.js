@@ -9,15 +9,17 @@ import { collection, query, where, onSnapshot,  doc,
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { openCreateTaskModal } from './create-task.js';
 
+// Global variables for map and data
+let fieldsMap = null;
+let markersLayer = null;
+let currentUserId = null;
+let fieldsData = [];
+let topFieldsUnsub = null;
+let nestedFieldsUnsub = null;
+const fieldStore = new Map();
+
 // Initialize Leaflet Map for Fields Section
 export function initializeFieldsSection() {
-  let fieldsMap = null;
-  let markersLayer = null;
-  let currentUserId = null;
-  let fieldsData = [];
-  let topFieldsUnsub = null;
-  let nestedFieldsUnsub = null;
-  const fieldStore = new Map();
   let topFieldKeys = new Set();
   let nestedFieldKeys = new Set();
   let activeHighlightedField = null;
@@ -360,13 +362,12 @@ document.addEventListener('click', (e) => {
 
       const createTopKey = (doc) => doc.data()?.sourceRef || doc.ref.path;
 
-      // --- Only fetch top-level fields that belong to user AND are reviewed ---
-      // We use `in` to cover both 'reviewed' and 'Reviewed' variants in case of inconsistent casing.
-      // If your DB is normalized to lowercase, you can switch to where('status','==','reviewed')
+      // --- Fetch top-level fields that belong to user (exclude only pending ones) ---
+      // Show both 'reviewed' and 'active' fields (active = has growth tracking)
       const topQuery = query(
         collection(db, 'fields'),
         where('userId', '==', currentUserId),
-        where('status', '==', 'reviewed')
+        where('status', 'in', ['reviewed', 'active'])
       );
       topFieldsUnsub = onSnapshot(topQuery, (snapshot) => {
         console.log('📦 Top-level fields snapshot (reviewed) size:', snapshot.size);
@@ -397,40 +398,7 @@ document.addEventListener('click', (e) => {
         showMessage('Error loading fields: ' + error.message, 'error');
       });
 
-      // --- Only fetch nested field applications that are reviewed ---
-      const nestedQuery = query(
-        collection(db, 'field_applications', currentUserId, 'fields'),
-        where('status', '==', 'reviewed')
-      );
-      nestedFieldsUnsub = onSnapshot(nestedQuery, (snapshot) => {
-        console.log('📦 Nested fields snapshot (reviewed) size:', snapshot.size);
-        const seen = new Set();
-
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data() || {};
-          const key = docSnap.ref.path;
-          seen.add(key);
-          // keep user's nested fields; overwrite only if not present (top-level takes precedence)
-          fieldStore.set(key, {
-            id: docSnap.id,
-            ...data,
-            userId: data.userId || currentUserId,
-            sourceRef: key
-          });
-        });
-
-        nestedFieldKeys.forEach((key) => {
-          if (!seen.has(key) && !topFieldKeys.has(key)) {
-            fieldStore.delete(key);
-          }
-        });
-        nestedFieldKeys = seen;
-
-        renderFromStore();
-      }, (error) => {
-        console.error('❌ Error fetching nested fields (reviewed):', error);
-        showMessage('Error loading fields: ' + error.message, 'error');
-      });
+      // ✅ No longer need nested field_applications subscription - single source in 'fields' collection
 
     } catch (error) {
       console.error('❌ Error loading fields:', error);
@@ -466,7 +434,7 @@ document.addEventListener('click', (e) => {
         </h3>
         <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">
           <p><strong>Location:</strong> ${field.barangay || 'N/A'}</p>
-          <p><strong>Area:</strong> ${field.area_size || field.area || 'N/A'} hectares</p>
+          <p><strong>Area:</strong> ${field.field_size || field.area_size || field.area || field.size || 'N/A'} hectares</p>
           <p><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span></p>
         </div>
         <button onclick="viewFieldDetails('${field.id}')" style="background: #7ccf00; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; width: 100%; border: none; cursor: pointer;">
@@ -482,22 +450,7 @@ document.addEventListener('click', (e) => {
 
   }
 
-  // --- Fetch field details from Firestore nested structure ---
-  async function fetchFieldApplicationDetails(requestedBy, fieldId) {
-    try {
-      const fieldRef = doc(db, "field_applications", requestedBy, "fields", fieldId);
-      const snap = await getDoc(fieldRef);
-      if (snap.exists()) {
-        return { id: snap.id, ...snap.data() };
-      } else {
-        console.warn("No field data found for:", fieldId);
-        return null;
-      }
-    } catch (err) {
-      console.error("Failed to fetch field application details:", err);
-      return null;
-    }
-  }
+  // ✅ No longer needed - all data is in top-level 'fields' collection
 
   // Update fields list in sidebar
   function updateFieldsList() {
@@ -529,7 +482,7 @@ document.addEventListener('click', (e) => {
                 ${field.barangay || 'Unknown location'}
               </p>
               <p class="text-[11px] text-gray-500 mt-1">
-                ${field.area_size || field.area || 'N/A'} hectares
+                ${field.field_size || field.area_size || field.area || field.size || 'N/A'} hectares
               </p>
             </div>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badgeClass} ${textClass}">
@@ -618,25 +571,13 @@ window.viewFieldDetails = async function(fieldId) {
       return;
     }
 
-    // --- Fetch additional field data from field_applications/{requestedBy}/fields/{fieldId} ---
-    let detailedField = null;
-
-    if (field.requestedBy) {
-      detailedField = await fetchFieldApplicationDetails(field.requestedBy, fieldId);
-    }
-
-    if (!detailedField) {
-      console.warn("No detailed field info found in field_applications path.");
-      detailedField = {};
-    }
-
-    // Use detailed data (fallback to base if missing)
-    const fieldName = detailedField.field_name || field.field_name || 'Unnamed Field';
-    const street = detailedField.street || '—';
-    const barangay = detailedField.barangay || '—';
-    const caneType = detailedField.sugarcane_variety || field.cane_type || 'N/A';
-    const area = detailedField.field_size || field.area_size || 'N/A';
-    const terrain = detailedField.terrain_type || 'N/A';
+    // ✅ All data is now in the 'fields' collection - no need to fetch from field_applications
+    const fieldName = field.field_name || field.fieldName || 'Unnamed Field';
+    const street = field.street || '—';
+    const barangay = field.barangay || '—';
+    const caneType = field.sugarcane_variety || field.variety || 'N/A';
+    const area = field.field_size || field.area_size || field.area || field.size || 'N/A';
+    const terrain = field.terrain_type || 'N/A';
 
     // Format address
     const formattedAddress = `${street}, ${barangay}, Ormoc City`;
@@ -644,7 +585,10 @@ window.viewFieldDetails = async function(fieldId) {
     // --- Build modal DOM (centered) ---
     // Remove any existing details modal first
     const existing = document.getElementById('fieldDetailsModal');
-    if (existing) existing.remove();
+    if (existing) {
+      console.log('🗑️ Removing existing field details modal');
+      existing.remove();
+    }
 
     const modal = document.createElement('div');
 
@@ -674,13 +618,17 @@ window.viewFieldDetails = async function(fieldId) {
 
 <div class="p-6 modal-content">
   <!-- LEFT COLUMN -->
-  <div class="space-y-5">
+  <div class="space-y-5 modal-left-col">
 
-    <!-- Month Selector & View Toggle -->
+    <!-- Month/Week Selector -->
     <div class="flex items-center justify-between">
-      <h3 class="text-base font-bold text-[var(--cane-900)]">Month of <span id="fd_month_label">November</span></h3>
+      <h3 class="text-base font-bold text-[var(--cane-900)]">
+        <span id="fd_month_label">November</span>
+        <span id="fd_week_label"></span>
+      </h3>
       <div class="flex items-center gap-2">
-        <select id="fd_month_selector" class="text-xs">
+        <select id="fd_month_selector" class="text-xs px-2 py-1 border rounded">
+          <option value="all">All Time</option>
           <option value="0">January</option>
           <option value="1">February</option>
           <option value="2">March</option>
@@ -694,17 +642,16 @@ window.viewFieldDetails = async function(fieldId) {
           <option value="10" selected>November</option>
           <option value="11">December</option>
         </select>
-        <select id="fd_week_selector"></select>
-
+        <select id="fd_week_selector" class="text-xs px-2 py-1 border rounded"></select>
       </div>
     </div>
 
     <!-- Field Tasks -->
     <div class="fd_table_card p-3">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-semibold">Field Tasks</h3>
+        <h3 class="text-sm font-semibold">Tasks</h3>
         <select id="fd_tasks_filter" class="text-xs rounded-md border px-2 py-1">
-          <option value="all">All</option>
+          <option value="all">All Status</option>
           <option value="todo">To Do</option>
           <option value="pending">Pending</option>
           <option value="done">Done</option>
@@ -717,7 +664,7 @@ window.viewFieldDetails = async function(fieldId) {
   </div>
 
   <!-- RIGHT COLUMN -->
-  <div class="fd_table_card p-3">
+  <div class="fd_table_card p-3 modal-right-col">
     <h3 class="text-sm font-semibold mb-2">Growth Tracker</h3>
     <div id="fd_growth_container" class="text-xs text-[var(--cane-600)]">Loading growth tracker...</div>
   </div>
@@ -763,6 +710,17 @@ modalStyle.textContent = `
     overflow: hidden; /* hide default scroll */
   }
 
+  /* Column sizing - left takes more space */
+  #fieldDetailsModal .modal-left-col {
+    flex: 1 1 65%;
+    min-width: 0; /* allow flex shrink */
+  }
+
+  #fieldDetailsModal .modal-right-col {
+    flex: 1 1 35%;
+    min-width: 0; /* allow flex shrink */
+  }
+
   /* Field tasks scrollable only on DESKTOP */
   @media (min-width: 769px) {
     #fieldDetailsModal #fd_tasks_container {
@@ -784,6 +742,11 @@ modalStyle.textContent = `
       -webkit-overflow-scrolling: touch;
       padding-bottom: 24px;
     }
+    #fieldDetailsModal .modal-left-col,
+    #fieldDetailsModal .modal-right-col {
+      flex: 1 1 auto;
+      width: 100%;
+    }
     #fieldDetailsModal #fd_tasks_container {
       overflow: visible;
       max-height: none;
@@ -797,7 +760,7 @@ modalStyle.textContent = `
 `;
 
 modalStyle.textContent += `
-  /* MOBILE FIX: keep month header, tasks header, and date row fixed */
+  /* MOBILE: Simplified responsive layout without sticky headers */
   @media (max-width: 768px) {
     #fieldDetailsModal .modal-content {
       flex-direction: column;
@@ -807,23 +770,22 @@ modalStyle.textContent += `
       scroll-behavior: smooth;
     }
 
-    /* 1️⃣ Keep the "Month of November" + dropdowns fixed */
-    #fieldDetailsModal .modal-content > .space-y-5 > div:first-child {
+    #fieldDetailsModal .modal-left-col,
+    #fieldDetailsModal .modal-right-col {
+      flex: 1 1 auto;
+      width: 100%;
+    }
+
+    /* Keep "Field Tasks" title + filter slightly sticky for easy filtering */
+    #fieldDetailsModal .fd_table_card > div:first-child {
       position: sticky;
       top: 0;
       background: white;
-      z-index: 30;
-    }
-
-    /* 2️⃣ Keep "Field Tasks" title + filter sticky (just below month selector) */
-    #fieldDetailsModal .fd_table_card > div:first-child {
-      position: sticky;
-      top: 48px;
-      background: white;
       z-index: 25;
+      padding-bottom: 8px;
     }
 
-    /* 3️⃣ Keep the full date-row (Mon–Sun) fixed */
+    /* Remove obsolete sticky header rules */
     #fieldDetailsModal #fd_tasks_container > div.overflow-x-auto {
       position: sticky;
       top: 90px;
@@ -842,98 +804,15 @@ modalStyle.textContent += `
 
 
 
-modal.appendChild(modalStyle);
-
-
-  const monthSelector = modal.querySelector('#fd_month_selector');
-const weekSelector = modal.querySelector('#fd_week_selector');
-const monthLabel = modal.querySelector('#fd_month_label');
-
-function populateWeeks(monthIndex) {
-  if (!weekSelector) return;
-  weekSelector.innerHTML = '';
-  // Determine number of weeks in the month dynamically
-  const year = new Date().getFullYear();
-  const firstDay = new Date(year, monthIndex, 1);
-  const lastDay = new Date(year, monthIndex + 1, 0);
-  const weeksInMonth = Math.ceil((lastDay.getDate() + firstDay.getDay()) / 7);
-
-  for (let i = 1; i <= weeksInMonth; i++) {
-    const option = document.createElement('option');
-    option.value = i;
-    option.text = `Week ${i}`;
-    weekSelector.appendChild(option);
-  }
-
-  // Auto-select current week if month is current
-  const today = new Date();
-  if (today.getMonth() === parseInt(monthIndex)) {
-    const currentWeek = Math.ceil((today.getDate() + firstDay.getDay()) / 7);
-    weekSelector.value = currentWeek;
-  } else {
-    weekSelector.value = 1;
-  }
+// Append style to head (not modal) so it persists across modal recreations
+if (!document.getElementById('fieldDetailsModalStyle')) {
+  modalStyle.id = 'fieldDetailsModalStyle';
+  document.head.appendChild(modalStyle);
+  console.log('✅ Field details modal styles added to head');
+} else {
+  console.log('ℹ️ Field details modal styles already exist');
 }
 
-// Initial population
-populateWeeks(monthSelector.value);
-
-// ---------- WEEK SELECTION SUPPORT: compute date range for chosen month/week ----------
-function getWeekDateRange(monthIndex, weekNumber) {
-  const year = new Date().getFullYear();
-  const firstDay = new Date(year, monthIndex, 1);
-  const lastDay = new Date(year, monthIndex + 1, 0);
-  // find first date in month that belongs to that week number
-  let start = new Date(firstDay);
-  while (Math.ceil((start.getDate() + firstDay.getDay()) / 7) < weekNumber && start <= lastDay) {
-    start.setDate(start.getDate() + 1);
-  }
-  // end date: last date that has same weekNumber (or month end)
-  let end = new Date(start);
-  while (Math.ceil((end.getDate() + firstDay.getDay()) / 7) === weekNumber && end <= lastDay) {
-    end.setDate(end.getDate() + 1);
-  }
-  end.setDate(end.getDate() - 1);
-  return { start, end };
-}
-
-
-function renderTasksForWeek(tasks = [], monthIndex = (new Date()).getMonth(), weekNumber = 1, filter = 'all') {
-  const { start, end } = getWeekDateRange(monthIndex, weekNumber);
-  const days = [];
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    days.push(new Date(d));
-  }
-
-  const grouped = {};
-  tasks.forEach(t => {
-    if (filter !== 'all' && (t.status || '').toLowerCase() !== filter) return;
-    const scheduled = t.scheduled_at ? (t.scheduled_at.toDate ? t.scheduled_at.toDate() : new Date(t.scheduled_at)) : null;
-    const key = scheduled ? scheduled.toISOString().slice(0,10) : (t.date || 'unspecified');
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(t);
-  });
-
-  const cols = days.map(d => {
-    const key = d.toISOString().slice(0,10);
-    const items = grouped[key] || [];
-    const dayLabel = d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
-    const inner = items.map(it => {
-      const title = it.title || it.task || 'Untitled task';
-      const time = it.scheduled_at ? (it.scheduled_at.toDate ? it.scheduled_at.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : new Date(it.scheduled_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})) : '';
-      const status = (it.status || 'todo').toLowerCase();
-      const statusBadge = status === 'done' ? '<span class="px-2 py-0.5 rounded text-xs">Done</span>' : (status === 'pending' ? '<span class="px-2 py-0.5 rounded text-xs">Pending</span>' : '<span class="px-2 py-0.5 rounded text-xs">To Do</span>');
-      return `<div class="fd_task_item mb-2 p-2 rounded border border-gray-100">
-  <div class="text-sm font-semibold">${escapeHtml(title)}</div>
-  <div class="text-xs text-[var(--cane-600)]">${escapeHtml(time)} • ${statusBadge}</div>
-</div>
-`;
-    }).join('');
-    return `<div class="min-w-[140px] flex-shrink-0"><div class="text-xs font-semibold mb-2">${escapeHtml(dayLabel)}</div>${inner || '<div class="text-xs text-[var(--cane-500)]">No tasks</div>'}</div>`;
-  }).join('');
-
-  return `<div class="overflow-x-auto"><div class="flex gap-4 pb-2">${cols}</div></div>`;
-}
 
 function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMobile = 5) {
   try {
@@ -985,41 +864,113 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
 }
 
 
-// call adjust after renders (see next step where to call)
+// Month/Week selector logic
+    const monthSelector = modal.querySelector('#fd_month_selector');
+    const weekSelector = modal.querySelector('#fd_week_selector');
+    const monthLabel = modal.querySelector('#fd_month_label');
+    const weekLabel = modal.querySelector('#fd_week_label');
 
-// --- wire week selector changes to re-render tasks ---
-if (weekSelector) {
-  weekSelector.addEventListener('change', async () => {
-    try {
-      const mIdx = parseInt(monthSelector.value, 10);
-      const wNum = parseInt(weekSelector.value, 10);
-      const filterValue = modal.querySelector('#fd_tasks_filter')?.value || 'all';
-      const tasks = await fetchTasksForField(fieldId).catch(()=>[]);
-      const tasksContainer = modal.querySelector('#fd_tasks_container');
-      if (tasksContainer) tasksContainer.innerHTML = renderTasksForWeek(tasks, mIdx, wNum, filterValue === 'all' ? 'all' : filterValue);
-    } catch (err) {
-      console.error('Error re-rendering tasks for selected week:', err);
+    function populateWeeks(monthIndex) {
+      if (!weekSelector || monthIndex === 'all') {
+        if (weekSelector) {
+          weekSelector.innerHTML = '';
+          weekSelector.style.display = 'none';
+        }
+        return;
+      }
+
+      weekSelector.style.display = '';
+      weekSelector.innerHTML = '<option value="all">All Weeks</option>';
+
+      const year = new Date().getFullYear();
+      const firstDay = new Date(year, parseInt(monthIndex), 1);
+      const lastDay = new Date(year, parseInt(monthIndex) + 1, 0);
+      const weeksInMonth = Math.ceil((lastDay.getDate() + firstDay.getDay()) / 7);
+
+      for (let i = 1; i <= weeksInMonth; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.text = `Week ${i}`;
+        weekSelector.appendChild(option);
+      }
+
+      // Auto-select current week if this is current month
+      const today = new Date();
+      if (today.getMonth() === parseInt(monthIndex)) {
+        const currentWeek = Math.ceil((today.getDate() + firstDay.getDay()) / 7);
+        weekSelector.value = currentWeek;
+      } else {
+        weekSelector.value = 'all';
+      }
     }
-  });
-}
 
+    // Initialize with "All Time" as default to show all tasks
+    monthSelector.value = 'all';
+    populateWeeks('all');
 
-// Also re-run weeks when month changes
-monthSelector.addEventListener('change', async (e) => {
-  const idx = parseInt(e.target.value, 10);
-  populateWeeks(idx);
-  if (weekSelector) weekSelector.dispatchEvent(new Event('change'));
-});
+    // Update label
+    function updateLabels() {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Update weeks when month changes
-monthSelector.addEventListener('change', (e) => {
-  const idx = parseInt(e.target.value);
-  monthLabel.textContent = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-  ][idx];
-  populateWeeks(idx);
-});
+      if (monthSelector.value === 'all') {
+        monthLabel.textContent = 'All Tasks';
+        weekLabel.textContent = '';
+      } else {
+        monthLabel.textContent = monthNames[parseInt(monthSelector.value)];
+        if (weekSelector.value === 'all') {
+          weekLabel.textContent = '';
+        } else {
+          weekLabel.textContent = ` - Week ${weekSelector.value}`;
+        }
+      }
+    }
+
+    updateLabels();
+
+    // Month change handler
+    monthSelector.addEventListener('change', async () => {
+      const monthValue = monthSelector.value;
+      populateWeeks(monthValue);
+      updateLabels();
+
+      // Re-render tasks
+      const tasks = await fetchTasksForField(fieldId).catch(() => []);
+      const tasksContainer = modal.querySelector('#fd_tasks_container');
+      const filterValue = modal.querySelector('#fd_tasks_filter')?.value || 'all';
+
+      if (monthValue === 'all') {
+        // Show all tasks
+        tasksContainer.innerHTML = renderTasksWeekly(tasks, filterValue);
+      } else {
+        const weekValue = weekSelector.value;
+        if (weekValue === 'all') {
+          // Show all tasks for this month
+          tasksContainer.innerHTML = renderTasksForMonth(tasks, parseInt(monthValue), filterValue);
+        } else {
+          // Show tasks for specific week
+          tasksContainer.innerHTML = renderTasksForWeek(tasks, parseInt(monthValue), parseInt(weekValue), filterValue);
+        }
+      }
+    });
+
+    // Week change handler
+    weekSelector.addEventListener('change', async () => {
+      updateLabels();
+
+      const tasks = await fetchTasksForField(fieldId).catch(() => []);
+      const tasksContainer = modal.querySelector('#fd_tasks_container');
+      const filterValue = modal.querySelector('#fd_tasks_filter')?.value || 'all';
+      const monthValue = monthSelector.value;
+      const weekValue = weekSelector.value;
+
+      if (weekValue === 'all') {
+        tasksContainer.innerHTML = renderTasksForMonth(tasks, parseInt(monthValue), filterValue);
+      } else {
+        tasksContainer.innerHTML = renderTasksForWeek(tasks, parseInt(monthValue), parseInt(weekValue), filterValue);
+      }
+    });
+
     // small helper to escape text (prevent popup html injection)
     function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
@@ -1035,50 +986,6 @@ monthSelector.addEventListener('change', (e) => {
       window.removeEventListener('resize', resizeHandler);
       window.removeEventListener('orientationchange', resizeHandler);
     });
-
-
-    // --- Month Selector + View Toggle (placed correctly inside modal) ---
-    const viewToggle = modal.querySelector('#fd_view_toggle');
-
-    if (monthSelector && viewToggle && monthLabel) {
-      // --- Auto-select current month and week ---
-      const now = new Date();
-      const currentMonthIndex = now.getMonth(); // 0-11
-      const monthNames = [
-        "January","February","March","April","May","June",
-        "July","August","September","October","November","December"
-      ];
-
-      // Set default month in both selector and label
-      monthSelector.value = currentMonthIndex.toString();
-      monthLabel.textContent = monthNames[currentMonthIndex];
-
-      // Always default to weekly view (today's week)
-      viewToggle.value = 'weekly';
-
-      // Determine current week of the month (1–5)
-      function getWeekOfMonth(date) {
-        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-        const dayOfMonth = date.getDate();
-        const adjustedDate = dayOfMonth + firstDay.getDay();
-        return Math.ceil(adjustedDate / 7);
-      }
-
-      console.log(`📅 Auto-selected: ${monthNames[currentMonthIndex]}`);
-
-      monthSelector.addEventListener('change', (e) => {
-        const monthNames = [
-          "January","February","March","April","May","June",
-          "July","August","September","October","November","December"
-        ];
-        monthLabel.textContent = monthNames[parseInt(e.target.value)];
-      });
-
-      viewToggle.addEventListener('change', (e) => {
-        const view = e.target.value;
-        console.log("Switched to view:", view);
-      });
-    }
 
     // scroll to top of modal content
     modal.querySelector('section')?.scrollTo?.({ top: 0 });
@@ -1135,90 +1042,245 @@ monthSelector.addEventListener('change', (e) => {
         if (json && json.current_weather) {
           const cw = json.current_weather;
           const weatherIcon = modal.querySelector('#fd_weather_icon');
-          const code = cw.weathercode;
-          const weatherDesc = getWeatherDescription(code);
-          modal.querySelector('#fd_weather_desc').textContent = `${weatherDesc} • Wind ${Math.round(cw.windspeed)} km/h`;
-          modal.querySelector('#fd_weather_val').textContent = `${cw.temperature ?? '—'}°C`;
-          weatherIcon.src = getWeatherIconUrl(code);
+          const weatherDesc = modal.querySelector('#fd_weather_desc');
+          const weatherVal = modal.querySelector('#fd_weather_val');
+
+          if (weatherDesc && weatherVal) {
+            const code = cw.weathercode;
+            const desc = getWeatherDescription(code);
+            weatherDesc.textContent = `${desc} • Wind ${Math.round(cw.windspeed)} km/h`;
+            weatherVal.textContent = `${cw.temperature ?? '—'}°C`;
+            if (weatherIcon) weatherIcon.src = getWeatherIconUrl(code);
+          }
         } else {
-          modal.querySelector('#fd_weather_desc').textContent = 'Weather unavailable';
-          modal.querySelector('#fd_weather_val').textContent = '—';
+          const weatherDesc = modal.querySelector('#fd_weather_desc');
+          const weatherVal = modal.querySelector('#fd_weather_val');
+          if (weatherDesc) weatherDesc.textContent = 'Weather unavailable';
+          if (weatherVal) weatherVal.textContent = '—';
         }
       } catch (err) {
         console.warn('Weather fetch failed', err);
         const descEl = modal.querySelector('#fd_weather_desc');
+        const valEl = modal.querySelector('#fd_weather_val');
         if (descEl) descEl.textContent = 'Failed to load weather';
+        if (valEl) valEl.textContent = '—';
       }
     })();
 
-    // --- Load field tasks (try multiple collection patterns) ---
+    // --- Load field tasks from top-level tasks collection ---
     async function fetchTasksForField(fid) {
-      // try subcollection: fields/{fid}/tasks
+      console.log(`🔍 Fetching tasks for field: ${fid}`);
+
       try {
-        const tasksRef = collection(db, 'fields', fid, 'tasks');
-        const snap = await getDocs(query(tasksRef, orderBy('scheduled_at', 'asc')));
-        if (!snap.empty) return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (err) {
-        console.debug('No subcollection tasks or query failed (fields/{id}/tasks):', err?.message || err);
-      }
-      // fallback: top-level tasks collection with fieldId property
-      try {
-        const tasksQuery = query(collection(db, 'tasks'), where('fieldId', '==', fid), orderBy('scheduled_at', 'asc'));
+        const tasksQuery = query(collection(db, 'tasks'), where('fieldId', '==', fid));
         const snap = await getDocs(tasksQuery);
-        if (!snap.empty) return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (err) {
-        console.debug('Fallback tasks query failed:', err?.message || err);
-      }
-      return [];
-    }
+        console.log(`📋 Found ${snap.size} tasks for field`);
 
-    // --- Load growth tracker (try several names) ---
-    async function fetchGrowthRecords(fid) {
-      const attempts = [
-        () => getDocs(collection(db, 'fields', fid, 'growth')),
-        () => getDocs(collection(db, 'fields', fid, 'growth_records')),
-        () => getDocs(collection(db, 'fields', fid, 'growth_tracker')),
-        () => getDocs(query(collection(db, 'growth_records'), where('fieldId', '==', fid), orderBy('month', 'desc'))),
-      ];
-      for (const attempt of attempts) {
-        try {
-          const snap = await attempt();
-          if (snap && snap.size !== undefined && snap.size > 0) {
-            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          }
-        } catch (err) {
-          // continue to next try
+        if (!snap.empty) {
+          const tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          console.log(`✅ Returning ${tasks.length} tasks:`, tasks);
+          // Sort in memory by scheduled_at
+          tasks.sort((a, b) => {
+            const aTime = a.scheduled_at?.seconds || 0;
+            const bTime = b.scheduled_at?.seconds || 0;
+            return aTime - bTime;
+          });
+          return tasks;
         }
+      } catch (err) {
+        console.error('Tasks query failed:', err?.message || err);
+      }
+
+      // Debug: Let's see ALL tasks in the collection to understand the structure
+      try {
+        console.log('🔍 DEBUG: Fetching ALL tasks to check structure...');
+        const allTasksSnap = await getDocs(collection(db, 'tasks'));
+        console.log(`📊 Total tasks in collection: ${allTasksSnap.size}`);
+        allTasksSnap.docs.forEach(doc => {
+          const data = doc.data();
+          console.log(`  - Task ${doc.id}:`, {
+            fieldId: data.fieldId,
+            field_id: data.field_id,
+            created_by: data.created_by,
+            title: data.title || data.task,
+            hasFieldId: !!data.fieldId
+          });
+        });
+      } catch (err) {
+        console.error('Debug query failed:', err);
+      }
+
+      console.warn(`⚠️ No tasks found for field ${fid}`);
+      return [];
+    }
+
+    // --- Load growth tracker data from field document (REQ-5) ---
+    async function fetchGrowthRecords(fid) {
+      try {
+        // First, try to get REQ-5 growth tracking data from the field document itself
+        const fieldRef = doc(db, 'fields', fid);
+        const fieldSnap = await getDoc(fieldRef);
+
+        if (fieldSnap.exists()) {
+          const fieldData = fieldSnap.data();
+
+          // Check if field has REQ-5 growth tracking data
+          if (fieldData.plantingDate || fieldData.currentGrowthStage) {
+            return {
+              isREQ5: true,
+              plantingDate: fieldData.plantingDate,
+              currentGrowthStage: fieldData.currentGrowthStage,
+              expectedHarvestDate: fieldData.expectedHarvestDate,
+              basalFertilizationDate: fieldData.basalFertilizationDate,
+              mainFertilizationDate: fieldData.mainFertilizationDate,
+              delayDays: fieldData.delayDays || 0,
+              variety: fieldData.sugarcane_variety || fieldData.variety
+            };
+          }
+        }
+
+        // Fallback: try subcollections for manual growth records
+        const attempts = [
+          () => getDocs(collection(db, 'fields', fid, 'growth')),
+          () => getDocs(collection(db, 'fields', fid, 'growth_records')),
+          () => getDocs(collection(db, 'fields', fid, 'growth_tracker')),
+          () => getDocs(query(collection(db, 'growth_records'), where('fieldId', '==', fid), orderBy('month', 'desc'))),
+        ];
+        for (const attempt of attempts) {
+          try {
+            const snap = await attempt();
+            if (snap && snap.size !== undefined && snap.size > 0) {
+              return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            }
+          } catch (err) {
+            // continue to next try
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching growth records:', error);
       }
       return [];
     }
 
-    // render tasks into a weekly table (today's week). Each day column can grow vertically.
+    // render tasks - show ALL tasks (for "All Time" option)
     function renderTasksWeekly(tasks = [], filter = 'all') {
-      // compute current week (Mon..Sun) display keys (use local timezone)
-      const now = new Date();
-      const dayOfWeek = now.getDay(); // 0 Sun .. 6 Sat
-      // compute start as Monday
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-      const days = [];
-      for (let i=0;i<7;i++){
-        const d = new Date(monday);
-        d.setDate(monday.getDate()+i);
-        days.push(d);
-      }
+      console.log(`🎨 renderTasksWeekly called with ${tasks.length} tasks, filter: ${filter}`);
 
-      // group tasks by date (date-only)
-      const grouped = {};
-      tasks.forEach(t => {
-        if (filter !== 'all' && (t.status || '').toLowerCase() !== filter) return;
-        const scheduled = t.scheduled_at ? (t.scheduled_at.toDate ? t.scheduled_at.toDate() : new Date(t.scheduled_at)) : null;
-        const key = scheduled ? scheduled.toISOString().slice(0,10) : (t.date || 'unspecified');
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(t);
+      // Filter tasks by status
+      const filteredTasks = tasks.filter(t => {
+        if (filter === 'all') return true;
+        return (t.status || 'todo').toLowerCase() === filter;
       });
 
-      // build HTML (simple, vertical lists per day)
+      console.log(`✅ ${filteredTasks.length} tasks after filtering`);
+
+      if (filteredTasks.length === 0) {
+        return '<div class="text-sm text-gray-500 py-4">No tasks found</div>';
+      }
+
+      // Sort by scheduled_at (earliest first)
+      const sortedTasks = filteredTasks.sort((a, b) => {
+        const aTime = a.scheduled_at?.seconds || 0;
+        const bTime = b.scheduled_at?.seconds || 0;
+        return aTime - bTime;
+      });
+
+      return renderTaskList(sortedTasks);
+    }
+
+    // Render tasks for a specific month
+    function renderTasksForMonth(tasks = [], monthIndex, filter = 'all') {
+      const filteredTasks = tasks.filter(t => {
+        if (filter !== 'all' && (t.status || 'todo').toLowerCase() !== filter) return false;
+
+        const scheduled = t.scheduled_at ? (t.scheduled_at.toDate ? t.scheduled_at.toDate() : new Date(t.scheduled_at)) : null;
+        if (!scheduled) return false;
+
+        return scheduled.getMonth() === monthIndex;
+      });
+
+      if (filteredTasks.length === 0) {
+        return '<div class="text-sm text-gray-500 py-4">No tasks in this month</div>';
+      }
+
+      const sortedTasks = filteredTasks.sort((a, b) => {
+        const aTime = a.scheduled_at?.seconds || 0;
+        const bTime = b.scheduled_at?.seconds || 0;
+        return aTime - bTime;
+      });
+
+      return renderTaskList(sortedTasks);
+    }
+
+    // Render tasks for a specific week
+    function renderTasksForWeek(tasks = [], monthIndex, weekNumber, filter = 'all') {
+      const year = new Date().getFullYear();
+      const firstDay = new Date(year, monthIndex, 1);
+
+      const filteredTasks = tasks.filter(t => {
+        if (filter !== 'all' && (t.status || 'todo').toLowerCase() !== filter) return false;
+
+        const scheduled = t.scheduled_at ? (t.scheduled_at.toDate ? t.scheduled_at.toDate() : new Date(t.scheduled_at)) : null;
+        if (!scheduled || scheduled.getMonth() !== monthIndex) return false;
+
+        const taskWeek = Math.ceil((scheduled.getDate() + firstDay.getDay()) / 7);
+        return taskWeek === weekNumber;
+      });
+
+      if (filteredTasks.length === 0) {
+        return '<div class="text-sm text-gray-500 py-4">No tasks in this week</div>';
+      }
+
+      const sortedTasks = filteredTasks.sort((a, b) => {
+        const aTime = a.scheduled_at?.seconds || 0;
+        const bTime = b.scheduled_at?.seconds || 0;
+        return aTime - bTime;
+      });
+
+      return renderTaskList(sortedTasks);
+    }
+
+    // Shared function to render task list
+    function renderTaskList(tasks) {
+      const taskRows = tasks.map(t => {
+        const title = t.title || t.task || 'Untitled task';
+        // Try scheduled_at first, then deadline, then createdAt
+        const timeField = t.scheduled_at || t.deadline || t.createdAt;
+        const scheduled = timeField ? (timeField.toDate ? timeField.toDate() : new Date(timeField)) : null;
+        const dateStr = scheduled ? scheduled.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not scheduled';
+        const status = (t.status || 'todo').toLowerCase();
+        const statusColors = {
+          'todo': 'bg-gray-100 text-gray-700',
+          'pending': 'bg-yellow-100 text-yellow-700',
+          'in_progress': 'bg-blue-100 text-blue-700',
+          'done': 'bg-green-100 text-green-700',
+          'completed': 'bg-green-100 text-green-700'
+        };
+        const statusColor = statusColors[status] || 'bg-gray-100 text-gray-700';
+
+        return `
+          <div class="border border-gray-200 rounded-lg p-3 mb-2 hover:shadow-md transition">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="font-semibold text-sm text-gray-900">${escapeHtml(title)}</div>
+                <div class="text-xs text-gray-600 mt-1">
+                  <i class="far fa-calendar mr-1"></i>${escapeHtml(dateStr)}
+                </div>
+                ${t.details ? `<div class="text-xs text-gray-500 mt-1">${escapeHtml(t.details)}</div>` : ''}
+              </div>
+              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor} ml-3">
+                ${status}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `<div class="space-y-2">${taskRows}</div>`;
+    }
+
+    // Old weekly grid code removed - now using filtered list view
+    function oldWeeklyGridCode() {
       const cols = days.map(d => {
         const key = d.toISOString().slice(0,10);
         const items = grouped[key] || [];
@@ -1241,16 +1303,87 @@ monthSelector.addEventListener('change', (e) => {
       return `<div class="overflow-x-auto"><div class="flex gap-4 pb-2">${cols}</div></div>`;
     }
 
-    // render growth records (simple table by month)
-    function renderGrowthTable(records = []) {
-      if (!records || records.length === 0) return `<div class="text-xs text-[var(--cane-500)]">No growth data yet.</div>`;
+    // render growth records - supports both REQ-5 data and manual records
+    function renderGrowthTable(data = []) {
+      // Handle REQ-5 growth tracking data
+      if (data && data.isREQ5) {
+        const plantingDate = data.plantingDate ? (data.plantingDate.toDate ? data.plantingDate.toDate() : new Date(data.plantingDate)) : null;
+        const expectedHarvest = data.expectedHarvestDate ? (data.expectedHarvestDate.toDate ? data.expectedHarvestDate.toDate() : new Date(data.expectedHarvestDate)) : null;
+        const basalFert = data.basalFertilizationDate ? (data.basalFertilizationDate.toDate ? data.basalFertilizationDate.toDate() : new Date(data.basalFertilizationDate)) : null;
+        const mainFert = data.mainFertilizationDate ? (data.mainFertilizationDate.toDate ? data.mainFertilizationDate.toDate() : new Date(data.mainFertilizationDate)) : null;
+
+        // Calculate DAP
+        let DAP = 0;
+        let daysToHarvest = 0;
+        if (plantingDate) {
+          DAP = Math.floor((new Date() - plantingDate) / (1000 * 60 * 60 * 24));
+        }
+        if (expectedHarvest) {
+          daysToHarvest = Math.ceil((expectedHarvest - new Date()) / (1000 * 60 * 60 * 24));
+        }
+
+        return `
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <div class="text-[var(--cane-700)] font-medium mb-1">Variety</div>
+                <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${escapeHtml(data.variety || 'N/A')}</div>
+              </div>
+              <div>
+                <div class="text-[var(--cane-700)] font-medium mb-1">Current Stage</div>
+                <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${escapeHtml(data.currentGrowthStage || 'N/A')}</div>
+              </div>
+              <div>
+                <div class="text-[var(--cane-700)] font-medium mb-1">Days After Planting</div>
+                <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${DAP} days</div>
+              </div>
+              <div>
+                <div class="text-[var(--cane-700)] font-medium mb-1">Days to Harvest</div>
+                <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${daysToHarvest > 0 ? daysToHarvest + ' days' : 'Overdue'}</div>
+              </div>
+            </div>
+            <div class="text-xs space-y-2">
+              <div class="flex justify-between py-2 border-b border-[var(--cane-200)]">
+                <span class="text-[var(--cane-700)]">Planting Date:</span>
+                <span class="font-medium">${plantingDate ? plantingDate.toLocaleDateString() : 'Not planted'}</span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-[var(--cane-200)]">
+                <span class="text-[var(--cane-700)]">Expected Harvest:</span>
+                <span class="font-medium">${expectedHarvest ? expectedHarvest.toLocaleDateString() : 'N/A'}</span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-[var(--cane-200)]">
+                <span class="text-[var(--cane-700)]">Basal Fertilization:</span>
+                <span class="font-medium">${basalFert ? basalFert.toLocaleDateString() : 'Not done'}</span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-[var(--cane-200)]">
+                <span class="text-[var(--cane-700)]">Main Fertilization:</span>
+                <span class="font-medium">${mainFert ? mainFert.toLocaleDateString() : 'Not done'}</span>
+              </div>
+              ${data.delayDays > 0 ? `
+                <div class="mt-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
+                  ⚠️ Fertilization delayed by ${data.delayDays} days
+                </div>
+              ` : ''}
+            </div>
+            <div class="mt-3">
+              <a href="GrowthTracker.html" class="inline-block px-4 py-2 bg-[var(--cane-700)] text-white rounded hover:bg-[var(--cane-800)] text-xs transition">
+                View Full Growth Tracker →
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      // Handle manual growth records (legacy)
+      if (!data || data.length === 0) return `<div class="text-xs text-[var(--cane-500)]">No growth data yet.</div>`;
+
       // sort by month descending if have month property
-      records.sort((a,b) => {
+      data.sort((a,b) => {
         const am = a.month || a.date || '';
         const bm = b.month || b.date || '';
         return (bm > am) ? 1 : ((bm < am) ? -1 : 0);
       });
-      const rows = records.map(r => {
+      const rows = data.map(r => {
         const month = r.month || r.label || (r.timestamp && (r.timestamp.toDate ? r.timestamp.toDate().toLocaleDateString() : new Date(r.timestamp).toLocaleDateString())) || 'Unknown';
         const height = r.height || r.avg_height || r.growth_cm || '—';
         const notes = r.notes || r.comment || '';
@@ -1266,41 +1399,53 @@ monthSelector.addEventListener('change', (e) => {
       const filterSelect = modal.querySelector('#fd_tasks_filter');
 
       try {
+        console.log(`📥 Fetching tasks and growth for field ${fieldId}...`);
+        console.log(`📍 Current field ID being queried: "${fieldId}"`);
+        console.log(`👤 Current user ID: "${currentUserId}"`);
+
         const [tasks, growth] = await Promise.all([
-          fetchTasksForField(fieldId).catch(()=>[]),
-          fetchGrowthRecords(fieldId).catch(()=>[])
+          fetchTasksForField(fieldId).catch((err) => { console.error('❌ Task fetch error:', err); return []; }),
+          fetchGrowthRecords(fieldId).catch((err) => { console.error('❌ Growth fetch error:', err); return []; })
         ]);
 
-        const tasksFilter = modal.querySelector('#fd_tasks_filter');
-        const tasksContainer = modal.querySelector('#fd_tasks_container');
-
-        if (tasksFilter && tasksContainer) {
-          tasksFilter.addEventListener('change', async (e) => {
-            const filterValue = e.target.value; // "all", "todo", "pending", "done"
-            const tasks = await fetchTasksForField(fieldId); // fetch tasks for this field
-            renderTasksWeekly(tasks, filterValue); // re-render tasks with new filter
-          });
+        console.log(`✅ Fetched ${tasks.length} tasks and ${growth.length} growth records`);
+        if (tasks.length > 0) {
+          console.log('📋 Tasks data:', tasks);
         }
 
-        
-        const initialTasks = await fetchTasksForField(fieldId);
-        const initMonth = parseInt(monthSelector.value, 10);
-        const initWeek = parseInt(weekSelector.value, 10) || 1;
-        tasksContainer.innerHTML = renderTasksForWeek(initialTasks, initMonth, initWeek, (tasksFilter?.value) || 'all');
-        // apply visible-limit
-        adjustTasksContainerVisibleCount(modal, 4, 5);
-
-        // default render with current filter
-        const currentFilter = (filterSelect?.value) || 'all';
-        tasksContainer.innerHTML = renderTasksWeekly(tasks, currentFilter === 'all' ? 'all' : currentFilter);
-        // apply visible-limit again (in case different renderer used)
-        adjustTasksContainerVisibleCount(modal, 4, 5);
+        // Render growth data
         growthContainer.innerHTML = renderGrowthTable(growth);
 
-        // attach filter handler
-        filterSelect?.addEventListener('change', (e) => {
-          const val = e.target.value;
-          tasksContainer.innerHTML = renderTasksWeekly(tasks, val === 'all' ? 'all' : val);
+        // Render tasks with current filter
+        const currentFilter = (filterSelect?.value) || 'all';
+        tasksContainer.innerHTML = renderTasksWeekly(tasks, currentFilter);
+        adjustTasksContainerVisibleCount(modal, 4, 5);
+
+        // Attach filter handler
+        filterSelect?.addEventListener('change', async (e) => {
+          const filterValue = e.target.value;
+          console.log(`🔄 Filter changed to: ${filterValue}`);
+          // Re-fetch tasks to ensure fresh data
+          const freshTasks = await fetchTasksForField(fieldId).catch(() => []);
+          tasksContainer.innerHTML = renderTasksWeekly(freshTasks, filterValue);
+          adjustTasksContainerVisibleCount(modal, 4, 5);
+        });
+
+        // ✅ Listen for task creation events to refresh the list
+        const taskCreatedHandler = async (event) => {
+          if (event.detail.fieldId === fieldId) {
+            console.log('🔔 Task created event received, refreshing tasks...');
+            const freshTasks = await fetchTasksForField(fieldId).catch(() => []);
+            const currentFilter = (filterSelect?.value) || 'all';
+            tasksContainer.innerHTML = renderTasksWeekly(freshTasks, currentFilter);
+            adjustTasksContainerVisibleCount(modal, 4, 5);
+          }
+        };
+        document.addEventListener('task:created', taskCreatedHandler);
+
+        // Clean up listener when modal is closed
+        modal.addEventListener('remove', () => {
+          document.removeEventListener('task:created', taskCreatedHandler);
         });
 
       } catch (err) {

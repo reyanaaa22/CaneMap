@@ -6,7 +6,7 @@
     <title>CaneMap - SRA Dashboard</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/output.css">
     
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -98,20 +98,31 @@
         <div class="container mx-auto px-6 py-4 text-white">
             <div class="flex items-center justify-end">
                 <div class="flex items-center space-x-4">
-                    <!-- Notifications -->
+                    <!-- Notification Bell with Dropdown -->
                     <div class="relative">
-                        <button id="headerBellBtn" class="hover:opacity-90 transition-opacity relative">
-                            <i class="fas fa-bell text-xl"></i>
-                            <span id="notificationsBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">0</span>
+                        <button id="notificationBellBtn" class="relative text-white hover:text-gray-200 transition-colors p-2">
+                            <i class="fas fa-bell text-lg"></i>
+                            <!-- Notification Badge -->
+                            <span id="notificationBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
                         </button>
-                        <div id="bellPopup" class="hidden absolute right-0 mt-2 w-80 bg-white text-[var(--cane-900)] rounded-lg shadow-lg ring-1 ring-black/5 py-2 z-50">
-                            <div class="px-4 py-2 border-b border-[var(--cane-200)] font-semibold">Recent Notifications</div>
-                            <div id="bellPopupList" class="max-h-80 overflow-auto"></div>
-                            <div class="px-4 py-2 border-t border-[var(--cane-200)]">
-                                <a id="bellViewAll" href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-medium">View all</a>
+
+                        <!-- Notification Dropdown -->
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+                            <!-- Dropdown Header -->
+                            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                                <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
+                                <button id="notificationRefreshBtn" class="text-[var(--cane-700)] hover:text-[var(--cane-800)] text-xs">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+
+                            <!-- Notifications List -->
+                            <div id="notificationList" class="overflow-y-auto max-h-80">
+                                <div class="p-4 text-sm text-gray-500 text-center">Loading notifications...</div>
                             </div>
                         </div>
                     </div>
+
                     <!-- Profile -->
                     <div class="relative">
                         <button id="profileBtn" class="flex items-center space-x-2 hover:opacity-90 transition-opacity">
@@ -180,19 +191,10 @@
                         <i class="fas fa-file-alt"></i>
                         <span>Review Applications</span>
                     </a>
-                    <a href="#notifications" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="notifications">
-                        <i class="fas fa-bell"></i>
-                        <span>Notifications</span>
-                    </a>
-                    
+
                     <a href="#reports" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="reports">
                         <i class="fas fa-chart-bar"></i>
                         <span>Reports</span>
-                    </a>
-                    
-                    <a href="#analytics" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="analytics">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Analytics</span>
                     </a>
                 </nav>
             </div>
@@ -256,32 +258,18 @@
                 </div>
 
                 <!-- Main Dashboard Content -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 gap-8 mb-8">
                     <!-- Recent Field Applications Section -->
                     <div id="recentFieldApplicationsCard" class="section-card rounded-xl p-6 cursor-pointer">
                         <h3 class="text-xl font-bold text-[var(--cane-900)] mb-4 flex items-center">
                             <i class="fas fa-file-alt text-[var(--cane-500)] mr-3"></i>
                             Recent Field Applications
-                                </h3>
+                        </h3>
                         <div class="inner-content-box rounded-lg p-4">
                             <div class="bg-[var(--cane-100)] rounded-t-lg p-3 mb-2 border-b border-[var(--cane-200)]">
                                 <h4 class="font-semibold text-[var(--cane-800)]">Field Applications</h4>
                             </div>
                             <div id="recentAppsList" class="space-y-2 min-h-[160px]"></div>
-                        </div>
-                    </div>
-
-                    <!-- Notifications Section -->
-                    <div id="notificationsCard" class="section-card rounded-xl p-6 cursor-pointer">
-                        <h3 class="text-xl font-bold text-[var(--cane-900)] mb-4 flex items-center">
-                            <i class="fas fa-bell text-[var(--cane-500)] mr-3"></i>
-                            Notifications
-                            </h3>
-                        <div id="notificationsList" class="space-y-3 min-h-[160px]"></div>
-                        <div class="pt-2">
-                            <a id="viewAllNotificationsLink" href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-medium">
-                                View all notifications
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -307,37 +295,49 @@
                 <div id="fieldDocsContainer"></div>
             </div>
 
-            <div id="notifications" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-[var(--cane-900)]">Notifications</h2>
-                        <div class="flex items-center gap-2">
-                            <input id="notifSearch" type="text" placeholder="Search notifications..." class="border border-[var(--cane-200)] rounded-lg px-3 py-2 text-sm w-56"/>
-                            <select id="notifSort" class="border border-[var(--cane-200)] rounded-lg px-2 py-2 text-sm">
-                                <option value="newest">Newest first</option>
-                                <option value="oldest">Oldest first</option>
-                                <option value="type">Type (A–Z)</option>
-                                <option value="title">Title (A–Z)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="notifList" class="divide-y divide-[var(--cane-200)] min-h-[200px]"></div>
-                </div>
-            </div>
 
             <div id="reports" class="content-section hidden">
                 <div class="section-card rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Reports</h2>
-                    <p class="text-[var(--cane-600)]">Report generation and management functionality will be implemented here.</p>
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-[var(--cane-900)]">Handler Reports</h2>
+                            <p class="text-sm text-gray-600 mt-1">Review submitted production reports from handlers</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button id="requestReportBtn" class="px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                <i class="fas fa-file-invoice"></i>
+                                Request Report
+                            </button>
+                            <select id="reportStatusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
+                                <option value="all">All Reports</option>
+                                <option value="pending_review">Pending Review</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Date Submitted</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Handler</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Report Type</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sraReportsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-8 text-gray-500">Loading reports...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <div id="analytics" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Analytics</h2>
-                    <p class="text-[var(--cane-600)]">Analytics and data visualization functionality will be implemented here.</p>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -355,6 +355,6 @@
         </div>
     </div>
 
-<script type="module" src="../../backend/SRA/dashboard.js"></script>
+<script type="module" src="../../backend/SRA/dashboard.js?v=1763445085"></script>
 </body>
 </html> 

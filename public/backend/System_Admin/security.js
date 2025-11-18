@@ -99,11 +99,13 @@ window.refreshLoginHistory = async function() {
 
         failedLoginsSnapshot.forEach(docSnap => {
             const data = docSnap.data();
+            const attemptCount = data.attemptCount || 1;
+            console.log(`📧 ${data.email}: attemptCount=${attemptCount}, data:`, data);
             failedAttempts.push({
                 email: data.email || 'Unknown',
                 userType: 'Unknown User',
-                count: 1,
-                timestamp: data.timestamp,
+                count: attemptCount,  // ✅ Use attemptCount from database
+                timestamp: data.lastAttempt || data.timestamp,  // Use lastAttempt if available
                 typeClass: 'bg-red-100 text-red-800'
             });
         });
@@ -195,6 +197,10 @@ window.refreshAccounts = async function() {
 
         usersSnapshot.forEach(docSnap => {
             const data = docSnap.data();
+            // ✅ Filter out system_admin (same as main dashboard)
+            if (data.role === 'system_admin') {
+                return;
+            }
             users.push({
                 id: docSnap.id,
                 name: data.name || data.fullname || 'Unknown',

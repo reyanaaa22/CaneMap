@@ -189,17 +189,37 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.textContent || 'Submit Field Registration';
+
+    // Helper function to reset button state
+    function resetButton() {
+      if (!submitBtn) return;
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+      submitBtn.classList.remove("opacity-60", "cursor-not-allowed");
+      submitBtn.style.pointerEvents = "auto";
+    }
+
     if (!currentUser) {
-      showPopupMessage('Please login first before registering a field.', 'warning');
+      await showPopupMessage('Please login first before registering a field.', 'warning');
+      resetButton();
       return;
     }
 
     const fieldName = form.querySelector("#field_name")?.value.trim() || "";
     const sugarVariety = form.querySelector("#sugarcane_variety")?.value.trim() || "";
-    const barangay = window.selectedBarangay?.trim() || "";
+    // ✅ Use dropdown value for barangay (with fallback to auto-detected)
+    const barangay = form.querySelector("#barangay_select")?.value.trim() || window.selectedBarangay?.trim() || "";
     const street = form.querySelector("#street")?.value.trim() || "";
     const size = form.querySelector("#field_size")?.value.trim() || "";
     const terrain = form.querySelector("#terrain_type")?.value.trim() || "";
+
+    // ✅ NEW FIELDS: Capture additional field details
+    const soilType = form.querySelector("#soil_type")?.value.trim() || "";
+    const irrigationMethod = form.querySelector("#irrigation_method")?.value.trim() || "";
+    const fieldTerrain = form.querySelector("#field_terrain")?.value.trim() || "";
+    const previousCrop = form.querySelector("#previous_crop")?.value.trim() || "";
 
     const lat = parseFloat(form.querySelector("#latitude")?.value || "0");
     const lng = parseFloat(form.querySelector("#longitude")?.value || "0");
@@ -211,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const barangayCert = form.querySelector("#barangay_certification_base64")?.value || "";
     const landTitle = form.querySelector("#land_title_base64")?.value || "";
 
-    // ✅ Include fieldName in the validation
+    // ✅ Validation with proper error handling
     if (
       !fieldName ||
       !barangay ||
@@ -238,18 +258,28 @@ document.addEventListener("DOMContentLoaded", () => {
         validBack,
         selfie
       });
-      showPopupMessage('Please fill out all fields and capture all required photos.', 'error');
+      await showPopupMessage('Please fill out all fields and capture all required photos.', 'error');
+      resetButton();
       return;
     }
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting...";
-    submitBtn.classList.add("opacity-50");
+    // Show loading spinner AFTER validation passes
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="inline animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Submitting...
+      `;
+      submitBtn.classList.add("opacity-60", "cursor-not-allowed");
+      submitBtn.style.pointerEvents = "none";
+    }
 
     try {
-      // 🧩 Duplicate field check – stronger version
-      const fieldsRef = collection(db, "field_applications", currentUser.uid, "fields");
+      // 🧩 Duplicate field check – check top-level fields collection
+      const fieldsRef = collection(db, "fields");
 
       const barangayNorm = barangay.toLowerCase();
       const streetNorm = street.toLowerCase();
@@ -260,8 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const latNorm = parseFloat(lat.toFixed(5));
       const lngNorm = parseFloat(lng.toFixed(5));
 
-      // Query only docs with same barangay (fast + cheap)
-      const q = query(fieldsRef, where("barangay", "==", barangay));
+      // Query only docs with same barangay and userId (fast + cheap)
+      const q = query(fieldsRef, where("barangay", "==", barangay), where("userId", "==", currentUser.uid));
       const snap = await getDocs(q);
 
       let duplicateFound = false;
@@ -290,10 +320,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (duplicateFound) {
-        showPopupMessage('⚠️ You already registered this field with the same field name, barangay, street, field size, terrain type, variety, and coordinates.', 'warning');
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Field Registration";
-        submitBtn.classList.remove("opacity-50");
+        await showPopupMessage('⚠️ You already registered this field with the same field name, barangay, street, field size, terrain type, variety, and coordinates.', 'warning');
+        resetButton();
         return;
       }
 
@@ -322,20 +350,43 @@ document.addEventListener("DOMContentLoaded", () => {
       const barangayURL = barangayCert ? await uploadBase64(barangayCert, "barangay_certificate") : "";
       const landTitleURL = landTitle ? await uploadBase64(landTitle, "land_title") : "";
 
+      // REQ-10: Get field boundary coordinates from map
+      const rawCoordinates = window.getFieldCoordinates ? window.getFieldCoordinates() : [];
 
-      // ✅ Clean, ordered, no "_lower" version
-      const payload = {
+      // Convert nested array [[lat, lng], [lat, lng]] to array of objects for Firestore
+      // Firestore doesn't support nested arrays, so we convert to: [{ lat: x, lng: y }, ...]
+      const coordinates = rawCoordinates.map(coord => ({
+        lat: coord[0],
+        lng: coord[1]
+      }));
+
+      // Get user display name for applicant field
+      const userDisplayName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Handler';
+
+      // ✅ Single payload for fields collection only
+      const fieldPayload = {
+        userId: currentUser.uid,
+        applicantName: userDisplayName,
+        requestedBy: currentUser.uid,
         field_name: fieldName,
+        fieldName,
         barangay,
         street,
         sugarcane_variety: sugarVariety,
+        variety: sugarVariety, // Also store as 'variety' for consistency
         terrain_type: terrain,
         field_size: size,
+        area: size,
+        // ✅ NEW: Additional field details for better crop management
+        soilType: soilType,
+        irrigationMethod: irrigationMethod,
+        fieldTerrain: fieldTerrain,
+        previousCrop: previousCrop,
         latitude: lat,
         longitude: lng,
+        coordinates: coordinates, // REQ-10: Save polygon coordinates as array of objects
         status: "pending",
-        requestedBy: currentUser.uid,
-        submittedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         validBackUrl: backURL,
         validFrontUrl: frontURL,
@@ -344,50 +395,74 @@ document.addEventListener("DOMContentLoaded", () => {
         landTitleUrl: landTitleURL
       };
 
+      // ✅ Write to fields collection only (single source of truth)
+      let fieldDocRef;
+      try {
+        fieldDocRef = await addDoc(collection(db, "fields"), fieldPayload);
+        console.log("✅ Field registration completed, document ID:", fieldDocRef.id);
+      } catch (err) {
+        console.error("❌ Field registration failed:", err);
+        throw new Error("Failed to register field: " + err.message);
+      }
 
-      const userFieldsRef = collection(
-        db,
-        "field_applications",
-        currentUser.uid,
-        "fields"
-      );
-      const fieldDocRef = await addDoc(userFieldsRef, payload);
+      // Notify SRA officers about new field registration
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          role: 'sra', // Broadcast to all SRA officers
+          title: 'New Field Registration',
+          message: `A new field "${fieldName}" has been registered in ${barangay} and requires review.`,
+          type: 'field_registration',
+          relatedEntityId: fieldDocRef.id,
+          status: 'unread',
+          timestamp: serverTimestamp(),
+          createdAt: serverTimestamp()
+        });
+        console.log("✅ SRA notification created");
+      } catch (err) {
+        console.warn("⚠️ Failed to create SRA notification (non-critical):", err);
+        // Don't throw - this is non-critical, field was still registered
+      }
 
-      const topLevelPayload = {
-        userId: currentUser.uid,
-        field_name: fieldName,
-        fieldName,
-        barangay,
-        street,
-        sugarcane_variety: sugarVariety,
-        terrain_type: terrain,
-        field_size: size,
-        area: size,
-        latitude: lat,
-        longitude: lng,
-        status: "pending",
-        sourceRef: fieldDocRef.path,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
+      // Show crisp success modal
+      showSuccessModal();
 
-      const topLevelRef = doc(db, "fields", fieldDocRef.id);
-      await setDoc(topLevelRef, topLevelPayload, { merge: true });
-
-      showPopupMessage('✅ Field registration submitted successfully! Your request will be reviewed by the SRA within 5–10 working days.', 'success');
-        window.location.href = "../Common/lobby.html";
-
-
-      form.reset();
     } catch (err) {
       console.error("❌ Field registration error:", err);
-      showPopupMessage('Error submitting field registration: ' + (err.message || err), 'error');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Submit Field Registration";
-      submitBtn.classList.remove("opacity-50");
+      await showPopupMessage('Error submitting field registration: ' + (err.message || err), 'error');
+      resetButton();
     }
   });
+
+  // Success modal function
+  function showSuccessModal() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 flex items-center justify-center';
+    modal.style.zIndex = '10000'; // Higher than error popups
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.3)'; // Lighter overlay to match error popups
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-8 text-center animate-fadeIn">
+        <div class="mb-4">
+          <svg class="mx-auto h-16 w-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-3">Registration Successful!</h2>
+        <p class="text-gray-600 mb-2">
+          Your field registration has been submitted successfully.
+        </p>
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+          <p class="text-sm text-blue-900 font-medium">
+            <i class="fas fa-info-circle mr-2"></i>
+            Please wait for SRA approval notification. This typically takes 5-10 working days.
+          </p>
+        </div>
+        <button onclick="window.location.href='../Common/lobby.html'" class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-green-700 hover:to-green-800 transition-all">
+          Continue to Dashboard
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
 });
 
 // -------------------------------------------------------------

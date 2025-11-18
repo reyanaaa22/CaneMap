@@ -4,12 +4,35 @@ import {
   collection, doc, addDoc, updateDoc, getDocs, query, where, orderBy, getDoc, collectionGroup, serverTimestamp, Timestamp
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { handlePlantingCompletion, handleBasalFertilizationCompletion, handleMainFertilizationCompletion } from './growth-tracker.js';
+import { notifyTaskAssignment } from '../Common/notifications.js';
+import { getApprovedRentedDrivers } from './driver-rental.js';
+import { getRecommendedTasksForDAP } from './task-automation.js';
+import { calculateDAP } from './growth-tracker.js';
 
 let currentUserId = null;
 onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; });
 
 // Helper to escape html
 function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+// Helper function to get display name for task
+function getTaskDisplayName(taskValue) {
+  const taskMap = {
+    'plowing': 'Plowing',
+    'harrowing': 'Harrowing',
+    'furrowing': 'Furrowing',
+    'planting': 'Planting (0 DAP)',
+    'basal_fertilizer': 'Basal Fertilizer (0–30 DAP)',
+    'main_fertilization': 'Main Fertilization (45–60 DAP)',
+    'spraying': 'Spraying',
+    'weeding': 'Weeding',
+    'irrigation': 'Irrigation',
+    'harvesting': 'Harvesting',
+    'others': 'Others'
+  };
+  return taskMap[taskValue.toLowerCase()] || taskValue;
+}
 
 async function updateFieldVariety(fieldId, variety) {
   if (!variety || !currentUserId) return;
@@ -22,27 +45,44 @@ async function updateFieldVariety(fieldId, variety) {
   }
 }
 
-// Save task to Firestore (subcollection + top-level fallback)
+// Save task to Firestore (top-level tasks collection only)
 async function saveTaskToFirestore(fieldId, payload) {
-  const result = { ok: false, errors: [] };
+  const result = { ok: false, errors: [], taskId: null };
   try {
-    try {
-      const ref = collection(db, 'fields', fieldId, 'tasks');
-      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
-      await addDoc(ref, payload);
-    } catch (err) {
-      result.errors.push('subcollection:' + err.message);
+    // ✅ Add handlerId to payload for easier querying
+    if (!payload.handlerId && currentUserId) {
+      payload.handlerId = currentUserId;
     }
-    try {
-      const topRef = collection(db, 'tasks');
-      await addDoc(topRef, { ...payload, fieldId });
-    } catch (err) {
-      result.errors.push('topcollection:' + err.message);
-    }
+
+    console.log('💾 Saving task to Firestore:', {
+      fieldId,
+      handlerId: payload.handlerId,
+      status: payload.status,
+      assignedTo: payload.assignedTo,
+      title: payload.title
+    });
+
+    // Clean up undefined fields
+    Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+    // Save to top-level tasks collection
+    const topRef = collection(db, 'tasks');
+    const topDocRef = await addDoc(topRef, { ...payload, fieldId });
+    const taskId = topDocRef.id;
+
+    console.log(`✅ Saved to top-level tasks/${taskId}`, {
+      fieldId,
+      handlerId: payload.handlerId,
+      status: payload.status,
+      assignedTo: payload.assignedTo
+    });
+
     result.ok = true;
+    result.taskId = taskId;
     return result;
-  } catch(e) {
-    return { ok: false, errors: [e.message || e] };
+  } catch(err) {
+    console.error('❌ Task save failed:', err);
+    return { ok: false, errors: [err.message || err], taskId: null };
   }
 }
 
@@ -51,9 +91,9 @@ async function fetchDriversForField(fieldId) {
   const drivers = [];
   try {
     const q = query(
-      collectionGroup(db, 'join_fields'),
+      collection(db, 'field_joins'),
       where('fieldId', '==', fieldId),
-      where('role', '==', 'driver'),
+      where('assignedAs', '==', 'driver'),
       where('status', '==', 'approved')
     );
     const snap = await getDocs(q);
@@ -61,17 +101,26 @@ async function fetchDriversForField(fieldId) {
 
     for (const docSnap of snap.docs) {
       const data = docSnap.data();
-      const userId = data.user_uid || data.userId || data.user_id;
+      const userId = data.userId || data.user_uid || data.user_id;
       if (!userId || seenIds.has(userId)) continue;
       seenIds.add(userId);
 
+      // Fetch driver badge data
       const badgeDoc = await getDoc(doc(db, 'Drivers_Badge', userId));
       const badgeData = badgeDoc.exists() ? badgeDoc.data() : null;
       if (!badgeData) continue;
 
+      // Fallback to users collection if badge data is incomplete
+      let driverName = badgeData.fullname;
+      if (!driverName) {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+        driverName = userData.name || userData.full_name || userData.fullname || 'Unknown Driver';
+      }
+
       drivers.push({
         id: userId,
-        fullname: badgeData.fullname || 'Unknown',
+        fullname: driverName,
         vehicle_type: badgeData.other_vehicle_type || 'Unknown',
         contact_number: badgeData.contact_number || 'N/A',
         plate_number: badgeData.plate_number || 'N/A'
@@ -83,12 +132,56 @@ async function fetchDriversForField(fieldId) {
   return drivers;
 }
 
-// Populate driver dropdown
+// Fetch workers joined for this field
+async function fetchWorkersForField(fieldId) {
+  const workers = [];
+  try {
+    console.log(`🔍 Fetching workers for field: ${fieldId}`);
+    const q = query(
+      collection(db, 'field_joins'),
+      where('fieldId', '==', fieldId),
+      where('assignedAs', '==', 'worker'),
+      where('status', '==', 'approved')
+    );
+    const snap = await getDocs(q);
+    console.log(`📋 Found ${snap.docs.length} approved worker join requests`);
+    const seenIds = new Set();
+
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      console.log(`  - Join request data:`, data);
+      const userId = data.userId || data.user_uid || data.user_id;
+      if (!userId || seenIds.has(userId)) continue;
+      seenIds.add(userId);
+      workers.push({ id: userId });
+    }
+    console.log(`✅ Returning ${workers.length} unique workers:`, workers);
+  } catch (err) {
+    console.error('❌ Error fetching workers for field:', err);
+  }
+  return workers;
+}
+
+// Get field name by ID
+async function getFieldName(fieldId) {
+  try {
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+    if (fieldSnap.exists()) {
+      const data = fieldSnap.data();
+      return data.field_name || data.fieldName || 'Unknown Field';
+    }
+    return 'Unknown Field';
+  } catch (err) {
+    console.error('Error fetching field name:', err);
+    return 'Unknown Field';
+  }
+}
+
+// Populate driver dropdown (includes permanent and rented drivers)
 async function populateDriverDropdown(modal, fieldId) {
   const dropdownBtn = modal.querySelector('#ct_driver_dropdown_btn');
   const dropdownList = modal.querySelector('#ct_driver_dropdown_list');
-  dropdownList.innerHTML = '';
-
   dropdownList.innerHTML = '';
 
   const clearDiv = document.createElement('div');
@@ -98,7 +191,7 @@ async function populateDriverDropdown(modal, fieldId) {
     dropdownBtn.textContent = 'Select driver';
     dropdownBtn.dataset.driverId = '';
     dropdownList.classList.add('hidden');
-    
+
     // Clear driver error if any
     const driverErrorEl = modal.querySelector('#ct_driver_error');
     driverErrorEl.textContent = '';
@@ -106,41 +199,226 @@ async function populateDriverDropdown(modal, fieldId) {
   });
   dropdownList.appendChild(clearDiv);
 
-  const drivers = await fetchDriversForField(fieldId);
+  // Fetch both permanent field drivers and rented drivers
+  const permanentDrivers = await fetchDriversForField(fieldId);
+  const rentedDrivers = currentUserId ? await getApprovedRentedDrivers(currentUserId) : [];
 
-  if (drivers.length === 0) {
+  // Combine drivers (avoid duplicates)
+  const driverMap = new Map();
+
+  permanentDrivers.forEach(d => {
+    driverMap.set(d.id, { ...d, isRented: false });
+  });
+
+  rentedDrivers.forEach(d => {
+    if (!driverMap.has(d.id)) {
+      driverMap.set(d.id, { ...d, isRented: true });
+    }
+  });
+
+  const allDrivers = Array.from(driverMap.values());
+
+  if (allDrivers.length === 0) {
     dropdownBtn.textContent = 'No drivers';
     dropdownBtn.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
     dropdownBtn.style.pointerEvents = 'none';
 
     const div = document.createElement('div');
     div.className = 'px-3 py-2 text-gray-500';
-    div.textContent = 'No drivers joined this field';
+    div.textContent = 'No drivers available';
     dropdownList.appendChild(div);
     return;
   }
 
-  drivers.forEach(d => {
-    const div = document.createElement('div');
-    div.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer transition duration-200 transform hover:scale-105';
-    div.innerHTML = `
-      <div class="font-medium">${d.fullname} (${d.contact_number})</div>
-      <div class="text-sm text-gray-600">${d.vehicle_type} — ${d.plate_number}</div>
-    `;
-    div.addEventListener('click', () => {
-      dropdownBtn.textContent = d.fullname;
-      dropdownBtn.dataset.driverId = d.id;
-      dropdownList.classList.add('hidden');
+  // Group drivers by type
+  const permanent = allDrivers.filter(d => !d.isRented);
+  const rented = allDrivers.filter(d => d.isRented);
+
+  // Add permanent drivers first
+  if (permanent.length > 0) {
+    const permanentHeader = document.createElement('div');
+    permanentHeader.className = 'px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50';
+    permanentHeader.textContent = 'Permanent Drivers';
+    dropdownList.appendChild(permanentHeader);
+
+    permanent.forEach(d => {
+      const div = document.createElement('div');
+      div.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer transition duration-200 transform hover:scale-105';
+      div.innerHTML = `
+        <div class="font-medium">${d.fullname} (${d.contact_number})</div>
+        <div class="text-sm text-gray-600">${d.vehicle_type} — ${d.plate_number}</div>
+      `;
+      div.addEventListener('click', () => {
+        dropdownBtn.textContent = d.fullname;
+        dropdownBtn.dataset.driverId = d.id;
+        dropdownList.classList.add('hidden');
+      });
+      dropdownList.appendChild(div);
     });
-    dropdownList.appendChild(div);
-  });
+  }
+
+  // Add rented drivers
+  if (rented.length > 0) {
+    const rentedHeader = document.createElement('div');
+    rentedHeader.className = 'px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50 border-t border-gray-200';
+    rentedHeader.textContent = 'Rented Drivers';
+    dropdownList.appendChild(rentedHeader);
+
+    rented.forEach(d => {
+      const div = document.createElement('div');
+      div.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer transition duration-200 transform hover:scale-105';
+      div.innerHTML = `
+        <div class="font-medium">${d.fullname} <span class="text-xs text-blue-600">(Rented)</span> (${d.contact_number})</div>
+        <div class="text-sm text-gray-600">${d.vehicle_type} — ${d.plate_number}</div>
+      `;
+      div.addEventListener('click', () => {
+        dropdownBtn.textContent = `${d.fullname} (Rented)`;
+        dropdownBtn.dataset.driverId = d.id;
+        dropdownList.classList.add('hidden');
+      });
+      dropdownList.appendChild(div);
+    });
+  }
 
   // Toggle dropdown
   dropdownBtn.addEventListener('click', () => {
     dropdownList.classList.toggle('hidden');
   });
-  
+
 }
+
+/**
+ * Load and display task recommendations based on field's current DAP
+ * @param {string} fieldId - The field ID
+ * @param {Function} el - Selector function for modal elements
+ */
+async function loadTaskRecommendations(fieldId, el) {
+  const panel = el('#ct_recommendations_panel');
+  const fieldInfo = el('#ct_field_info');
+  const recommendationsList = el('#ct_recommendations_list');
+
+  if (!panel || !fieldInfo || !recommendationsList) return;
+
+  try {
+    // Fetch field data
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (!fieldSnap.exists()) {
+      console.log('Field not found, skipping recommendations');
+      return;
+    }
+
+    const fieldData = fieldSnap.data();
+    const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+    const variety = fieldData.sugarcane_variety || fieldData.variety;
+    const fieldName = fieldData.fieldName || fieldData.field_name || 'Field';
+
+    // Only show recommendations if field has been planted
+    if (!plantingDate) {
+      console.log('Field not planted yet, no recommendations');
+      return;
+    }
+
+    // Calculate current DAP
+    const currentDAP = calculateDAP(plantingDate);
+
+    // Get recommendations
+    const recommendations = getRecommendedTasksForDAP(currentDAP, variety);
+
+    if (recommendations.length === 0) {
+      console.log('No recommendations for current DAP:', currentDAP);
+      return;
+    }
+
+    // Show panel
+    panel.classList.remove('hidden');
+
+    // Update field info
+    fieldInfo.textContent = `${fieldName} | ${currentDAP} DAP | ${variety || 'Unknown variety'}`;
+
+    // Display recommendations
+    recommendationsList.innerHTML = recommendations.map(rec => {
+      // Color coding based on urgency
+      let bgColor, borderColor, textColor, icon;
+
+      switch (rec.urgency) {
+        case 'critical':
+          bgColor = 'bg-red-50';
+          borderColor = 'border-red-300';
+          textColor = 'text-red-900';
+          icon = '🚨';
+          break;
+        case 'overdue':
+          bgColor = 'bg-gray-100';
+          borderColor = 'border-gray-400';
+          textColor = 'text-gray-800';
+          icon = '❌';
+          break;
+        case 'high':
+          bgColor = 'bg-orange-50';
+          borderColor = 'border-orange-300';
+          textColor = 'text-orange-900';
+          icon = '⚠️';
+          break;
+        case 'medium':
+          bgColor = 'bg-yellow-50';
+          borderColor = 'border-yellow-300';
+          textColor = 'text-yellow-900';
+          icon = '💡';
+          break;
+        default:
+          bgColor = 'bg-blue-50';
+          borderColor = 'border-blue-300';
+          textColor = 'text-blue-900';
+          icon = 'ℹ️';
+      }
+
+      const daysInfo = rec.daysLeft !== null && rec.daysLeft !== undefined
+        ? `<span class="text-xs font-semibold">(${rec.daysLeft} days left)</span>`
+        : rec.daysLate !== null && rec.daysLate !== undefined
+        ? `<span class="text-xs font-semibold">(${rec.daysLate} days late)</span>`
+        : '';
+
+      return `
+        <div class="p-2 rounded-md border ${borderColor} ${bgColor}">
+          <div class="flex items-start gap-2">
+            <span class="text-lg">${icon}</span>
+            <div class="flex-1">
+              <p class="${textColor} font-semibold text-sm">${rec.task} ${daysInfo}</p>
+              <p class="text-xs ${textColor} mt-1">${rec.reason}</p>
+              ${rec.stage ? `<span class="text-xs ${textColor} opacity-75 mt-1 block">Stage: ${rec.stage}</span>` : ''}
+            </div>
+            <button
+              onclick="window.createTaskQuickFill('${rec.taskType}')"
+              class="px-2 py-1 text-xs rounded ${rec.urgency === 'critical' ? 'bg-red-600 hover:bg-red-700' : rec.urgency === 'high' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium transition-colors"
+              title="Quick fill this task">
+              Use
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    console.log(`✅ Displayed ${recommendations.length} recommendations for field ${fieldId} (${currentDAP} DAP)`);
+
+  } catch (error) {
+    console.error('Error loading task recommendations:', error);
+    // Silently fail - don't break the modal if recommendations fail
+  }
+}
+
+// Quick fill task from recommendation
+window.createTaskQuickFill = function(taskType) {
+  const titleSelect = document.querySelector('#ct_title');
+  if (titleSelect) {
+    titleSelect.value = taskType;
+    // Trigger change event to show/hide conditional fields
+    titleSelect.dispatchEvent(new Event('change'));
+    // Scroll to task type field
+    titleSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+};
 
 // Main function to open modal
 export async function openCreateTaskModal(fieldId) {
@@ -156,6 +434,20 @@ export async function openCreateTaskModal(fieldId) {
       <header class="flex items-center justify-start mb-3 pb-2 border-b border-gray-200">
         <h3 class="text-xl font-semibold text-[var(--cane-900)]">Create Task</h3>
       </header>
+
+      <!-- 🤖 RECOMMENDATIONS PANEL -->
+      <div id="ct_recommendations_panel" class="hidden mb-4 p-3 rounded-lg border-2 border-blue-200 bg-blue-50/50">
+        <div class="flex items-start gap-2 mb-2">
+          <i class="fas fa-lightbulb text-blue-600 mt-0.5"></i>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold text-blue-900">Recommended Tasks for This Field</h4>
+            <p id="ct_field_info" class="text-xs text-blue-700 mt-1"></p>
+          </div>
+        </div>
+        <div id="ct_recommendations_list" class="space-y-2 mt-3">
+          <!-- Recommendations will be dynamically inserted here -->
+        </div>
+      </div>
 
       <div class="space-y-4 text-sm">
         <div class="flex items-center gap-2 mb-2">
@@ -177,7 +469,7 @@ export async function openCreateTaskModal(fieldId) {
         <!-- TASK TYPE DROPDOWN -->
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Task Type</label>
-          <select id="ct_title" 
+          <select id="ct_title"
               class="w-full px-3 py-2 border rounded-md text-sm">
               <option value="">Select task...</option>
               <option value="plowing">Plowing</option>
@@ -187,6 +479,7 @@ export async function openCreateTaskModal(fieldId) {
               <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
               <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
               <option value="spraying">Spraying</option>
+              <option value="harvesting">Harvesting</option>
               <option value="others">Others</option>
           </select>
         </div>
@@ -235,6 +528,14 @@ export async function openCreateTaskModal(fieldId) {
                 class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
         </div>
 
+        <!-- HARVESTING -->
+        <div id="ct_harvesting_section" class="hidden mt-3">
+          <label class="text-xs font-semibold text-[var(--cane-700)]">Expected Yield (Optional)</label>
+          <input id="harvest_yield" type="number" step="0.01" placeholder="Tons per hectare"
+                class="w-full px-3 py-2 border rounded-md text-sm mt-1"/>
+          <p class="text-xs text-gray-500 mt-1">Leave blank if yield will be recorded after completion</p>
+        </div>
+
         <!-- OTHERS -->
         <div id="ct_other_section" class="hidden mt-3">
           <label class="text-xs font-semibold text-[var(--cane-700)]">Specify Task</label>
@@ -255,24 +556,21 @@ export async function openCreateTaskModal(fieldId) {
           </div>
 
           <div id="ct_worker_options" class="hidden space-y-2 mt-2 border-t pt-3">
-            <div class="flex items-center justify-between">
-              <label id="ct_people_label" class="text-sm font-medium text-[var(--cane-700)]">People needed:</label>
-              <input id="ct_workers_count" type="number" min="0" value="0" class="w-24 px-2 py-1 border rounded-md text-sm" />
+            <label class="text-sm font-medium text-[var(--cane-700)] block mb-2">Select Workers:</label>
+            <div id="ct_worker_list" class="max-h-48 overflow-y-auto space-y-2 border rounded-md p-3 bg-gray-50">
+              <div class="text-xs text-gray-500">Loading workers...</div>
             </div>
-            <div class="flex items-center gap-2">
-              <input id="ct_all_workers" type="checkbox" class="accent-[var(--cane-700)]" />
-              <label for="ct_all_workers" class="text-sm text-[var(--cane-700)]">All workers</label>
+            <div class="flex items-center gap-2 mt-2">
+              <input id="ct_select_all_workers" type="checkbox" class="accent-[var(--cane-700)]" />
+              <label for="ct_select_all_workers" class="text-sm text-[var(--cane-700)]">Select all workers</label>
             </div>
             <div id="ct_worker_error" class="text-xs text-red-500 mt-1 hidden"></div>
           </div>
 
           <div id="ct_driver_options" class="hidden space-y-2 mt-2 border-t pt-3">
-            <div class="flex items-center gap-2">
-              <input id="ct_any_driver" type="checkbox" class="accent-[var(--cane-700)]" />
-              <label for="ct_any_driver" class="text-sm text-[var(--cane-700)]">Any available driver</label>
-            </div>
+            <label class="text-sm font-medium text-[var(--cane-700)] block mb-2">Select Driver:</label>
             <div class="relative w-full">
-              <div id="ct_driver_dropdown_btn" 
+              <div id="ct_driver_dropdown_btn"
                   class="px-3 py-2 border rounded-md text-sm cursor-pointer bg-white flex justify-between items-center hover:bg-gray-100 transition-colors duration-200">
                 <span>Select driver</span>
                 <svg class="w-4 h-4 text-gray-500 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -280,6 +578,12 @@ export async function openCreateTaskModal(fieldId) {
                 </svg>
               </div>
               <div id="ct_driver_dropdown_list" class="absolute left-0 bottom-full w-full border rounded shadow mb-1 bg-white hidden max-h-60 overflow-y-auto z-50"></div>
+            </div>
+            <div class="mt-2">
+              <a href="#" id="ct_rent_driver_link" class="inline-flex items-center gap-1.5 text-xs text-[var(--cane-700)] hover:text-[var(--cane-800)] font-medium transition">
+                <i class="fas fa-plus-circle"></i>
+                Rent a Driver
+              </a>
             </div>
             <div id="ct_driver_error" class="text-xs text-red-500 mt-1 hidden"></div>
           </div>
@@ -296,6 +600,9 @@ export async function openCreateTaskModal(fieldId) {
 
   document.body.appendChild(modal);
   const el = s => modal.querySelector(s);
+
+  // ✅ LOAD AND DISPLAY DAP-AWARE RECOMMENDATIONS
+  await loadTaskRecommendations(fieldId, el);
 
   // Extra sections
   const varietySec = el("#ct_variety_section");
@@ -316,6 +623,7 @@ export async function openCreateTaskModal(fieldId) {
   const basalSec = el("#ct_basal_section");
   const mainfertSec = el("#ct_mainfert_section");
   const sprayingSec = el("#ct_spraying_section");
+  const harvestingSec = el("#ct_harvesting_section");
   const otherSec = el("#ct_other_section");
 
   const taskTitle = el("#ct_title");
@@ -329,12 +637,14 @@ export async function openCreateTaskModal(fieldId) {
     basalSec.classList.add("hidden");
     mainfertSec.classList.add("hidden");
     sprayingSec.classList.add("hidden");
+    harvestingSec.classList.add("hidden");
     otherSec.classList.add("hidden");
 
     if (v === "planting") varietySec.classList.remove("hidden");
     if (v === "basal_fertilizer") basalSec.classList.remove("hidden");
     if (v === "main_fertilization") mainfertSec.classList.remove("hidden");
     if (v === "spraying") sprayingSec.classList.remove("hidden");
+    if (v === "harvesting") harvestingSec.classList.remove("hidden");
     if (v === "others") otherSec.classList.remove("hidden");
   });
 
@@ -343,10 +653,8 @@ export async function openCreateTaskModal(fieldId) {
   const btnDriver = el('#ct_btn_driver');
   const workerOpts = el('#ct_worker_options');
   const driverOpts = el('#ct_driver_options');
-  const allWorkersCheck = el('#ct_all_workers');
-  const workerInput = el('#ct_workers_count');
-  const peopleLabel = el('#ct_people_label');
-  const anyDriverCheck = el('#ct_any_driver');
+  const selectAllWorkersCheck = el('#ct_select_all_workers');
+  const workerListContainer = el('#ct_worker_list');
   const dateInput = el('#ct_date');
   const timeInput = el('#ct_time');
   const weekCheck = el('#ct_this_week');
@@ -354,26 +662,11 @@ export async function openCreateTaskModal(fieldId) {
   const dropdownList = el('#ct_driver_dropdown_list');
   const driverErrorEl = el('#ct_driver_error');
 
-  
+
   // Clear driver error when a driver is selected from the dropdown
   dropdownList.addEventListener('click', () => {
     driverErrorEl.textContent = '';
     driverErrorEl.classList.add('hidden');
-  });
-
-  // Clear driver error when "Any available driver" is checked or unchecked
-  anyDriverCheck.addEventListener('change', () => {
-    if (anyDriverCheck.checked) { 
-        dropdownBtn.classList.add('bg-gray-100','text-gray-400','cursor-not-allowed'); 
-        dropdownBtn.style.pointerEvents='none'; 
-        dropdownBtn.textContent='Any available driver';
-        driverErrorEl.textContent = '';
-        driverErrorEl.classList.add('hidden');
-    } else { 
-        dropdownBtn.classList.remove('bg-gray-100','text-gray-400','cursor-not-allowed'); 
-        dropdownBtn.style.pointerEvents='auto'; 
-        dropdownBtn.textContent='Select driver'; 
-    }
   });
 
   let assignType = null;
@@ -422,37 +715,86 @@ function updateAssignUI() {
 }
 
 
+  // Populate worker list with checkboxes
+  async function populateWorkerList() {
+    workerListContainer.innerHTML = '<div class="text-xs text-gray-500">Loading workers...</div>';
+
+    const workers = await fetchWorkersForField(fieldId);
+
+    if (workers.length === 0) {
+      workerListContainer.innerHTML = '<div class="text-xs text-gray-500">No workers available for this field</div>';
+      return;
+    }
+
+    // Fetch worker details
+    const workerDetails = [];
+    for (const worker of workers) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', worker.id));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          workerDetails.push({
+            id: worker.id,
+            name: userData.name || userData.email || 'Unknown Worker',
+            email: userData.email || ''
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching worker:', err);
+      }
+    }
+
+    // Render checkboxes
+    workerListContainer.innerHTML = workerDetails.map(worker => `
+      <div class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded transition">
+        <input type="checkbox" class="worker-checkbox accent-[var(--cane-700)]" value="${worker.id}" id="worker_${worker.id}" />
+        <label for="worker_${worker.id}" class="text-sm text-gray-700 cursor-pointer flex-1">
+          ${escapeHtml(worker.name)}
+          <span class="text-xs text-gray-500 block">${escapeHtml(worker.email)}</span>
+        </label>
+      </div>
+    `).join('');
+
+    // Select all handler
+    selectAllWorkersCheck.addEventListener('change', () => {
+      const checkboxes = workerListContainer.querySelectorAll('.worker-checkbox');
+      checkboxes.forEach(cb => cb.checked = selectAllWorkersCheck.checked);
+
+      // Clear error when selecting workers
+      const errorEl = el('#ct_worker_error');
+      if (selectAllWorkersCheck.checked) {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden');
+      }
+    });
+
+    // Individual checkbox handlers
+    workerListContainer.querySelectorAll('.worker-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const errorEl = el('#ct_worker_error');
+        const anyChecked = workerListContainer.querySelectorAll('.worker-checkbox:checked').length > 0;
+        if (anyChecked) {
+          errorEl.textContent = '';
+          errorEl.classList.add('hidden');
+        }
+
+        // Update "select all" checkbox state
+        const allChecked = workerListContainer.querySelectorAll('.worker-checkbox').length ===
+                          workerListContainer.querySelectorAll('.worker-checkbox:checked').length;
+        selectAllWorkersCheck.checked = allChecked;
+      });
+    });
+  }
+
   // --- Worker / Driver button events ---
-  btnWorker.addEventListener('click', () => { assignType='worker'; updateAssignUI(); clearAssignError(); });
+  btnWorker.addEventListener('click', async () => {
+    assignType='worker';
+    updateAssignUI();
+    clearAssignError();
+    await populateWorkerList();
+  });
   btnDriver.addEventListener('click', async () => { assignType='driver'; updateAssignUI(); clearAssignError(); await populateDriverDropdown(modal, fieldId); });
 
-workerInput.addEventListener('input', () => {
-  const errorEl = el('#ct_worker_error');
-  if(parseInt(workerInput.value,10) > 0 || allWorkersCheck.checked){
-    errorEl.textContent = '';
-    errorEl.classList.add('hidden');
-  }
-});
-
-allWorkersCheck.addEventListener('change', () => {
-  const dis = allWorkersCheck.checked;
-  workerInput.disabled = dis;
-  peopleLabel.classList.toggle('text-gray-400', dis);
-  workerInput.classList.toggle('bg-gray-100', dis);
-  workerInput.classList.toggle('text-gray-400', dis);
-  if(dis) workerInput.value = 0; // reset
-  const errorEl = el('#ct_worker_error');
-  errorEl.textContent = '';
-  errorEl.classList.add('hidden');
-});
-
-
-  // --- Driver checkbox ---
-  anyDriverCheck.addEventListener('change', () => {
-    const dropdownBtn = el('#ct_driver_dropdown_btn');
-    if (anyDriverCheck.checked) { dropdownBtn.classList.add('bg-gray-100','text-gray-400','cursor-not-allowed'); dropdownBtn.style.pointerEvents='none'; }
-    else { dropdownBtn.classList.remove('bg-gray-100','text-gray-400','cursor-not-allowed'); dropdownBtn.style.pointerEvents='auto'; dropdownBtn.textContent='Select driver'; }
-  });
 
   // --- Date / This week ---
   weekCheck.addEventListener('change', () => {
@@ -465,6 +807,32 @@ allWorkersCheck.addEventListener('change', () => {
   el('#ct_cancel').addEventListener('click',()=>modal.remove());
   el('#ct_backdrop').addEventListener('click',(e)=>{ if(e.target.id==='ct_backdrop') modal.remove(); });
 
+  // --- Rent a Driver link ---
+  const rentDriverLink = el('#ct_rent_driver_link');
+  if (rentDriverLink) {
+    rentDriverLink.addEventListener('click', (e) => {
+      e.preventDefault();
+
+      // Force remove modal with slight delay to ensure it's gone
+      modal.remove();
+
+      // Also remove any backdrop or overlay
+      const backdrops = document.querySelectorAll('.modal-backdrop, [id*="Modal"]');
+      backdrops.forEach(bd => bd.remove());
+
+      // Navigate to Rent-a-Driver section in dashboard
+      setTimeout(() => {
+        const navLink = document.querySelector('[data-section="rentDriver"]');
+        if (navLink) {
+          navLink.click();
+          console.log('✅ Navigated to Rent a Driver section');
+        } else {
+          console.warn('⚠️ Rent a Driver nav link not found');
+        }
+      }, 100);
+    });
+  }
+
   // --- Save button ---
 el('#ct_save').addEventListener('click', async () => {
   modal.querySelectorAll('.ct_field_error').forEach(e => e.remove());
@@ -472,9 +840,208 @@ el('#ct_save').addEventListener('click', async () => {
   const details = el('#ct_details').value.trim();
   const isWeek = weekCheck.checked;
   const date = dateInput.value;
-  const workersCount = parseInt(workerInput.value, 10) || 0;
+  const taskType = el('#ct_title').value.trim();
 
-  // --- Validation ---
+  // ========================================
+  // ✅ TASK VALIDATION: Prevent Illogical Tasks
+  // ========================================
+
+  try {
+    // Fetch field data to check planting status and DAP
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (!fieldSnap.exists()) {
+      alert('Error: Field not found. Please refresh and try again.');
+      return;
+    }
+
+    const fieldData = fieldSnap.data();
+    const plantingDate = fieldData.plantingDate;
+    const fieldName = fieldData.field_name || fieldData.fieldName || 'this field';
+
+    // Validation 1: Check if field has been planted (except for pre-planting tasks)
+    const prePlantingTasks = ['plowing', 'harrowing', 'furrowing', 'planting'];
+    if (!prePlantingTasks.includes(taskType) && !plantingDate) {
+      const validationModal = document.createElement('div');
+      validationModal.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+      validationModal.innerHTML = `
+        <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
+          <div class="text-center mb-4">
+            <div class="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-3">
+              <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Field Not Planted Yet</h3>
+          </div>
+          <p class="text-sm text-gray-600 mb-4">
+            You cannot create "${getTaskDisplayName(taskType)}" tasks for <strong>${escapeHtml(fieldName)}</strong>
+            because the field has not been planted yet.
+          </p>
+          <p class="text-sm text-gray-700 font-medium mb-4">
+            <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>Please create and complete a "Planting" task first.
+          </p>
+          <button id="validationOk" class="w-full px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 font-medium">
+            OK, I Understand
+          </button>
+        </div>
+      `;
+      document.body.appendChild(validationModal);
+      validationModal.querySelector('#validationOk').addEventListener('click', () => validationModal.remove());
+      return;
+    }
+
+    // Validation 2: Check if deadline is before planting date (illogical)
+    if (plantingDate && !isWeek && date) {
+      const selectedDeadline = new Date(date);
+      const planting = plantingDate.toDate ? plantingDate.toDate() : new Date(plantingDate);
+
+      if (selectedDeadline < planting) {
+        const validationModal = document.createElement('div');
+        validationModal.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+        validationModal.innerHTML = `
+          <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
+            <div class="text-center mb-4">
+              <div class="w-16 h-16 mx-auto rounded-full bg-orange-100 flex items-center justify-center mb-3">
+                <i class="fas fa-calendar-times text-3xl text-orange-600"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">Invalid Deadline</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">
+              The deadline you selected (<strong>${selectedDeadline.toLocaleDateString()}</strong>) is before
+              the planting date (<strong>${planting.toLocaleDateString()}</strong>).
+            </p>
+            <p class="text-sm text-gray-700 font-medium mb-4">
+              <i class="fas fa-info-circle text-blue-600 mr-2"></i>Please select a deadline after the planting date.
+            </p>
+            <button id="validationOk" class="w-full px-4 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 font-medium">
+              Change Deadline
+            </button>
+          </div>
+        `;
+        document.body.appendChild(validationModal);
+        validationModal.querySelector('#validationOk').addEventListener('click', () => validationModal.remove());
+        return;
+      }
+    }
+
+    // Validation 3: Check DAP-based task appropriateness
+    if (plantingDate) {
+      const currentDAP = calculateDAP(plantingDate);
+      let validationError = null;
+
+      // Harvesting too early
+      if (taskType === 'harvesting' && currentDAP !== null) {
+        const variety = fieldData.variety || 'Unknown';
+        const minHarvestDAP = 300; // Minimum 300 days for any variety
+
+        if (currentDAP < minHarvestDAP) {
+          validationError = {
+            icon: 'fa-seedling',
+            iconColor: 'green',
+            title: 'Too Early to Harvest',
+            message: `The sugarcane crop at <strong>${escapeHtml(fieldName)}</strong> is only <strong>${currentDAP} days old</strong>.
+                      Harvesting is typically done at 300-400 DAP (depending on variety).`,
+            suggestion: `Current stage: The crop needs more time to mature. Harvesting now would result in low sugar content and poor yield.`,
+            buttonText: 'I Understand'
+          };
+        }
+      }
+
+      // Basal fertilization too late
+      if (taskType === 'basal_fertilizer' && currentDAP !== null && currentDAP > 40) {
+        validationError = {
+          icon: 'fa-clock',
+          iconColor: 'orange',
+          title: 'Basal Fertilization Window Passed',
+          message: `The crop at <strong>${escapeHtml(fieldName)}</strong> is at <strong>${currentDAP} DAP</strong>.
+                    Basal fertilization should be done within 0-30 DAP (now ${currentDAP - 30} days late).`,
+          suggestion: `It may be too late for basal fertilization. Consider creating a "Main Fertilization" task instead if you haven't done that yet.`,
+          buttonText: 'Create Anyway'
+        };
+      }
+
+      // Main fertilization too early or too late
+      if (taskType === 'main_fertilization' && currentDAP !== null) {
+        if (currentDAP < 40) {
+          validationError = {
+            icon: 'fa-hourglass-start',
+            iconColor: 'blue',
+            title: 'Too Early for Main Fertilization',
+            message: `The crop at <strong>${escapeHtml(fieldName)}</strong> is only <strong>${currentDAP} DAP</strong>.
+                      Main fertilization should be done at 45-60 DAP (${45 - currentDAP} days to go).`,
+            suggestion: `Creating this task now is fine for scheduling, but make sure to complete it within the 45-60 DAP window.`,
+            buttonText: 'Create Anyway'
+          };
+        } else if (currentDAP > 75) {
+          validationError = {
+            icon: 'fa-exclamation-triangle',
+            iconColor: 'red',
+            title: 'Main Fertilization Window Passed',
+            message: `The crop at <strong>${escapeHtml(fieldName)}</strong> is at <strong>${currentDAP} DAP</strong>.
+                      Main fertilization should have been done at 45-60 DAP (now ${currentDAP - 60} days late).`,
+            suggestion: `The critical fertilization window has passed. Applying now may have reduced effectiveness.`,
+            buttonText: 'Create Anyway'
+          };
+        }
+      }
+
+      // Show validation warning if needed
+      if (validationError) {
+        const validationModal = document.createElement('div');
+        validationModal.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+        validationModal.innerHTML = `
+          <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
+            <div class="text-center mb-4">
+              <div class="w-16 h-16 mx-auto rounded-full bg-${validationError.iconColor}-100 flex items-center justify-center mb-3">
+                <i class="fas ${validationError.icon} text-3xl text-${validationError.iconColor}-600"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">${validationError.title}</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">${validationError.message}</p>
+            <p class="text-sm text-gray-700 font-medium mb-4">
+              <i class="fas fa-info-circle text-blue-600 mr-2"></i>${validationError.suggestion}
+            </p>
+            <div class="flex gap-3">
+              <button id="validationCancel" class="flex-1 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 font-medium">
+                Cancel
+              </button>
+              <button id="validationContinue" class="flex-1 px-4 py-2 rounded-md bg-${validationError.iconColor}-600 text-white hover:bg-${validationError.iconColor}-700 font-medium">
+                ${validationError.buttonText}
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(validationModal);
+
+        // Handle validation modal buttons
+        await new Promise((resolve) => {
+          validationModal.querySelector('#validationCancel').addEventListener('click', () => {
+            validationModal.remove();
+            resolve(false); // Don't continue
+          });
+          validationModal.querySelector('#validationContinue').addEventListener('click', () => {
+            validationModal.remove();
+            resolve(true); // Continue with task creation
+          });
+        }).then(shouldContinue => {
+          if (!shouldContinue) throw new Error('User cancelled task creation');
+        });
+      }
+    }
+
+  } catch (err) {
+    if (err.message === 'User cancelled task creation') {
+      return; // User chose not to proceed
+    }
+    console.error('Validation error:', err);
+    // Continue with task creation if validation check fails
+  }
+
+  // ========================================
+  // END VALIDATION
+  // ========================================
+
+  // --- Basic Field Validation ---
   if (!title) {
     el('#ct_title').focus();
     el('#ct_title').insertAdjacentHTML('afterend', '<div class="ct_field_error text-xs text-red-500 mt-1">Please enter a Title.</div>');
@@ -497,16 +1064,20 @@ el('#ct_save').addEventListener('click', async () => {
   }
 
   if (!assignType) { showAssignError('Please select Worker or Driver.'); return; }
-  if (assignType === 'worker' && !allWorkersCheck.checked && workersCount <= 0) {
-    const errorEl = el('#ct_worker_error');
-    errorEl.textContent = 'Please specify the number of workers needed.';
-    errorEl.classList.remove('hidden');
-    workerInput.focus();
-    return;
+
+  // Validate worker selection
+  if (assignType === 'worker') {
+    const selectedWorkersCount = workerListContainer.querySelectorAll('.worker-checkbox:checked').length;
+    if (selectedWorkersCount === 0) {
+      const errorEl = el('#ct_worker_error');
+      errorEl.textContent = 'Please select at least one worker.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
   }
-  if (assignType === 'driver' && !anyDriverCheck.checked && !el('#ct_driver_dropdown_btn').dataset.driverId) {
+  if (assignType === 'driver' && !el('#ct_driver_dropdown_btn').dataset.driverId) {
     const driverErrorEl = el('#ct_driver_error');
-    driverErrorEl.textContent = 'Please select a driver or check "Any available driver".';
+    driverErrorEl.textContent = 'Please select a driver.';
     driverErrorEl.classList.remove('hidden');
     return;
   }
@@ -540,13 +1111,13 @@ el('#ct_save').addEventListener('click', async () => {
     if (isWeek) { const d = scheduledAt.toDate(); d.setHours(23, 59, 0, 0); scheduledAt = Timestamp.fromDate(d); }
 
   const payload = {
-    title: taskTitle.value === "others" ? el("#other_title").value : taskTitle.value,
+    title: taskTitle.value === "others" ? el("#other_title").value : getTaskDisplayName(taskTitle.value),
     details,
-    scheduled_at: scheduledAt,
+    deadline: scheduledAt,
     created_by: currentUserId,
-    created_at: serverTimestamp(),
+    createdAt: serverTimestamp(),
     assign_type: assignType,
-    status: 'todo',
+    status: 'pending',
     metadata: {}
   };
 
@@ -572,11 +1143,38 @@ el('#ct_save').addEventListener('click', async () => {
     payload.metadata.spray_type = el("#spray_type").value;
   }
 
+  // Harvesting
+  if (taskTitle.value === "harvesting") {
+    const yieldValue = el("#harvest_yield").value;
+    if (yieldValue) {
+      payload.metadata.expected_yield = parseFloat(yieldValue);
+    }
+  }
 
-    if (assignType === 'worker') payload.metadata.workers = allWorkersCheck.checked ? 'all' : workersCount;
-    if (assignType === 'driver') payload.metadata.driver = anyDriverCheck.checked
-      ? { id: 'any', fullname: 'Any available driver' }
-      : { id: el('#ct_driver_dropdown_btn').dataset.driverId, fullname: el('#ct_driver_dropdown_btn').textContent };
+
+    // Collect assignedTo array per REQUIREMENTS.md (array<userId>)
+    if (assignType === 'worker') {
+      const selectedWorkers = [];
+      workerListContainer.querySelectorAll('.worker-checkbox:checked').forEach(cb => {
+        selectedWorkers.push(cb.value);
+      });
+      payload.assignedTo = selectedWorkers;
+
+      // Keep metadata for backward compatibility if needed
+      payload.metadata.workers_count = selectedWorkers.length;
+    }
+
+    if (assignType === 'driver') {
+      // Get selected driver
+      const driverId = el('#ct_driver_dropdown_btn').dataset.driverId;
+      const driverName = el('#ct_driver_dropdown_btn').textContent;
+
+      const driverData = { id: driverId, fullname: driverName };
+      payload.metadata.driver = driverData;
+
+      // Add to assignedTo array
+      payload.assignedTo = [driverId];
+    }
 
     if (Object.keys(payload.metadata).length === 0) delete payload.metadata;
 
@@ -588,8 +1186,38 @@ el('#ct_save').addEventListener('click', async () => {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Save';
 
-    
+
     if (res.ok) {
+      // --- Send Notifications ---
+      try {
+        const taskId = res.taskId;
+        const fieldName = await getFieldName(fieldId);
+        const taskType = payload.title || 'Task';
+        let assignedUserIds = [];
+
+        // Collect user IDs based on assignment type
+        if (assignType === 'worker') {
+          // Get selected workers from checkboxes (this is already in payload.assignedTo)
+          if (payload.assignedTo && Array.isArray(payload.assignedTo)) {
+            assignedUserIds = payload.assignedTo;
+          }
+        } else if (assignType === 'driver') {
+          // Notify the selected driver (already in payload.assignedTo)
+          if (payload.assignedTo && Array.isArray(payload.assignedTo)) {
+            assignedUserIds = payload.assignedTo;
+          }
+        }
+
+        // Send notifications
+        if (assignedUserIds.length > 0) {
+          await notifyTaskAssignment(assignedUserIds, taskType, fieldName, taskId);
+          console.log(`✅ Sent notifications to ${assignedUserIds.length} user(s) for task ${taskId}`);
+        }
+      } catch (notifError) {
+        console.error('Error sending notifications:', notifError);
+        // Don't fail the whole operation if notification fails
+      }
+
       // --- Centered Success Message ---
       const successModal = document.createElement('div');
       successModal.className = 'fixed inset-0 z-[24000] flex items-center justify-center';

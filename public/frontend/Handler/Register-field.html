@@ -5,10 +5,13 @@
     <title>CaneMap - Field Registration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/output.css">
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet.draw for polygon drawing -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -85,6 +88,33 @@
 
 .field-header {
   text-align: left;
+}
+
+/* Crisp fade-in animation for success modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 </style>
@@ -227,11 +257,103 @@
   <div>
     <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
       <i class="fas fa-ruler-combined text-[var(--cane-500)] mr-2"></i>
-      Field Size (Hectares)
+      Field Size (Hectares) *
     </label>
-    <input type="number" id="field_size" name="field_size" step="0.01" min="0.01"
+    <input type="number" id="field_size" name="field_size" step="0.01" min="0.01" required
       class="form-input w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300"
       placeholder="e.g., 2.5">
+  </div>
+
+  <!-- Soil Type -->
+  <div>
+    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+      <i class="fas fa-mountain text-[var(--cane-500)] mr-2"></i>
+      Soil Type *
+    </label>
+    <select id="soil_type" name="soil_type" required
+      class="form-select w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
+      <option value="">Select soil type...</option>
+      <option value="Clay">Clay (Heavy, holds water, slow drainage)</option>
+      <option value="Loam">Loam (Ideal for sugarcane, balanced drainage)</option>
+      <option value="Sandy Loam">Sandy Loam (Good drainage, needs frequent irrigation)</option>
+      <option value="Silt Loam">Silt Loam (Fertile, moderate drainage)</option>
+      <option value="Sandy">Sandy (Fast drainage, low water retention)</option>
+      <option value="Clay Loam">Clay Loam (Fertile, moderate drainage)</option>
+      <option value="Peat">Peat/Organic (High organic matter)</option>
+    </select>
+  </div>
+
+  <!-- Irrigation Method -->
+  <div>
+    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+      <i class="fas fa-tint text-[var(--cane-500)] mr-2"></i>
+      Irrigation Method *
+    </label>
+    <select id="irrigation_method" name="irrigation_method" required
+      class="form-select w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
+      <option value="">Select irrigation method...</option>
+      <option value="Rainfed">Rainfed (No irrigation system, depends on rainfall)</option>
+      <option value="Furrow Irrigation">Furrow Irrigation (Water flows between rows)</option>
+      <option value="Drip Irrigation">Drip Irrigation (Water-efficient, direct to roots)</option>
+      <option value="Sprinkler Irrigation">Sprinkler Irrigation (Overhead sprinklers)</option>
+      <option value="Surface Flooding">Surface Flooding (Entire field flooded periodically)</option>
+      <option value="Mixed">Mixed (Combination of methods)</option>
+    </select>
+  </div>
+
+  <!-- Field Terrain/Slope -->
+  <div>
+    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+      <i class="fas fa-chart-line text-[var(--cane-500)] mr-2"></i>
+      Field Terrain/Slope *
+    </label>
+    <select id="field_terrain" name="field_terrain" required
+      class="form-select w-full px-4 py-3 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
+      <option value="">Select terrain type...</option>
+      <option value="Flat">Flat (0-3% slope, ideal for mechanization)</option>
+      <option value="Gently Sloping">Gently Sloping (3-8% slope, suitable for farming)</option>
+      <option value="Moderately Sloping">Moderately Sloping (8-15% slope, needs terracing)</option>
+      <option value="Steep">Steep (15-30% slope, challenging for machinery)</option>
+      <option value="Very Steep">Very Steep (>30% slope, requires special management)</option>
+      <option value="Undulating">Undulating (Mixed flat and slopes)</option>
+    </select>
+  </div>
+
+  <!-- Previous Crop (Optional) -->
+  <div>
+    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+      <i class="fas fa-history text-[var(--cane-500)] mr-2"></i>
+      Previous Crop (Optional)
+    </label>
+    <select id="previous_crop" name="previous_crop"
+      class="form-select w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
+      <option value="">Select previous crop...</option>
+      <option value="Sugarcane (Ratoon)">Sugarcane (Ratoon - Previous harvest)</option>
+      <option value="Sugarcane (Plant)">Sugarcane (Plant - New planting)</option>
+      <option value="Rice">Rice</option>
+      <option value="Corn">Corn</option>
+      <option value="Vegetables">Vegetables</option>
+      <option value="Fallow">Fallow (No crop, resting land)</option>
+      <option value="Forest/Virgin">Forest/Virgin Land</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+
+  <!-- Barangay Selection (Dropdown + Auto-detect) -->
+  <div>
+    <label class="block text-sm font-semibold text-[var(--cane-800)] mb-2">
+      <i class="fas fa-map-marker-alt text-[var(--cane-500)] mr-2"></i>
+      Barangay *
+    </label>
+    <select id="barangay_select" name="barangay" required
+      class="form-select w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:outline-none transition-all duration-300">
+      <option value="">Select barangay or pin on map...</option>
+      <!-- Will be populated by JavaScript from barangays array -->
+    </select>
+    <p class="text-xs text-[var(--cane-600)] mt-1">
+      <i class="fas fa-info-circle mr-1"></i>
+      Will auto-fill when you mark the field location on the map below
+    </p>
   </div>
 
 </div>
@@ -284,11 +406,14 @@
                         <div class="flex items-start space-x-3">
                             <i class="fas fa-info-circle text-[var(--cane-600)] mt-1"></i>
                             <div class="text-sm text-[var(--cane-700)]">
-                                <p class="font-medium mb-1">How to set location:</p>
+                                <p class="font-medium mb-1">How to set field boundary:</p>
                                 <ul class="space-y-1">
-                                    <li>• Click on the map above to set your field location</li>
+                                    <li>• Use the drawing tools on the map (top-right corner)</li>
+                                    <li>• Draw a <strong>polygon</strong> to mark your field boundaries</li>
+                                    <li>• Or use a <strong>rectangle</strong> for rectangular fields</li>
+                                    <li>• Or place a <strong>marker</strong> for a single point location</li>
+                                    <li>• You can edit/delete the shape using the edit tools</li>
                                     <li>• Coordinates will automatically update</li>
-                                    <li>• Ensure accuracy for proper field monitoring</li>
                                 </ul>
                             </div>
                         </div>
@@ -520,7 +645,8 @@
 
 <script type="module">
 import { showPopupMessage } from '../../backend/Common/ui-popup.js';
-let locationMap, locationMarker;
+let locationMap, locationMarker, drawnItems, fieldPolygon;
+let fieldCoordinates = []; // REQ-10: Store polygon coordinates array
 
 // 🗺️ Barangays of Ormoc City with sample coordinates (approximate)
 const barangays = [
@@ -637,37 +763,144 @@ function initLocationMap() {
     popupAnchor: [0, -32]
     });
 
-  // 🖱️ Click to set location (Ormoc only)
-  locationMap.on('click', async e => {
-      const lat = e.latlng.lat;
-      const lng = e.latlng.lng;
-      if (!ormocBounds.contains([lat, lng])) {
-        await showPopupMessage("Only fields within Ormoc City are allowed.", 'warning');
-        return;
+    // REQ-10: Add polygon drawing capability
+    drawnItems = new L.FeatureGroup();
+    locationMap.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          drawError: {
+            color: '#e1e100',
+            message: '<strong>Error:</strong> Polygon edges cannot cross!'
+          },
+          shapeOptions: {
+            color: 'var(--cane-600)',
+            fillColor: 'var(--cane-400)',
+            fillOpacity: 0.3
+          }
+        },
+        polyline: false,
+        rectangle: true,
+        circle: false,
+        marker: {
+          icon: caneIcon
+        },
+        circlemarker: false
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: true
       }
-      document.getElementById('latitude').value = lat.toFixed(6);
-      document.getElementById('longitude').value = lng.toFixed(6);
-      // 🟢 Auto-detect nearest barangay when clicking on the map
+    });
+
+    locationMap.addControl(drawControl);
+
+    // REQ-10: Handle polygon creation
+    locationMap.on(L.Draw.Event.CREATED, async function (e) {
+      const layer = e.layer;
+      const type = e.layerType;
+
+      // Clear any previous drawings
+      drawnItems.clearLayers();
+      fieldPolygon = null;
+      fieldCoordinates = [];
+
+      if (type === 'polygon' || type === 'rectangle') {
+        // Check if polygon is within Ormoc bounds
+        const bounds = layer.getBounds();
+        if (!ormocBounds.contains(bounds.getNorthEast()) || !ormocBounds.contains(bounds.getSouthWest())) {
+          await showPopupMessage("Field boundary must be within Ormoc City limits.", 'warning');
+          return;
+        }
+
+        drawnItems.addLayer(layer);
+        fieldPolygon = layer;
+
+        // Get polygon coordinates
+        const latlngs = layer.getLatLngs()[0]; // Get first ring for polygon
+        fieldCoordinates = latlngs.map(latlng => [latlng.lat, latlng.lng]);
+
+        // Calculate center point for lat/lng fields
+        const center = bounds.getCenter();
+        document.getElementById('latitude').value = center.lat.toFixed(6);
+        document.getElementById('longitude').value = center.lng.toFixed(6);
+
+        // Auto-detect nearest barangay
         let nearestBarangay = "";
         let nearestDist = Infinity;
         barangays.forEach(b => {
-        if (!b.coords) return;
-        const dist = Math.sqrt(
-            Math.pow(b.coords[0] - lat, 2) + Math.pow(b.coords[1] - lng, 2)
-        );
-        if (dist < nearestDist) {
+          if (!b.coords) return;
+          const dist = Math.sqrt(
+            Math.pow(b.coords[0] - center.lat, 2) + Math.pow(b.coords[1] - center.lng, 2)
+          );
+          if (dist < nearestDist) {
             nearestDist = dist;
             nearestBarangay = b.name;
-        }
+          }
         });
         selectedBarangay = nearestBarangay || "Unknown";
-        console.log("📍 Auto-detected barangay:", selectedBarangay);
+        // ✅ Also set the barangay dropdown
+        const barangaySelect = document.getElementById('barangay_select');
+        if (barangaySelect) barangaySelect.value = selectedBarangay;
+        console.log("📍 Field boundary drawn, barangay:", selectedBarangay);
+        console.log("📍 Field coordinates:", fieldCoordinates);
 
-      if (locationMarker) locationMarker.remove();
-        locationMarker = L.marker([lat, lng], { icon: caneIcon })
-        .addTo(locationMap)
-        .bindPopup('Your Field Location (Ormoc City)')
-        .openPopup();
+      } else if (type === 'marker') {
+        const latlng = layer.getLatLng();
+        if (!ormocBounds.contains(latlng)) {
+          await showPopupMessage("Only fields within Ormoc City are allowed.", 'warning');
+          return;
+        }
+
+        drawnItems.addLayer(layer);
+        document.getElementById('latitude').value = latlng.lat.toFixed(6);
+        document.getElementById('longitude').value = latlng.lng.toFixed(6);
+
+        // Auto-detect nearest barangay
+        let nearestBarangay = "";
+        let nearestDist = Infinity;
+        barangays.forEach(b => {
+          if (!b.coords) return;
+          const dist = Math.sqrt(
+            Math.pow(b.coords[0] - latlng.lat, 2) + Math.pow(b.coords[1] - latlng.lng, 2)
+          );
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestBarangay = b.name;
+          }
+        });
+        selectedBarangay = nearestBarangay || "Unknown";
+        // ✅ Also set the barangay dropdown
+        const barangaySelect = document.getElementById('barangay_select');
+        if (barangaySelect) barangaySelect.value = selectedBarangay;
+        console.log("📍 Marker placed, barangay:", selectedBarangay);
+      }
+    });
+
+    // Handle polygon editing
+    locationMap.on(L.Draw.Event.EDITED, function (e) {
+      const layers = e.layers;
+      layers.eachLayer(function (layer) {
+        if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+          const latlngs = layer.getLatLngs()[0];
+          fieldCoordinates = latlngs.map(latlng => [latlng.lat, latlng.lng]);
+          const bounds = layer.getBounds();
+          const center = bounds.getCenter();
+          document.getElementById('latitude').value = center.lat.toFixed(6);
+          document.getElementById('longitude').value = center.lng.toFixed(6);
+          console.log("📍 Field boundary edited, coordinates:", fieldCoordinates);
+        }
+      });
+    });
+
+    // Handle polygon deletion
+    locationMap.on(L.Draw.Event.DELETED, function (e) {
+      fieldPolygon = null;
+      fieldCoordinates = [];
+      console.log("📍 Field boundary removed");
     });
 
     // 🔍 Local barangay search (no API)
@@ -708,6 +941,9 @@ function initLocationMap() {
 
     // 🟢 Store barangay name globally for Firestore
     selectedBarangay = match.name;
+    // ✅ Also set the barangay dropdown
+    const barangaySelect = document.getElementById('barangay_select');
+    if (barangaySelect) barangaySelect.value = selectedBarangay;
     console.log("Barangay selected via search:", selectedBarangay);
 
     }
@@ -726,14 +962,128 @@ function initLocationMap() {
   }
 }
 
+// Load and display user's own reviewed fields as reference
+async function loadExistingFields() {
+  try {
+    const { auth, db } = await import('../../backend/Common/firebase-config.js');
+    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+    // Get current user
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('⏭️ No user logged in, skipping field reference load');
+      return;
+    }
+
+    // Query only user's own reviewed and active fields
+    const fieldsRef = collection(db, 'fields');
+    const q = query(
+      fieldsRef,
+      where('userId', '==', currentUser.uid),
+      where('status', 'in', ['reviewed', 'active'])
+    );
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      console.log('📍 No reviewed or active fields found for reference');
+      return;
+    }
+
+    snapshot.forEach((doc) => {
+      const field = doc.data();
+
+      // Display field polygon if coordinates exist (reference fields in blue)
+      if (field.coordinates && field.coordinates.length > 0) {
+        // Convert from Firestore format [{ lat: x, lng: y }] to Leaflet format [[lat, lng]]
+        const leafletCoords = field.coordinates.map(coord => [coord.lat, coord.lng]);
+
+        const polygon = L.polygon(leafletCoords, {
+          color: '#4A90E2',        // Blue border for reference
+          fillColor: '#7AB8F5',    // Light blue fill
+          fillOpacity: 0.15,       // More transparent
+          weight: 2,
+          dashArray: '5, 5'        // Dashed line to indicate reference
+        }).addTo(locationMap);
+
+        polygon.bindPopup(`
+          <div style="font-family: sans-serif;">
+            <h4 style="font-weight: bold; margin: 0 0 8px 0; color: #4A90E2;">📌 Your Field (Reference)</h4>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Name:</strong> ${field.field_name || field.fieldName || 'Unknown'}</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Area:</strong> ${field.field_size || field.area || 'N/A'} hectares</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Variety:</strong> ${field.sugarcane_variety || field.variety || 'N/A'}</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Barangay:</strong> ${field.barangay || 'N/A'}</p>
+          </div>
+        `);
+      } else if (field.latitude && field.longitude) {
+        // Fallback to marker if no polygon coordinates (use blue icon)
+        const referenceIcon = L.divIcon({
+          className: 'reference-field-marker',
+          html: '<div style="background: #4A90E2; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-bookmark" style="color: white; font-size: 14px;"></i></div>',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+          popupAnchor: [0, -15]
+        });
+
+        L.marker([field.latitude, field.longitude], { icon: referenceIcon })
+          .addTo(locationMap)
+          .bindPopup(`
+            <div style="font-family: sans-serif;">
+              <h4 style="font-weight: bold; margin: 0 0 8px 0; color: #4A90E2;">📌 Your Field (Reference)</h4>
+              <p style="margin: 4px 0; font-size: 12px;"><strong>Name:</strong> ${field.field_name || field.fieldName || 'Unknown'}</p>
+              <p style="margin: 4px 0; font-size: 12px;"><strong>Area:</strong> ${field.field_size || field.area || 'N/A'} hectares</p>
+              <p style="margin: 4px 0; font-size: 12px;"><strong>Variety:</strong> ${field.sugarcane_variety || field.variety || 'N/A'}</p>
+            </div>
+          `);
+      }
+    });
+
+    console.log(`✅ Loaded ${snapshot.size} reviewed field(s) as reference (blue/dashed)`);
+  } catch (error) {
+    console.error('Error loading reference fields:', error);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(() => initLocationMap(), 100);
+  setTimeout(() => {
+    initLocationMap();
+    // Load existing fields after map initialization
+    setTimeout(() => loadExistingFields(), 500);
+
+    // ✅ Populate barangay dropdown
+    populateBarangayDropdown();
+  }, 100);
 });
-// 🟩 Global variable to hold selected barangay name from the map or search
+
+// ✅ Populate barangay dropdown from barangays array
+function populateBarangayDropdown() {
+  const barangaySelect = document.getElementById('barangay_select');
+  if (!barangaySelect) return;
+
+  // Sort barangays alphabetically
+  const sortedBarangays = [...barangays].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Clear existing options (except the first placeholder)
+  while (barangaySelect.options.length > 1) {
+    barangaySelect.remove(1);
+  }
+
+  // Add all barangays
+  sortedBarangays.forEach(brgy => {
+    const option = document.createElement('option');
+    option.value = brgy.name;
+    option.textContent = brgy.name;
+    barangaySelect.appendChild(option);
+  });
+
+  console.log('✅ Populated barangay dropdown with', sortedBarangays.length, 'barangays');
+}
+
+// 🟩 Global variables accessible to Register-field.js
 window.selectedBarangay = "";
+window.getFieldCoordinates = () => fieldCoordinates;
 
 </script>
 
-    <script type="module" src="../../backend/Handler/Register-field.js"></script>
+    <script type="module" src="../../backend/Handler/Register-field.js?v=2"></script>
 </body>
 </html>

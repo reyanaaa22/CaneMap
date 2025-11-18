@@ -24,9 +24,13 @@ import {
 let currentUser = null;
 let users = [];
 let activityLogs = [];
+let failedLogins = [];
+let filteredFailedLogins = [];
 let currentPage = 1;
 let itemsPerPage = 10;
 let filteredUsers = [];
+let failedLoginsCurrentPage = 1;
+let failedLoginsPerPage = 10;
 
 // Chart instances - track so we can destroy them when switching tabs
 let userGrowthChartInstance = null;
@@ -249,13 +253,23 @@ try {
 async function loadDashboardStats() {
     try {
         console.log('🔄 Loading dashboard stats...');
-        
-        // Get total users and calculate growth
+
+        // Get total users and calculate growth (excluding system_admin)
         let totalUsers = 0;
         let totalUsersGrowth = 0;
         try {
             const usersSnapshot = await getDocs(collection(db, 'users'));
-            totalUsers = usersSnapshot.size;
+
+            // Filter out system_admin users
+            const regularUsers = [];
+            usersSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.role !== 'system_admin') {
+                    regularUsers.push(data);
+                }
+            });
+
+            totalUsers = regularUsers.length;
 
             // Calculate users created in last 30 days vs previous 30 days
             const now = new Date();
@@ -265,8 +279,7 @@ async function loadDashboardStats() {
             let usersLastMonth = 0;
             let usersPreviousMonth = 0;
 
-            usersSnapshot.forEach(doc => {
-                const data = doc.data();
+            regularUsers.forEach(data => {
                 if (data.createdAt && data.createdAt.toDate) {
                     const createdDate = data.createdAt.toDate();
                     if (createdDate >= thirtyDaysAgo) {
@@ -284,12 +297,12 @@ async function loadDashboardStats() {
                 totalUsersGrowth = null; // No previous data to compare
             }
 
-            console.log(`📊 Total users: ${totalUsers}, Growth: ${totalUsersGrowth !== null ? totalUsersGrowth.toFixed(1) + '%' : 'N/A'}`);
+            console.log(`📊 Total users (excluding system_admin): ${totalUsers}, Growth: ${totalUsersGrowth !== null ? totalUsersGrowth.toFixed(1) + '%' : 'N/A'}`);
         } catch (error) {
             console.log('⚠️ Could not load users collection:', error.message);
         }
         
-        // Get active users (logged in within last 30 days) and calculate growth
+        // Get active users (logged in within last 30 days) and calculate growth (excluding system_admin)
         let activeUsers = 0;
         let activeUsersGrowth = 0;
         try {
@@ -304,6 +317,10 @@ async function loadDashboardStats() {
 
             usersSnapshot.forEach(doc => {
                 const data = doc.data();
+
+                // Skip system_admin users
+                if (data.role === 'system_admin') return;
+
                 const lastLogin = data.lastLogin && data.lastLogin.toDate ? data.lastLogin.toDate() : null;
 
                 // Count active users (logged in within last 30 days)
@@ -324,12 +341,12 @@ async function loadDashboardStats() {
                 activeUsersGrowth = null; // No previous data to compare
             }
 
-            console.log(`📊 Active users: ${activeUsers}, Growth: ${activeUsersGrowth !== null ? activeUsersGrowth.toFixed(1) + '%' : 'N/A'}`);
+            console.log(`📊 Active users (excluding system_admin): ${activeUsers}, Growth: ${activeUsersGrowth !== null ? activeUsersGrowth.toFixed(1) + '%' : 'N/A'}`);
         } catch (error) {
             console.log('⚠️ Could not load active users:', error.message);
         }
         
-        // Get failed logins (sum from users.failedLoginAttempts + failed_logins collection count)
+        // Get failed logins (sum from users.failedLoginAttempts + failed_logins collection attemptCount)
         let failedLogins = 0;
         try {
             // Count failedLoginAttempts from all users
@@ -340,9 +357,13 @@ async function loadDashboardStats() {
                 userFailedAttempts += (data.failedLoginAttempts || 0);
             });
 
-            // Count documents in failed_logins collection (for non-existent user attempts)
+            // Sum attemptCount from failed_logins collection (for non-existent user attempts)
             const failedLoginsSnapshot = await getDocs(collection(db, 'failed_logins'));
-            const nonExistentUserAttempts = failedLoginsSnapshot.size;
+            let nonExistentUserAttempts = 0;
+            failedLoginsSnapshot.forEach(doc => {
+                const data = doc.data();
+                nonExistentUserAttempts += (data.attemptCount || 1);
+            });
 
             // Total failed logins = user attempts + non-existent user attempts
             failedLogins = userFailedAttempts + nonExistentUserAttempts;
@@ -376,11 +397,11 @@ async function loadDashboardStats() {
             let unknownUserFailures = 0;
             failedLoginsSnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.timestamp && data.timestamp.toDate) {
-                    const loginDate = data.timestamp.toDate();
-                    if (loginDate >= today) {
-                        unknownUserFailures++;
-                    }
+                // Check if lastAttempt or timestamp is today
+                const attemptDate = data.lastAttempt?.toDate() || data.timestamp?.toDate();
+                if (attemptDate && attemptDate >= today) {
+                    // Add the attemptCount for this email (not just 1)
+                    unknownUserFailures += (data.attemptCount || 1);
                 }
             });
 
@@ -413,9 +434,14 @@ async function loadDashboardStats() {
             const driverBadgesSnapshot = await getDocs(collection(db, 'Drivers_Badge'));
             driverBadgesSnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.createdAt && data.createdAt.toDate) {
-                    const createdDate = data.createdAt.toDate();
-                    if (createdDate >= oneWeekAgo && data.status === 'approved') {
+                // Check if badge was approved this week using approvedAt timestamp
+                if (data.status === 'approved') {
+                    const approvalDate = data.approvedAt?.toDate() ||
+                                       data.createdAt?.toDate() ||
+                                       data.timestamp?.toDate() ||
+                                       data.submitted_at?.toDate();
+
+                    if (approvalDate && approvalDate >= oneWeekAgo) {
                         driverBadgesThisWeek++;
                     }
                 }
@@ -505,34 +531,37 @@ async function loadDashboardStats() {
 async function loadUsers() {
     try {
         console.log('🔄 Loading users...');
-        
+
         const usersQuery = query(
             collection(db, 'users'),
             orderBy('createdAt', 'desc')
         );
-        
+
         const querySnapshot = await getDocs(usersQuery);
         users = [];
-        
+
         querySnapshot.forEach((doc) => {
             const userData = doc.data();
-            users.push({
-                id: doc.id,
-                ...userData,
-                createdAt: userData.createdAt?.toDate() || new Date(),
-                lastLogin: userData.lastLogin?.toDate() || null
-            });
+            // Exclude system_admin users from user management
+            if (userData.role !== 'system_admin') {
+                users.push({
+                    id: doc.id,
+                    ...userData,
+                    createdAt: userData.createdAt?.toDate() || new Date(),
+                    lastLogin: userData.lastLogin?.toDate() || null
+                });
+            }
         });
-        
+
         filteredUsers = [...users];
-        console.log(`📊 Loaded ${users.length} users`);
-        
+        console.log(`📊 Loaded ${users.length} users (excluding system_admin)`);
+
         // Only render table if the users table exists
         const usersTableBody = document.getElementById('usersTableBody');
         if (usersTableBody) {
             renderUsersTable();
         }
-        
+
     } catch (error) {
         console.error('❌ Error loading users:', error);
         // Don't show alert if we're not on the users page
@@ -572,6 +601,9 @@ function renderUsersTable() {
         const roleClass = getRoleClass(user.role);
         const badgeClass = getBadgeClass(user.driverBadge);
         
+        // Normalize status display (convert 'verified' to 'active')
+        const displayStatus = user.status === 'verified' ? 'active' : (user.status || 'pending');
+
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
@@ -591,7 +623,7 @@ function renderUsersTable() {
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
-                    ${user.status || 'inactive'}
+                    ${displayStatus}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -668,18 +700,38 @@ async function confirmDeleteUser(userId, el) {
                 window.showPopup({ title: 'User Deleted', message: 'User deleted successfully.', type: 'success' });
             }
 
-            // remove row from DOM if provided
-            try {
-                if (el && el.closest) {
-                    const tr = el.closest('tr');
-                    if (tr && tr.parentElement) tr.parentElement.removeChild(tr);
-                }
-            } catch (_) {}
+            // Remove from local users array
+            const index = users.findIndex(u => u.id === userId);
+            if (index !== -1) {
+                users.splice(index, 1);
+                filteredUsers = [...users];
+            }
+
+            // Refresh appropriate table based on which one exists
+            const usersTableBody = document.getElementById('usersTableBody');
+            const farmersTableBody = document.getElementById('farmersTableBody');
+            const sraTableBody = document.getElementById('sraTableBody');
+
+            if (usersTableBody) {
+                renderUsersTable();
+            } else if (farmersTableBody && window.refreshFarmers) {
+                window.refreshFarmers();
+            } else if (sraTableBody && window.fetchAndRenderSRA) {
+                window.fetchAndRenderSRA();
+            } else {
+                // Fallback: remove row from DOM if provided
+                try {
+                    if (el && el.closest) {
+                        const tr = el.closest('tr');
+                        if (tr && tr.parentElement) tr.parentElement.removeChild(tr);
+                    }
+                } catch (_) {}
+            }
 
         } catch (err) {
-            console.error('Error deleting user:', err);
+            console.error('❌ Error deleting user:', err);
             if (typeof window.showPopup === 'function') {
-                window.showPopup({ title: 'Deletion Failed', message: 'Failed to delete user. Please try again later.', type: 'error' });
+                window.showPopup({ title: 'Deletion Failed', message: `Failed to delete user: ${err.message}`, type: 'error' });
             } else {
                 showAlert('Failed to delete user', 'error');
             }
@@ -763,6 +815,261 @@ function renderActivityLogs() {
     });
 }
 
+// Load failed logins from both registered and unknown users
+async function loadFailedLogins() {
+    try {
+        console.log('🔄 Loading failed login attempts...');
+        failedLogins = [];
+
+        // 1. Get failed logins from unknown users (failed_logins collection)
+        const failedLoginsSnapshot = await getDocs(collection(db, 'failed_logins'));
+        failedLoginsSnapshot.forEach(doc => {
+            const data = doc.data();
+            failedLogins.push({
+                id: doc.id,
+                email: data.email || 'unknown',
+                userType: 'unknown',
+                attemptCount: data.attemptCount || 1,
+                firstAttempt: data.firstAttempt?.toDate() || data.timestamp?.toDate() || null,
+                lastAttempt: data.lastAttempt?.toDate() || data.timestamp?.toDate() || null,
+                ipAddress: data.ipAddress || 'unknown'
+            });
+        });
+
+        // 2. Get failed logins from registered users (users collection)
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        usersSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.failedLoginAttempts && data.failedLoginAttempts > 0) {
+                failedLogins.push({
+                    id: doc.id,
+                    email: data.email || 'unknown',
+                    userType: 'registered',
+                    attemptCount: data.failedLoginAttempts,
+                    firstAttempt: null, // We don't track first attempt for registered users
+                    lastAttempt: data.lastFailedLogin?.toDate() || null,
+                    ipAddress: 'N/A'
+                });
+            }
+        });
+
+        filteredFailedLogins = [...failedLogins];
+        console.log(`📊 Loaded ${failedLogins.length} failed login records (${failedLogins.filter(f => f.userType === 'registered').length} registered, ${failedLogins.filter(f => f.userType === 'unknown').length} unknown)`);
+
+        // Only render if the table exists
+        const tableBody = document.getElementById('failedLoginsTableBody');
+        if (tableBody) {
+            renderFailedLoginsTable();
+            updateFailedLoginsStats();
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading failed logins:', error);
+        const tableBody = document.getElementById('failedLoginsTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-red-600">
+                        Failed to load data. Error: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Render failed logins table
+function renderFailedLoginsTable() {
+    const tbody = document.getElementById('failedLoginsTableBody');
+    if (!tbody) return;
+
+    const startIndex = (failedLoginsCurrentPage - 1) * failedLoginsPerPage;
+    const endIndex = startIndex + failedLoginsPerPage;
+    const pageData = filteredFailedLogins.slice(startIndex, endIndex);
+
+    tbody.innerHTML = '';
+
+    if (pageData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                    <i class="fas fa-shield-alt text-4xl mb-2 text-gray-300"></i>
+                    <p>No failed login attempts found.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    pageData.forEach(login => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+
+        const userTypeBadge = login.userType === 'registered'
+            ? '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Registered</span>'
+            : '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
+
+        const attemptBadgeColor = login.attemptCount >= 10 ? 'bg-red-100 text-red-800'
+            : login.attemptCount >= 5 ? 'bg-orange-100 text-orange-800'
+            : 'bg-yellow-100 text-yellow-800';
+
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${login.email}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                ${userTypeBadge}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${attemptBadgeColor}">
+                    ${login.attemptCount} ${login.attemptCount === 1 ? 'attempt' : 'attempts'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                ${login.firstAttempt ? formatDate(login.firstAttempt) : '—'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                ${login.lastAttempt ? formatDate(login.lastAttempt) : '—'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="clearFailedLoginRecord('${login.id}', '${login.userType}')" class="text-red-600 hover:text-red-700" title="Clear record">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    // Update pagination info
+    const showingEl = document.getElementById('failedLoginsShowing');
+    const totalEl = document.getElementById('failedLoginsTotal');
+    const currentPageEl = document.getElementById('failedLoginsCurrentPage');
+
+    if (showingEl) showingEl.textContent = pageData.length;
+    if (totalEl) totalEl.textContent = filteredFailedLogins.length;
+    if (currentPageEl) currentPageEl.textContent = failedLoginsCurrentPage;
+
+    // Update pagination buttons
+    const prevBtn = document.getElementById('failedLoginsPrevPage');
+    const nextBtn = document.getElementById('failedLoginsNextPage');
+    const totalPages = Math.ceil(filteredFailedLogins.length / failedLoginsPerPage);
+
+    if (prevBtn) prevBtn.disabled = failedLoginsCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = failedLoginsCurrentPage >= totalPages || filteredFailedLogins.length === 0;
+}
+
+// Update statistics
+function updateFailedLoginsStats() {
+    const totalAttempts = failedLogins.reduce((sum, login) => sum + login.attemptCount, 0);
+    const uniqueEmails = failedLogins.length;
+    const registeredCount = failedLogins.filter(f => f.userType === 'registered').length;
+    const unknownCount = failedLogins.filter(f => f.userType === 'unknown').length;
+
+    const totalAttemptsEl = document.getElementById('totalFailedAttempts');
+    const uniqueEmailsEl = document.getElementById('uniqueFailedEmails');
+    const registeredEl = document.getElementById('registeredFailedUsers');
+    const unknownEl = document.getElementById('unknownFailedUsers');
+
+    if (totalAttemptsEl) totalAttemptsEl.textContent = totalAttempts;
+    if (uniqueEmailsEl) uniqueEmailsEl.textContent = uniqueEmails;
+    if (registeredEl) registeredEl.textContent = registeredCount;
+    if (unknownEl) unknownEl.textContent = unknownCount;
+}
+
+// Filter and sort failed logins
+function applyFailedLoginsFilters() {
+    const searchTerm = document.getElementById('failedLoginsSearch')?.value.toLowerCase() || '';
+    const userTypeFilter = document.getElementById('failedLoginsUserTypeFilter')?.value || '';
+    const sortBy = document.getElementById('failedLoginsSortBy')?.value || 'recent';
+
+    filteredFailedLogins = failedLogins.filter(login => {
+        const matchesSearch = login.email.toLowerCase().includes(searchTerm);
+        const matchesUserType = !userTypeFilter || login.userType === userTypeFilter;
+        return matchesSearch && matchesUserType;
+    });
+
+    // Sort
+    if (sortBy === 'recent') {
+        filteredFailedLogins.sort((a, b) => {
+            const dateA = a.lastAttempt || a.firstAttempt || new Date(0);
+            const dateB = b.lastAttempt || b.firstAttempt || new Date(0);
+            return dateB - dateA;
+        });
+    } else if (sortBy === 'attempts') {
+        filteredFailedLogins.sort((a, b) => b.attemptCount - a.attemptCount);
+    } else if (sortBy === 'email') {
+        filteredFailedLogins.sort((a, b) => a.email.localeCompare(b.email));
+    }
+
+    failedLoginsCurrentPage = 1;
+    renderFailedLoginsTable();
+}
+
+// Set up event listeners for failed logins section
+function setupFailedLoginsListeners() {
+    const refreshBtn = document.getElementById('refreshFailedLogins');
+    const searchInput = document.getElementById('failedLoginsSearch');
+    const userTypeFilter = document.getElementById('failedLoginsUserTypeFilter');
+    const sortBy = document.getElementById('failedLoginsSortBy');
+    const prevBtn = document.getElementById('failedLoginsPrevPage');
+    const nextBtn = document.getElementById('failedLoginsNextPage');
+
+    if (refreshBtn) refreshBtn.addEventListener('click', loadFailedLogins);
+    if (searchInput) searchInput.addEventListener('input', applyFailedLoginsFilters);
+    if (userTypeFilter) userTypeFilter.addEventListener('change', applyFailedLoginsFilters);
+    if (sortBy) sortBy.addEventListener('change', applyFailedLoginsFilters);
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (failedLoginsCurrentPage > 1) {
+                failedLoginsCurrentPage--;
+                renderFailedLoginsTable();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredFailedLogins.length / failedLoginsPerPage);
+            if (failedLoginsCurrentPage < totalPages) {
+                failedLoginsCurrentPage++;
+                renderFailedLoginsTable();
+            }
+        });
+    }
+
+    console.log('✅ Failed logins event listeners attached');
+}
+
+// Clear a failed login record
+async function clearFailedLoginRecord(id, userType) {
+    if (!confirm('Are you sure you want to clear this failed login record?')) {
+        return;
+    }
+
+    try {
+        if (userType === 'unknown') {
+            // Delete from failed_logins collection
+            await deleteDoc(doc(db, 'failed_logins', id));
+            console.log(`✅ Deleted failed_logins record: ${id}`);
+        } else {
+            // Reset failedLoginAttempts for registered user
+            await updateDoc(doc(db, 'users', id), {
+                failedLoginAttempts: 0,
+                lastFailedLogin: null
+            });
+            console.log(`✅ Reset failed login attempts for user: ${id}`);
+        }
+
+        showAlert('Failed login record cleared successfully', 'success');
+        loadFailedLogins();
+    } catch (error) {
+        console.error('❌ Error clearing failed login record:', error);
+        showAlert('Failed to clear record: ' + error.message, 'error');
+    }
+}
+
 // Set up real-time listeners
 function setupRealtimeListeners() {
     try {
@@ -773,6 +1080,39 @@ function setupRealtimeListeners() {
                 console.log('📊 Users snapshot updated:', snapshot.size);
                 loadUsers();
                 loadDashboardStats();
+
+                // Refresh failed logins table if visible (for registered users' failed attempts)
+                const loginHistoryTable = document.getElementById('loginHistoryTableBody');
+                if (loginHistoryTable && typeof window.refreshLoginHistory === 'function') {
+                    console.log('📊 Auto-refreshing login history for registered users...');
+                    window.refreshLoginHistory();
+                }
+
+                // Refresh Security > Account Management subtab if visible
+                const accountsTableBody = document.getElementById('accountsTableBody');
+                if (accountsTableBody && typeof window.refreshAccounts === 'function') {
+                    console.log('📊 Auto-refreshing account management table...');
+                    window.refreshAccounts();
+                }
+
+                // Refresh accounts tables if visible (check all subtabs)
+                const usersTableBody = document.getElementById('usersTableBody');
+                if (usersTableBody) {
+                    console.log('📊 Auto-refreshing users table...');
+                    renderUsersTable();
+                }
+
+                const farmersTableBody = document.getElementById('farmersTableBody');
+                if (farmersTableBody && typeof window.refreshFarmers === 'function') {
+                    console.log('📊 Auto-refreshing farmers table...');
+                    window.refreshFarmers();
+                }
+
+                const sraTableBody = document.getElementById('sraTableBody');
+                if (sraTableBody && typeof window.fetchAndRenderSRA === 'function') {
+                    console.log('📊 Auto-refreshing SRA officers table...');
+                    window.fetchAndRenderSRA();
+                }
             },
             (error) => {
                 console.error('❌ Users snapshot error:', error);
@@ -788,6 +1128,12 @@ function setupRealtimeListeners() {
             (snapshot) => {
                 console.log('🔒 Failed logins snapshot updated:', snapshot.size);
                 loadDashboardStats(); // Refresh stats when failed logins change
+                // Also refresh failed logins table if it's visible (security.js implementation)
+                const loginHistoryTable = document.getElementById('loginHistoryTableBody');
+                if (loginHistoryTable && typeof window.refreshLoginHistory === 'function') {
+                    console.log('📊 Auto-refreshing login history table...');
+                    window.refreshLoginHistory();
+                }
             },
             (error) => {
                 console.error('❌ Failed logins snapshot error:', error);
@@ -805,6 +1151,32 @@ function setupRealtimeListeners() {
             (error) => {
                 console.error('❌ Activity logs snapshot error:', error);
                 console.log('Note: admin_security_logs collection may not exist yet');
+            }
+        );
+
+        // Listen for driver badge changes with error handling
+        const driverBadgesListener = onSnapshot(
+            collection(db, 'Drivers_Badge'),
+            (snapshot) => {
+                console.log('🚗 Driver badges snapshot updated:', snapshot.size);
+                loadDashboardStats();
+
+                // Refresh driver badges tables if visible
+                const badgeRequestsBody = document.getElementById('badgeRequestsTableBody');
+                if (badgeRequestsBody && typeof window.refreshBadgeRequests === 'function') {
+                    console.log('📊 Auto-refreshing badge requests table...');
+                    window.refreshBadgeRequests();
+                }
+
+                const approvedBadgesBody = document.getElementById('approvedBadgesTableBody');
+                if (approvedBadgesBody && typeof window.refreshApprovedBadges === 'function') {
+                    console.log('📊 Auto-refreshing approved badges table...');
+                    window.refreshApprovedBadges();
+                }
+            },
+            (error) => {
+                console.error('❌ Driver badges snapshot error:', error);
+                console.log('Note: Drivers_Badge collection may not exist yet');
             }
         );
 
@@ -949,18 +1321,54 @@ function updatePagination() {
 
 // Modal functions
 
-function openEditUserModal(userId) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    
+async function openEditUserModal(userId) {
+    let user = users.find(u => u.id === userId);
+
+    // If user not found in local array, fetch from Firestore
+    if (!user) {
+        try {
+            console.log(`🔍 User ${userId} not in local array, fetching from Firestore...`);
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+                user = { id: userDoc.id, ...userDoc.data() };
+                console.log('✅ User fetched from Firestore:', user);
+            } else {
+                console.error('❌ User not found in Firestore');
+                showAlert('User not found', 'error');
+                return;
+            }
+        } catch (error) {
+            console.error('❌ Error fetching user:', error);
+            showAlert('Failed to load user data', 'error');
+            return;
+        }
+    }
+
     document.getElementById('editUserId').value = user.id;
     document.getElementById('editUserName').value = user.name || '';
     document.getElementById('editUserEmail').value = user.email || '';
     document.getElementById('editUserRole').value = user.role || '';
     document.getElementById('editUserPhone').value = user.phone || '';
-    document.getElementById('editUserStatus').value = user.status || 'inactive';
+
+    // Display status as read-only (not editable)
+    const statusDisplay = document.getElementById('editUserStatusDisplay');
+    if (statusDisplay) {
+        const displayStatus = user.status || 'pending';
+        statusDisplay.textContent = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
+
+        // Add color coding
+        statusDisplay.className = 'font-medium';
+        if (displayStatus === 'verified' || displayStatus === 'active') {
+            statusDisplay.className += ' text-green-600';
+        } else if (displayStatus === 'pending') {
+            statusDisplay.className += ' text-yellow-600';
+        } else {
+            statusDisplay.className += ' text-gray-600';
+        }
+    }
+
     document.getElementById('editUserBadge').value = user.driverBadge || 'none';
-    
+
     document.getElementById('editUserModal').classList.remove('hidden');
 }
 
@@ -972,7 +1380,7 @@ function closeEditUserModal() {
 // Handle edit user
 async function handleEditUser(e) {
     e.preventDefault();
-    
+
     try {
         const userId = document.getElementById('editUserId').value;
         const userData = {
@@ -980,20 +1388,57 @@ async function handleEditUser(e) {
             email: document.getElementById('editUserEmail').value,
             role: document.getElementById('editUserRole').value,
             phone: document.getElementById('editUserPhone').value,
-            status: document.getElementById('editUserStatus').value,
             driverBadge: document.getElementById('editUserBadge').value,
-            updatedAt: serverTimestamp()
+            updatedAt: new Date() // Use local date for optimistic update
         };
-        
-        await updateDoc(doc(db, 'users', userId), userData);
-        
-        showAlert('User updated successfully', 'success');
+        // Note: status is NOT included - it's auto-managed by system (email verification)
+
+        // OPTIMISTIC UPDATE: Update local data and render appropriate table
+        const userIndex = users.findIndex(u => u.id === userId);
+        if (userIndex !== -1) {
+            users[userIndex] = { ...users[userIndex], ...userData };
+            filteredUsers = [...users];
+        }
+
+        // Check which table exists and update accordingly
+        const usersTableBody = document.getElementById('usersTableBody');
+        const farmersTableBody = document.getElementById('farmersTableBody');
+        const sraTableBody = document.getElementById('sraTableBody');
+
+        if (usersTableBody) {
+            // On main users management page
+            renderUsersTable();
+        } else if (farmersTableBody && window.refreshFarmers) {
+            // On Farmers/Accounts tab - refresh the farmers data
+            window.refreshFarmers();
+        } else if (sraTableBody && window.fetchAndRenderSRA) {
+            // On SRA officers tab
+            window.fetchAndRenderSRA();
+        }
+
+        // Close modal and show success message immediately
         closeEditUserModal();
-        loadUsers();
-        
+        showAlert('User updated successfully', 'success');
+
+        // Update Firestore in the background
+        await updateDoc(doc(db, 'users', userId), {
+            ...userData,
+            updatedAt: serverTimestamp() // Use server timestamp for Firestore
+        });
+
+        console.log('✅ User updated in Firestore');
+
     } catch (error) {
         console.error('❌ Error updating user:', error);
-        showAlert('Failed to update user', 'error');
+        showAlert('Failed to update user - reverting changes', 'error');
+        // Reload appropriate data source
+        if (document.getElementById('usersTableBody')) {
+            loadUsers();
+        } else if (document.getElementById('farmersTableBody') && window.refreshFarmers) {
+            window.refreshFarmers();
+        } else if (document.getElementById('sraTableBody') && window.fetchAndRenderSRA) {
+            window.fetchAndRenderSRA();
+        }
     }
 }
 
@@ -1031,11 +1476,15 @@ async function deleteUser(userId, el) {
 
 // Utility functions
 function getStatusClass(status) {
-    switch (status) {
+    // Normalize 'verified' to 'active' for backward compatibility
+    const normalizedStatus = status === 'verified' ? 'active' : status;
+
+    switch (normalizedStatus) {
         case 'active': return 'status-active';
-        case 'inactive': return 'status-inactive';
         case 'pending': return 'status-pending';
-        default: return 'status-inactive';
+        case 'suspended': return 'status-inactive';
+        case 'inactive': return 'status-inactive';
+        default: return 'status-pending'; // Default to pending for unknown statuses
     }
 }
 
@@ -1120,26 +1569,29 @@ function formatDate(date) {
 // Load analytics charts
 async function loadAnalyticsCharts() {
     try {
-        // Get all users for analytics
+        // Get all users for analytics (excluding system_admin)
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const allUsers = [];
-        
+
         usersSnapshot.forEach((doc) => {
             const userData = doc.data();
-            allUsers.push({
-                id: doc.id,
-                ...userData,
-                createdAt: userData.createdAt?.toDate() || new Date(),
-                lastLogin: userData.lastLogin?.toDate() || null
-            });
+            // Exclude system_admin from charts
+            if (userData.role !== 'system_admin') {
+                allUsers.push({
+                    id: doc.id,
+                    ...userData,
+                    createdAt: userData.createdAt?.toDate() || new Date(),
+                    lastLogin: userData.lastLogin?.toDate() || null
+                });
+            }
         });
-        
+
         // Create user growth chart
         createUserGrowthChart(allUsers);
-        
+
         // Create user role distribution chart
         createUserRoleChart(allUsers);
-        
+
     } catch (error) {
         console.error('❌ Error loading analytics charts:', error);
     }
@@ -1243,18 +1695,22 @@ function createUserRoleChart(users) {
         userRoleChartInstance = null;
     }
 
-    // Count users by role
+    // Count users by role (exclude system_admin and handler)
     const roleCounts = {
         farmer: 0,
         worker: 0,
-        sra: 0,
-        admin: 0
+        driver: 0,
+        sra: 0
     };
 
     users.forEach(user => {
-        const role = user.role || 'worker';
-        if (roleCounts.hasOwnProperty(role)) {
+        const role = user.role || 'farmer';
+        // Only count regular user roles, exclude system_admin and handler
+        if (role !== 'system_admin' && role !== 'handler' && roleCounts.hasOwnProperty(role)) {
             roleCounts[role]++;
+        } else if (role !== 'system_admin' && role !== 'handler' && !roleCounts.hasOwnProperty(role)) {
+            // Log unexpected roles for debugging
+            console.warn(`⚠️ Unexpected user role: ${role}`);
         }
     });
 
@@ -1262,7 +1718,7 @@ function createUserRoleChart(users) {
         role.charAt(0).toUpperCase() + role.slice(1) + 's'
     );
     const data = Object.values(roleCounts);
-    const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#ef4444'];
+    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6']; // green, blue, amber, purple
 
     userRoleChartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -1364,10 +1820,10 @@ async function fetchAndRenderSRA() {
             </span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-600">
-            <button class="text-[var(--cane-600)] hover:text-[var(--cane-700)] mx-2">
+            <button onclick="editUser('${doc.id}')" class="text-[var(--cane-600)] hover:text-[var(--cane-700)] mx-2" title="Edit SRA Officer">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="text-red-500 hover:text-red-700 mx-2" onclick="confirmDeleteSRA('${doc.id}', '${data.name}', '${data.email}')">
+            <button class="text-red-500 hover:text-red-700 mx-2" onclick="confirmDeleteSRA('${doc.id}', '${data.name}', '${data.email}')" title="Delete SRA Officer">
             <i class="fas fa-trash-alt"></i>
             </button>
           </td>

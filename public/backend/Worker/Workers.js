@@ -2,11 +2,53 @@
 import { showPopupMessage } from '../Common/ui-popup.js';
 import { auth, db } from '../Common/firebase-config.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import {
+    doc,
+    getDoc,
+    updateDoc,
+    collection,
+    query,
+    where,
+    getDocs,
+    onSnapshot,
+    orderBy,
+    limit,
+    Timestamp,
+    addDoc,
+    serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import {
+    handlePlantingCompletion,
+    handleBasalFertilizationCompletion,
+    handleMainFertilizationCompletion,
+    handleHarvestCompletion
+} from '../Handler/growth-tracker.js';
+
+// Helper function to get display-friendly task names
+function getTaskDisplayName(taskValue) {
+    const taskMap = {
+        'plowing': 'Plowing',
+        'harrowing': 'Harrowing',
+        'furrowing': 'Furrowing',
+        'planting': 'Planting (0 DAP)',
+        'basal_fertilizer': 'Basal Fertilizer (0–30 DAP)',
+        'main_fertilization': 'Main Fertilization (45–60 DAP)',
+        'spraying': 'Spraying',
+        'weeding': 'Weeding',
+        'irrigation': 'Irrigation',
+        'pest_control': 'Pest Control',
+        'harvesting': 'Harvesting',
+        'others': 'Others'
+    };
+    return taskMap[taskValue.toLowerCase()] || taskValue;
+}
+
 // Global variables
 let userType = 'worker';
 let hasDriverBadge = false;
 let currentSection = 'dashboard';
+let currentUserId = null;
+let unsubscribeListeners = [];
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -32,6 +74,9 @@ async function initAuthSession() {
                 return;
             }
 
+            // Store current user ID
+            currentUserId = user.uid;
+
             // Persist uid for other modules
             try { localStorage.setItem('userId', user.uid); } catch(_) {}
 
@@ -52,10 +97,15 @@ async function initAuthSession() {
                 try { localStorage.setItem('userEmail', user.email || ''); } catch(_) {}
 
                 // Update UI
-                const nameEls = document.querySelectorAll('#userName, #dropdownUserName');
+                const nameEls = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
                 nameEls.forEach(el => { if (el) el.textContent = display; });
                 const dropdownUserType = document.getElementById('dropdownUserType');
                 if (dropdownUserType) dropdownUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+                const sidebarUserType = document.getElementById('sidebarUserType');
+                if (sidebarUserType) sidebarUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+
+                // Load worker-specific data
+                await loadWorkerDashboardData();
 
             } catch (err) {
                 console.warn('Failed to load user profile:', err);
@@ -331,10 +381,627 @@ function navigateToSection(section) {
 }
 
 // Toggle notifications
-async function toggleNotifications() {
+function toggleNotifications() {
     console.log('Toggle notifications clicked');
-    // You can implement notification panel logic here
-    await showPopupMessage('Notifications feature will be implemented here', 'info');
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('hidden');
+    }
+}
+
+// Close notification dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    const dropdown = document.getElementById('notificationDropdown');
+    const notificationBtn = document.getElementById('notificationBtn');
+    if (dropdown && notificationBtn && !dropdown.contains(event.target) && !notificationBtn.contains(event.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
+
+// REQ-9: Load worker dashboard data
+async function loadWorkerDashboardData() {
+    if (!currentUserId) return;
+
+    try {
+        // Set up real-time listeners for worker data
+        setupWorkerFieldsListener();
+        setupWorkerTasksListener();
+        setupWorkerNotificationsListener();
+        setupRecentActivityListener();
+    } catch (error) {
+        console.error('Error loading worker dashboard data:', error);
+    }
+}
+
+// REQ-9: Query fields where user is in field.members OR user has assigned tasks
+async function setupWorkerFieldsListener() {
+    if (!currentUserId) return;
+
+    try {
+        console.log('🔍 Setting up worker fields listener for userId:', currentUserId);
+
+        const fieldIds = new Set();
+
+        // Method 1: Get fields from field_joins collection
+        const joinsRef = collection(db, 'field_joins');
+        const joinsQuery = query(
+            joinsRef,
+            where('userId', '==', currentUserId),
+            where('assignedAs', '==', 'worker'),
+            where('status', '==', 'approved')
+        );
+
+        const joinsSnapshot = await getDocs(joinsQuery);
+        console.log(`📋 Field joins found: ${joinsSnapshot.size}`);
+        joinsSnapshot.forEach((doc) => {
+            const fieldId = doc.data().fieldId;
+            if (fieldId) {
+                fieldIds.add(fieldId);
+                console.log(`  - Field from join: ${fieldId}`);
+            }
+        });
+
+        // Method 2: Query tasks assigned to this worker to find associated fields
+        const tasksRef = collection(db, 'tasks');
+        const tasksQuery = query(
+            tasksRef,
+            where('assignedTo', 'array-contains', currentUserId)
+        );
+
+        // Set up real-time listener for tasks
+        const unsubscribe = onSnapshot(tasksQuery, async (snapshot) => {
+            console.log(`🗺️ Tasks query for fields returned: ${snapshot.size} tasks`);
+
+            // Re-add field_joins fields (in case they changed)
+            const joinsSnapshot = await getDocs(joinsQuery);
+            fieldIds.clear();
+            joinsSnapshot.forEach((doc) => {
+                const fieldId = doc.data().fieldId;
+                if (fieldId) fieldIds.add(fieldId);
+            });
+
+            // Add fields from tasks
+            snapshot.forEach((doc) => {
+                const task = doc.data();
+                if (task.fieldId) {
+                    fieldIds.add(task.fieldId);
+                    console.log(`  - Field from task: ${task.fieldId}`);
+                }
+            });
+
+            console.log(`📊 Total unique fields: ${fieldIds.size}`);
+
+            // Update active fields count
+            const activeFieldsCount = fieldIds.size;
+            updateDashboardStat('activeFieldsCount', activeFieldsCount);
+
+            // Load and display field details
+            await loadFieldDetails(Array.from(fieldIds));
+        }, (error) => {
+            console.error('❌ Error in fields listener:', error);
+            console.error('Error details:', error.message, error.code);
+        });
+
+        unsubscribeListeners.push(unsubscribe);
+    } catch (error) {
+        console.error('❌ Error setting up fields listener:', error);
+        console.error('Error details:', error.message, error.code);
+    }
+}
+
+// Load field details for display
+async function loadFieldDetails(fieldIds) {
+    const fieldsListEl = document.getElementById('myFieldsList');
+    if (!fieldsListEl) return;
+
+    if (fieldIds.length === 0) {
+        fieldsListEl.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-map text-[var(--cane-400)] text-4xl mb-3"></i>
+                <p class="text-[var(--cane-600)]">No fields assigned yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        const fieldsHTML = [];
+
+        for (const fieldId of fieldIds) {
+            const fieldRef = doc(db, 'fields', fieldId);
+            const fieldSnap = await getDoc(fieldRef);
+
+            if (fieldSnap.exists()) {
+                const field = fieldSnap.data();
+                fieldsHTML.push(`
+                    <div class="p-4 border border-[var(--cane-200)] rounded-lg flex items-center justify-between hover:bg-[var(--cane-50)] transition-colors">
+                        <div>
+                            <p class="font-semibold text-[var(--cane-900)]">${escapeHtml(field.fieldName || 'Unknown Field')}</p>
+                            <p class="text-sm text-[var(--cane-600)]">Area: ${field.area || 'N/A'} hectares</p>
+                            <p class="text-sm text-[var(--cane-600)]">Variety: ${field.variety || 'N/A'}</p>
+                        </div>
+                        <button onclick="viewFieldTasks('${fieldId}')" class="btn-secondary px-3 py-1.5 rounded">
+                            <i class="fas fa-eye mr-1"></i> View Tasks
+                        </button>
+                    </div>
+                `);
+            }
+        }
+
+        fieldsListEl.innerHTML = fieldsHTML.join('');
+    } catch (error) {
+        console.error('Error loading field details:', error);
+        fieldsListEl.innerHTML = `
+            <div class="text-center py-8 text-red-600">
+                <i class="fas fa-exclamation-triangle text-2xl mb-3"></i>
+                <p>Error loading fields. Please refresh the page.</p>
+            </div>
+        `;
+    }
+}
+
+// REQ-9: Query tasks where assignedTo contains worker's userId
+async function setupWorkerTasksListener() {
+    if (!currentUserId) return;
+
+    try {
+        console.log('🔍 Setting up worker tasks listener for userId:', currentUserId);
+        const tasksRef = collection(db, 'tasks');
+        const tasksQuery = query(
+            tasksRef,
+            where('assignedTo', 'array-contains', currentUserId)
+        );
+
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            console.log(`📋 Worker tasks loaded: ${snapshot.size} tasks`);
+            const tasks = [];
+            const now = new Date();
+            const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+            snapshot.forEach((doc) => {
+                const task = doc.data();
+                task.id = doc.id;
+                tasks.push(task);
+                console.log(`  - Task: ${task.taskType}, Status: ${task.status}, Field: ${task.fieldId}`);
+            });
+
+            // Sort tasks by createdAt (client-side sorting to avoid index requirement)
+            tasks.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return timeB - timeA;
+            });
+
+            // Calculate statistics
+            const assignedTasksCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress' || !t.status).length;
+
+            // Upcoming tasks: tasks with deadline within next 7 days that are not done
+            const upcomingTasks = tasks.filter(t => {
+                // Must not be completed
+                if (t.status === 'done' || t.status === 'completed') return false;
+
+                // Use deadline field as per REQUIREMENTS.md
+                if (!t.deadline) return false;
+
+                const dateObj = t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline);
+                // Must be in the future and within 7 days from now
+                return dateObj >= now && dateObj <= sevenDaysFromNow;
+            });
+
+            console.log(`📊 Upcoming tasks calculation:`);
+            console.log(`   - Now: ${now.toLocaleString()}`);
+            console.log(`   - 7 days from now: ${sevenDaysFromNow.toLocaleString()}`);
+            console.log(`   - All tasks:`, tasks.map(t => ({
+                title: t.title || t.taskType || 'No title',
+                deadline: t.deadline ? (t.deadline.toDate ? t.deadline.toDate().toLocaleString() : t.deadline) : 'None',
+                status: t.status
+            })));
+            console.log(`   - Upcoming tasks found: ${upcomingTasks.length}`);
+
+            console.log(`📊 Stats: Assigned=${assignedTasksCount}, Upcoming=${upcomingTasks.length}`);
+
+            // Update dashboard stats
+            updateDashboardStat('assignedTasksCount', assignedTasksCount);
+            updateDashboardStat('upcomingTasksCount', upcomingTasks.length);
+
+            // Display tasks in My Tasks section
+            displayWorkerTasks(tasks);
+        }, (error) => {
+            console.error('❌ Error in tasks listener:', error);
+            console.error('Error details:', error.message, error.code);
+        });
+
+        unsubscribeListeners.push(unsubscribe);
+    } catch (error) {
+        console.error('❌ Error setting up tasks listener:', error);
+        console.error('Error details:', error.message, error.code);
+    }
+}
+
+// Display worker tasks
+function displayWorkerTasks(tasks) {
+    const tasksListEl = document.getElementById('myTasksList');
+    if (!tasksListEl) return;
+
+    // Get current filter
+    const filter = document.getElementById('taskFilter')?.value || 'all';
+
+    // Filter tasks based on selection
+    let filteredTasks = tasks;
+    if (filter === 'pending') {
+        filteredTasks = tasks.filter(t => t.status === 'pending');
+    } else if (filter === 'done') {
+        filteredTasks = tasks.filter(t => t.status === 'done');
+    }
+
+    if (filteredTasks.length === 0) {
+        tasksListEl.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-clipboard-list text-[var(--cane-400)] text-4xl mb-3"></i>
+                <p class="text-[var(--cane-600)]">No ${filter === 'all' ? '' : filter} tasks found.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const tasksHTML = filteredTasks.map(task => {
+        // Use deadline field as per REQUIREMENTS.md
+        const deadline = task.deadline ? (task.deadline.toDate ? task.deadline.toDate() : new Date(task.deadline)) : null;
+        const deadlineStr = deadline ? deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline';
+        const isPending = task.status === 'pending' || task.status === 'in_progress';
+        const isDone = task.status === 'done' || task.status === 'completed';
+        const statusColor = isDone ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+
+        // Get task title - try multiple fields
+        const taskTitle = task.title || task.taskType || task.name || 'Task';
+        const taskDescription = task.description || task.notes || task.details || 'No description provided';
+
+        return `
+            <div class="p-4 border border-gray-300 rounded-lg ${isDone ? 'bg-gray-50' : 'bg-white'} transition-colors">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-900 text-lg">${escapeHtml(taskTitle)}</h4>
+                        <p class="text-sm text-gray-600 mt-1">${escapeHtml(taskDescription)}</p>
+                    </div>
+                    <span class="px-3 py-1 text-xs font-semibold rounded-full ${statusColor} ml-3">
+                        ${isDone ? 'Completed' : 'Pending'}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between text-sm text-gray-600 mb-3">
+                    <span><i class="fas fa-calendar mr-2"></i>${deadlineStr}</span>
+                    ${task.fieldName ? '<span><i class="fas fa-map-marker-alt mr-2"></i>'+escapeHtml(task.fieldName)+'</span>' : ''}
+                </div>
+                ${isPending ? `
+                    <button onclick="markTaskAsDone('${task.id}')" class="w-full bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                        <i class="fas fa-check-circle mr-2"></i>Mark as Done
+                    </button>
+                ` : `
+                    <div class="text-center py-2 text-green-600 font-medium">
+                        <i class="fas fa-check-circle mr-2"></i>Task Completed
+                    </div>
+                `}
+            </div>
+        `;
+    }).join('');
+
+    tasksListEl.innerHTML = tasksHTML;
+}
+
+// REQ-9: Query notifications where userId matches and type is 'task_assigned' or 'task_deleted'
+async function setupWorkerNotificationsListener() {
+    if (!currentUserId) return;
+
+    try {
+        const notificationsRef = collection(db, 'notifications');
+        const notificationsQuery = query(
+            notificationsRef,
+            where('userId', '==', currentUserId),
+            orderBy('timestamp', 'desc'),
+            limit(25)
+        );
+
+        const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+            const notifications = [];
+            snapshot.forEach((doc) => {
+                notifications.push({ id: doc.id, ...doc.data() });
+            });
+
+            const unreadCount = notifications.filter(n => !n.read).length;
+
+            // Update notification badge
+            const notificationCountEl = document.getElementById('notificationCount');
+            if (notificationCountEl) {
+                if (unreadCount > 0) {
+                    notificationCountEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    notificationCountEl.classList.remove('hidden');
+                } else {
+                    notificationCountEl.classList.add('hidden');
+                }
+            }
+
+            // Render notifications in dropdown
+            renderWorkerNotifications(notifications);
+        }, (error) => {
+            console.error('Error in notifications listener:', error);
+        });
+
+        unsubscribeListeners.push(unsubscribe);
+    } catch (error) {
+        console.error('Error setting up notifications listener:', error);
+    }
+}
+
+// Render notifications in dropdown
+function renderWorkerNotifications(notifications) {
+    const notificationsList = document.getElementById('notificationsList');
+    if (!notificationsList) return;
+
+    if (notifications.length === 0) {
+        notificationsList.innerHTML = '<div class="p-4 text-sm text-gray-500 text-center">No notifications yet.</div>';
+        return;
+    }
+
+    notificationsList.innerHTML = notifications.map(notification => {
+        const isRead = notification.read === true;
+        const statusClass = isRead ? 'bg-gray-100' : 'bg-[var(--cane-50)]';
+        const meta = formatRelativeTime(notification.timestamp);
+        const message = notification.message || 'Notification';
+
+        return `
+            <button onclick="markWorkerNotificationRead('${notification.id}')" class="w-full text-left px-4 py-3 hover:bg-gray-50 focus:outline-none ${statusClass}">
+                <div class="flex items-start gap-2">
+                    <div class="mt-1 h-2 w-2 rounded-full ${isRead ? 'bg-gray-300' : 'bg-[var(--cane-600)]'}"></div>
+                    <div class="flex-1">
+                        <p class="text-sm text-[var(--cane-700)] leading-snug">${escapeHtml(message)}</p>
+                        <span class="text-xs text-[var(--cane-600)] mt-1 block">${meta}</span>
+                    </div>
+                </div>
+            </button>
+        `;
+    }).join('');
+}
+
+// Mark notification as read
+async function markWorkerNotificationRead(notificationId) {
+    try {
+        await updateDoc(doc(db, 'notifications', notificationId), {
+            read: true,
+            readAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+// Make function available globally
+window.markWorkerNotificationRead = markWorkerNotificationRead;
+
+// Mark task as done
+async function markTaskAsDone(taskId) {
+    try {
+        console.log(`Marking task ${taskId} as done...`);
+
+        // Get task details to notify handler
+        const taskRef = doc(db, 'tasks', taskId);
+        const taskSnap = await getDoc(taskRef);
+
+        if (!taskSnap.exists()) {
+            await showPopupMessage('Task not found', 'error');
+            return;
+        }
+
+        const task = taskSnap.data();
+
+        // Update task status
+        await updateDoc(taskRef, {
+            status: 'done',
+            completedAt: serverTimestamp(),
+            completedBy: currentUserId
+        });
+
+        // REQ-5: Trigger growth tracking if this is a planting or fertilization task
+        const fieldId = task.fieldId;
+        const handlerId = task.created_by || task.createdBy;
+
+        if (fieldId && handlerId) {
+            // Normalize task title: replace underscores with spaces and convert to lowercase
+            const taskTitle = (task.title || '').toLowerCase().replace(/_/g, ' ');
+
+            console.log(`📋 Worker marked task as done - Title: "${task.title}", Field: ${fieldId}`);
+
+            // Check if this is a planting task
+            if (taskTitle === 'planting' || taskTitle.includes('planting')) {
+                const variety = task.metadata?.variety || task.variety;
+                if (variety) {
+                    try {
+                        console.log(`🌱 Triggering planting completion for field ${fieldId} with variety ${variety}`);
+                        await handlePlantingCompletion(handlerId, fieldId, variety);
+                        console.log(`✅ Growth tracking initialized for field ${fieldId}`);
+                    } catch (error) {
+                        console.error('❌ Error triggering growth tracking:', error);
+                    }
+                }
+            }
+            // Check if this is basal fertilization
+            else if (taskTitle === 'basal fertilizer' || taskTitle.includes('basal')) {
+                try {
+                    console.log(`🌿 Triggering basal fertilization for field ${fieldId}`);
+                    await handleBasalFertilizationCompletion(handlerId, fieldId);
+                    console.log(`✅ Basal fertilization tracked for field ${fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error triggering basal fertilization:', error);
+                }
+            }
+            // Check if this is main fertilization
+            else if (taskTitle === 'main fertilization' || taskTitle.includes('main fertiliz')) {
+                try {
+                    console.log(`🌾 Triggering main fertilization for field ${fieldId}`);
+                    await handleMainFertilizationCompletion(handlerId, fieldId);
+                    console.log(`✅ Main fertilization tracked for field ${fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error triggering main fertilization:', error);
+                }
+            }
+            // Check if this is harvesting
+            else if (taskTitle === 'harvesting' || taskTitle.includes('harvest')) {
+                try {
+                    console.log(`🚜 Triggering harvest completion for field ${fieldId}`);
+                    const yieldData = task.metadata?.expected_yield || task.metadata?.actual_yield || null;
+                    await handleHarvestCompletion(handlerId, fieldId, new Date(), yieldData);
+                    console.log(`✅ Harvest completed and field finalized for ${fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error triggering harvest completion:', error);
+                }
+            }
+        }
+
+        // Notify handler (check both created_by and createdBy for compatibility)
+        if (handlerId) {
+            const { createNotification } = await import('../Common/notifications.js');
+            const workerName = localStorage.getItem('farmerName') || 'A worker';
+            const taskTitle = task.title || task.taskType || 'Task';
+            await createNotification(
+                handlerId,
+                `${workerName} completed task: ${taskTitle}`,
+                'task_completed',
+                taskId
+            );
+            console.log(`✅ Notification sent to handler ${handlerId}`);
+        } else {
+            console.warn('⚠️ No handler ID found (created_by field missing)');
+        }
+
+        await showPopupMessage('Task marked as done!', 'success');
+        console.log(`✅ Task ${taskId} marked as done`);
+
+    } catch (error) {
+        console.error('Error marking task as done:', error);
+        await showPopupMessage('Failed to mark task as done. Please try again.', 'error');
+    }
+}
+
+window.markTaskAsDone = markTaskAsDone;
+
+// REQ-9: Recent Activity feed (last 5 task updates)
+async function setupRecentActivityListener() {
+    if (!currentUserId) return;
+
+    try {
+        const tasksRef = collection(db, 'tasks');
+        const tasksQuery = query(
+            tasksRef,
+            where('assignedTo', 'array-contains', currentUserId),
+            orderBy('createdAt', 'desc'),
+            limit(5)
+        );
+
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            const activities = [];
+
+            snapshot.forEach((doc) => {
+                const task = doc.data();
+                task.id = doc.id;
+                activities.push(task);
+            });
+
+            console.log('📊 Recent Activity:', activities);
+            displayRecentActivity(activities);
+        }, (error) => {
+            console.error('Error in recent activity listener:', error);
+        });
+
+        unsubscribeListeners.push(unsubscribe);
+    } catch (error) {
+        console.error('Error setting up recent activity listener:', error);
+    }
+}
+
+// Display recent activity
+function displayRecentActivity(activities) {
+    const activityListEl = document.getElementById('recentActivityList');
+    if (!activityListEl) return;
+
+    if (activities.length === 0) {
+        activityListEl.innerHTML = `
+            <li class="py-3 text-center text-[var(--cane-600)]">
+                No recent activity
+            </li>
+        `;
+        return;
+    }
+
+    const activitiesHTML = activities.map(activity => {
+        const createdAt = activity.createdAt ? (activity.createdAt.toDate ? activity.createdAt.toDate() : new Date(activity.createdAt)) : new Date();
+        const timeAgo = getTimeAgo(createdAt);
+        const statusText = activity.status === 'done' ? 'completed' : 'assigned';
+        const taskTitle = activity.title || activity.taskType || activity.name || 'Task';
+
+        return `
+            <li class="py-2 flex items-start justify-between">
+                <span class="text-[var(--cane-800)]">
+                    <i class="fas fa-${activity.status === 'done' ? 'check-circle text-green-600' : 'circle text-yellow-600'} mr-2"></i>
+                    Task ${statusText}: ${escapeHtml(taskTitle)}
+                </span>
+                <span class="text-[var(--cane-600)] text-xs">${timeAgo}</span>
+            </li>
+        `;
+    }).join('');
+
+    activityListEl.innerHTML = activitiesHTML;
+}
+
+// Update dashboard stat
+function updateDashboardStat(elementId, value) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = value;
+    }
+}
+
+// Utility function to escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Format timestamp to relative time
+function formatRelativeTime(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Utility function to get time ago
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// View field tasks
+function viewFieldTasks(fieldId) {
+    // Navigate to tasks section and filter by field
+    showSection('my-tasks');
 }
 
 // Logout function
@@ -435,6 +1102,362 @@ function setupEventListeners() {
         }
         applyHeaderPadding();
     });
+
+    // Task filter change listener
+    const taskFilter = document.getElementById('taskFilter');
+    if (taskFilter) {
+        taskFilter.addEventListener('change', function() {
+            // Re-trigger task display with new filter
+            if (currentUserId) {
+                setupWorkerTasksListener();
+            }
+        });
+    }
+
+    // Work log button listener
+    const createWorkLogBtn = document.getElementById('createWorkLogBtn');
+    if (createWorkLogBtn) {
+        createWorkLogBtn.addEventListener('click', function() {
+            showWorkLogModal();
+        });
+    }
+
+    // Refresh notifications button
+    const refreshNotifications = document.getElementById('refreshNotifications');
+    if (refreshNotifications) {
+        refreshNotifications.addEventListener('click', function() {
+            setupWorkerNotificationsListener();
+        });
+    }
+
+    // Cleanup listeners on page unload
+    window.addEventListener('beforeunload', function() {
+        unsubscribeListeners.forEach(unsubscribe => {
+            try {
+                unsubscribe();
+            } catch (e) {
+                console.error('Error unsubscribing:', e);
+            }
+        });
+    });
+}
+
+// REQ-10: Show work log modal with enhanced fields
+async function showWorkLogModal() {
+    try {
+        // Get worker's fields from both field_joins and tasks
+        const fieldIds = new Set();
+
+        // Method 1: Get fields from field_joins
+        const joinsQuery = query(
+            collection(db, 'field_joins'),
+            where('userId', '==', currentUserId),
+            where('assignedAs', '==', 'worker'),
+            where('status', '==', 'approved')
+        );
+        const joinsSnap = await getDocs(joinsQuery);
+        joinsSnap.forEach(doc => {
+            const fieldId = doc.data().fieldId;
+            if (fieldId) fieldIds.add(fieldId);
+        });
+
+        // Method 2: Get fields from tasks
+        const tasksQuery = query(collection(db, 'tasks'), where('assignedTo', 'array-contains', currentUserId));
+        const tasksSnap = await getDocs(tasksQuery);
+        tasksSnap.forEach(doc => {
+            const task = doc.data();
+            if (task.fieldId) fieldIds.add(task.fieldId);
+        });
+
+        if (fieldIds.size === 0) {
+            await showPopupMessage('You need to be assigned to at least one field before logging work.', 'warning');
+            return;
+        }
+
+        // Load field details
+        let fieldsOptions = '<option value="">Select field...</option>';
+        for (const fieldId of fieldIds) {
+            const fieldRef = doc(db, 'fields', fieldId);
+            const fieldSnap = await getDoc(fieldRef);
+            if (fieldSnap.exists()) {
+                const field = fieldSnap.data();
+                fieldsOptions += `<option value="${fieldId}">${field.fieldName || field.field_name || field.name || 'Unknown Field'}</option>`;
+            }
+        }
+
+        const { value: formValues } = await Swal.fire({
+            title: 'Log Work Activity',
+            html: `
+                <div class="text-left space-y-4 max-h-[70vh] overflow-y-auto px-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Field *</label>
+                        <select id="swal-fieldId" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
+                            ${fieldsOptions}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1.5">Select the field where this work was done</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Task Type *</label>
+                        <select id="swal-taskType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
+                            <option value="">Select task...</option>
+                            <option value="plowing">Plowing</option>
+                            <option value="harrowing">Harrowing</option>
+                            <option value="furrowing">Furrowing</option>
+                            <option value="planting">Planting (0 DAP)</option>
+                            <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
+                            <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
+                            <option value="spraying">Spraying</option>
+                            <option value="weeding">Weeding</option>
+                            <option value="irrigation">Irrigation</option>
+                            <option value="pest_control">Pest Control</option>
+                            <option value="harvesting">Harvesting</option>
+                            <option value="others">Others</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
+                        <input type="date" id="swal-completionDate" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" max="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Worker Name</label>
+                        <input id="swal-workerName" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" placeholder="If logging from another device...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea id="swal-notes" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base resize-none" placeholder="Describe what you did..." rows="4"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Photo (optional)</label>
+                        <input type="file" id="swal-photo" accept="image/*" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-base file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                        <input type="checkbox" id="swal-verification" class="w-5 h-5 mt-0.5 accent-green-600">
+                        <label for="swal-verification" class="text-sm text-gray-700 font-medium">I verify this work was completed as described *</label>
+                    </div>
+                </div>
+            `,
+            width: '95%',
+            maxWidth: '650px',
+            padding: '2rem',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-check mr-2"></i>Log Work',
+            cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+            buttonsStyling: false,
+            customClass: {
+                popup: 'rounded-xl shadow-2xl',
+                title: 'text-2xl font-bold text-gray-800 mb-4',
+                htmlContainer: 'text-base',
+                confirmButton: 'px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md mr-2',
+                cancelButton: 'px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors shadow-md',
+                actions: 'gap-3 mt-6'
+            },
+            preConfirm: () => {
+                const fieldId = document.getElementById('swal-fieldId').value;
+                const taskType = document.getElementById('swal-taskType').value;
+                const completionDate = document.getElementById('swal-completionDate').value;
+                const workerName = document.getElementById('swal-workerName').value;
+                const notes = document.getElementById('swal-notes').value;
+                const photoFile = document.getElementById('swal-photo').files[0];
+                const verification = document.getElementById('swal-verification').checked;
+
+                if (!fieldId) {
+                    Swal.showValidationMessage('Field is required');
+                    return false;
+                }
+
+                if (!taskType) {
+                    Swal.showValidationMessage('Task type is required');
+                    return false;
+                }
+
+                if (!completionDate) {
+                    Swal.showValidationMessage('Completion date is required');
+                    return false;
+                }
+
+                if (!verification) {
+                    Swal.showValidationMessage('You must verify that this work was completed');
+                    return false;
+                }
+
+                return { fieldId, taskType, completionDate, workerName, notes, photoFile, verification };
+            }
+        });
+
+        if (formValues) {
+            await createWorkerLog(formValues);
+        }
+    } catch (error) {
+        console.error('Error showing work log modal:', error);
+        await showPopupMessage('Error showing work log form. Please try again.', 'error');
+    }
+}
+
+// REQ-10: Create worker log with enhanced fields
+async function createWorkerLog(logData) {
+    if (!currentUserId) {
+        await showPopupMessage('Please log in to create work logs', 'error');
+        return;
+    }
+
+    try {
+        // Show loading message
+        await showPopupMessage('Creating work log...', 'info', { autoClose: false });
+
+        let photoURL = '';
+
+        // Upload photo if provided
+        if (logData.photoFile) {
+            const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js');
+            const storage = getStorage();
+            const timestamp = Date.now();
+            const fileName = `worker_logs/${currentUserId}_${timestamp}_${logData.photoFile.name}`;
+            const storageRef = ref(storage, fileName);
+
+            await uploadBytes(storageRef, logData.photoFile);
+            photoURL = await getDownloadURL(storageRef);
+        }
+
+        // Convert completion date to Firestore timestamp
+        const completionDate = logData.completionDate ? Timestamp.fromDate(new Date(logData.completionDate)) : Timestamp.now();
+
+        // Get worker name (use provided name or get from user profile)
+        let workerName = logData.workerName || '';
+        if (!workerName) {
+            const userRef = doc(db, 'users', currentUserId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                workerName = userData.fullname || userData.name || userData.nickname || 'Unknown Worker';
+            }
+        }
+
+        // Get field name, handlerId, and variety for display and growth tracking
+        let fieldName = 'Unknown Field';
+        let handlerId = null;
+        let fieldVariety = null;
+        if (logData.fieldId) {
+            const fieldRef = doc(db, 'fields', logData.fieldId);
+            const fieldSnap = await getDoc(fieldRef);
+            if (fieldSnap.exists()) {
+                const fieldData = fieldSnap.data();
+                fieldName = fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field';
+                handlerId = fieldData.userId || fieldData.handlerId || null;
+                fieldVariety = fieldData.sugarcane_variety || fieldData.variety || null;
+            }
+        }
+
+        // Create task document with worker_log type
+        const taskData = {
+            taskType: 'worker_log',
+            title: getTaskDisplayName(logData.taskType), // Use display name as title
+            details: getTaskDisplayName(logData.taskType),
+            description: logData.notes || '',
+            notes: logData.notes || '',
+            photoURL: photoURL,
+            status: 'done',
+            assignedTo: [currentUserId],
+            createdAt: serverTimestamp(),
+            createdBy: currentUserId,
+            created_by: currentUserId, // For compatibility
+            completionDate: completionDate,
+            completedAt: serverTimestamp(),
+            workerName: workerName,
+            verified: logData.verification || false,
+            fieldId: logData.fieldId, // Include field ID
+            fieldName: fieldName, // Include field name for display
+            handlerId: handlerId, // Include handler ID so handlers can see this task
+            // REQ-5: Include variety for growth tracking trigger
+            variety: fieldVariety,
+            metadata: {
+                variety: fieldVariety
+            }
+        };
+
+        const taskRef = await addDoc(collection(db, 'tasks'), taskData);
+
+        // REQ-5: Trigger growth tracking for planting and fertilization tasks
+        // Normalize task title: replace underscores with spaces and convert to lowercase
+        const taskTitle = logData.taskType.toLowerCase().replace(/_/g, ' ');
+
+        console.log(`📋 Worker log created - Task: "${logData.taskType}", Field: ${logData.fieldId}, Variety: ${fieldVariety}`);
+
+        // Check if this is a planting task (handles: "planting", "Planting (0 DAP)")
+        if (taskTitle === 'planting' || taskTitle.includes('planting')) {
+            if (fieldVariety && handlerId && logData.fieldId) {
+                try {
+                    console.log(`🌱 Triggering planting completion for field ${logData.fieldId} with variety ${fieldVariety}`);
+                    await handlePlantingCompletion(handlerId, logData.fieldId, fieldVariety, completionDate.toDate());
+                    console.log(`✅ Growth tracking initialized successfully for field ${logData.fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error triggering growth tracking:', error);
+                    console.error('Error details:', error.message, error.stack);
+                }
+            } else {
+                console.warn(`⚠️ Missing data for growth tracking: variety=${fieldVariety}, handlerId=${handlerId}, fieldId=${logData.fieldId}`);
+            }
+        }
+        // Check if this is basal fertilization (handles: "basal_fertilizer", "basal fertilizer", "Basal Fertilizer (0–30 DAP)")
+        else if (taskTitle === 'basal fertilizer' || taskTitle.includes('basal')) {
+            if (handlerId && logData.fieldId) {
+                try {
+                    console.log(`🌿 Triggering basal fertilization for field ${logData.fieldId}`);
+                    await handleBasalFertilizationCompletion(handlerId, logData.fieldId, completionDate.toDate());
+                    console.log(`✅ Basal fertilization tracked successfully for field ${logData.fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error tracking basal fertilization:', error);
+                }
+            }
+        }
+        // Check if this is main fertilization (handles: "main_fertilization", "main fertilization", "Main Fertilization (45–60 DAP)")
+        else if (taskTitle === 'main fertilization' || taskTitle.includes('main fertiliz')) {
+            if (handlerId && logData.fieldId) {
+                try {
+                    console.log(`🌾 Triggering main fertilization for field ${logData.fieldId}`);
+                    await handleMainFertilizationCompletion(handlerId, logData.fieldId, completionDate.toDate());
+                    console.log(`✅ Main fertilization tracked successfully for field ${logData.fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error tracking main fertilization:', error);
+                }
+            }
+        }
+        // Check if this is harvesting (handles: "harvesting", "Harvesting")
+        else if (taskTitle === 'harvesting' || taskTitle.includes('harvest')) {
+            if (handlerId && logData.fieldId) {
+                try {
+                    console.log(`🚜 Triggering harvest completion for field ${logData.fieldId}`);
+                    // Check if yield was logged
+                    const yieldData = logData.yield || null;
+                    await handleHarvestCompletion(handlerId, logData.fieldId, completionDate.toDate(), yieldData);
+                    console.log(`✅ Harvest completed and field finalized for ${logData.fieldId}`);
+                } catch (error) {
+                    console.error('❌ Error completing harvest:', error);
+                }
+            }
+        }
+
+        // Notify handler if available
+        if (handlerId) {
+            const { createNotification } = await import('../Common/notifications.js');
+            await createNotification(
+                handlerId,
+                `${workerName} logged work: ${getTaskDisplayName(logData.taskType)}`,
+                'work_logged',
+                logData.fieldId
+            );
+        }
+
+        await showPopupMessage('Work log created successfully!', 'success', { autoClose: true, timeout: 2000 });
+    } catch (error) {
+        console.error('Error creating work log:', error);
+        await showPopupMessage('Failed to create work log. Please try again.', 'error');
+    }
+}
+
+// Stub function for header padding (not needed in current implementation)
+function applyHeaderPadding() {
+    // No-op - header padding handled by CSS
 }
 
 // Export functions for use in HTML
@@ -448,6 +1471,7 @@ window.toggleProfileDropdown = toggleProfileDropdown;
 window.toggleSidebarCollapse = toggleSidebarCollapse;
 window.toggleSubmenu = toggleSubmenu;
 window.applyHeaderPadding = applyHeaderPadding;
+window.viewFieldTasks = viewFieldTasks;
 
 // Worker custom logout popup controls (HTML lives in Workers.html)
 function showWorkerToast(msg){

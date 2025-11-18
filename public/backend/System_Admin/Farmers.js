@@ -137,17 +137,24 @@ async function loadFarmers() {
         }
         
         farmers = [];
-        
+        let systemAdminCount = 0;
+
         querySnapshot.forEach((doc) => {
             const farmerData = doc.data();
-            farmers.push({
-                id: doc.id,
-                ...farmerData,
-                createdAt: farmerData.createdAt?.toDate() || new Date(),
-                lastLogin: farmerData.lastLogin?.toDate() || null
-            });
+            // Exclude system_admin users from the accounts tab
+            if (farmerData.role !== 'system_admin') {
+                farmers.push({
+                    id: doc.id,
+                    ...farmerData,
+                    createdAt: farmerData.createdAt?.toDate() || new Date(),
+                    lastLogin: farmerData.lastLogin?.toDate() || null
+                });
+            } else {
+                systemAdminCount++;
+                console.log(`🚫 Filtered out system_admin: ${farmerData.email || doc.id}`);
+            }
         });
-        
+
         // Sort manually if orderBy failed
         if (farmers.length > 0 && !farmers[0].createdAt) {
             farmers.sort((a, b) => {
@@ -156,9 +163,9 @@ async function loadFarmers() {
                 return dateB - dateA; // Descending order
             });
         }
-        
+
         filteredFarmers = [...farmers];
-        console.log(`📊 Loaded ${farmers.length} users from users collection`);
+        console.log(`📊 Loaded ${farmers.length} users (excluded ${systemAdminCount} system_admin) from users collection`);
         
         // Debug: Log first few users to see what data we're getting
         if (farmers.length > 0) {
@@ -405,17 +412,24 @@ export function editFarmer(farmerId) {
 
 // Delete farmer function
 export async function deleteFarmer(farmerId) {
-    const ok = await showConfirm('Are you sure you want to delete this farmer? This action cannot be undone.');
-    if (!ok) return;
-    
+    // Use the global confirmDeleteUser if available (from dashboard.js)
+    if (typeof window.confirmDeleteUser === 'function') {
+        window.confirmDeleteUser(farmerId);
+        return;
+    }
+
+    // Fallback to showConfirm if confirmDeleteUser not available
     try {
+        const ok = await showConfirm('Are you sure you want to delete this user? This action cannot be undone.');
+        if (!ok) return;
+
         await deleteDoc(doc(db, 'users', farmerId));
-        showFarmersAlert('Farmer deleted successfully', 'success');
+        showFarmersAlert('User deleted successfully', 'success');
         loadFarmers();
-        
+
     } catch (error) {
-        console.error('❌ Error deleting farmer:', error);
-        showFarmersAlert('Failed to delete farmer', 'error');
+        console.error('❌ Error deleting user:', error);
+        showFarmersAlert('Failed to delete user', 'error');
     }
 }
 

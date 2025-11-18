@@ -140,8 +140,12 @@ function applyFilters() {
     return matchesSearch && matchesFilter;
   });
 
-  // Sort descending by submittedAt by default
-  filtered.sort((a,b) => (b.submittedAt?.seconds||0) - (a.submittedAt?.seconds||0));
+  // Sort descending by createdAt by default (fallback to submittedAt for old data)
+  filtered.sort((a,b) => {
+    const aTime = (a.createdAt?.seconds || a.submittedAt?.seconds || 0);
+    const bTime = (b.createdAt?.seconds || b.submittedAt?.seconds || 0);
+    return bTime - aTime;
+  });
 
   renderFields(filtered);
 }
@@ -208,18 +212,25 @@ function renderFields(list) {
 }
 
 
-function loadFields(uid) {
+async function loadFields(uid) {
   container.innerHTML = '';
   spinner.style.display = 'flex';
   allFields = [];
 
-  const ref = collection(db, 'field_applications', uid, 'fields');
-  const q = query(ref, orderBy('submittedAt', 'desc'));
+  // Query top-level fields collection by userId
+  const { where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+  const ref = collection(db, 'fields');
+  const q = query(ref, where('userId', '==', uid), orderBy('createdAt', 'desc'));
 
   // Real-time updates (no try/catch needed)
   onSnapshot(q, (snap) => {
     spinner.style.display = 'none';
-    allFields = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`📋 Loaded ${snap.docs.length} fields for user ${uid}`);
+    allFields = snap.docs.map(d => {
+      const data = { id: d.id, ...d.data() };
+      console.log(`  - Field: ${data.field_name || 'Unnamed'} | Status: ${data.status || 'N/A'}`);
+      return data;
+    });
     applyFilters(); // auto re-render when data changes
   }, (err) => {
     console.error('Error listening to snapshot:', err);
@@ -368,17 +379,18 @@ async function openEditModal(uid, fieldId, data){
   document.body.appendChild(modal);
   modal.querySelector('#closeModalBtn').onclick = ()=>modal.remove();
   modal.querySelector('#m_cancel').onclick = ()=>modal.remove();
-  
-    // 🔸 Hide Cancel if not editable
-    if (data.status !== 'to edit') {
-    modal.querySelector('#m_cancel').style.display = 'none';
-    // make X button background transparent
-    const closeBtn = modal.querySelector('#closeModalBtn');
-    closeBtn.classList.add('bg-transparent', 'hover:bg-black/10', 'rounded-full', 'transition');
-    }
 
   // populate
   const editable = data.status === 'to edit';
+
+  // 🔸 Hide Cancel and Save Changes buttons if not editable
+  if (!editable) {
+    modal.querySelector('#m_cancel').style.display = 'none';
+    modal.querySelector('#m_save').style.display = 'none';
+    // make X button background transparent
+    const closeBtn = modal.querySelector('#closeModalBtn');
+    closeBtn.classList.add('bg-transparent', 'hover:bg-black/10', 'rounded-full', 'transition');
+  }
   // Show policy agreement only if editable
   const policyNotice = modal.querySelector('#policyNotice');
   const policyCheck = modal.querySelector('#policyCheck');
