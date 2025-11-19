@@ -438,11 +438,11 @@ async function initNotifications(userId) {
                                 if (elReviewedToday) elReviewedToday.textContent = String(computeReviewedToday(snap.docs));
                             });
 
-                            // Active Fields: count reviewed and active fields from top-level 'fields' collection
-                            onSnapshot(query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active'])), (snap) => {
+                            // Active Fields: count reviewed, active, and harvested fields from top-level 'fields' collection
+                            onSnapshot(query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active', 'harvested'])), (snap) => {
                                 if (elActiveFields) {
                                     elActiveFields.textContent = String(snap.size);
-                                    console.log(`📊 Active Fields: ${snap.size} (reviewed and active)`);
+                                    console.log(`📊 Active Fields: ${snap.size} (reviewed, active, and harvested)`);
                                 }
                             });
                         } catch(_) {}
@@ -593,8 +593,8 @@ async function initNotifications(userId) {
                                         const { db } = await import('../Common/firebase-config.js');
                                         const { collection, onSnapshot, query, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
 
-                                        // Listen to reviewed and active fields in real-time (top-level collection)
-                                        const q = query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active']));
+                                        // Listen to reviewed, active, and harvested fields in real-time (top-level collection)
+                                        const q = query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active', 'harvested']));
 
                                         onSnapshot(q, async (snap) => {
                                             console.log('🗺️ Map: Real-time update triggered, processing fields...');

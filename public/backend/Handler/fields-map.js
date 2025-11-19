@@ -8,6 +8,7 @@ import { collection, query, where, onSnapshot,  doc,
   collectionGroup } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { openCreateTaskModal } from './create-task.js';
+import { handleRatooning, handleReplanting } from './growth-tracker.js';
 
 // Global variables for map and data
 let fieldsMap = null;
@@ -94,6 +95,12 @@ document.addEventListener('click', (e) => {
       badgeClass: 'bg-green-100',
       textClass: 'text-green-800',
       color: '#16a34a'
+    },
+    harvested: {
+      label: 'Harvested',
+      badgeClass: 'bg-purple-100',
+      textClass: 'text-purple-800',
+      color: '#9333ea'
     },
     'for certification': {
       label: 'For Certification',
@@ -362,12 +369,12 @@ document.addEventListener('click', (e) => {
 
       const createTopKey = (doc) => doc.data()?.sourceRef || doc.ref.path;
 
-      // --- Fetch top-level fields that belong to user (exclude only pending ones) ---
-      // Show both 'reviewed' and 'active' fields (active = has growth tracking)
+      // --- Fetch top-level fields that belong to user (exclude only pending/to edit) ---
+      // Show 'reviewed', 'active', and 'harvested' fields (handlers need to see harvested to start ratooning)
       const topQuery = query(
         collection(db, 'fields'),
         where('userId', '==', currentUserId),
-        where('status', 'in', ['reviewed', 'active'])
+        where('status', 'in', ['reviewed', 'active', 'harvested'])
       );
       topFieldsUnsub = onSnapshot(topQuery, (snapshot) => {
         console.log('📦 Top-level fields snapshot (reviewed) size:', snapshot.size);
@@ -671,14 +678,29 @@ window.viewFieldDetails = async function(fieldId) {
 </div>
 
 
-        <footer class="flex items-center justify-end gap-3 p-6 border-t">
-          <button id="fd_create_task_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-sm text-[var(--cane-800)] hover:bg-gray-50 transition">
-            <i class="fas fa-plus"></i>
-            Create Task
-          </button>
-          <button id="fd_close_btn" class="px-4 py-2 rounded-lg font-semibold bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white shadow-lg">
-            Close
-          </button>
+        <footer class="flex items-center justify-between gap-3 p-6 border-t">
+          <!-- Left side: Ratooning/Replanting buttons (only for harvested fields) -->
+          <div class="flex items-center gap-2 ${field.status !== 'harvested' ? 'invisible' : ''}" id="fd_harvest_actions">
+            <button id="fd_ratoon_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-purple-300 bg-purple-50 text-sm text-purple-700 hover:bg-purple-100 transition">
+              <i class="fas fa-seedling"></i>
+              Ratoon
+            </button>
+            <button id="fd_replant_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-green-300 bg-green-50 text-sm text-green-700 hover:bg-green-100 transition">
+              <i class="fas fa-redo"></i>
+              Replant
+            </button>
+          </div>
+
+          <!-- Right side: Create Task & Close -->
+          <div class="flex items-center gap-2">
+            <button id="fd_create_task_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-sm text-[var(--cane-800)] hover:bg-gray-50 transition">
+              <i class="fas fa-plus"></i>
+              Create Task
+            </button>
+            <button id="fd_close_btn" class="px-4 py-2 rounded-lg font-semibold bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white shadow-lg">
+              Close
+            </button>
+          </div>
         </footer>
       </section>
     `;
@@ -1024,6 +1046,78 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         alert('Unable to open Create Task modal. See console for details.');
       }
     });
+
+    // --- Ratooning button handler ---
+    modal.querySelector('#fd_ratoon_btn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (btn.disabled) return;
+
+      const confirmed = confirm(
+        `Start Ratooning Cycle?\n\n` +
+        `This will:\n` +
+        `• Reset the field to "Active" status\n` +
+        `• Start a new ratoon cycle (regrowth from existing roots)\n` +
+        `• Archive the previous harvest data\n` +
+        `• Reset growth tracking\n\n` +
+        `Ratoon start date will be set to today.\n\n` +
+        `Continue?`
+      );
+
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+      try {
+        const result = await handleRatooning(currentUserId, fieldId);
+        alert(`✅ Ratooning started successfully!\n\nRatoon Cycle: #${result.ratoonNumber}`);
+        modal.remove(); // Close modal
+        // Refresh the fields list
+        window.location.reload();
+      } catch (err) {
+        console.error('Ratooning failed:', err);
+        alert(`❌ Ratooning failed:\n\n${err.message}`);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-seedling"></i> Ratoon';
+      }
+    });
+
+    // --- Replanting button handler ---
+    modal.querySelector('#fd_replant_btn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (btn.disabled) return;
+
+      const confirmed = confirm(
+        `Start Replanting Cycle?\n\n` +
+        `This will:\n` +
+        `• Reset the field to "Active" status\n` +
+        `• Start a completely new planting cycle\n` +
+        `• Archive ALL previous data (including all ratoons)\n` +
+        `• Clear all growth tracking data\n` +
+        `• Reset fertilization dates\n\n` +
+        `Planting date will be set to today.\n\n` +
+        `Continue?`
+      );
+
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+      try {
+        const result = await handleReplanting(currentUserId, fieldId);
+        alert(`✅ Replanting started successfully!\n\nPlanting Cycle: #${result.plantingCycleNumber}`);
+        modal.remove(); // Close modal
+        // Refresh the fields list
+        window.location.reload();
+      } catch (err) {
+        console.error('Replanting failed:', err);
+        alert(`❌ Replanting failed:\n\n${err.message}`);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-redo"></i> Replant';
+      }
+    });
+
     modal.querySelector('#fieldDetailsBackdrop')?.addEventListener('click', (e) => {
       // close when clicking backdrop
       if (e.target.id === 'fieldDetailsBackdrop') modal.remove();

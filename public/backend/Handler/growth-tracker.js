@@ -468,6 +468,177 @@ export async function handleHarvestCompletion(userId, fieldId, harvestDate = new
 }
 
 /**
+ * Handle ratooning (regrowth from existing roots after harvest)
+ * Resets field to active status and clears growth data for new cycle
+ * @param {string} userId - User ID
+ * @param {string} fieldId - Field ID
+ * @param {Date} ratoonStartDate - Start date of ratooning (optional, defaults to today)
+ * @returns {Promise<{success: boolean, ratoonNumber: number}>}
+ */
+export async function handleRatooning(userId, fieldId, ratoonStartDate = new Date()) {
+  try {
+    console.log(`🌱 Starting ratooning for field ${fieldId}`);
+
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (!fieldSnap.exists()) {
+      throw new Error('Field not found');
+    }
+
+    const fieldData = fieldSnap.data();
+
+    // Validate field is harvested
+    if (fieldData.status !== 'harvested') {
+      throw new Error('Can only ratoon harvested fields');
+    }
+
+    // Increment ratoon cycle number
+    const ratoonNumber = (fieldData.ratoonNumber || 0) + 1;
+
+    // Archive previous cycle data
+    const archiveData = {
+      cycle: ratoonNumber - 1,
+      plantingDate: fieldData.plantingDate,
+      actualHarvestDate: fieldData.actualHarvestDate,
+      finalDAP: fieldData.finalDAP,
+      actualYield: fieldData.actualYield,
+      harvestTiming: fieldData.harvestTiming,
+      harvestedAt: fieldData.harvestedAt,
+      archivedAt: serverTimestamp()
+    };
+
+    // Reset field for new ratoon cycle
+    const updates = {
+      status: 'active',
+      plantingDate: Timestamp.fromDate(ratoonStartDate),
+      ratoonNumber: ratoonNumber,
+      currentGrowthStage: 'Ratoon Establishment (0-30 DAP)',
+      isRatoon: true,
+
+      // Archive previous cycle
+      [`growthHistory.cycle${ratoonNumber - 1}`]: archiveData,
+
+      // Clear harvest data for new cycle
+      actualHarvestDate: null,
+      finalDAP: null,
+      actualYield: null,
+      harvestTiming: null,
+      harvestTimingDays: null,
+      harvestedAt: null,
+
+      // Keep fertilization dates from previous cycle (optional, can be cleared)
+      // basalFertilizationDate: null,
+      // mainFertilizationDate: null,
+
+      ratoonedAt: serverTimestamp(),
+      lastUpdated: serverTimestamp()
+    };
+
+    await updateDoc(fieldRef, updates);
+
+    console.log(`✅ Ratooning completed for field ${fieldId}`);
+    console.log(`   Ratoon Number: ${ratoonNumber}`);
+    console.log(`   Start Date: ${ratoonStartDate.toLocaleDateString()}`);
+
+    return { success: true, ratoonNumber };
+
+  } catch (error) {
+    console.error('Error handling ratooning:', error);
+    throw error;
+  }
+}
+
+/**
+ * Handle replanting (complete new planting cycle after harvest)
+ * Resets field to active status and clears ALL growth data
+ * @param {string} userId - User ID
+ * @param {string} fieldId - Field ID
+ * @param {Date} newPlantingDate - New planting date
+ * @param {string} variety - Optional: New sugarcane variety
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function handleReplanting(userId, fieldId, newPlantingDate = new Date(), variety = null) {
+  try {
+    console.log(`🌾 Starting replanting for field ${fieldId}`);
+
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (!fieldSnap.exists()) {
+      throw new Error('Field not found');
+    }
+
+    const fieldData = fieldSnap.data();
+
+    // Validate field is harvested
+    if (fieldData.status !== 'harvested') {
+      throw new Error('Can only replant harvested fields');
+    }
+
+    // Increment planting cycle number
+    const plantingCycleNumber = (fieldData.plantingCycleNumber || 0) + 1;
+
+    // Archive previous cycle data (including all ratoons)
+    const archiveData = {
+      plantingCycle: plantingCycleNumber - 1,
+      plantingDate: fieldData.plantingDate,
+      actualHarvestDate: fieldData.actualHarvestDate,
+      finalDAP: fieldData.finalDAP,
+      actualYield: fieldData.actualYield,
+      ratoonNumber: fieldData.ratoonNumber || 0,
+      variety: fieldData.sugarcane_variety || fieldData.variety,
+      growthHistory: fieldData.growthHistory || {},
+      archivedAt: serverTimestamp()
+    };
+
+    // Complete reset for new planting cycle
+    const updates = {
+      status: 'active',
+      plantingDate: Timestamp.fromDate(newPlantingDate),
+      plantingCycleNumber: plantingCycleNumber,
+      currentGrowthStage: 'Germination (0-30 DAP)',
+      isRatoon: false,
+      ratoonNumber: 0,
+
+      // Archive previous planting cycle
+      [`plantingHistory.cycle${plantingCycleNumber - 1}`]: archiveData,
+
+      // Clear ALL growth data
+      actualHarvestDate: null,
+      finalDAP: null,
+      actualYield: null,
+      harvestTiming: null,
+      harvestTimingDays: null,
+      harvestedAt: null,
+      basalFertilizationDate: null,
+      mainFertilizationDate: null,
+      expectedHarvestDate: null,
+      growthHistory: {},
+
+      // Update variety if provided
+      ...(variety && { sugarcane_variety: variety }),
+
+      replantedAt: serverTimestamp(),
+      lastUpdated: serverTimestamp()
+    };
+
+    await updateDoc(fieldRef, updates);
+
+    console.log(`✅ Replanting completed for field ${fieldId}`);
+    console.log(`   Planting Cycle: ${plantingCycleNumber}`);
+    console.log(`   New Planting Date: ${newPlantingDate.toLocaleDateString()}`);
+    if (variety) console.log(`   New Variety: ${variety}`);
+
+    return { success: true, plantingCycleNumber };
+
+  } catch (error) {
+    console.error('Error handling replanting:', error);
+    throw error;
+  }
+}
+
+/**
  * Update growth stage for a field (should be called periodically or on field view)
  * @param {string} userId - User ID
  * @param {string} fieldId - Field ID

@@ -489,14 +489,14 @@ async function fetchApprovedFields() {
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"
     );
 
-    // ✅ Fetch from top-level fields collection
+    // ✅ Fetch from top-level fields collection (include harvested for transparency)
     const q = query(
       collection(db, "fields"),
-      where("status", "in", ["reviewed", "active"])
+      where("status", "in", ["reviewed", "active", "harvested"])
     );
     const snap = await getDocs(q);
     if (snap.empty) {
-      console.warn("⚠️ No reviewed or active fields found.");
+      console.warn("⚠️ No reviewed, active, or harvested fields found.");
       return [];
     }
 

@@ -324,7 +324,7 @@ async function fetchHandlerFields() {
     const q = query(
       collection(db, 'fields'),
       where('userId', '==', currentUserId),
-      where('status', 'in', ['reviewed', 'active'])
+      where('status', 'in', ['reviewed', 'active', 'harvested'])
     );
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...(d.data()||{}) }));

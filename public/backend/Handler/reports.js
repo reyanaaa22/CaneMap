@@ -269,7 +269,7 @@ export async function renderReportForm(reportType, containerId, prefillData = {}
       const fieldsQuery = query(
         collection(db, 'fields'),
         where('userId', '==', currentUserId),
-        where('status', 'in', ['reviewed', 'active'])
+        where('status', 'in', ['reviewed', 'active', 'harvested'])
       );
       const fieldsSnapshot = await getDocs(fieldsQuery);
 
