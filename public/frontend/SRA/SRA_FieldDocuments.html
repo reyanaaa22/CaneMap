@@ -7,16 +7,17 @@
     </div>
     <div>
       <select id="fieldDocsStatus" class="px-3 py-2 border border-[var(--cane-200)] rounded-lg text-sm">
-        <option value="all">All Status</option>
-        <option value="pending" selected>Pending Review</option>
-        <option value="to edit">To Edit</option>
+        <option value="needs_review" selected>⚠️ Needs Review</option>
+        <option value="pending">Pending Only</option>
+        <option value="to edit">To Edit Only</option>
         <option value="reviewed">Reviewed</option>
+        <option value="all">All Status</option>
       </select>
     </div>
   </div>
 
   <div class="inner-content-box rounded-lg">
-    <div id="fieldDocsSubtitle" class="border-b border-[var(--cane-200)] px-4 py-2 text-[var(--cane-800)] font-semibold">Pending Applications</div>
+    <div id="fieldDocsSubtitle" class="border-b border-[var(--cane-200)] px-4 py-2 text-[var(--cane-800)] font-semibold">⚠️ Applications Needing Review (Pending + To Edit)</div>
     <div id="fieldDocsDynamic" class="min-h-[120px]"></div>
   </div>
 </div>
@@ -38,10 +39,11 @@
       const updateSubtitle = () => {
         const filterValue = filterSelect.value;
         const subtitleMap = {
-          'all': 'All Applications',
-          'pending': 'Pending Applications',
-          'to edit': 'Applications To Edit',
-          'reviewed': 'Reviewed Applications'
+          'needs_review': '⚠️ Applications Needing Review (Pending + To Edit)',
+          'pending': 'Pending Applications Only',
+          'to edit': 'Applications To Edit Only',
+          'reviewed': 'Reviewed Applications',
+          'all': 'All Applications'
         };
         subtitle.textContent = subtitleMap[filterValue] || 'All Applications';
       };

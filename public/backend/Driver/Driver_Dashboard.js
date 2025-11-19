@@ -30,7 +30,32 @@ import { initializeDriverDashboard } from './driver-init.js';
   - Then load notifications and show unread count
 */
 
+// ✅ Prevent double initialization on auth state changes
+let isDriverInitialized = false;
+let currentDriverUserId = null;
+let notificationsUnsub = null;
+
 onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "../../frontend/Common/farmers_login.html";
+    return;
+  }
+
+  // ✅ Prevent re-initialization for same user (fixes double rendering in production)
+  if (isDriverInitialized && currentDriverUserId === user.uid) {
+    console.log('⏭️ Driver dashboard already initialized for this user, skipping...');
+    return;
+  }
+
+  // ✅ Cleanup listeners before re-initializing for a different user
+  if (isDriverInitialized && currentDriverUserId !== user.uid) {
+    console.log('🔄 User changed, cleaning up previous listeners...');
+    if (notificationsUnsub) notificationsUnsub();
+    isDriverInitialized = false;
+  }
+
+  currentDriverUserId = user.uid;
+
   // 🟢 1️⃣ Add instant blur overlay before anything else loads
   const preBlur = document.createElement("div");
   preBlur.id = "preBlurOverlay";
@@ -41,11 +66,6 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   `;
   document.body.appendChild(preBlur);
-
-  if (!user) {
-    window.location.href = "../../frontend/Common/farmers_login.html";
-    return;
-  }
 
   try {
     const userRef = doc(db, "users", user.uid);
@@ -113,6 +133,10 @@ onAuthStateChanged(auth, async (user) => {
 
     // ✅ Initialize dashboard after authentication
     initializeDriverDashboard();
+
+    // ✅ Mark as initialized
+    isDriverInitialized = true;
+    console.log('✅ Driver dashboard fully initialized');
   } catch (error) {
     console.error("❌ Error verifying role:", error);
   }
@@ -134,6 +158,9 @@ async function loadDriverNotifications(userId) {
   const notifList = document.getElementById("notificationsList");
   const badge = document.getElementById("notificationCount");
 
+  // ✅ Cleanup previous listener before creating a new one
+  if (notificationsUnsub) notificationsUnsub();
+
   try {
     const q = query(
       collection(db, "notifications"),
@@ -141,7 +168,7 @@ async function loadDriverNotifications(userId) {
       orderBy("timestamp", "desc")
     );
 
-    onSnapshot(q, (snapshot) => {
+    notificationsUnsub = onSnapshot(q, (snapshot) => {
       notifList.innerHTML = "";
       let unreadCount = 0;
 

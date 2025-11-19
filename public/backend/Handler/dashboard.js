@@ -796,8 +796,32 @@ function setupJoinRequestsListener(handlerId) {
   }
 }
 
+// ✅ Prevent double initialization on auth state changes
+let isInitialized = false;
+let currentUserId = null;
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) return (window.location.href = "../../frontend/Common/farmers_login.html");
+
+  // ✅ Prevent re-initialization for same user (fixes double rendering in production)
+  if (isInitialized && currentUserId === user.uid) {
+    console.log('⏭️ Dashboard already initialized for this user, skipping...');
+    return;
+  }
+
+  // ✅ Cleanup all listeners before re-initializing for a different user
+  if (isInitialized && currentUserId !== user.uid) {
+    console.log('🔄 User changed, cleaning up previous listeners...');
+    if (notificationsUnsub) notificationsUnsub();
+    if (activeWorkersUnsub) activeWorkersUnsub();
+    if (pendingTasksUnsub) pendingTasksUnsub();
+    if (taskWarningsUnsub) taskWarningsUnsub();
+    if (unsubscribeJoinRequests) unsubscribeJoinRequests();
+    if (tasksUnsubscribe) tasksUnsubscribe();
+    isInitialized = false;
+  }
+
+  currentUserId = user.uid;
 
   // ✅ SECURITY: Verify user has handler role before allowing access
   try {
@@ -841,6 +865,10 @@ onAuthStateChanged(auth, async (user) => {
 
   // REQ-4: Initialize tasks section
   initializeTasksSection(user.uid);
+
+  // ✅ Mark as initialized
+  isInitialized = true;
+  console.log('✅ Dashboard fully initialized');
 });
 
 // Add refresh button event listener for join requests

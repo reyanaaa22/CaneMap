@@ -169,9 +169,16 @@ for (const app of allFields) {
 
   // Optional: filter by status
   let filtered = allFields;
-    if (status === 'pending') filtered = allFields.filter((a) => a.status === 'pending');
-    if (status === 'to edit') filtered = allFields.filter((a) => a.status === 'to edit');
-    if (status === 'reviewed') filtered = allFields.filter((a) => a.status === 'reviewed');
+    if (status === 'needs_review') {
+      // ✅ NEW: Show both 'pending' and 'to edit' - all fields needing SRA attention
+      filtered = allFields.filter((a) => a.status === 'pending' || a.status === 'to edit');
+    } else if (status === 'pending') {
+      filtered = allFields.filter((a) => a.status === 'pending');
+    } else if (status === 'to edit') {
+      filtered = allFields.filter((a) => a.status === 'to edit');
+    } else if (status === 'reviewed') {
+      filtered = allFields.filter((a) => a.status === 'reviewed');
+    }
 
   // Sort newest first
   filtered.sort((a, b) => {
@@ -675,9 +682,17 @@ let isRendering = false; // Prevent concurrent renders
 
 function startRealtimeUpdates(status = 'all') {
   if (unsubscribeListener) unsubscribeListener(); // stop old listener
-  const q = status === 'all'
-    ? collection(db, 'fields')
-    : query(collection(db, 'fields'), where('status', '==', status));
+
+  // ✅ Build query based on filter
+  let q;
+  if (status === 'all') {
+    q = collection(db, 'fields');
+  } else if (status === 'needs_review') {
+    // ✅ NEW: Combine 'pending' and 'to edit' - fields needing SRA attention
+    q = query(collection(db, 'fields'), where('status', 'in', ['pending', 'to edit']));
+  } else {
+    q = query(collection(db, 'fields'), where('status', '==', status));
+  }
 
   unsubscribeListener = onSnapshot(q, async (snapshot) => {
     // ✅ Prevent concurrent renders that could cause duplicates
@@ -688,7 +703,8 @@ function startRealtimeUpdates(status = 'all') {
     isRendering = true;
     try {
       console.log(`🔄 Real-time update detected: ${snapshot.size} fields with status "${status}"`);
-      await render(status);
+      // ✅ FIX: Use snapshot data directly instead of fetching again
+      await renderFromSnapshot(snapshot);
     } catch (error) {
       console.error('❌ Render failed:', error);
     } finally {
@@ -699,7 +715,97 @@ function startRealtimeUpdates(status = 'all') {
   });
 }
 
-// Render the list into container #fieldDocsDynamic
+// ✅ NEW: Render directly from snapshot data (prevents double fetching)
+async function renderFromSnapshot(snapshot) {
+  const container = document.getElementById('fieldDocsDynamic');
+  if (!container) {
+    console.warn('⚠️ Container #fieldDocsDynamic not found');
+    return;
+  }
+
+  // ✅ Clear container completely to prevent duplicates
+  container.innerHTML = '';
+
+  // ✅ Convert snapshot docs to app objects (same format as fetchApplications)
+  const normalize = (d) => {
+    const raw = d.data();
+    const validFront = pickFirst(raw, ['validFrontUrl', 'valid_id_front', 'valid_front', 'front_id']);
+    const validBack = pickFirst(raw, ['validBackUrl', 'valid_id_back', 'valid_back', 'back_id']);
+    const selfie = pickFirst(raw, ['selfieUrl', 'selfie_with_id', 'selfie_id']);
+    const brgyCert = pickFirst(raw, ['barangay_certification', 'barangay_certificate', 'barangay_certification_url', 'barangay_certificate_url', 'barangayCertUrl', 'brgyCertUrl', 'brgy_certificate', 'barangayCert']);
+    const landTitle = pickFirst(raw, ['land_title', 'land_title_url', 'landTitleUrl', 'land_titleURL', 'landTitle']);
+
+    return {
+      id: d.id,
+      docRef: d.ref,
+      path: d.ref.path,
+      raw,
+      applicantName: pickFirst(raw, ['applicantName', 'requestedBy', 'userId', 'requester']) || '—',
+      barangay: pickFirst(raw, ['barangay', 'location']) || '—',
+      fieldName: pickFirst(raw, ['field_name', 'fieldName']) || '—',
+      terrain: pickFirst(raw, ['terrain_type', 'terrain']) || '—',
+      variety: pickFirst(raw, ['sugarcane_variety', 'variety']) || '—',
+      street: pickFirst(raw, ['street']) || '—',
+      size: pickFirst(raw, ['field_size', 'size', 'fieldSize']) || '—',
+      lat: pickFirst(raw, ['latitude', 'lat']),
+      lng: pickFirst(raw, ['longitude', 'lng']),
+      status: pickFirst(raw, ['status']) || 'pending',
+      createdAt: pickFirst(raw, ['submittedAt', 'createdAt']),
+      images: { validFront, validBack, selfie, brgyCert, landTitle }
+    };
+  };
+
+  let apps = snapshot.docs.map(normalize);
+
+  // Enrich with user names
+  const userCache = {};
+  for (const app of apps) {
+    let possibleUid = app.raw.userId || app.raw.requestedBy || null;
+    if (app.applicantName && app.applicantName.length < 25 && !app.applicantName.includes(' ') && !app.applicantName.includes('@')) {
+      possibleUid = app.applicantName;
+    }
+    if (possibleUid) {
+      if (userCache[possibleUid]) {
+        app.applicantName = userCache[possibleUid];
+        continue;
+      }
+      try {
+        const userRef = doc(db, 'users', possibleUid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const displayName = userData.name || userData.fullName || userData.displayName || userData.email || possibleUid;
+          app.applicantName = displayName;
+          userCache[possibleUid] = displayName;
+        }
+      } catch (err) {
+        console.warn('User lookup failed for', possibleUid, err);
+      }
+    }
+  }
+
+  // Sort newest first
+  apps.sort((a, b) => {
+    const t1 = a.createdAt?.seconds || 0;
+    const t2 = b.createdAt?.seconds || 0;
+    return t2 - t1;
+  });
+
+  console.log(`📋 Rendering ${apps.length} applications from snapshot`);
+
+  if (apps.length === 0) {
+    container.appendChild(h('div', 'px-4 py-6 text-[var(--cane-700)] text-sm', 'No applications yet.'));
+    return;
+  }
+
+  const list = h('div', 'divide-y divide-[var(--cane-200)]');
+  for (const app of apps) list.appendChild(buildItem(app));
+  container.appendChild(list);
+
+  console.log(`✅ Render complete: ${apps.length} items displayed`);
+}
+
+// Render the list into container #fieldDocsDynamic (kept for initial render only)
 async function render(status = 'all') {
   const container = document.getElementById('fieldDocsDynamic');
   if (!container) {
@@ -811,10 +917,11 @@ function updateSubtitle(filterValue) {
   if (!subtitle) return;
 
   const subtitleMap = {
-    'all': 'All Applications',
-    'pending': 'Pending Applications',
-    'to edit': 'Applications To Edit',
-    'reviewed': 'Reviewed Applications'
+    'needs_review': '⚠️ Applications Needing Review (Pending + To Edit)',
+    'pending': 'Pending Applications Only',
+    'to edit': 'Applications To Edit Only',
+    'reviewed': 'Reviewed Applications',
+    'all': 'All Applications'
   };
 
   subtitle.textContent = subtitleMap[filterValue] || 'All Applications';
@@ -851,10 +958,10 @@ export const SRAReview = {
         startRealtimeUpdates(val);
       });
     }
-    // 🔥 Default to 'pending' to show only fields needing review
-    updateSubtitle('pending');
-    await render('pending');
-    startRealtimeUpdates('pending'); // 🟢 Live listener starts
+    // ✅ Default to 'needs_review' to show ALL fields needing SRA attention (pending + to edit)
+    updateSubtitle('needs_review');
+    await render('needs_review');
+    startRealtimeUpdates('needs_review'); // 🟢 Live listener starts
   }
 };
 
