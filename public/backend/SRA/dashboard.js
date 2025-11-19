@@ -143,11 +143,12 @@ async function initNotifications(userId) {
     );
 
     // Query 2: Broadcast notifications for SRA role
+    // NOTE: No orderBy to avoid requiring composite index (role + timestamp)
+    // Sorting is done client-side in mergeAndRender() function below
     const broadcastQuery = query(
       notificationsRef,
       where("role", "==", "sra"),
-      orderBy("timestamp", "desc"),
-      limit(25)
+      limit(50) // Increased limit since we filter and sort client-side
     );
 
     // Subscribe to personal notifications

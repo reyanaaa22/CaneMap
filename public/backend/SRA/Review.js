@@ -371,7 +371,7 @@ sendRemarksBtn.addEventListener('click', async () => {
 
         confirm.remove();
         showSuccessPopup('Remarks Sent', 'Status updated to "To Edit".');
-        await render();
+        // ✅ Don't manually re-render - the onSnapshot listener will handle it automatically
       } catch (err) {
         console.error('Send remark failed:', err);
         showErrorPopup('Failed to send remarks. Please check your connection or permissions.');
@@ -566,10 +566,9 @@ async function updateStatus(appOrId, status) {
       }
     }
 
-    // Re-render list with current filter (if present)
-    const statusSelect = document.getElementById('fieldDocsStatus');
-    const current = statusSelect && statusSelect.value ? statusSelect.value : 'all';
-    await render(current);
+    // ✅ Don't manually re-render - the onSnapshot listener will handle it automatically
+    // This prevents duplicate rendering and race conditions
+    console.log(`✅ Field status updated successfully. Real-time listener will refresh the list.`);
 
   } catch (e) {
     console.error(e);
@@ -672,6 +671,7 @@ function buildItem(app) {
 
 
 let unsubscribeListener = null;
+let isRendering = false; // Prevent concurrent renders
 
 function startRealtimeUpdates(status = 'all') {
   if (unsubscribeListener) unsubscribeListener(); // stop old listener
@@ -679,24 +679,51 @@ function startRealtimeUpdates(status = 'all') {
     ? collection(db, 'fields')
     : query(collection(db, 'fields'), where('status', '==', status));
 
-  unsubscribeListener = onSnapshot(q, async () => {
-    await render(status);
+  unsubscribeListener = onSnapshot(q, async (snapshot) => {
+    // ✅ Prevent concurrent renders that could cause duplicates
+    if (isRendering) {
+      console.log('⏳ Render already in progress, skipping...');
+      return;
+    }
+    isRendering = true;
+    try {
+      console.log(`🔄 Real-time update detected: ${snapshot.size} fields with status "${status}"`);
+      await render(status);
+    } catch (error) {
+      console.error('❌ Render failed:', error);
+    } finally {
+      isRendering = false;
+    }
+  }, (error) => {
+    console.error('❌ Real-time listener error:', error);
   });
 }
 
 // Render the list into container #fieldDocsDynamic
 async function render(status = 'all') {
   const container = document.getElementById('fieldDocsDynamic');
-  if (!container) return;
+  if (!container) {
+    console.warn('⚠️ Container #fieldDocsDynamic not found');
+    return;
+  }
+
+  // ✅ Clear container completely to prevent duplicates
   container.innerHTML = '';
+
   const list = h('div', 'divide-y divide-[var(--cane-200)]');
   const apps = await fetchApplications(status);
+
+  console.log(`📋 Rendering ${apps.length} applications with status: ${status}`);
+
   if (apps.length === 0) {
     container.appendChild(h('div', 'px-4 py-6 text-[var(--cane-700)] text-sm', 'No applications yet.'));
     return;
   }
+
   for (const app of apps) list.appendChild(buildItem(app));
   container.appendChild(list);
+
+  console.log(`✅ Render complete: ${apps.length} items displayed`);
 }
 
 // --- Reusable confirmation modal ---
@@ -824,9 +851,10 @@ export const SRAReview = {
         startRealtimeUpdates(val);
       });
     }
-    updateSubtitle('all'); // 🔥 Set initial subtitle
-    await render('all');
-    startRealtimeUpdates('all'); // 🟢 Live listener starts
+    // 🔥 Default to 'pending' to show only fields needing review
+    updateSubtitle('pending');
+    await render('pending');
+    startRealtimeUpdates('pending'); // 🟢 Live listener starts
   }
 };
 

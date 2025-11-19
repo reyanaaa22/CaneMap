@@ -49,6 +49,9 @@ let hasDriverBadge = false;
 let currentSection = 'dashboard';
 let currentUserId = null;
 let unsubscribeListeners = [];
+let currentTasks = []; // ✅ Store current tasks data for filter re-rendering
+let tasksListenerUnsubscribe = null; // ✅ Track tasks listener separately
+let isRenderingTasks = false; // ✅ Prevent concurrent task renders
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -552,66 +555,89 @@ async function setupWorkerTasksListener() {
             where('assignedTo', 'array-contains', currentUserId)
         );
 
-        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            console.log(`📋 Worker tasks loaded: ${snapshot.size} tasks`);
-            const tasks = [];
-            const now = new Date();
-            const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        // ✅ Unsubscribe old listener if it exists
+        if (tasksListenerUnsubscribe) {
+            console.log('🔄 Stopping old tasks listener before creating new one');
+            tasksListenerUnsubscribe();
+        }
 
-            snapshot.forEach((doc) => {
-                const task = doc.data();
-                task.id = doc.id;
-                tasks.push(task);
-                console.log(`  - Task: ${task.taskType}, Status: ${task.status}, Field: ${task.fieldId}`);
-            });
+        tasksListenerUnsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            // ✅ Prevent concurrent renders
+            if (isRenderingTasks) {
+                console.log('⏳ Tasks render already in progress, skipping...');
+                return;
+            }
+            isRenderingTasks = true;
 
-            // Sort tasks by createdAt (client-side sorting to avoid index requirement)
-            tasks.sort((a, b) => {
-                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-                return timeB - timeA;
-            });
+            try {
+                console.log(`📋 Worker tasks loaded: ${snapshot.size} tasks`);
+                const tasks = [];
+                const now = new Date();
+                const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-            // Calculate statistics
-            const assignedTasksCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress' || !t.status).length;
+                snapshot.forEach((doc) => {
+                    const task = doc.data();
+                    task.id = doc.id;
+                    tasks.push(task);
+                    console.log(`  - Task: ${task.taskType}, Status: ${task.status}, Field: ${task.fieldId}`);
+                });
 
-            // Upcoming tasks: tasks with deadline within next 7 days that are not done
-            const upcomingTasks = tasks.filter(t => {
-                // Must not be completed
-                if (t.status === 'done' || t.status === 'completed') return false;
+                // Sort tasks by createdAt (client-side sorting to avoid index requirement)
+                tasks.sort((a, b) => {
+                    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                    return timeB - timeA;
+                });
 
-                // Use deadline field as per REQUIREMENTS.md
-                if (!t.deadline) return false;
+                // ✅ Store tasks globally for filter re-rendering
+                currentTasks = tasks;
 
-                const dateObj = t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline);
-                // Must be in the future and within 7 days from now
-                return dateObj >= now && dateObj <= sevenDaysFromNow;
-            });
+                // Calculate statistics
+                const assignedTasksCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress' || !t.status).length;
 
-            console.log(`📊 Upcoming tasks calculation:`);
-            console.log(`   - Now: ${now.toLocaleString()}`);
-            console.log(`   - 7 days from now: ${sevenDaysFromNow.toLocaleString()}`);
-            console.log(`   - All tasks:`, tasks.map(t => ({
-                title: t.title || t.taskType || 'No title',
-                deadline: t.deadline ? (t.deadline.toDate ? t.deadline.toDate().toLocaleString() : t.deadline) : 'None',
-                status: t.status
-            })));
-            console.log(`   - Upcoming tasks found: ${upcomingTasks.length}`);
+                // Upcoming tasks: tasks with deadline within next 7 days that are not done
+                const upcomingTasks = tasks.filter(t => {
+                    // Must not be completed
+                    if (t.status === 'done' || t.status === 'completed') return false;
 
-            console.log(`📊 Stats: Assigned=${assignedTasksCount}, Upcoming=${upcomingTasks.length}`);
+                    // Use deadline field as per REQUIREMENTS.md
+                    if (!t.deadline) return false;
 
-            // Update dashboard stats
-            updateDashboardStat('assignedTasksCount', assignedTasksCount);
-            updateDashboardStat('upcomingTasksCount', upcomingTasks.length);
+                    const dateObj = t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline);
+                    // Must be in the future and within 7 days from now
+                    return dateObj >= now && dateObj <= sevenDaysFromNow;
+                });
 
-            // Display tasks in My Tasks section
-            displayWorkerTasks(tasks);
+                console.log(`📊 Upcoming tasks calculation:`);
+                console.log(`   - Now: ${now.toLocaleString()}`);
+                console.log(`   - 7 days from now: ${sevenDaysFromNow.toLocaleString()}`);
+                console.log(`   - All tasks:`, tasks.map(t => ({
+                    title: t.title || t.taskType || 'No title',
+                    deadline: t.deadline ? (t.deadline.toDate ? t.deadline.toDate().toLocaleString() : t.deadline) : 'None',
+                    status: t.status
+                })));
+                console.log(`   - Upcoming tasks found: ${upcomingTasks.length}`);
+
+                console.log(`📊 Stats: Assigned=${assignedTasksCount}, Upcoming=${upcomingTasks.length}`);
+
+                // Update dashboard stats
+                updateDashboardStat('assignedTasksCount', assignedTasksCount);
+                updateDashboardStat('upcomingTasksCount', upcomingTasks.length);
+
+                // Display tasks in My Tasks section
+                displayWorkerTasks(tasks);
+            } catch (error) {
+                console.error('❌ Error processing tasks snapshot:', error);
+            } finally {
+                isRenderingTasks = false;
+            }
         }, (error) => {
             console.error('❌ Error in tasks listener:', error);
             console.error('Error details:', error.message, error.code);
+            isRenderingTasks = false;
         });
 
-        unsubscribeListeners.push(unsubscribe);
+        unsubscribeListeners.push(tasksListenerUnsubscribe);
     } catch (error) {
         console.error('❌ Error setting up tasks listener:', error);
         console.error('Error details:', error.message, error.code);
@@ -752,7 +778,7 @@ function renderWorkerNotifications(notifications) {
                 <div class="flex items-start gap-2">
                     <div class="mt-1 h-2 w-2 rounded-full ${isRead ? 'bg-gray-300' : 'bg-[var(--cane-600)]'}"></div>
                     <div class="flex-1">
-                        <p class="text-sm text-[var(--cane-700)] leading-snug">${escapeHtml(message)}</p>
+                        <p class="text-sm text-[var(--cane-700)] leading-snug">${message}</p>
                         <span class="text-xs text-[var(--cane-600)] mt-1 block">${meta}</span>
                     </div>
                 </div>
@@ -1107,10 +1133,9 @@ function setupEventListeners() {
     const taskFilter = document.getElementById('taskFilter');
     if (taskFilter) {
         taskFilter.addEventListener('change', function() {
-            // Re-trigger task display with new filter
-            if (currentUserId) {
-                setupWorkerTasksListener();
-            }
+            // ✅ Don't create new listener - just re-render with current data
+            console.log(`🔄 Filter changed to: ${taskFilter.value}`);
+            displayWorkerTasks(currentTasks);
         });
     }
 

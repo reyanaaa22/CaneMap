@@ -1757,7 +1757,7 @@ async function fetchAndRenderSRA() {
 
   tableBody.innerHTML = `
     <tr>
-      <td colspan="4" class="px-6 py-10">
+      <td colspan="3" class="px-6 py-10">
         <div class="flex flex-col items-center justify-center text-center text-gray-500">
           <i class="fas fa-spinner fa-spin text-2xl mb-2 text-gray-400"></i>
           <p>Loading SRA officers...</p>
@@ -1774,7 +1774,7 @@ async function fetchAndRenderSRA() {
     if (snap.empty) {
       tableBody.innerHTML = `
         <tr>
-          <td colspan="4" class="px-6 py-10 text-center text-gray-400">
+          <td colspan="3" class="px-6 py-10 text-center text-gray-400">
             <i class="fas fa-user-tie text-3xl mb-2"></i>
             <p>No SRA officers found.</p>
           </td>
@@ -1786,17 +1786,25 @@ async function fetchAndRenderSRA() {
     let html = "";
     snap.forEach((doc) => {
       const data = doc.data();
-      const statusColor =
-        data.status === "active"
-          ? "bg-green-100 text-green-700"
-          : data.status === "pending"
-          ? "bg-yellow-100 text-yellow-700"
-          : "bg-gray-100 text-gray-700";
 
-      const verifiedText = data.emailVerified ? "Verified" : "Pending";
-      const verifiedColor = data.emailVerified
-        ? "text-green-600"
-        : "text-yellow-600";
+      // ✅ Combine account status and email verification into one meaningful status
+      let statusBadge = '';
+      let statusText = '';
+
+      if (data.emailVerified) {
+        // Email is verified - check account status
+        if (data.status === 'active') {
+          statusBadge = 'bg-green-100 text-green-700';
+          statusText = '<i class="fas fa-check-circle mr-1"></i>Active & Verified';
+        } else {
+          statusBadge = 'bg-blue-100 text-blue-700';
+          statusText = '<i class="fas fa-check mr-1"></i>Verified';
+        }
+      } else {
+        // Email not verified
+        statusBadge = 'bg-yellow-100 text-yellow-700';
+        statusText = '<i class="fas fa-clock mr-1"></i>Pending Verification';
+      }
 
       html += `
         <tr class="hover:bg-gray-50 transition">
@@ -1812,11 +1820,8 @@ async function fetchAndRenderSRA() {
             </div>
           </td>
           <td class="px-6 py-4 text-sm">
-            <span class="${verifiedColor}">${verifiedText}</span>
-          </td>
-          <td class="px-6 py-4 text-sm">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
-              ${data.status || "inactive"}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge}">
+              ${statusText}
             </span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-600">
@@ -1836,7 +1841,7 @@ async function fetchAndRenderSRA() {
     console.error("Error fetching SRA officers:", err);
     tableBody.innerHTML = `
       <tr>
-        <td colspan="4" class="px-6 py-10 text-center text-red-600">
+        <td colspan="3" class="px-6 py-10 text-center text-red-600">
           Failed to load data. Please check your Firebase rules or network.
         </td>
       </tr>
