@@ -169,8 +169,11 @@ for (const app of allFields) {
 
   // Optional: filter by status
   let filtered = allFields;
-    if (status === 'needs_review') {
-      // ✅ NEW: Show both 'pending' and 'to edit' - all fields needing SRA attention
+    if (status === 'all') {
+      // ✅ Exclude 'active' and 'harvested' fields - they're operational/completed fields, not for SRA review
+      filtered = allFields.filter((a) => a.status !== 'active' && a.status !== 'harvested');
+    } else if (status === 'needs_review') {
+      // ✅ Show 'pending' and 'to edit' ONLY - these need SRA attention
       filtered = allFields.filter((a) => a.status === 'pending' || a.status === 'to edit');
     } else if (status === 'pending') {
       filtered = allFields.filter((a) => a.status === 'pending');
@@ -686,9 +689,11 @@ function startRealtimeUpdates(status = 'all') {
   // ✅ Build query based on filter
   let q;
   if (status === 'all') {
+    // ✅ For 'all', fetch everything and filter client-side to exclude 'active' and 'harvested'
+    // (Firestore doesn't support multiple != operators in one query)
     q = collection(db, 'fields');
   } else if (status === 'needs_review') {
-    // ✅ NEW: Combine 'pending' and 'to edit' - fields needing SRA attention
+    // ✅ Combine 'pending' and 'to edit' - fields needing SRA attention
     q = query(collection(db, 'fields'), where('status', 'in', ['pending', 'to edit']));
   } else {
     q = query(collection(db, 'fields'), where('status', '==', status));
@@ -704,7 +709,7 @@ function startRealtimeUpdates(status = 'all') {
     try {
       console.log(`🔄 Real-time update detected: ${snapshot.size} fields with status "${status}"`);
       // ✅ FIX: Use snapshot data directly instead of fetching again
-      await renderFromSnapshot(snapshot);
+      await renderFromSnapshot(snapshot, status);
     } catch (error) {
       console.error('❌ Render failed:', error);
     } finally {
@@ -716,7 +721,7 @@ function startRealtimeUpdates(status = 'all') {
 }
 
 // ✅ NEW: Render directly from snapshot data (prevents double fetching)
-async function renderFromSnapshot(snapshot) {
+async function renderFromSnapshot(snapshot, status = 'all') {
   const container = document.getElementById('fieldDocsDynamic');
   if (!container) {
     console.warn('⚠️ Container #fieldDocsDynamic not found');
@@ -756,6 +761,11 @@ async function renderFromSnapshot(snapshot) {
   };
 
   let apps = snapshot.docs.map(normalize);
+
+  // ✅ Client-side filtering for 'all' status to exclude operational fields
+  if (status === 'all') {
+    apps = apps.filter(a => a.status !== 'active' && a.status !== 'harvested');
+  }
 
   // Enrich with user names
   const userCache = {};
