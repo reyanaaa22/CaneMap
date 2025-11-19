@@ -41,12 +41,12 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // 🔥 EMULATOR SETUP - Connect to local emulators in development
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-  console.log("🔥 Connected to Firebase Emulators");
-  connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
-  connectFirestoreEmulator(db, "localhost", 8080);
-  connectStorageEmulator(storage, "localhost", 9199);
-}
+//if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+  //console.log("🔥 Connected to Firebase Emulators");
+  //connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+  //connectFirestoreEmulator(db, "localhost", 8080);
+  //connectStorageEmulator(storage, "localhost", 9199);
+//}
 
 // Expose commonly used auth helpers for non-module scripts
 // This allows classic scripts (e.g., lobby.js) to call signOut(auth)

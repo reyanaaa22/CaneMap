@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CaneMap - Agricultural Decision Support Platform</title>
-    <!-- Tailwind CSS via Play CDN (alternative to cdn.tailwindcss.com) -->
-    <link rel="stylesheet" href="/css/output.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS and JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -644,6 +644,10 @@ header nav .flex.items-center.justify-between > .relative {
                                 Field Form
                                 </a>
                                  <div class="border-t border-[var(--cane-100)] mt-2">
+                                    <a href="activity-log.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium">
+                                         <i class="fas fa-clipboard-list mr-3 text-[var(--cane-500)]"></i>
+                                         Activity Log
+                                     </a>
                                     <a id="logoutLink" href="#" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                          <i class="fas fa-sign-out-alt mr-3"></i>
                                          Logout
@@ -1315,7 +1319,7 @@ header nav .flex.items-center.justify-between > .relative {
                         <div class="slide text-[var(--cane-900)] font-medium hidden transition-opacity duration-200" data-step="4">
                             <div class="space-y-2">
                                 <div class="flex items-start gap-2 text-[var(--cane-800)]"><i class="fas fa-check text-[var(--cane-600)] mt-1"></i> You're all set. Follow the steps above to unlock your tools.</div>
-                                <p class="text-sm text-[var(--cane-600)] mt-2">Click "Got it" below to close this guide.</p>
+                                <button id="lockedGotIt" class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Got it ✅</button>
                             </div>
                         </div>
                     </div>
