@@ -415,15 +415,6 @@ header nav .flex.items-center.justify-between > div:first-child {
   gap: 0.75rem; 
 }
 
-#btnRegisterField {
-  margin-left: 0.5rem;
-}
-
-header nav .flex.items-center.justify-between > .relative {
-  margin-left: auto; 
-  padding-right: 1px;  
-}
-
 /* Weather card responsiveness to avoid overlaps */
 @media (max-width: 1280px) {
   #weatherForecast .flex.items-start.justify-between { flex-wrap: wrap; gap: 1rem; }
@@ -552,6 +543,7 @@ header nav .flex.items-center.justify-between > .relative {
   flex-shrink: 0;
 }
 
+
 .leaflet-marker-bounce {
   animation: markerBounce 0.6s ease-in-out 0s 2 alternate;
 }
@@ -560,6 +552,223 @@ header nav .flex.items-center.justify-between > .relative {
   50% { transform: translateY(-10px); }
   100% { transform: translateY(0); }
 }
+
+/* hide driver-badge promo section on small screens */
+@media (max-width: 768px) {
+  #driver-badge {
+    display: none !important;
+  }
+}
+
+/* Header icon buttons: transparent background, white icon, subtle hover */
+.header-icon-btn {
+  background: transparent;
+  color: white;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 9999px; /* pill/circle */
+  transition: transform .12s ease, background .12s ease, box-shadow .12s ease, color .12s ease;
+  min-width: 40px;
+  height: 40px;
+  box-shadow: none;
+}
+
+/* small badge inside icon */
+.header-icon-btn .hdr-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 18px;
+  border-radius: 9999px;
+  background: #ffffff; /* white badge */
+  color: var(--cane-800); /* badge text in theme dark color */
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* hover: slightly visible white background */
+.header-icon-btn:hover {
+  background: rgba(255,255,255,0.08);
+  transform: translateY(-1px) scale(1.03);
+}
+
+/* small-screen: hide the side notifications card */
+@media (max-width: 768px) {
+  #notifCard {
+    display: none !important;
+  }
+  /* widen weather area if you want it to take the slot */
+  #weatherForecast { width: 100%; }
+}
+
+/* Put icons inside the dropdown footer */
+#profileDropdown .dropdown-footer-icons {
+  display: flex;
+  gap: .5rem;
+  padding: .6rem;
+  border-top: 1px solid var(--cane-100);
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+
+  #headerIcons {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 1px !important;        /* SUPER TIGHT */
+    margin-right: 0 !important;
+  }
+
+  /* Remove ALL extra margins around icons */
+  #btnRegisterField,
+  #btnDriverBadgeMobile,
+  #btnNotifHeader {
+    margin: 0 !important;       /* remove margin */
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Icons styling */
+  #btnRegisterField span[aria-hidden="true"] {
+    color: white !important;
+    font-size: 21px !important;
+    font-weight: 900 !important;
+  }
+  #btnDriverBadgeMobile i,
+  #btnNotifHeader i {
+    color: white !important;
+    font-size: 18px !important;
+  }
+}
+
+/* TOOLTIP (unchanged, still works) */
+#btnRegisterField:hover::after,
+#btnDriverBadgeMobile:hover::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.75);
+  color: white;
+  padding: 4px 7px;
+  font-size: 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  animation: fadeInTooltip 0.2s forwards;
+}
+
+/* FORCE headerIcons to stay on the far right always */
+#headerIcons {
+    margin-left: auto !important;
+    justify-content: flex-end !important;
+}
+
+.custom-tooltip {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+#notifCard {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+@media (max-width: 768px) {
+#btnNotifHeader {
+    margin-right: 6px !important; /* adjust if you want more/less */
+  }
+}
+
+#btnDriverRental[aria-hidden="true"] {
+    display: none !important;
+}
+
+
+/* Desktop: make MAP wider than WEATHER */
+@media (min-width: 1024px) {
+  #mapPanel {
+    flex: 2;     /* 2x width */
+  }
+
+  #weatherForecast {
+    flex: 1;     /* half width of map */
+    max-width: 420px; /* optional: limit width */
+  }
+}
+
+/* Force RIGHT-aligned scrollbar for notifications list */
+#allNotificationsList {
+    direction: rtl;  /* flips scrollbar to the right */
+    padding-right: 4px;
+}
+
+#allNotificationsList > * {
+    direction: ltr;  /* keeps content normal (not reversed) */
+}
+
+/* Scrollbar styling */
+#allNotificationsList::-webkit-scrollbar {
+    width: 8px;
+}
+
+#allNotificationsList::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#allNotificationsList::-webkit-scrollbar-thumb {
+    background: #b5b5b5;
+    border-radius: 10px;
+}
+
+#allNotificationsList::-webkit-scrollbar-thumb:hover {
+    background: #8c8c8c;
+}
+
+@media (min-width: 1024px) {
+    #weatherForecast {
+        height: 90rem !important; 
+        max-height: 30rem !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    #map {
+        height: 27rem !important; /* Map fixed height */
+    }
+}
+
 
 </style>
 </head>
@@ -602,21 +811,26 @@ header nav .flex.items-center.justify-between > .relative {
                           <a href="#contact" class="text-white hover:text-[var(--cane-100)] hover:underline underline-offset-4 decoration-[var(--cane-300)] transition-colors text-base font-semibold">Contact</a>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                <!-- Register field (existing) -->
-                <button id="btnRegisterField"
-                        class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold"
-                        onclick="window.location.href = './Handler/Register-field.html'">
-                + Register a Field
-                </button>
+<div id="headerIconsLeft" class="flex items-center gap-2">
+    <button id="btnRegisterField"
+        class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold"
+        onclick="window.location.href = './Handler/Register-field.html'">
+        + Register a Field
+    </button>
+</div>
 
-                <!-- Driver-only: Rental button (hidden by default, will be shown for drivers) -->
-                <button id="btnDriverRental"
-                        class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold"
-                        style="display:none;"
-                        aria-hidden="true">
-                🚚 Open for Driver Rental
-                </button>
+<button id="btnDriverRental"
+    class="bg-white text-[var(--cane-800)] px-4 py-2 text-sm rounded-lg hover:bg-[var(--cane-50)] transition-all duration-300 transform hover:scale-105 shadow-md font-semibold"
+    style="display:none;"
+    aria-hidden="true">
+    🚚 Open for Driver Rental
+</button>
+
+
+                 <!-- group ONLY the two small icons here -->
+    <div id="headerIcons" class="flex items-center gap-1" style="margin-right:6px;"></div>
+
+
                      <!-- Profile Dropdown -->
                      <div class="relative">
                          <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-[var(--cane-100)] transition-all duration-300">
@@ -636,7 +850,7 @@ header nav .flex.items-center.justify-between > .relative {
                                  </div>
                                  <a id="dashboardLink" href="javascript:void(0)" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium opacity-60 cursor-not-allowed">
                                      <i class="fas fa-tachometer-alt mr-3 text-[var(--cane-500)]"></i>
-                                     Dashboard
+                                     Dashboard (View Fields & Task)
                                  </a>
                                  <!-- Pending Field Registration (visible only to handler OR user with pending field application) -->
                                 <a id="pendingFieldLink" href="javascript:void(0)" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium hidden">
@@ -648,6 +862,15 @@ header nav .flex.items-center.justify-between > .relative {
                                          <i class="fas fa-clipboard-list mr-3 text-[var(--cane-500)]"></i>
                                          Activity Log
                                      </a>
+                                    <a href="../Handler/Register-field.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium">
+                                        <i class="fas fa-plus mr-3 text-[var(--cane-500)]"></i>
+                                        Register a Field
+                                    </a>
+                                    <a href="../Driver/Driver_Badge.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition-colors font-medium">
+                                        <i class="fas fa-id-badge mr-3 text-[var(--cane-500)]"></i>
+                                        Apply Driver's Badge
+                                    </a>
+
                                     <a id="logoutLink" href="#" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                          <i class="fas fa-sign-out-alt mr-3"></i>
                                          Logout
@@ -666,8 +889,44 @@ header nav .flex.items-center.justify-between > .relative {
     <div id="mainContent" class="w-full px-4 pb-8 flex flex-col lg:flex-row gap-8">
             <!-- Left Panel - Sugarcane Field Map -->
             <div id="mapPanel" class="flex-1 fade-in-left">
-                                                  <div class="flex justify-between items-center mb-4">
-                     <h2 class="text-2xl font-extrabold text-[var(--cane-950)]">Sugarcane Field Map</h2>
+                <!-- Instruction Box -->
+            <!-- Instruction Box -->
+            <div class="instruction-box
+                        bg-[rgba(173,255,47,0.25)] border border-[rgba(102,153,0,0.8)]
+                        rounded-md px-4 py-2 text-[var(--cane-950)] text-sm
+                        flex items-center gap-2 mb-2
+                        lg:mb-4 lg:order-[-1]
+                        shadow-[0_2px_6px_rgba(0,0,0,0.15)]">
+
+                <div class="flex items-center flex-wrap gap-2">
+                    <span class="font-bold text-[rgba(85,128,0,1)]">
+                        Want to join a field?
+                    </span>
+
+                        Simply tap any field
+                    </span>
+                        <span class="text-[rgba(50,50,0,1)]">
+                        on the map. ex.
+                    </span>
+                    
+            <!-- CaneMap Pin Icon -->
+                    <img src="../img/PIN.png"
+                        alt="Map Pin"
+                        class="w-5 h-5 object-contain drop-shadow-sm">
+                    
+                    
+                </div>
+            </div>
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center mb-4">
+                    <h2 class="text-2xl font-extrabold text-[var(--cane-950)] flex items-center gap-2">
+                        JOIN HERE
+                        <i class="fas fa-hand-point-down text-[var(--cane-950)] text-xl"></i>
+                    </h2>
+                </div>
+
+
+                     
                      <div class="flex items-center gap-3 ml-auto">
                          <input id="mapSearchInput" type="text" placeholder="Search for sugarcane fields..." class="w-[500px] px-6 py-3 rounded-full bg-white text-[var(--cane-900)] placeholder-[var(--cane-700)]/70 shadow-[0_4px_12px_rgba(0,0,0,0.10)] border border-[var(--cane-200)] focus:outline-none focus:ring-2 focus:ring-[var(--cane-400)]/40 focus:border-[var(--cane-300)]">
                          <button id="mapSearchBtn" class="px-7 h-[48px] rounded-full bg-[var(--cane-800)] text-white font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:bg-[var(--cane-900)] transition-colors shrink-0">Search</button>
@@ -682,63 +941,44 @@ header nav .flex.items-center.justify-between > .relative {
                     <div id="refreshMapIcon" class="absolute top-4 right-16 z-10 bg-white rounded-full shadow-lg p-3 cursor-pointer hover:bg-[var(--cane-100)] transition-all duration-300 transform hover:scale-110" title="Refresh Map">
                         <i class="fas fa-sync-alt text-[var(--cane-600)] text-xl"></i>
                     </div>
-                    <div id="map" class="w-full h-[32rem] rounded-xl mb-4 shadow-[0_8px_22px_rgba(94,165,0,0.16)] border border-[var(--cane-200)] bg-white"></div>
+                    <div id="map" class="w-full h-[27rem] rounded-xl mb-4 shadow-[0_8px_22px_rgba(94,165,0,0.16)] border border-[var(--cane-200)] bg-white"></div>
                 </div>
                 
                 <!-- removed get verified section per request -->
             </div>
-            <!-- Right Panel -->
-            <div id="sidePanel" class="w-full lg:w-96 space-y-3 fade-in-right">
-<!-- 🔔 Notifications (Dashboard Card) -->
-<div class="bg-white rounded-xl p-5 shadow-[0_8px_18px_rgba(94,165,0,0.14)] border border-[var(--cane-200)]">
-  <h3 class="text-lg font-bold text-[var(--cane-950)] mb-6 flex items-center relative">
-    <i class="fas fa-bell text-[var(--cane-500)] mr-3 text-xl relative">
-      <span id="notifBadgeCount"
-        class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-        0
-      </span>
-    </i>
-    Notifications
-  </h3>
-
-  <!-- Short preview list -->
-  <div id="notificationsList" class="space-y-3"></div>
-
-  <!-- See all button -->
-  <div class="mt-4 text-center">
-    <button id="openNotifModal"
-      class="text-[var(--cane-600)] hover:text-[var(--cane-800)] text-sm font-medium">
-      See all notifications →
-    </button>
-  </div>
-</div>
-
 <!-- 🔔 Notifications Modal -->
-
 <div id="notifModal"
-
-  class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-50">
+  class="fixed inset-0 hidden flex items-center justify-center bg-black bg-opacity-40 z-50">
+  
   <div class="bg-white rounded-xl shadow-xl w-11/12 max-w-md p-6 relative">
+    <!-- Close button -->
     <button id="closeNotifModal"
       class="absolute top-3 right-4 text-gray-500 hover:text-gray-800 text-2xl font-bold">
       &times;
     </button>
+
+    <!-- Modal header -->
     <h2 class="text-xl font-bold text-[var(--cane-950)] mb-4 flex items-center">
       <i class="fas fa-bell text-[var(--cane-500)] mr-2"></i>
       All Notifications
     </h2>
+
+    <!-- Modal actions -->
     <div class="flex justify-between items-center mb-3">
-    <h3 class="text-lg font-semibold text-[var(--cane-900)]">Notifications</h3>
-    <div class="flex items-center gap-2">
+      <h3 class="text-lg font-semibold text-[var(--cane-900)]">Notifications</h3>
+      <div class="flex items-center gap-2">
         <button id="markAllReadBtn" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] font-semibold">
-        Mark all as read
+          Mark all as read
         </button>
+      </div>
     </div>
-    </div>
-    <div id="allNotificationsList" class="space-y-3 max-h-[70vh] overflow-y-auto">
+
+    <!-- Modal content -->
+    <div id="allNotificationsList" class="space-y-3 max-h-[70vh] overflow-y-scroll">
       <p class="text-gray-500 text-sm text-center">Loading notifications...</p>
     </div>
   </div>
+
 </div>
 
 
@@ -1159,7 +1399,7 @@ header nav .flex.items-center.justify-between > .relative {
                                 </div>
                                 <div>
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Email</p>
-                                    <p class="text-[var(--cane-900)] font-semibold text-xs">info@canemap.com</p>
+                                    <p class="text-[var(--cane-900)] font-semibold text-xs">canemapteam@gmail.com</p>
                                 </div>
                                 </div>
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
@@ -1168,7 +1408,7 @@ header nav .flex.items-center.justify-between > .relative {
                             </div>
                                 <div>
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Phone</p>
-                                    <p class="text-[var(--cane-900)] font-semibold text-xs">+63 912 345 6789</p>
+                                    <p class="text-[var(--cane-900)] font-semibold text-xs">+63 970 399 7687</p>
                                 </div>
                         </div>
                             <div class="flex items-center space-x-2 p-2 bg-[var(--cane-50)] rounded-md">
@@ -1177,7 +1417,7 @@ header nav .flex.items-center.justify-between > .relative {
                                 </div>
                                 <div>
                                     <p class="text-xs text-[var(--cane-700)] font-medium">Location</p>
-                                    <p class="text-[var(--cane-900)] font-semibold text-xs">SRA Ormoc Mill District, Philippines</p>
+                                    <p class="text-[var(--cane-900)] font-semibold text-xs">Eastern Visayas State University - Ormoc Campus</p>
                                 </div>
                             </div>
                         </div>

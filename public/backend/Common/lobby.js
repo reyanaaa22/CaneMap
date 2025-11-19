@@ -3298,16 +3298,19 @@ function showConfirmationPopup() {
 setTimeout(() => {
   console.log("🔔 [Notifications] Real-time system starting...");
 
-  const openNotifModal = document.getElementById("openNotifModal");
+  const openNotifModal = document.getElementById("btnNotifHeader");  
   const closeNotifModal = document.getElementById("closeNotifModal");
   const notifModal = document.getElementById("notifModal");
-  const notifList = document.getElementById("notificationsList");
+
+  // You deleted <div id="notificationsList"> so set to null
+  const notifList = null;
+
   const allNotifList = document.getElementById("allNotificationsList");
   const notifBadgeCount = document.getElementById("notifBadgeCount");
   const markAllBtn = document.getElementById("markAllReadBtn");
 
-  if (!openNotifModal || !notifModal || !notifList) {
-    console.warn("⚠️ Missing notification elements!");
+  if (!notifModal) {
+    console.warn("⚠️ Notification modal missing!");
     return;
   }
 
@@ -3384,85 +3387,68 @@ setTimeout(() => {
       }
 
       // --- Update UI for both modal + preview ---
-      function updateUI() {
-        const unread = cachedData.filter((n) => n.status === "unread").length;
+function updateUI() {
+    const unread = cachedData.filter((n) => n.status === "unread").length;
 
-        // 🔢 Badge update
-        if (notifBadgeCount) {
-          if (unread > 0) {
+// update both badges (header + sidebar)
+const headerBadge = document.getElementById("headerNotifBadgeCount");
+
+    if (notifBadgeCount) {
+        if (unread > 0) {
             notifBadgeCount.textContent = unread;
-            notifBadgeCount.dataset.countLength = String(unread).length;
             notifBadgeCount.classList.remove("hidden");
-          } else {
+        } else {
             notifBadgeCount.classList.add("hidden");
-          }
         }
+    }
 
-        // 🪶 Outside preview (top of lobby)
-        notifList.innerHTML =
-          cachedData.length === 0
-            ? `<div class="p-3 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
-            : cachedData
-                .slice(0, 3)
-                .map(
-                  (n) => `
-                    <div class="preview-notif-card ${n.status}" data-id="${
-                    n.id
-                  }">
-                      <div class="notif-icon">
-                        <i class="fas ${
-                          n.status === "unread"
-                            ? "fa-envelope"
-                            : "fa-envelope-open-text"
-                        } text-white text-base"></i>
-                      </div>
-                      <div>
-                        <h4 class="font-semibold">${
-                          getNotificationTitle(n)
-                        }</h4>
-                        <p class="text-sm text-gray-700">${n.message || ""}</p>
-                      </div>
-                    </div>`
-                )
-                .join("");
+    if (headerBadge) {
+        if (unread > 0) {
+            headerBadge.textContent = unread;
+            headerBadge.style.display = "flex";
+        } else {
+            headerBadge.style.display = "none";
+        }
+    }
 
-        // 📬 Modal list
-        allNotifList.innerHTML =
-          cachedData.length === 0
-            ? `<div class="p-6 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
-            : cachedData
-                .map(
-                  (n) => `
-            <div class="notification-card ${
-              n.status
-            } flex items-start space-x-3 p-3 mb-2 border border-[var(--cane-200)] rounded-lg" data-id="${
-                    n.id
-                  }">
-              <div class="notif-icon">
-                <i class="fas ${
-                  n.status === "unread"
-                    ? "fa-envelope"
-                    : "fa-envelope-open-text"
-                } text-white text-base"></i>
-              </div>
-              <div class="flex-1">
-                <h4 class="font-semibold">${getNotificationTitle(n)}</h4>
-                <p class="text-sm text-[var(--cane-800)]">${n.message}</p>
-                <p class="text-xs text-gray-400 mt-1">${
-                  n.timestamp?.toDate?.()
-                    ? new Date(n.timestamp.toDate()).toLocaleString("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })
-                    : ""
-                }</p>
-              </div>
-            </div>`
-                )
-                .join("");
+    // You removed the preview — ignore it
+    if (notifList) {
+        notifList.innerHTML = "";
+    }
 
-        attachClickHandlers();
-      }
+    // MODAL LIST
+    allNotifList.innerHTML =
+      cachedData.length === 0
+        ? `<div class="p-6 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
+        : cachedData
+            .map(
+              (n) => `
+        <div class="notification-card ${n.status} flex items-start space-x-3 p-3 mb-2 border border-[var(--cane-200)] rounded-lg" data-id="${n.id}">
+          <div class="notif-icon">
+            <i class="fas ${
+              n.status === "unread" ? "fa-envelope" : "fa-envelope-open-text"
+            } text-white text-base"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-semibold">${getNotificationTitle(n)}</h4>
+            <p class="text-sm text-[var(--cane-800)]">${n.message}</p>
+            <p class="text-xs text-gray-400 mt-1">
+              ${
+                n.timestamp?.toDate?.()
+                  ? new Date(n.timestamp.toDate()).toLocaleString("en-US", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  : ""
+              }
+            </p>
+          </div>
+        </div>`
+            )
+            .join("");
+
+    attachClickHandlers();
+}
 
       // --- Click any notification (mark as read + handle embedded links) ---
       function attachClickHandlers() {
@@ -4058,3 +4044,276 @@ function checkJoinFieldButton() {
     console.warn("checkJoinFieldButton error:", err);
   }
 }
+
+/* ---------- Mobile header button adaption: icon + driver badge icon ---------- */
+(function () {
+  // path to driver badge page relative to lobby.html (lobby.html is in .../Common/)
+  const DRIVER_BADGE_PATH = "../Driver/Driver_Badge.html";
+  const REGISTER_FIELD_PATH = "./Handler/Register-field.html"; // keep existing target
+
+  // create mobile driver badge button (only once)
+  function createDriverBadgeButton() {
+    const btn = document.createElement("button");
+    btn.id = "btnDriverBadgeMobile";
+    btn.setAttribute("aria-label", "Driver Badge");
+    btn.className = "hidden md:hidden bg-white text-[var(--cane-800)] rounded-full p-2 shadow-md hover:scale-105 transition transform";
+    btn.style.minWidth = "40px";
+    btn.style.height = "40px";
+    btn.style.display = "inline-flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.innerHTML = `<i class="fas fa-id-badge"></i>`; 
+    btn.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      // use relative path to Driver_Badge.html
+      window.location.href = DRIVER_BADGE_PATH;
+    });
+    return btn;
+  }
+
+function updateHeaderButtonsForViewport() {
+    const regBtn = document.getElementById("btnRegisterField");
+    let mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
+    const notifBtn = document.getElementById("btnNotifHeader");
+    const headerIcons = document.getElementById("headerIcons");
+
+    if (!regBtn || !headerIcons) return;
+
+    // Create mobile driver button once
+    if (!mobileDriverBtn) {
+        mobileDriverBtn = createDriverBadgeButton();
+        headerIcons.appendChild(mobileDriverBtn);
+    }
+
+    const isSmall = window.innerWidth <= 768;
+    const defaultColor = "#ffffff";
+    const smallColor = "#ffffff"; // same color as default, adjust if you want
+
+    if (isSmall) {
+        // Convert Register → map icon
+        regBtn.innerHTML = `
+            <span class="sr-only">Register a Field</span>
+            <i class="fas fa-map-marker-alt" 
+               style="font-size:18px; color:${defaultColor};"></i>
+        `;
+        regBtn.style.width = "42px";
+        regBtn.style.height = "42px";
+        regBtn.style.borderRadius = "9999px";
+        regBtn.style.background = "transparent";
+        regBtn.style.display = "inline-flex";
+        regBtn.style.alignItems = "center";
+        regBtn.style.justifyContent = "center";
+        regBtn.style.margin = "0";
+        regBtn.style.padding = "0";
+        regBtn.style.boxShadow = "none";
+
+        // Ensure icon colors (desktop -> mobile)
+        if (mobileDriverBtn) mobileDriverBtn.querySelector("i").style.color = smallColor;
+        if (notifBtn) notifBtn.querySelector("i").style.color = smallColor;
+
+        // Add tooltips
+        addTooltip(regBtn, "Register a Field");
+        addTooltip(mobileDriverBtn, "Apply a Driver Badge");
+        if (notifBtn) addTooltip(notifBtn, "Notifications");
+
+        // Ensure correct order: Field, Driver, Notification
+        [regBtn, mobileDriverBtn, notifBtn].forEach(btn => {
+            if (!btn) return;
+            btn.style.display = "inline-flex";
+            btn.style.alignItems = "center";
+            btn.style.justifyContent = "center";
+            btn.style.margin = "0";
+            if (!headerIcons.contains(btn)) headerIcons.appendChild(btn);
+            else headerIcons.appendChild(btn); // enforce order
+        });
+    } 
+    else {
+        // Restore normal Register button for desktop
+        regBtn.innerHTML = "+ Register a Field";
+        regBtn.style = ""; // full reset
+
+        // Restore icon colors
+        if (mobileDriverBtn) mobileDriverBtn.querySelector("i").style.color = defaultColor;
+        if (notifBtn) notifBtn.querySelector("i").style.color = defaultColor;
+
+        // Put Register back to left container
+        const oldSpot = document.getElementById("headerIconsLeft");
+        if (oldSpot && !oldSpot.contains(regBtn)) oldSpot.appendChild(regBtn);
+
+        // Hide mobile driver icon
+        if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
+
+        // Add tooltips for desktop too
+        addTooltip(regBtn, "Register a Field");
+        addTooltip(mobileDriverBtn, "Driver Badge");
+        if (notifBtn) addTooltip(notifBtn, "Notifications");
+    }
+}
+
+  // Run initially and on resize (debounced)
+  function debounce(fn, wait = 120) {
+    let t;
+    return function () {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, arguments), wait);
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // call once after your other DOMContentLoaded work (safe to run again)
+    try {
+      updateHeaderButtonsForViewport();
+    } catch (e) {
+      console.warn("mobile header init failed", e);
+    }
+  });
+
+  window.addEventListener("resize", debounce(updateHeaderButtonsForViewport, 120));
+})();
+
+
+/* === Notification Bell Only (header + dropdown) === */
+(function () {
+
+function initNotifHeader() {
+  const headerIcons = document.getElementById("headerIcons");
+  const notifModal = document.getElementById("notifModal");
+  const sideBadge = document.getElementById("notifBadgeCount");
+  if (!headerIcons) return;
+
+  function makeIcon({ id, iconClass, tooltipText, onClick }) {
+    const btn = document.createElement("button");
+    btn.id = id;
+    btn.className = "header-icon-btn";
+    btn.innerHTML = `<i class="${iconClass}"></i>`;
+    btn.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
+    btn.style.position = "relative";
+    btn.addEventListener("click", onClick);
+    addTooltip(btn, tooltipText);
+    return btn;
+  }
+
+  const notifBtn = makeIcon({
+    id: "btnNotifHeader",
+    iconClass: "fas fa-bell",
+    tooltipText: "Notifications",
+    onClick: () => {
+      notifModal.classList.remove("hidden");
+      notifModal.classList.add("flex");
+    }
+  });
+
+  const headerBadge = document.createElement("span");
+  headerBadge.id = "headerNotifBadgeCount";
+  headerBadge.className = "hdr-badge";
+  headerBadge.style.display = "none";
+  notifBtn.appendChild(headerBadge);
+
+  headerIcons.appendChild(notifBtn);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+   initNotifHeader();
+});
+
+})();
+
+// Fallback open/close handlers (safe to run even if initNotifHeader already created elements)
+document.addEventListener("DOMContentLoaded", () => {
+  const notifBtn = document.getElementById("btnNotifHeader"); // created by initNotifHeader
+  const notifModal = document.getElementById("notifModal");   // from your HTML
+  const closeNotif = document.getElementById("closeNotifModal"); // from your HTML
+
+  if (notifBtn && notifModal) {
+    notifBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      notifModal.classList.remove("hidden");
+      notifModal.classList.add("flex");
+    });
+  }
+
+  if (closeNotif && notifModal) {
+    closeNotif.addEventListener("click", () => {
+      notifModal.classList.add("hidden");
+      notifModal.classList.remove("flex");
+    });
+  }
+
+  // click outside to close
+  if (notifModal) {
+    notifModal.addEventListener("click", (e) => {
+      if (e.target === notifModal) {
+        notifModal.classList.add("hidden");
+        notifModal.classList.remove("flex");
+      }
+    });
+  }
+});
+
+
+function addTooltip(button, text) {
+    button.setAttribute("aria-label", text);
+
+    // Prevent duplicate listeners
+    if (button._tooltipListeners) return;
+    button._tooltipListeners = true;
+
+    button.addEventListener("mouseenter", () => {
+        // Remove old tooltip if somehow still present
+        if (button._tooltip) button._tooltip.remove();
+
+        // Create tooltip
+        const tip = document.createElement("div");
+        tip.className = "custom-tooltip";
+        tip.textContent = text;
+        document.body.appendChild(tip);
+
+        // Position below the icon
+        const rect = button.getBoundingClientRect();
+        tip.style.left = rect.left + rect.width / 2 + "px";
+        tip.style.top = rect.top + rect.height + 6 + "px";
+        tip.style.transform = "translateX(-50%)";
+        tip.style.position = "absolute";
+        tip.style.background = "rgba(0,0,0,0.75)";
+        tip.style.color = "white";
+        tip.style.padding = "4px 7px";
+        tip.style.fontSize = "10px";
+        tip.style.borderRadius = "6px";
+        tip.style.whiteSpace = "nowrap";
+        tip.style.zIndex = 9999;
+        tip.style.opacity = 0;
+        tip.style.transition = "opacity 0.2s";
+
+        requestAnimationFrame(() => tip.style.opacity = 1);
+
+        button._tooltip = tip;
+    });
+
+    button.addEventListener("mouseleave", () => {
+        if (button._tooltip) {
+            button._tooltip.remove();
+            button._tooltip = null;
+        }
+    });
+}
+
+
+// Optional: ensure tooltips clean up automatically
+function cleanupTooltips() {
+    document.querySelectorAll(".custom-tooltip").forEach(tip => tip.remove());
+}
+
+// Call this on mouseleave for all current tooltipped buttons
+document.addEventListener("mouseover", (e) => {
+    const btn = e.target.closest("button[aria-label]");
+    if (!btn) return;
+
+    btn.addEventListener("mouseleave", () => {
+        if (btn._tooltip) {
+            btn._tooltip.remove();
+            btn._tooltip = null;
+        }
+    });
+});
