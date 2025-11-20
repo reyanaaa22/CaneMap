@@ -2516,6 +2516,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const role = (snap.data()?.role || "").toLowerCase();
         localStorage.setItem("userRole", role);
         refreshPendingFieldMenu(pendingLink, db, userId, role);
+
+        
       });
 
       // --- listen to field_applications changes in realtime ---
@@ -2573,6 +2575,67 @@ document.addEventListener("DOMContentLoaded", function () {
       initPendingFieldWatcher();
     }, 400);
   });
+/* ===== Robust: hide Driver Badge UI & Register a Field when role is handler, worker, or driver ===== */
+(function ensureHideDriverBadgeForHandlerWorker() {
+  function hideDriverBadgeElements() {
+    try {
+      const role = (localStorage.getItem("userRole") || "").toLowerCase();
+      const isHandlerOrWorker = role === "handler" || role === "worker";
+
+      // Driver Badge targets
+      const headerDriverLink = document.querySelector('a[href="#driver-badge"]');
+      const promoSection = document.getElementById("driver-badge");
+      const dropdownDriverLink = document.querySelector('#profileDropdown a[href*="Driver_Badge.html"], #profileDropdown a[href*="Driver_Badge"]');
+      const mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
+      const driverRentalBtn = document.getElementById("btnDriverRental");
+
+      if (headerDriverLink) headerDriverLink.style.display = isHandlerOrWorker ? "none" : "";
+      if (promoSection) promoSection.style.display = isHandlerOrWorker ? "none" : "";
+      if (dropdownDriverLink) dropdownDriverLink.style.display = isHandlerOrWorker ? "none" : "";
+      if (mobileDriverBtn) mobileDriverBtn.style.display = isHandlerOrWorker ? "none" : "";
+      if (driverRentalBtn) driverRentalBtn.style.display = isHandlerOrWorker ? "none" : "";
+
+      document.querySelectorAll('a[href*="Driver_Badge.html"], a[href*="Driver_Badge"]').forEach((el) => {
+        el.style.display = isHandlerOrWorker ? "none" : "";
+      });
+
+      // Hide "Register a Field" in dropdown for driver or worker
+      const regFieldDropdown = document.querySelector('#profileDropdown a[href*="Register-field.html"]');
+      if (regFieldDropdown) {
+        regFieldDropdown.style.display = (role === "driver" || role === "worker") ? "none" : "";
+      }
+
+    } catch (err) {
+      console.warn("hideDriverBadgeElements error:", err);
+    }
+  }
+
+  // Run immediately
+  hideDriverBadgeElements();
+
+  // Re-run if localStorage changes (role changes)
+  window.addEventListener("storage", (ev) => {
+    if (ev.key === "userRole") {
+      hideDriverBadgeElements();
+    }
+  });
+
+  // Observe DOM changes (in case dropdown or buttons load later)
+  const observer = new MutationObserver(() => hideDriverBadgeElements());
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Safety retry for late-loading elements
+  let retries = 6;
+  (function retryLoop() {
+    hideDriverBadgeElements();
+    if (retries-- > 0) setTimeout(retryLoop, 200);
+  })();
+
+  // Expose for manual testing if needed
+  window.hideDriverBadgeElements = hideDriverBadgeElements;
+})();
+
+
 
   // Feedback FAB bindings (ensure after DOM is ready)
   try {
@@ -4079,20 +4142,38 @@ function updateHeaderButtonsForViewport() {
     const notifBtn = document.getElementById("btnNotifHeader");
     const headerIcons = document.getElementById("headerIcons");
 
-    if (!regBtn || !headerIcons) return;
+        
+    // get user role from localStorage (make sure it's lowercase)
+    const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-    // Create mobile driver button once
-    if (!mobileDriverBtn) {
-        mobileDriverBtn = createDriverBadgeButton();
-        headerIcons.appendChild(mobileDriverBtn);
+    /* ---------- INSERT HERE: role-based hiding ---------- */
+
+    // Hide Driver Badge icon if handler or worker
+    if (role !== "handler" && role !== "worker") {
+        if (!mobileDriverBtn) {
+            mobileDriverBtn = createDriverBadgeButton();
+            headerIcons.appendChild(mobileDriverBtn);
+        }
+    } else if (mobileDriverBtn) {
+        mobileDriverBtn.style.display = "none";
+    }
+
+    // Hide Register a Field completely if role is driver or worker
+    if (role === "driver" || role === "worker") {
+        if (regBtn) regBtn.style.display = "none";
+    } else {
+        if (regBtn) regBtn.style.display = "inline-flex";
     }
 
     const isSmall = window.innerWidth <= 768;
     const defaultColor = "#ffffff";
     const smallColor = "#ffffff"; // same color as default, adjust if you want
 
-    if (isSmall) {
-        // Convert Register → map icon
+if (isSmall) {
+    // Convert Register → map icon
+if (isSmall) {
+    // Only create / display Register map icon if role is allowed
+    if (role !== "driver" && role !== "worker" && regBtn) {
         regBtn.innerHTML = `
             <span class="sr-only">Register a Field</span>
             <i class="fas fa-map-marker-alt" 
@@ -4109,47 +4190,65 @@ function updateHeaderButtonsForViewport() {
         regBtn.style.padding = "0";
         regBtn.style.boxShadow = "none";
 
-        // Ensure icon colors (desktop -> mobile)
-        if (mobileDriverBtn) mobileDriverBtn.querySelector("i").style.color = smallColor;
-        if (notifBtn) notifBtn.querySelector("i").style.color = smallColor;
-
-        // Add tooltips
         addTooltip(regBtn, "Register a Field");
-        addTooltip(mobileDriverBtn, "Apply a Driver Badge");
-        if (notifBtn) addTooltip(notifBtn, "Notifications");
-
-        // Ensure correct order: Field, Driver, Notification
-        [regBtn, mobileDriverBtn, notifBtn].forEach(btn => {
-            if (!btn) return;
-            btn.style.display = "inline-flex";
-            btn.style.alignItems = "center";
-            btn.style.justifyContent = "center";
-            btn.style.margin = "0";
-            if (!headerIcons.contains(btn)) headerIcons.appendChild(btn);
-            else headerIcons.appendChild(btn); // enforce order
-        });
-    } 
-    else {
-        // Restore normal Register button for desktop
-        regBtn.innerHTML = "+ Register a Field";
-        regBtn.style = ""; // full reset
-
-        // Restore icon colors
-        if (mobileDriverBtn) mobileDriverBtn.querySelector("i").style.color = defaultColor;
-        if (notifBtn) notifBtn.querySelector("i").style.color = defaultColor;
-
-        // Put Register back to left container
-        const oldSpot = document.getElementById("headerIconsLeft");
-        if (oldSpot && !oldSpot.contains(regBtn)) oldSpot.appendChild(regBtn);
-
-        // Hide mobile driver icon
-        if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
-
-        // Add tooltips for desktop too
-        addTooltip(regBtn, "Register a Field");
-        addTooltip(mobileDriverBtn, "Driver Badge");
-        if (notifBtn) addTooltip(notifBtn, "Notifications");
+    } else if (regBtn) {
+        // Completely hide for driver or worker
+        regBtn.style.display = "none";
     }
+
+    // Mobile driver icon
+    if (mobileDriverBtn) {
+        mobileDriverBtn.style.display = (role !== "handler" && role !== "worker") ? "inline-flex" : "none";
+        if (mobileDriverBtn.style.display === "inline-flex") addTooltip(mobileDriverBtn, "Apply a Driver Badge");
+    }
+
+    // Notification icon
+    if (notifBtn) addTooltip(notifBtn, "Notifications");
+
+    // Correct order & append
+    const buttonsToAppend = [];
+    if (regBtn && role !== "driver" && role !== "worker") buttonsToAppend.push(regBtn);
+    if (mobileDriverBtn && role !== "handler" && role !== "worker") buttonsToAppend.push(mobileDriverBtn);
+    if (notifBtn) buttonsToAppend.push(notifBtn);
+
+    buttonsToAppend.forEach(btn => {
+        btn.style.display = "inline-flex";
+        btn.style.alignItems = "center";
+        btn.style.justifyContent = "center";
+        btn.style.margin = "0";
+        if (!headerIcons.contains(btn)) headerIcons.appendChild(btn);
+        else headerIcons.appendChild(btn); // enforce order
+    });
+}
+
+}
+  else {
+      // Restore normal Register button for desktop
+      if (role !== "driver") {
+          regBtn.innerHTML = "+ Register a Field";
+          regBtn.style = ""; // full reset
+          regBtn.style.display = "inline-flex"; // ensure it's visible
+      } else {
+          // Hide completely for driver
+          regBtn.style.display = "none";
+      }
+
+      // Restore icon colors
+      if (mobileDriverBtn) mobileDriverBtn.querySelector("i").style.color = defaultColor;
+      if (notifBtn) notifBtn.querySelector("i").style.color = defaultColor;
+
+      // Put Register back to left container (only if not hidden)
+      const oldSpot = document.getElementById("headerIconsLeft");
+      if (oldSpot && role !== "driver" && !oldSpot.contains(regBtn)) oldSpot.appendChild(regBtn);
+
+      // Hide mobile driver icon
+      if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
+
+      // Add tooltips for desktop too
+      if (role !== "driver") addTooltip(regBtn, "Register a Field");
+      addTooltip(mobileDriverBtn, "Driver Badge");
+      if (notifBtn) addTooltip(notifBtn, "Notifications");
+  }
 }
 
   // Run initially and on resize (debounced)
