@@ -4416,3 +4416,41 @@ document.addEventListener("mouseover", (e) => {
         }
     });
 });
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+    const instructionBox = document.querySelector(".instruction-box .flex");
+
+    if (!instructionBox) return;
+
+    if (userRole === "handler") {
+        instructionBox.innerHTML = `
+            <span class="text-[rgba(50,50,0,1)]">
+                Simply tap any field
+            </span>
+            <span class="text-[rgba(50,50,0,1)]">
+                on the map to see field details. ex.
+            </span>
+            <img src="../img/PIN.png"
+                alt="Map Pin"
+                class="w-5 h-5 object-contain drop-shadow-sm">
+        `;
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+    const heading = document.querySelector("#mainContent h2");
+
+    if (!heading) return;
+
+    if (userRole === "handler") {
+        // Replace ONLY the text
+        heading.childNodes[0].textContent = "Sugarcane Fields in Ormoc City";
+
+        // Remove the icon (hand)
+        const icon = heading.querySelector("i");
+        if (icon) icon.remove();
+    }
+});
