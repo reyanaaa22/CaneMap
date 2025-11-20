@@ -1645,6 +1645,7 @@ async function watchPendingConflicts(userId) {
 // Call this on load
 watchPendingConflicts(localStorage.getItem("userId"));
 
+
 function openDriverRentalModal() {
   const wrapper = document.getElementById("driverRentalModalWrapper");
   const frame = document.getElementById("driverRentalFrame");
@@ -2577,39 +2578,68 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 /* ===== Robust: hide Driver Badge UI & Register a Field when role is handler, worker, or driver ===== */
 (function ensureHideDriverBadgeForHandlerWorker() {
-  function hideDriverBadgeElements() {
-    try {
-      const role = (localStorage.getItem("userRole") || "").toLowerCase();
-      const isHandlerOrWorker = role === "handler" || role === "worker";
+function hideDriverBadgeElements() {
+  try {
+    const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-      // Driver Badge targets
-      const headerDriverLink = document.querySelector('a[href="#driver-badge"]');
-      const promoSection = document.getElementById("driver-badge");
-      const dropdownDriverLink = document.querySelector('#profileDropdown a[href*="Driver_Badge.html"], #profileDropdown a[href*="Driver_Badge"]');
-      const mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
-      const driverRentalBtn = document.getElementById("btnDriverRental");
+// 🔥 READ PENDING FLAGS (must match profile dropdown logic)
+const pendingWorkerJoin =
+    localStorage.getItem("pendingWorker") === "true";
+const pendingFieldApplication =
+    localStorage.getItem("pendingFieldApplication") === "true";
+const pendingDriverBadge =
+    localStorage.getItem("pendingDriverBadge") === "true";
+const pendingJoinField =
+    localStorage.getItem("pendingJoinField") === "true";
 
-      if (headerDriverLink) headerDriverLink.style.display = isHandlerOrWorker ? "none" : "";
-      if (promoSection) promoSection.style.display = isHandlerOrWorker ? "none" : "";
-      if (dropdownDriverLink) dropdownDriverLink.style.display = isHandlerOrWorker ? "none" : "";
-      if (mobileDriverBtn) mobileDriverBtn.style.display = isHandlerOrWorker ? "none" : "";
-      if (driverRentalBtn) driverRentalBtn.style.display = isHandlerOrWorker ? "none" : "";
+// 🔥 Farmer should be blocked if ANY pending exists
+const farmerHasPending =
+    pendingWorkerJoin ||
+    pendingFieldApplication ||
+    pendingDriverBadge ||
+    pendingJoinField;
 
-      document.querySelectorAll('a[href*="Driver_Badge.html"], a[href*="Driver_Badge"]').forEach((el) => {
-        el.style.display = isHandlerOrWorker ? "none" : "";
-      });
+// 🔥 If should be hidden (same logic as your dropdown)
+const shouldHide =
+    role === "handler" ||
+    role === "worker" ||
+    (role === "farmer" && farmerHasPending);
 
-      // Hide "Register a Field" in dropdown for driver or worker
-      const regFieldDropdown = document.querySelector('#profileDropdown a[href*="Register-field.html"]');
-      if (regFieldDropdown) {
-        regFieldDropdown.style.display = (role === "driver" || role === "worker") ? "none" : "";
-      }
+// 🔥 Override ALL icon visibility BEFORE viewport rules run
+if (shouldHide) {
+    if (regBtn) regBtn.style.display = "none";
+    if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
+}
 
-    } catch (err) {
-      console.warn("hideDriverBadgeElements error:", err);
-    }
+
+    // 🔽 Elements
+    const headerDriverLink = document.querySelector('a[href="#driver-badge"]');
+    const promoSection = document.getElementById("driver-badge");
+    const dropdownDriverLink = document.querySelector(
+      '#profileDropdown a[href*="Driver_Badge"]'
+    );
+    const mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
+    const driverRentalBtn = document.getElementById("btnDriverRental");
+    const regFieldDropdown = document.querySelector(
+      '#profileDropdown a[href*="Register-field.html"]'
+    );
+    const regBtn = document.getElementById("btnRegisterField");
+
+    // 🔥 APPLY HIDING LOGIC
+    if (headerDriverLink) headerDriverLink.style.display = shouldHide ? "none" : "";
+    if (promoSection) promoSection.style.display = shouldHide ? "none" : "";
+    if (dropdownDriverLink) dropdownDriverLink.style.display = shouldHide ? "none" : "";
+    if (mobileDriverBtn) mobileDriverBtn.style.display = shouldHide ? "none" : "";
+    if (driverRentalBtn) driverRentalBtn.style.display = shouldHide ? "none" : "";
+
+    // Register Field (dropdown + header)
+    if (regFieldDropdown) regFieldDropdown.style.display = shouldHide ? "none" : "";
+    if (regBtn) regBtn.style.display = shouldHide ? "none" : "";
+
+  } catch (err) {
+    console.warn("hideDriverBadgeElements error:", err);
   }
-
+}
   // Run immediately
   hideDriverBadgeElements();
 
@@ -2635,6 +2665,41 @@ document.addEventListener("DOMContentLoaded", function () {
   window.hideDriverBadgeElements = hideDriverBadgeElements;
 })();
 
+// ---- AUTO-HIDE "Register a Field" WHEN DRIVER BADGE IS PENDING ---- //
+function hideRegisterFieldIfDriverPending() {
+    const dropdown = document.getElementById("profileDropdown");
+    if (!dropdown) return;
+
+    // find the <a> by visible text only
+    const links = dropdown.querySelectorAll("a");
+    links.forEach(a => {
+        const text = a.textContent.trim().toLowerCase();
+
+        if (text.includes("register a field")) {
+            const hasPendingDriver = localStorage.getItem("pendingDriver") === "true";
+
+            if (hasPendingDriver) {
+                a.classList.add("hidden");
+                a.style.display = "none";       // double safety
+                console.log("🚫 Hidden: Register a Field (driver badge pending)");
+            } else {
+                a.classList.remove("hidden");
+                a.style.display = "";
+                console.log("✅ Visible: Register a Field");
+            }
+        }
+    });
+}
+
+// Run once on load
+document.addEventListener("DOMContentLoaded", hideRegisterFieldIfDriverPending);
+
+// React to Firestore updates (watchPendingConflicts triggers storage events)
+window.addEventListener("storage", (e) => {
+    if (e.key === "pendingDriver") {
+        hideRegisterFieldIfDriverPending();
+    }
+});
 
 
   // Feedback FAB bindings (ensure after DOM is ready)
@@ -4146,7 +4211,33 @@ function updateHeaderButtonsForViewport() {
     // get user role from localStorage (make sure it's lowercase)
     const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-    /* ---------- INSERT HERE: role-based hiding ---------- */
+// Read all pending flags
+const pendingWorker = localStorage.getItem("pendingWorker") === "true";
+const pendingDriverBadge = localStorage.getItem("pendingDriverBadge") === "true";
+const pendingFieldApp = localStorage.getItem("pendingFieldApplication") === "true";
+const pendingJoinField = localStorage.getItem("pendingJoinField") === "true";
+
+const farmerHasPending =
+    pendingWorker ||
+    pendingDriverBadge ||
+    pendingFieldApp ||
+    pendingJoinField;
+
+// Determine if header icons must be hidden
+const shouldHide =
+    (role === "farmer" && farmerHasPending);
+
+// 🔥 100% HIDE — INCLUDING HEADER + MOBILE — AND STOP EXECUTION
+if (shouldHide) {
+    if (regBtn) regBtn.style.display = "none";
+    if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
+
+    // ALSO remove them from headerIcons container
+    if (regBtn && headerIcons.contains(regBtn)) headerIcons.removeChild(regBtn);
+    if (mobileDriverBtn && headerIcons.contains(mobileDriverBtn)) headerIcons.removeChild(mobileDriverBtn);
+
+    return; // ⛔ VERY IMPORTANT — stop further logic so they NEVER reappear
+}
 
     // Hide Driver Badge icon if handler or worker
     if (role !== "handler" && role !== "worker") {
@@ -4165,6 +4256,7 @@ function updateHeaderButtonsForViewport() {
         if (regBtn) regBtn.style.display = "inline-flex";
     }
 
+    
     const isSmall = window.innerWidth <= 768;
     const defaultColor = "#ffffff";
     const smallColor = "#ffffff"; // same color as default, adjust if you want
@@ -4271,6 +4363,41 @@ if (isSmall) {
 
   window.addEventListener("resize", debounce(updateHeaderButtonsForViewport, 120));
 })();
+
+/* === AUTO UPDATE HEADER WHEN ROLE OR PENDING STATUS CHANGES === */
+
+// Save previous values for comparison
+let lastRole = (localStorage.getItem("userRole") || "").toLowerCase();
+let lastPendingWorker = localStorage.getItem("pendingWorker");
+let lastPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
+let lastPendingFieldApp = localStorage.getItem("pendingFieldApplication");
+let lastPendingJoinField = localStorage.getItem("pendingJoinField");
+
+// Re-run header update every 400ms if values changed
+setInterval(() => {
+    const newRole = (localStorage.getItem("userRole") || "").toLowerCase();
+    const newPendingWorker = localStorage.getItem("pendingWorker");
+    const newPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
+    const newPendingFieldApp = localStorage.getItem("pendingFieldApplication");
+    const newPendingJoinField = localStorage.getItem("pendingJoinField");
+
+    if (
+        newRole !== lastRole ||
+        newPendingWorker !== lastPendingWorker ||
+        newPendingDriverBadge !== lastPendingDriverBadge ||
+        newPendingFieldApp !== lastPendingFieldApp ||
+        newPendingJoinField !== lastPendingJoinField
+    ) {
+        console.log("🔄 Header updated automatically.");
+        updateHeaderButtonsForViewport();
+    }
+
+    lastRole = newRole;
+    lastPendingWorker = newPendingWorker;
+    lastPendingDriverBadge = newPendingDriverBadge;
+    lastPendingFieldApp = newPendingFieldApp;
+    lastPendingJoinField = newPendingJoinField;
+}, 400);
 
 
 /* === Notification Bell Only (header + dropdown) === */
