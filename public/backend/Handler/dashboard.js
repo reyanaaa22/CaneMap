@@ -674,8 +674,8 @@ async function loadJoinRequests(handlerId) {
               const notifRef = doc(collection(db, "notifications"));
               const notifTitle =
                 action === "approve"
-                  ? "Field Registration Approved!"
-                  : "Field Registration Rejected!";
+                  ? "Field Join Approved!"
+                  : "Field Join Rejected!";
               const notifMessage =
                 action === "approve"
                   ? `Your join request for <strong>${requestData.fieldName || "a field"}</strong> has been approved! You can now access the field from your <a href="../../frontend/Worker/Workers.html" target="_blank" class="notif-link">Worker Dashboard</a>.`

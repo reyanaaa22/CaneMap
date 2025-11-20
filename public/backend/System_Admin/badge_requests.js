@@ -114,19 +114,22 @@ async function updateStatus(id, newStatus) {
       }
     }
 
-    // 📨 Create Notification
+    // 📨 Create Notification in your required format
     const notifId = crypto.randomUUID();
+
     await setDoc(doc(db, "notifications", notifId), {
       userId: driverUID,
-      type: newStatus === "approved" ? "badge_approved" : "badge_rejected",
-      title: newStatus === "approved" ? "Driver Badge Approved" : "Driver Badge Rejected",
+      title:
+        newStatus === "approved"
+          ? "Drivers Badge Approved!"
+          : "Drivers Badge Rejected",
       message:
         newStatus === "approved"
-          ? "Congratulations! Your Driver Badge has been approved by the System Admin. You can now access your driver dashboard."
-          : "We're sorry, but your Driver Badge request was rejected. Please review your information and resubmit your application.",
-      read: false,
-      createdAt: serverTimestamp(),
-      relatedEntityId: id, // Badge request ID
+          ? `Your drivers badge application has been reviewed by the System Admin. You can now check your dashboard <a href="../../frontend/Driver/Driver_Dashboard.html" target="_blank" class="notif-link">here</a>.`
+          : `Your drivers badge application was reviewed by the System Admin and unfortunately it has been rejected. Please review your submission and try again.`,
+        status: "unread",
+        timestamp: serverTimestamp(),
+        userId: driverUID
     });
 
     // 🔹 Update UI locally

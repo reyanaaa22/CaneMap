@@ -3586,78 +3586,71 @@ const headerBadge = document.getElementById("headerNotifBadgeCount");
             const notifId = card.dataset.id;
             const notif = cachedData.find((n) => n.id === notifId);
             if (!notif) return;
+card.onclick = async (e) => {
+  if (e.target.tagName === "A") return;
 
-            // 1️⃣ Handle whole card click (normal redirect logic)
-            card.onclick = async (e) => {
-              // Prevent conflict if the user clicks an <a> inside
-              if (e.target.tagName === "A") return;
+  try {
+    // Mark as read
+    if (notif.status === "unread") {
+      await updateDoc(doc(db, "notifications", notifId), {
+        status: "read",
+      });
+      notif.status = "read";
+    }
 
-              try {
-                if (notif.status === "unread") {
-                  await updateDoc(doc(db, "notifications", notifId), {
-                    status: "read",
-                  });
-                  notif.status = "read";
-                }
+    const title = (notif.title || "").toLowerCase();
+    const msg = (notif.message || "").toLowerCase();
 
-                const msg = (notif.message || "").toLowerCase();
-                if (msg.includes("click here")) {
-                  window.location.href =
-                    "../../frontend/Driver/Driver_Badge.html";
-                  return;
-                }
-                if (
-                  msg.includes("successfully approved") ||
-                  msg.includes("success")
-                ) {
-                  try {
-                    const { db } = await import("./firebase-config.js");
-                    const { doc, getDoc } = await import(
-                      "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"
-                    );
+    // 1️⃣ New Join Request → Handler Dashboard
+    if (
+      title.includes("new join request") ||
+      notif.type === "join_request"
+    ) {
+      window.location.href = "../../frontend/Handler/dashboard.html";
+      return;
+    }
 
-                    const userId = localStorage.getItem("userId");
-                    const userRef = doc(db, "users", userId);
-                    const userSnap = await getDoc(userRef);
+    // 2️⃣ Driver Badge Approved → Driver Dashboard
+    if (
+      title.includes("drivers badge approved") ||
+      notif.type === "badge_approved"
+    ) {
+      window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
+      return;
+    }
 
-                    if (
-                      userSnap.exists() &&
-                      (userSnap.data().role || "").toLowerCase() === "driver"
-                    ) {
-                      // ✅ Role verified — go to dashboard
-                      window.location.href =
-                        "../../frontend/Driver/Driver_Dashboard.html";
-                    } else {
-                      // ❌ Not yet driver — show styled alert popup
-                      const overlay = document.createElement("div");
-                      overlay.className =
-                        "fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]";
-                      overlay.innerHTML = `
-                        <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-md w-[90%] animate-fadeIn">
-                        <div class="text-5xl mb-3">⚠️</div>
-                        <h2 class="text-lg font-bold text-[var(--cane-800)] mb-2">Access Restricted</h2>
-                        <p class="text-gray-600 mb-4 text-sm">
-                            You are not yet verified as a <strong>Driver</strong>.<br>
-                            Please wait for your application to be approved before accessing your dashboard.
-                        </p>
-                        <button class="mt-2 px-5 py-2 rounded-lg bg-[var(--cane-700)] text-white font-medium shadow-md hover:bg-[var(--cane-800)]">
-                            Got it
-                        </button>
-                        </div>
-                    `;
-                      document.body.appendChild(overlay);
-                      overlay.querySelector("button").onclick = () =>
-                        overlay.remove();
-                    }
-                  } catch (err) {
-                    console.error("⚠️ Role verification failed:", err);
-                  }
-                  return;
-                }
-              } catch (err) {
-                console.error("⚠️ Failed to handle notification click:", err);
-              }
-            };
+    // 3️⃣ Field Join Approved (FOR DRIVER) → Driver Dashboard
+    if (
+      notif.type === "field_join_approved" ||
+      title.includes("field join")       // safe catch
+    ) {
+      window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
+      return;
+    }
+
+    // 4️⃣ Remarks → Field Form (Handler)
+    if (title.includes("remarks") || msg.includes("remarks")) {
+      window.location.href = "../../frontend/Handler/field_form.html";
+      return;
+    }
+
+    // 5️⃣ Field Registration Approved → Handler Dashboard
+    if (
+      title.includes("field registration approved") ||
+      msg.includes("field registration approved") ||
+      notif.type === "field_approved"
+    ) {
+      window.location.href = "../../frontend/Handler/dashboard.html";
+      return;
+    }
+
+    // 6️⃣ Default → Handler Dashboard
+    window.location.href = "../../frontend/Handler/dashboard.html";
+
+  } catch (err) {
+    console.error("⚠️ Failed to handle notification click:", err);
+  }
+};
 
             // 2️⃣ Handle direct link clicks (like <a href="...">here</a>)
             const links = card.querySelectorAll("a");
