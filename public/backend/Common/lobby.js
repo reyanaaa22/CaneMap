@@ -3469,6 +3469,7 @@ setTimeout(() => {
         doc,
         updateDoc,
         deleteDoc,
+        serverTimestamp,
       } = await import(
         "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"
       );
@@ -3594,6 +3595,8 @@ card.onclick = async (e) => {
     if (notif.status === "unread") {
       await updateDoc(doc(db, "notifications", notifId), {
         status: "read",
+        read: true,
+        readAt: serverTimestamp(),
       });
       notif.status = "read";
     }
@@ -3662,6 +3665,8 @@ card.onclick = async (e) => {
                   if (notif.status === "unread") {
                     await updateDoc(doc(db, "notifications", notifId), {
                       status: "read",
+                      read: true,
+                      readAt: serverTimestamp(),
                     });
                     notif.status = "read";
                   }
@@ -4064,7 +4069,11 @@ card.onclick = async (e) => {
 
             await Promise.all(
               unread.map((n) =>
-                updateDoc(doc(db, "notifications", n.id), { status: "read" })
+                updateDoc(doc(db, "notifications", n.id), {
+                  status: "read",
+                  read: true,
+                  readAt: serverTimestamp(),
+                })
               )
             );
 

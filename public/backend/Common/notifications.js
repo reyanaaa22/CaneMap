@@ -298,6 +298,7 @@ export async function markNotificationAsRead(notificationId) {
     const notificationRef = doc(db, 'notifications', notificationId);
     await updateDoc(notificationRef, {
       read: true,
+      status: 'read',
       readAt: serverTimestamp()
     });
 
@@ -328,6 +329,7 @@ export async function markAllNotificationsAsRead(userId) {
     for (const docSnap of snapshot.docs) {
       await updateDoc(docSnap.ref, {
         read: true,
+        status: 'read',
         readAt: serverTimestamp()
       });
       count++;
