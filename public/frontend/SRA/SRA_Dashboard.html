@@ -28,7 +28,8 @@
         
         /* App shell styling to match reference UI */
         .app-header {
-            background-color: var(--cane-700);
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .brand-badge {
@@ -38,9 +39,78 @@
             color: transparent;
         }
 
-        .sidebar-surface { background-color: #0f172a; }
+        .sidebar-surface { background-color: var(--cane-700); }
         .sidebar-divider { height: 1px; background-color: rgba(255,255,255,0.08); margin: 1rem 0; }
         .sidebar-section-title { color: #e2e8f0; opacity: 0.8; font-size: 0.95rem; margin-bottom: 0.5rem; }
+        
+        /* Updated sidebar navigation styles */
+        .nav-item {
+            position: relative;
+            margin: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            padding: 0.65rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #cbd5e1;
+            font-weight: 500;
+            font-size: 1.05rem;
+        }
+        
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .nav-item:hover {
+            background-color: rgba(96, 165, 250, 0.1);
+            color: white;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 60%;
+            width: 3px;
+            background-color: #ffffff;
+            border-radius: 0 4px 4px 0;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item:hover::before,
+        .nav-item.bg-slate-800::before {
+            opacity: 1;
+            height: 70%;
+        }
+        
+        /* Active state for current page */
+        .nav-item.bg-slate-800 {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05)) !important;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .nav-item.bg-slate-800::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            border-radius: 0.5rem;
+            z-index: -1;
+            opacity: 0.5;
+        }
         
         .btn-primary {
             background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
@@ -95,12 +165,12 @@
 <body class="bg-[#eef2f7] min-h-screen">
     <!-- Header -->
     <header class="app-header shadow-md lg:pl-64">
-        <div class="container mx-auto px-6 py-4 text-white">
+        <div class="container mx-auto px-6 py-2 text-gray-800">
             <div class="flex items-center justify-end">
                 <div class="flex items-center space-x-4">
                     <!-- Notification Bell with Dropdown -->
                     <div class="relative">
-                        <button id="notificationBellBtn" class="relative text-white hover:text-gray-200 transition-colors p-2">
+                        <button id="notificationBellBtn" class="relative text-gray-800 hover:text-gray-600 transition-colors p-2">
                             <i class="fas fa-bell text-lg"></i>
                             <!-- Notification Badge -->
                             <span id="notificationBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
@@ -126,11 +196,11 @@
                     <!-- Profile -->
                     <div class="relative">
                         <button id="profileBtn" class="flex items-center space-x-2 hover:opacity-90 transition-opacity">
-                            <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center shadow-inner">
-                                <i class="fas fa-user text-white text-sm"></i>
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center shadow-inner">
+                                <i class="fas fa-user text-gray-800 text-sm"></i>
                             </div>
-                            <span id="headerUserName" class="font-medium">SRA Officer</span>
-                            <i class="fas fa-chevron-down text-white/80 text-xs"></i>
+                            <span id="headerUserName" class="font-medium text-gray-800 uppercase">SRA Officer</span>
+                            <i class="fas fa-chevron-down text-gray-600 text-xs"></i>
                         </button>
                         <!-- Dropdown -->
                         <div id="profileMenu" class="hidden absolute right-0 mt-2 w-44 bg-white text-[var(--cane-900)] rounded-lg shadow-lg ring-1 ring-black/5 py-2 z-50">
@@ -153,7 +223,7 @@
         <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
         
         <!-- Left Sidebar -->
-        <div id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0 bg-slate-900">
+        <div id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0" style="background-color: var(--cane-700);">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
                     <button id="sraCollapseSidebarBtn" class="hidden lg:inline-flex items-center justify-center text-slate-300 hover:text-white p-2 rounded" title="Collapse sidebar">
@@ -171,7 +241,7 @@
                         <i class="fas fa-user"></i>
                     </div>
                     <div>
-                        <div id="sidebarUserName" class="text-white font-semibold leading-tight">SRA Officer</div>
+                        <div id="sidebarUserName" class="text-white font-semibold leading-tight uppercase">SRA Officer</div>
                         <div class="text-gray-300 text-xs">SRA Officer</div>
                     </div>
                 </div>
@@ -189,7 +259,12 @@
                     
                     <a href="#field-documents" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="field-documents">
                         <i class="fas fa-file-alt"></i>
-                        <span>Review Applications</span>
+                        <span>Applications</span>
+                    </a>
+                    
+                    <a href="#map" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="map">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Map</span>
                     </a>
 
                     <a href="#reports" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-section="reports">
@@ -204,57 +279,93 @@
         <main id="sraMain" class="flex-1 px-4 lg:px-6 py-8 h-full overflow-y-auto lg:ml-64">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
-                <h1 class="text-3xl font-bold text-[var(--cane-900)] mb-8">Dashboard</h1>
-                
+                <!-- Welcome Header -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-[var(--cane-900)]">Welcome, <span id="userGreeting">SRA Officer</span> 👋</h1>
+                    <p class="text-gray-600 mt-1">You have <span id="pendingReviewsCount" class="font-semibold text-[var(--cane-600)]">0</span> pending reviews today.</p>
+                </div>
+
                 <!-- Key Metrics/Statistics -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="metric-card rounded-xl p-6 cursor-pointer hover:scale-[1.02] transition-transform duration-300">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4 text-white">
-                                <i class="fas fa-file-alt text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-[var(--cane-700)]">Total Submissions</p>
-                                <p id="metricTotalSubmissions" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                    <a href="#" class="block group" data-section="field-documents">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
+                            <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
+                            <div class="p-6 relative">
+                                <div class="mb-3">
+                                    <div class="pr-16">
+                                        <p class="text-base font-medium text-gray-500">Total Submissions</p>
+                                        <div class="flex flex-col">
+                                            <p id="metricTotalSubmissions" class="text-4xl font-bold text-gray-900">0</p>
+                                            <p class="text-xs text-gray-400 mt-1">All applications received</p>
+                                        </div>
+                                    </div>
+                                    <span class="absolute top-2 right-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800">
+                                        View All
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="metric-card rounded-xl p-6 cursor-pointer hover:scale-[1.02] transition-transform duration-300">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4 text-white">
-                                <i class="fas fa-clock text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-[var(--cane-700)]">Pending Review</p>
-                                <p id="metricPendingReview" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                    <a href="#" class="block group" data-section="field-documents">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
+                            <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
+                            <div class="p-6 relative">
+                                <div class="mb-3">
+                                    <div class="pr-16">
+                                        <p class="text-base font-medium text-gray-500">Pending Review</p>
+                                        <div class="flex flex-col">
+                                            <p id="metricPendingReview" class="text-4xl font-bold text-gray-900">0</p>
+                                            <p class="text-xs text-gray-400 mt-1">Applications awaiting review</p>
+                                        </div>
+                                    </div>
+                                    <span class="absolute top-2 right-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-800">
+                                        Review Now
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="metric-card rounded-xl p-6 cursor-pointer hover:scale-[1.02] transition-transform duration-300">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4 text-white">
-                                <i class="fas fa-check text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-[var(--cane-700)]">Reviewed Today</p>
-                                <p id="metricReviewedToday" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                    <a href="#" class="block group" data-section="field-documents">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
+                            <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
+                            <div class="p-6 relative">
+                                <div class="mb-3">
+                                    <div class="pr-16">
+                                        <p class="text-base font-medium text-gray-500">Reviewed Today</p>
+                                        <div class="flex flex-col">
+                                            <p id="metricReviewedToday" class="text-4xl font-bold text-gray-900">0</p>
+                                            <p class="text-xs text-gray-400 mt-1">Completed reviews today</p>
+                                        </div>
+                                    </div>
+                                    <span class="absolute top-2 right-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800">
+                                        Today
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="metric-card rounded-xl p-6 cursor-pointer hover:scale-[1.02] transition-transform duration-300">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-[var(--cane-500)] rounded-lg flex items-center justify-center mr-4 text-white">
-                                <i class="fas fa-seedling text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-[var(--cane-700)]">Active Fields</p>
-                                <p id="metricActiveFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                    <a href="#" class="block group" data-section="field-documents">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
+                            <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
+                            <div class="p-6 relative">
+                                <div class="mb-3">
+                                    <div class="pr-16">
+                                        <p class="text-base font-medium text-gray-500">Active Fields</p>
+                                        <div class="flex flex-col">
+                                            <p id="metricActiveFields" class="text-4xl font-bold text-gray-900">0</p>
+                                            <p class="text-xs text-gray-400 mt-1">Fields currently active</p>
+                                        </div>
+                                    </div>
+                                    <span class="absolute top-2 right-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800">
+                                        View Map
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
 
                 <!-- Main Dashboard Content -->
