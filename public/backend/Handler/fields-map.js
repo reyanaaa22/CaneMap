@@ -961,7 +961,8 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       // Re-render tasks
       const tasks = await fetchTasksForField(fieldId).catch(() => []);
       const tasksContainer = modal.querySelector('#fd_tasks_container');
-      const filterValue = modal.querySelector('#fd_tasks_filter')?.value || 'all';
+      const filterValue = modal.querySelector('#fd_tasks_filter')?.value || 'pending';
+
 
       if (monthValue === 'all') {
         // Show all tasks
@@ -1274,12 +1275,22 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         return '<div class="text-sm text-gray-500 py-4">No tasks found</div>';
       }
 
-      // Sort by scheduled_at (earliest first)
-      const sortedTasks = filteredTasks.sort((a, b) => {
-        const aTime = a.scheduled_at?.seconds || 0;
-        const bTime = b.scheduled_at?.seconds || 0;
-        return aTime - bTime;
-      });
+    const sortedTasks = filteredTasks.sort((a, b) => {
+
+      // 1️⃣ Pending first
+      const aStatus = (a.status || 'todo').toLowerCase();
+      const bStatus = (b.status || 'todo').toLowerCase();
+
+      if (aStatus === 'pending' && bStatus !== 'pending') return -1;
+      if (bStatus === 'pending' && aStatus !== 'pending') return 1;
+
+      // 2️⃣ Deadline sorting (nearest → farthest)
+      const aDeadline = a.deadline?.seconds ? a.deadline.toDate() : new Date(8640000000000000);
+      const bDeadline = b.deadline?.seconds ? b.deadline.toDate() : new Date(8640000000000000);
+
+      return aDeadline - bDeadline;
+    });
+
 
       return renderTaskList(sortedTasks);
     }
