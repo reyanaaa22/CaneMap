@@ -1,14 +1,16 @@
 // Import Firebase from existing config
 import { auth, db } from '../Common/firebase-config.js';
-import { collection, query, where, onSnapshot,  doc,
+import { collection, query, where, onSnapshot, doc,
   getDoc,
   getDocs,
+  deleteDoc,   // <-- ADD THIS
   orderBy,
   limit,
   collectionGroup } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { openCreateTaskModal } from './create-task.js';
 import { handleRatooning, handleReplanting } from './growth-tracker.js';
+
 
 // Global variables for map and data
 let fieldsMap = null;
@@ -1334,44 +1336,61 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       return renderTaskList(sortedTasks);
     }
 
-    // Shared function to render task list
-    function renderTaskList(tasks) {
-      const taskRows = tasks.map(t => {
-        const title = t.title || t.task || 'Untitled task';
-        // Try scheduled_at first, then deadline, then createdAt
-        const timeField = t.scheduled_at || t.deadline || t.createdAt;
-        const scheduled = timeField ? (timeField.toDate ? timeField.toDate() : new Date(timeField)) : null;
-        const dateStr = scheduled ? scheduled.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not scheduled';
-        const status = (t.status || 'todo').toLowerCase();
-        const statusColors = {
-          'todo': 'bg-gray-100 text-gray-700',
-          'pending': 'bg-yellow-100 text-yellow-700',
-          'in_progress': 'bg-blue-100 text-blue-700',
-          'done': 'bg-green-100 text-green-700',
-          'completed': 'bg-green-100 text-green-700'
-        };
-        const statusColor = statusColors[status] || 'bg-gray-100 text-gray-700';
+  // Shared function to render task list (UPDATED: adds delete button)
+  function renderTaskList(tasks) {
+    const taskRows = tasks.map(t => {
+      const title = t.title || t.task || 'Untitled task';
+      // Try scheduled_at first, then deadline, then createdAt
+      const timeField = t.scheduled_at || t.deadline || t.createdAt;
+      const scheduled = timeField ? (timeField.toDate ? timeField.toDate() : new Date(timeField)) : null;
+      const dateStr = scheduled ? scheduled.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not scheduled';
+      const status = (t.status || 'todo').toLowerCase();
+      const statusColors = {
+        'todo': 'bg-gray-100 text-gray-700',
+        'pending': 'bg-yellow-100 text-yellow-700',
+        'in_progress': 'bg-blue-100 text-blue-700',
+        'done': 'bg-green-100 text-green-700',
+        'completed': 'bg-green-100 text-green-700'
+      };
+      const statusColor = statusColors[status] || 'bg-gray-100 text-gray-700';
 
         return `
-          <div class="border border-gray-200 rounded-lg p-3 mb-2 hover:shadow-md transition">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="font-semibold text-sm text-gray-900">${escapeHtml(title)}</div>
-                <div class="text-xs text-gray-600 mt-1">
-                  <i class="far fa-calendar mr-1"></i>${escapeHtml(dateStr)}
-                </div>
-                ${t.details ? `<div class="text-xs text-gray-500 mt-1">${escapeHtml(t.details)}</div>` : ''}
+          <div class="border border-gray-200 rounded-lg p-3 mb-2 hover:shadow-md transition"
+              data-task-id="${t.id}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-sm text-gray-900 truncate">${escapeHtml(title)}</div>
+              <div class="text-xs text-gray-600 mt-1 truncate">
+                <i class="far fa-calendar mr-1"></i>${escapeHtml(dateStr)}
               </div>
-              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor} ml-3">
+              ${t.details ? `<div class="text-xs text-gray-500 mt-1 line-clamp-2">${escapeHtml(t.details)}</div>` : ''}
+            </div>
+
+            <div class="flex items-center gap-3 ml-3 flex-shrink-0">
+              <!-- Status badge -->
+              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor}">
                 ${status}
               </span>
+
+              <!-- Delete button -->
+              <button
+                type="button"
+                aria-label="Delete task"
+                title="Delete task"
+                class="inline-flex items-center justify-center h-8 w-8 rounded-full border border-gray-200 hover:bg-red-50 hover:border-red-200 transition text-red-600"
+                onclick="_deleteModal.show('${t.id}')"
+              >
+                <i class="fas fa-trash text-sm"></i>
+              </button>
             </div>
           </div>
-        `;
-      }).join('');
+        </div>
+      `;
+    }).join('');
 
-      return `<div class="space-y-2">${taskRows}</div>`;
-    }
+    return `<div class="space-y-2">${taskRows}</div>`;
+  }
+
 
     // Old weekly grid code removed - now using filtered list view
     function oldWeeklyGridCode() {
@@ -1669,6 +1688,178 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       initFieldsMap();
     }, 100);
   };
+
+// ======================================================
+// DELETE TASK — CUSTOM MODAL UI
+// ======================================================
+
+// Create modal + overlay once (global)
+(function() {
+  const overlay = document.createElement("div");
+  overlay.id = "deleteTaskOverlay";
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99998;
+  `;
+
+  const modal = document.createElement("div");
+  modal.id = "deleteTaskModal";
+  modal.style.cssText = `
+    background: white;
+    width: 360px;
+    max-width: 92%;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    text-align: center;
+    z-index: 99999;
+  `;
+
+  modal.innerHTML = `
+    <h2 class="text-lg font-semibold text-[var(--cane-900)] mb-2">
+      Delete Task?
+    </h2>
+    <p class="text-sm text-gray-600 mb-4">
+      This action cannot be undone. Are you sure you want to delete this task?
+    </p>
+
+    <div class="flex justify-center gap-3 mt-2">
+      <button id="deleteCancelBtn"
+        class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">
+        Cancel
+      </button>
+
+      <button id="deleteConfirmBtn"
+        class="px-4 py-2 rounded-md text-white text-sm"
+        style="background: var(--cane-700); opacity: 1;">
+        Delete
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+// Cancel button
+modal.querySelector("#deleteCancelBtn").onclick = () => {
+  overlay.style.display = "none";
+};
+
+// Confirm Delete button
+modal.querySelector("#deleteConfirmBtn").onclick = async () => {
+  const taskId = window._deleteModal.taskId;
+  if (!taskId) return;
+
+  try {
+    await deleteDoc(doc(db, "tasks", taskId));
+
+    // REMOVE THE TASK FROM THE UI WITHOUT REFRESH
+    document.querySelector(`[data-task-id="${taskId}"]`)?.remove();
+
+    _successModal.show();
+    window._deleteModal.hide();
+
+    // Refresh tasks if the field details modal is open
+    const fdModal = document.getElementById("fieldDetailsModal");
+    if (fdModal) {
+      const fieldId = window.currentFieldIdForTasks;
+      if (fieldId) {
+        const tasks = await fetchTasksForField(fieldId).catch(() => []);
+        const filterValue = fdModal.querySelector('#fd_tasks_filter')?.value || 'all';
+        const container = fdModal.querySelector("#fd_tasks_container");
+        container.innerHTML = renderTasksWeekly(tasks, filterValue);
+      }
+    } else {
+      window.location.reload();
+    }
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("Error deleting task.");
+  }
+};
+
+// success 
+(function () {
+  const overlay = document.createElement("div");
+  overlay.id = "successTaskOverlay";
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99998;
+  `;
+
+  const modal = document.createElement("div");
+  modal.id = "successTaskModal";
+  modal.style.cssText = `
+    background: white;
+    width: 300px;
+    max-width: 90%;
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    animation: fadeInScale .25s ease-out;
+  `;
+
+  modal.innerHTML = `
+    <div class="text-green-600 text-4xl mb-2">
+      <i class="fas fa-check-circle"></i>
+    </div>
+    <h2 class="text-lg font-semibold text-[var(--cane-900)] mb-2">
+      Success!
+    </h2>
+    <p class="text-sm text-gray-600 mb-4">
+      Task deleted successfully.
+    </p>
+
+    <button id="successCloseBtn"
+      class="px-4 py-2 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)] text-sm w-full">
+      OK
+    </button>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Close button
+  modal.querySelector("#successCloseBtn").onclick = () => {
+    overlay.style.display = "none";
+  };
+
+  // Expose globally
+  window._successModal = {
+    show: () => {
+      overlay.style.display = "flex";
+    },
+    hide: () => {
+      overlay.style.display = "none";
+    }
+  };
+})();
+
+window._deleteModal = {
+  show: (taskId) => {
+    window._deleteModal.taskId = taskId;
+    // No more checkbox code
+    document.getElementById("deleteConfirmBtn").disabled = false;
+    document.getElementById("deleteConfirmBtn").style.opacity = "1";
+    overlay.style.display = "flex";
+  },
+  hide: () => overlay.style.display = "none"
+};
+
+})();
 
   // Export for use by dashboard.js
   window.initFieldsMap = initFieldsMap;
