@@ -1211,6 +1211,27 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       return [];
     }
 
+    function listenToTasks(fieldId, callback) {
+  const q = query(
+    collection(db, "tasks"),
+    where("fieldId", "==", fieldId)
+  );
+
+  // Live listener
+  return onSnapshot(q, (snapshot) => {
+    const tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Sort
+    tasks.sort((a, b) => {
+      const aTime = a.scheduled_at?.seconds || 0;
+      const bTime = b.scheduled_at?.seconds || 0;
+      return aTime - bTime;
+    });
+
+    callback(tasks);
+  });
+}
+
     // --- Load growth tracker data from field document (REQ-5) ---
     async function fetchGrowthRecords(fid) {
       try {
@@ -1540,11 +1561,18 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         // Render growth data
         growthContainer.innerHTML = renderGrowthTable(growth);
 
-        // Render tasks with current filter
-        const currentFilter = (filterSelect?.value) || 'all';
-        tasksContainer.innerHTML = renderTasksWeekly(tasks, currentFilter);
-        adjustTasksContainerVisibleCount(modal, 4, 5);
+ // --- REAL-TIME TASK LISTENING ---
+        let unsubscribeTasks = listenToTasks(fieldId, (liveTasks) => {
+          const currentFilter = filterSelect?.value || "all";
+          tasksContainer.innerHTML = renderTasksWeekly(liveTasks, currentFilter);
+          adjustTasksContainerVisibleCount(modal, 4, 5);
+        });
 
+        // Remove listener when modal closes
+        modal.addEventListener("remove", () => {
+          if (unsubscribeTasks) unsubscribeTasks();
+        });
+        
         // Attach filter handler
         filterSelect?.addEventListener('change', async (e) => {
           const filterValue = e.target.value;
