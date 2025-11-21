@@ -296,7 +296,12 @@
                 
                 <!-- Right side with user controls -->
                 <div class="flex items-center space-x-4">
-
+                    <!-- Back to Lobby Button -->
+                    <a href="../Common/lobby.html" class="flex items-center space-x-1 text-gray-700 hover:text-[var(--cane-600)] transition-colors px-2 py-1 rounded-lg" title="Back to Lobby">
+                        <i class="fas fa-home text-base"></i>
+                        <span class="text-sm font-medium hidden sm:inline">Lobby</span>
+                    </a>
+                    
                     <div class="relative">
                         <button id="notificationBtn" class="text-gray-800 hover:text-gray-600 transition-colors relative" onclick="toggleNotifications()">
                             <i class="fas fa-bell text-lg"></i>
@@ -321,7 +326,7 @@
                             <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                                 <i class="fas fa-user text-white text-sm"></i>
                             </div>
-                            <span class="font-medium" id="userName">Worker Name</span>
+                            <span class="font-medium max-w-[120px] sm:max-w-[180px] truncate" id="userName" title="Worker Name">Worker Name</span>
                             <i class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-300"></i>
                         </button>
                         
@@ -357,23 +362,11 @@
         
         <!-- Left Sidebar -->
         <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col" style="
-            background: linear-gradient(180deg, #3b6e0f 0%, #6fbf2b 100%);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            background: linear-gradient(180deg, #1e3e08 0%, #2c5a0b 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
             height: 100vh;
+            padding-top: 1rem;
         ">
-            <!-- Top Section with Dark Green Background -->
-            <div class="w-full flex items-center justify-between" style="background-color: #2c5a0b; height: 3rem; padding: 0 1rem;">
-                <!-- Back to Lobby Button -->
-                <a href="../Common/lobby.html" class="flex-1 flex items-center justify-center space-x-2 text-white hover:bg-white hover:bg-opacity-20 transition-colors px-3 py-1.5 rounded-lg" title="Back to Lobby">
-                    <i class="fas fa-home text-sm"></i>
-                    <span class="text-xs font-medium">Back to Lobby</span>
-                </a>
-                
-                <!-- Close Sidebar Button (Visible on desktop) -->
-                <button id="closeSidebarDesktop" class="hidden lg:flex items-center justify-center text-white hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 ml-2" title="Collapse sidebar">
-                    <i class="fas fa-chevron-left text-xs"></i>
-                </button>
-            </div>
             
             <div style="padding: 1.25rem 1rem; flex-grow: 1; overflow-y: auto;">
                 <!-- Sidebar Header with close button -->

@@ -110,11 +110,9 @@ async function loadUserData(user) {
         const role = (data.role || 'worker').toString().toLowerCase();
         const nickname = (data.nickname || '').trim();
         const fullname = data.fullname || data.name || user.displayName || '';
-        // Get first and second names and convert to uppercase
+        // Get only the first name and convert to uppercase
         const nameParts = fullname.split(' ');
-        const displayName = nameParts.length >= 2 
-            ? `${nameParts[0].toUpperCase()} ${nameParts[1].toUpperCase()}`
-            : (nameParts[0] ? nameParts[0].toUpperCase() : '');
+        const displayName = nameParts[0] ? nameParts[0].toUpperCase() : '';
             
         const display = nickname.length > 0 ? nickname.toUpperCase() : 
                       (displayName || (user.email ? user.email.split('@')[0].toUpperCase() : 'WORKER'));
