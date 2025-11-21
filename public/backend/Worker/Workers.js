@@ -81,42 +81,90 @@ async function initAuthSession() {
             currentUserId = user.uid;
 
             // Persist uid for other modules
-            try { localStorage.setItem('userId', user.uid); } catch(_) {}
+            try { 
+                localStorage.setItem('userId', user.uid); 
+            } catch(e) {
+                console.warn('Failed to save userId to localStorage:', e);
+            }
 
-            // Load user profile document
-            try {
-                const userRef = doc(db, 'users', user.uid);
-                const snap = await getDoc(userRef);
-                const data = snap.exists() ? (snap.data() || {}) : {};
-
-                const role = (data.role || 'worker').toString().toLowerCase();
-                const nickname = (data.nickname || '').trim();
-                const fullname = data.fullname || data.name || user.displayName || '';
-                const display = nickname.length > 0 ? nickname : (fullname || (user.email ? user.email.split('@')[0] : 'Worker'));
-
-                try { localStorage.setItem('userRole', role); } catch(_) {}
-                try { localStorage.setItem('farmerName', fullname || display); } catch(_) {}
-                if (nickname) { try { localStorage.setItem('farmerNickname', nickname); } catch(_) {} }
-                try { localStorage.setItem('userEmail', user.email || ''); } catch(_) {}
-
-                // Update UI
-                const nameEls = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
-                nameEls.forEach(el => { if (el) el.textContent = display; });
-                const dropdownUserType = document.getElementById('dropdownUserType');
-                if (dropdownUserType) dropdownUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-                const sidebarUserType = document.getElementById('sidebarUserType');
-                if (sidebarUserType) sidebarUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-
-                // Load worker-specific data
-                await loadWorkerDashboardData();
-
-            } catch (err) {
-                console.warn('Failed to load user profile:', err);
-                setDisplayNameFromStorage();
+            // Wait for DOM to be fully loaded before loading user data
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => loadUserData(user));
+            } else {
+                await loadUserData(user);
             }
         });
     } catch (e) {
         console.error('Auth init failed:', e);
+        setDisplayNameFromStorage();
+    }
+}
+
+// Load user data and update UI
+async function loadUserData(user) {
+    try {
+        const userRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userRef);
+        const data = snap.exists() ? (snap.data() || {}) : {};
+
+        const role = (data.role || 'worker').toString().toLowerCase();
+        const nickname = (data.nickname || '').trim();
+        const fullname = data.fullname || data.name || user.displayName || '';
+        // Get first and second names and convert to uppercase
+        const nameParts = fullname.split(' ');
+        const displayName = nameParts.length >= 2 
+            ? `${nameParts[0].toUpperCase()} ${nameParts[1].toUpperCase()}`
+            : (nameParts[0] ? nameParts[0].toUpperCase() : '');
+            
+        const display = nickname.length > 0 ? nickname.toUpperCase() : 
+                      (displayName || (user.email ? user.email.split('@')[0].toUpperCase() : 'WORKER'));
+
+        // Store in localStorage with error handling
+        try { 
+            localStorage.setItem('userRole', role); 
+            localStorage.setItem('farmerName', fullname || display); 
+            if (nickname) localStorage.setItem('farmerNickname', nickname);
+            localStorage.setItem('userEmail', user.email || ''); 
+        } catch (e) {
+            console.warn('Error accessing localStorage:', e);
+        }
+
+        // Update UI elements with a small delay to ensure they exist
+        const updateUI = () => {
+            const nameEls = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
+            nameEls.forEach(el => { 
+                if (el) el.textContent = display; 
+                else console.warn('Name element not found');
+            });
+            
+            const dropdownUserType = document.getElementById('dropdownUserType');
+            if (dropdownUserType) {
+                dropdownUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+            } else {
+                console.warn('dropdownUserType element not found');
+            }
+            
+            const sidebarUserType = document.getElementById('sidebarUserType');
+            if (sidebarUserType) {
+                sidebarUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+            }
+
+            // Update UI with user data
+            updateUserInterface();
+        };
+
+        // Try updating UI immediately, and retry after a short delay if elements aren't found
+        updateUI();
+        if (!document.getElementById('dropdownUserType')) {
+            console.log('UI elements not found, retrying...');
+            setTimeout(updateUI, 500);
+        }
+
+        // Load worker-specific data
+        await loadWorkerDashboardData();
+
+    } catch (err) {
+        console.error('Failed to load user profile:', err);
         setDisplayNameFromStorage();
     }
 }
@@ -148,20 +196,26 @@ function initializeDashboard() {
     initializeCalendar();
 }
 
-// Update user interface elements
+// Update user interface elements with null checks
 function updateUserInterface() {
     const badgeIndicator = document.getElementById('badgeIndicator');
     const dropdownUserType = document.getElementById('dropdownUserType');
     const sidebarUserType = document.getElementById('sidebarUserType');
     
+    // Add null checks for required elements
+    if (!dropdownUserType) {
+        console.warn('dropdownUserType element not found');
+        return;
+    }
+
     if (hasDriverBadge) {
-        badgeIndicator.classList.remove('hidden');
+        if (badgeIndicator) badgeIndicator.classList.remove('hidden');
         dropdownUserType.textContent = 'Worker with Driver Badge';
         if (sidebarUserType) {
             sidebarUserType.textContent = 'Worker (with badge)';
         }
     } else {
-        badgeIndicator.classList.add('hidden');
+        if (badgeIndicator) badgeIndicator.classList.add('hidden');
         dropdownUserType.textContent = 'Worker';
         if (sidebarUserType) {
             sidebarUserType.textContent = 'Worker (no badge)';
@@ -596,17 +650,44 @@ async function setupWorkerTasksListener() {
                 const assignedTasksCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress' || !t.status).length;
 
                 // Upcoming tasks: tasks with deadline within next 7 days that are not done
-                const upcomingTasks = tasks.filter(t => {
-                    // Must not be completed
-                    if (t.status === 'done' || t.status === 'completed') return false;
-
-                    // Use deadline field as per REQUIREMENTS.md
-                    if (!t.deadline) return false;
-
-                    const dateObj = t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline);
-                    // Must be in the future and within 7 days from now
-                    return dateObj >= now && dateObj <= sevenDaysFromNow;
+                const upcomingTasks = [];
+                const invalidDeadlineTasks = [];
+                
+                tasks.forEach(t => {
+                    // Skip completed tasks
+                    if (t.status === 'done' || t.status === 'completed') return;
+                    
+                    // Skip tasks with no deadline
+                    if (!t.deadline) {
+                        console.log(`Task ${t.id} has no deadline`);
+                        return;
+                    }
+                    
+                    try {
+                        // Handle both Firestore Timestamp and string dates
+                        const dateObj = t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline);
+                        
+                        // Check if the date is valid
+                        if (isNaN(dateObj.getTime())) {
+                            console.warn('Invalid date for task:', t.id, 'deadline:', t.deadline);
+                            invalidDeadlineTasks.push(t.id);
+                            return;
+                        }
+                        
+                        // Check if the date is in the future and within 7 days from now
+                        if (dateObj >= now && dateObj <= sevenDaysFromNow) {
+                            upcomingTasks.push(t);
+                        }
+                    } catch (e) {
+                        console.error('Error processing task deadline:', t.id, 'deadline:', t.deadline, 'Error:', e);
+                        invalidDeadlineTasks.push(t.id);
+                    }
                 });
+                
+                // Log tasks with invalid deadlines for debugging
+                if (invalidDeadlineTasks.length > 0) {
+                    console.log(`⚠️ ${invalidDeadlineTasks.length} tasks with invalid/missing deadlines:`, invalidDeadlineTasks);
+                }
 
                 console.log(`📊 Upcoming tasks calculation:`);
                 console.log(`   - Now: ${now.toLocaleString()}`);
@@ -769,33 +850,66 @@ function renderWorkerNotifications(notifications) {
 
     notificationsList.innerHTML = notifications.map(notification => {
         const isRead = notification.read === true;
-        const statusClass = isRead ? 'bg-gray-100' : 'bg-[var(--cane-50)]';
+        const statusClass = isRead ? 'bg-white' : 'bg-white';
         const meta = formatRelativeTime(notification.timestamp);
         const message = notification.message || 'Notification';
+        
+        // Determine the section based on notification type
+        let section = 'dashboard';
+        // Check for field-related notifications first
+        if (notification.type && (notification.type.toLowerCase().includes('field') || 
+                                notification.message?.toLowerCase().includes('field'))) {
+            section = 'my-fields';
+        } 
+        // Then check for task-related notifications
+        else if (notification.type && (notification.type.toLowerCase().includes('task') || 
+                                     notification.message?.toLowerCase().includes('task'))) {
+            section = 'my-tasks';
+        }
 
         return `
-            <button onclick="markWorkerNotificationRead('${notification.id}')" class="w-full text-left px-4 py-3 hover:bg-gray-50 focus:outline-none ${statusClass}">
-                <div class="flex items-start gap-2">
-                    <div class="mt-1 h-2 w-2 rounded-full ${isRead ? 'bg-gray-300' : 'bg-[var(--cane-600)]'}"></div>
+            <div class="notification-item w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-200 cursor-pointer border-b border-gray-100 ${statusClass}" 
+                  data-section="${section}" 
+                  data-notification-id="${notification.id}">
+                <div class="flex items-start gap-3">
+                    <div class="mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${isRead ? 'bg-gray-300' : 'bg-green-500'}"></div>
                     <div class="flex-1">
-                        <p class="text-sm text-[var(--cane-700)] leading-snug">${message}</p>
-                        <span class="text-xs text-[var(--cane-600)] mt-1 block">${meta}</span>
+                        <p class="text-sm text-gray-700 leading-snug">${message}</p>
+                        <span class="text-xs text-gray-400 mt-0.5 block">${meta}</span>
                     </div>
                 </div>
-            </button>
+            </div>
         `;
     }).join('');
 }
 
-// Mark notification as read
+// Mark notification as read and navigate to My Tasks
 async function markWorkerNotificationRead(notificationId) {
     try {
+        // Mark notification as read
         await updateDoc(doc(db, 'notifications', notificationId), {
             read: true,
             readAt: serverTimestamp()
         });
+        
+        // Navigate to My Tasks section
+        showSection('my-tasks');
+        
+        // Update active tab in the sidebar
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('text-white', 'bg-gray-800');
+            if (item.getAttribute('data-section') === 'my-tasks') {
+                item.classList.add('text-white', 'bg-gray-800');
+            }
+        });
+        
+        // Close the notifications dropdown if open
+        const dropdown = document.getElementById('notificationDropdown');
+        if (dropdown) {
+            dropdown.classList.add('hidden');
+        }
     } catch (error) {
-        console.error('Error marking notification as read:', error);
+        console.error('Error handling notification click:', error);
     }
 }
 
@@ -978,9 +1092,31 @@ function displayRecentActivity(activities) {
 
 // Update dashboard stat
 function updateDashboardStat(elementId, value) {
-    const el = document.getElementById(elementId);
-    if (el) {
-        el.textContent = value;
+    // Try to get the element immediately
+    let el = document.getElementById(elementId);
+    
+    // If element not found, try again after a short delay (in case DOM isn't fully loaded)
+    if (!el) {
+        setTimeout(() => {
+            el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = value;
+            }
+        }, 500);
+        return;
+    }
+    
+    // Update the element's text content
+    el.textContent = value;
+    
+    // Special handling for specific elements
+    if (elementId === 'activeFieldsCount') {
+        const activeFieldsText = document.getElementById('activeFieldsText');
+        if (activeFieldsText) {
+            activeFieldsText.textContent = value === 0 || value === '0' ? 'No active fields — Join a field' : 'Currently active fields';
+        }
+    } else if (elementId === 'upcomingTasksCount') {
+        console.log(`Updating upcoming tasks count to: ${value}`);
     }
 }
 

@@ -243,33 +243,62 @@
             background-color: var(--cane-700) !important;
             border-color: var(--cane-700) !important;
         }
+        .header-container {
+            max-width: 100%;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+        @media (min-width: 1024px) {
+            .header-container {
+                padding-left: calc(1.5rem + 16rem); /* 16rem is the width of the sidebar */
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen pt-16 lg:pl-64">
+    <!-- This empty div creates space for the fixed header -->
+    <div class="h-12"></div>
     <!-- Header -->
-    <header class="shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600));">
-        <div id="workerHeaderContainer" class="container mx-auto px-6 py-3 lg:pl-64">
+    <header class="fixed top-0 left-0 right-0 z-30 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
+        <div class="w-full px-4 lg:ml-64 lg:pr-4">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4"></div>
-                <div class="text-center">
-                    <div class="flex items-center justify-center space-x-2">
-                        <span id="badgeIndicator" class="badge-indicator hidden">Driver Badge</span>
+                <!-- Left side with hamburger and logo -->
+                <div class="flex items-center">
+                    <!-- Hamburger Menu Button -->
+                    <button id="hamburgerBtn" class="text-gray-800 hover:text-gray-600 transition-colors mr-4" onclick="toggleSidebar()">
+                        <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
+                    </button>
+                    
+                    <!-- Vertical Separator - Only show on desktop -->
+                    <div class="hidden lg:block h-8 w-px bg-gray-300 mx-2"></div>
+                    
+                    <!-- Logo or Title - Only show on desktop -->
+                    <div class="hidden lg:block ml-2">
+                        <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <!-- Hamburger Menu Button -->
-                    <button id="hamburgerBtn" class="lg:hidden text-white hover:text-gray-200 transition-colors">
-                        <i class="fas fa-bars text-lg"></i>
-                    </button>
-
-                    <!-- Back to Lobby Button -->
-                    <a href="../Common/lobby.html" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors px-3 py-2 rounded-lg hover:bg-white/10" title="Back to Lobby">
-                        <i class="fas fa-home text-lg"></i>
-                        <span class="hidden md:inline text-sm font-medium">Lobby</span>
+                
+                <!-- Navigation Links - Desktop -->
+                <nav class="hidden lg:flex space-x-6">
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
                     </a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="my-fields">
+                        <i class="fas fa-map-marked-alt mr-2"></i> My Fields
+                    </a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="my-tasks">
+                        <i class="fas fa-tasks mr-2"></i> My Tasks
+                    </a>
+                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="reports">
+                        <i class="fas fa-chart-bar mr-2"></i> Reports
+                    </a>
+                </nav>
+                
+                <!-- Right side with user controls -->
+                <div class="flex items-center space-x-4">
 
                     <div class="relative">
-                        <button id="notificationBtn" class="text-white hover:text-gray-200 transition-colors relative" onclick="toggleNotifications()">
+                        <button id="notificationBtn" class="text-gray-800 hover:text-gray-600 transition-colors relative" onclick="toggleNotifications()">
                             <i class="fas fa-bell text-lg"></i>
                             <span id="notificationCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                         </button>
@@ -288,12 +317,12 @@
                         </div>
                     </div>
                     <div class="relative">
-                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-all duration-300">
+                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-all duration-300">
                             <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                                 <i class="fas fa-user text-white text-sm"></i>
                             </div>
                             <span class="font-medium" id="userName">Worker Name</span>
-                            <i class="fas fa-chevron-down text-white text-xs transition-transform duration-300"></i>
+                            <i class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-300"></i>
                         </button>
                         
                         <!-- Profile Dropdown -->
@@ -322,65 +351,119 @@
     </header>
 
     <!-- Main Content with Sidebar -->
-    <div id="mainWrapper" class="flex relative lg:ml-64">
+    <div id="mainWrapper" class="flex relative">
         <!-- Mobile Sidebar Overlay -->
-        <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
         
         <!-- Left Sidebar -->
-        <div id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 min-h-screen shadow-lg transform -translate-x-full lg:translate-x-0">
-            <div class="p-6">
-                <!-- Close button for mobile -->
-                <div class="flex justify-between items-center mb-4">
-                    <!-- Desktop collapse button -->
-                    <button id="collapseSidebarBtn" class="hidden lg:inline-flex items-center justify-center text-gray-300 hover:text-white p-2 rounded" title="Collapse sidebar">
-                        <i class="fas fa-bars"></i>
+        <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col" style="
+            background: linear-gradient(180deg, #3b6e0f 0%, #6fbf2b 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            height: 100vh;
+        ">
+            <!-- Top Section with Dark Green Background -->
+            <div class="w-full flex items-center justify-between" style="background-color: #2c5a0b; height: 3rem; padding: 0 1rem;">
+                <!-- Back to Lobby Button -->
+                <a href="../Common/lobby.html" class="flex-1 flex items-center justify-center space-x-2 text-white hover:bg-white hover:bg-opacity-20 transition-colors px-3 py-1.5 rounded-lg" title="Back to Lobby">
+                    <i class="fas fa-home text-sm"></i>
+                    <span class="text-xs font-medium">Back to Lobby</span>
+                </a>
+                
+                <!-- Close Sidebar Button (Visible on desktop) -->
+                <button id="closeSidebarDesktop" class="hidden lg:flex items-center justify-center text-white hover:bg-white hover:bg-opacity-20 rounded-full w-6 h-6 ml-2" title="Collapse sidebar">
+                    <i class="fas fa-chevron-left text-xs"></i>
+                </button>
+            </div>
+            
+            <div style="padding: 1.25rem 1rem; flex-grow: 1; overflow-y: auto;">
+                <!-- Sidebar Header with close button -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div id="profileImageContainer" style="
+                            width: 3.5rem;
+                            height: 3.5rem;
+                            background: rgba(255,255,255,0.2);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            overflow: hidden;
+                            font-weight: 600;
+                            font-size: 1.5rem;
+                            border: 2px solid rgba(255,255,255,0.3);
+                        " id="userInitials">
+                            U
+                        </div>
+                        <div>
+                            <p style="color: white; font-weight: 600; line-height: 1.25; margin: 0; font-size: 1.2rem;" id="sidebarUserName">User Name</p>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
+                        </div>
+                    </div>
+                    <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white">
+                        <i class="fas fa-times" style="font-size: 1.25rem; line-height: 1.75rem;"></i>
                     </button>
-                    <!-- Close button for mobile -->
-                    <div class="lg:hidden">
-                        <button id="closeSidebarBtn" class="text-gray-400 hover:text-white">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
                 </div>
-
-                <!-- Worker Profile (compact) -->
-                <div class="flex items-center space-x-3 mb-5">
-                    <div class="w-10 h-10 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center border border-white/20">
-                        <i class="fas fa-user text-white text-sm"></i>
-                    </div>
-                    <div>
-                        <p class="text-white font-semibold leading-tight" id="sidebarUserName">Worker</p>
-                        <p class="text-gray-400 text-xs" id="sidebarUserType">Worker</p>
-                    </div>
-                </div>
-                <div class="border-b border-gray-700 mb-4"></div>
                 
                 <!-- Navigation Menu -->
-                <nav class="space-y-2">
+                <nav style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.5rem 0.75rem;">
+                    <p style="color: rgba(255,255,255,0.7); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin: 0 0 0.5rem 0.75rem; letter-spacing: 0.05em;">Menu</p>
+                    
                     <!-- Dashboard -->
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-white rounded-lg font-medium bg-gray-800" data-section="dashboard">
-                        <i class="fas fa-gauge-high w-5 h-5"></i>
+                    <a href="#" class="nav-item" data-section="dashboard" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        padding: 0.75rem 1rem;
+                        color: white;
+                        background-color: rgba(255,255,255,0.2);
+                        border-radius: 8px;
+                        font-weight: 500;
+                        text-decoration: none;
+                        transition: all 0.2s;
+                        border-left: 3px solid white;
+                    ">
+                        <i class="fas fa-gauge-high" style="width: 1.25rem; color: white; text-align: center;"></i>
                         <span>Dashboard</span>
                     </a>
 
                     <!-- My Fields -->
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="my-fields">
-                        <i class="fas fa-map-marked-alt w-5 h-5"></i>
+                    <a href="#" class="nav-item" data-section="my-fields" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        padding: 0.75rem 1rem;
+                        color: rgba(255,255,255,0.9);
+                        border-radius: 8px;
+                        font-weight: 400;
+                        text-decoration: none;
+                        transition: all 0.2s;
+                    ">
+                        <i class="fas fa-map-marked-alt" style="width: 1.25rem; color: rgba(255,255,255,0.9); text-align: center;"></i>
                         <span>My Fields</span>
                     </a>
 
                     <!-- My Tasks -->
-                    <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors" data-section="my-tasks">
-                        <i class="fas fa-clipboard-check w-5 h-5"></i>
+                    <a href="#" class="nav-item" data-section="my-tasks" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        padding: 0.75rem 1rem;
+                        color: rgba(255,255,255,0.9);
+                        border-radius: 8px;
+                        font-weight: 400;
+                        text-decoration: none;
+                        transition: all 0.2s;
+                    ">
+                        <i class="fas fa-clipboard-check" style="width: 1.25rem; color: rgba(255,255,255,0.9); text-align: center;"></i>
                         <span>My Tasks</span>
                     </a>
-
                 </nav>
             </div>
         </div>
 
         <!-- Main Content Area -->
-        <main id="mainContent" class="w-full px-4 py-8 lg:px-8">
+        <main id="mainContent" class="w-full px-4 py-6 lg:px-8">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
                     <div class="mb-6">
@@ -390,50 +473,93 @@
 
                 <!-- Dashboard Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <div class="section-card rounded-xl p-6 hover:shadow-md transition">
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-map-marker-alt text-white text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-600 mb-1">Active Fields</p>
-                                <p class="text-3xl font-bold text-gray-900" id="activeFieldsCount">0</p>
+                    <!-- Active Fields Card -->
+                    <a href="#" class="block group" data-section="my-fields">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
+                            <div class="h-2 bg-[var(--cane-600)]"></div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Active Fields</h3>
+                                    <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">LIVE</span>
+                                </div>
+                                <div class="flex items-end justify-between mt-5">
+                                    <div>
+                                        <p class="text-5xl font-bold text-gray-900" id="activeFieldsCount">0</p>
+                                        <p class="text-base text-gray-600 mt-2"><span id="activeFieldsText">Currently active fields</span></p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-sm text-gray-600 block">This week</span>
+                                        <span class="text-base font-semibold text-green-600 flex items-center">
+                                            <i class="fas fa-arrow-up mr-1"></i> 5%
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="section-card rounded-xl p-6 hover:shadow-md transition">
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-clipboard-list text-white text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-[var(--cane-600)] mb-1">Assigned Tasks</p>
-                                <p class="text-3xl font-bold text-[var(--cane-900)]" id="assignedTasksCount">0</p>
+                    <!-- Assigned Tasks Card -->
+                    <a href="#" class="block group" data-section="my-tasks">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
+                            <div class="h-2 bg-[var(--cane-600)]"></div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Assigned Tasks</h3>
+                                    <span class="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">TASKS</span>
+                                </div>
+                                <div class="flex items-end justify-between mt-5">
+                                    <div>
+                                        <p class="text-5xl font-bold text-gray-900" id="assignedTasksCount">0</p>
+                                        <p class="text-base text-gray-600 mt-2">Tasks assigned to you</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-sm text-gray-600 block">From yesterday</span>
+                                        <span class="text-base font-semibold text-red-600 flex items-center">
+                                            <i class="fas fa-arrow-down mr-1"></i> 2%
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="section-card rounded-xl p-6 hover:shadow-md transition">
-                        <div class="flex items-center gap-4 mb-3">
-                            <div class="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-clock text-white text-xl"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-600 mb-1">Upcoming Tasks</p>
-                                <p class="text-3xl font-bold text-gray-900" id="upcomingTasksCount">0</p>
+                    <!-- Upcoming Tasks Card -->
+                    <a href="#" class="block group" data-section="my-tasks">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
+                            <div class="h-2 bg-[var(--cane-600)]"></div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Upcoming Tasks</h3>
+                                    <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">SCHEDULE</span>
+                                </div>
+                                <div class="flex items-end justify-between mt-5">
+                                    <div>
+                                        <p class="text-5xl font-bold text-gray-900" id="upcomingTasksCount">0</p>
+                                        <p class="text-base text-gray-600 mt-2">Due within 7 days</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-xs text-gray-500 block">This week</span>
+                                        <span class="text-sm font-medium text-[var(--cane-500)] flex items-center">
+                                            <i class="fas fa-arrow-up mr-1"></i> 10%
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-500 pl-[72px]">Tasks due within 7 days</p>
-                    </div>
+                    </a>
                 </div>
 
                 <!-- Recent Activity Section -->
                 <div class="section-card rounded-xl p-6 hover:shadow-md transition">
-                    <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center gap-2">
-                        <i class="fas fa-bolt text-[var(--cane-600)]"></i>
-                        Recent Activity
-                    </h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-[var(--cane-900)] flex items-center gap-2">
+                            <i class="fas fa-bolt text-[var(--cane-600)]"></i>
+                            Recent Activity
+                        </h3>
+                        <a href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] flex items-center gap-1" data-section="activity">
+                            View All <i class="fas fa-arrow-right text-xs"></i>
+                        </a>
+                    </div>
                     <ul id="recentActivityList" class="divide-y divide-gray-200 text-sm">
                         <li class="py-3 text-center text-gray-500">
                             <i class="fas fa-spinner fa-spin mr-2"></i>
@@ -530,6 +656,53 @@
 
     <!-- Workers Dashboard JavaScript -->
     <script type="module" src="../../backend/Worker/Workers.js"></script>
+    
+    <!-- Notification Handler -->
+    <script>
+      // Function to handle notification clicks
+      function handleNotificationClick(sectionId) {
+        // Close the notification dropdown
+        const dropdown = document.getElementById('notificationDropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+        
+        // Find and click the corresponding nav item
+        const navItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+        if (navItem) {
+          // Remove active styles from all nav items
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.style.backgroundColor = '';
+            item.style.borderLeft = '';
+            item.style.color = 'rgba(255,255,255,0.9)';
+            const icon = item.querySelector('i');
+            if (icon) icon.style.color = 'rgba(255,255,255,0.9)';
+          });
+          
+          // Apply active styles to the target nav item
+          navItem.style.backgroundColor = 'rgba(255,255,255,0.2)';
+          navItem.style.borderLeft = '3px solid white';
+          navItem.style.color = 'white';
+          const icon = navItem.querySelector('i');
+          if (icon) icon.style.color = 'white';
+          
+          // Navigate to the section
+          navigateToSection(sectionId);
+        }
+      }
+      
+      // Add click handler for notification items
+      document.addEventListener('click', function(e) {
+        const notificationItem = e.target.closest('.notification-item');
+        if (notificationItem) {
+          e.preventDefault();
+          const sectionId = notificationItem.getAttribute('data-section');
+          if (sectionId) {
+            handleNotificationClick(sectionId);
+          }
+        }
+      });
+    </script>
 
     <!-- Custom popup for logout message (Worker) -->
     <div id="workerToastOverlay" class="fixed inset-0 bg-black/40 opacity-0 invisible transition-opacity duration-200 z-[90]"></div>
@@ -548,6 +721,226 @@
     </div>
 
     <script>
+      // Navigation function to handle section changes
+      function navigateToSection(sectionId) {
+        // Hide all content sections
+        document.querySelectorAll('.content-section').forEach(section => {
+          section.classList.add('hidden');
+        });
+        
+        // Show the selected section
+        const sectionToShow = document.getElementById(sectionId);
+        if (sectionToShow) {
+          sectionToShow.classList.remove('hidden');
+        }
+        
+        // Reset all nav items to inactive state
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.style.backgroundColor = '';
+          item.style.borderLeft = '';
+          item.style.color = 'rgba(255,255,255,0.9)';
+          
+          const icon = item.querySelector('i');
+          if (icon) {
+            icon.style.color = 'rgba(255,255,255,0.9)';
+          }
+        });
+        
+        // Set active state only for the selected section in sidebar
+        const activeNavItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+        if (activeNavItem) {
+          activeNavItem.style.backgroundColor = 'rgba(255,255,255,0.2)';
+          activeNavItem.style.borderLeft = '3px solid white';
+          activeNavItem.style.color = 'white';
+          
+          const activeIcon = activeNavItem.querySelector('i');
+          if (activeIcon) {
+            activeIcon.style.color = 'white';
+          }
+        }
+        
+        // Close mobile sidebar if open
+        const sidebar = document.getElementById('sidebar');
+        if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
+          toggleSidebar();
+        }
+        
+        // Store the active section in localStorage
+        localStorage.setItem('activeSection', sectionId);
+      }
+      
+      // Toggle sidebar function
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const icon = document.getElementById('hamburgerIcon');
+        
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+        
+        // Toggle between bars and times icon
+        if (sidebar.classList.contains('-translate-x-full')) {
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+          // Store sidebar state in localStorage
+          localStorage.setItem('sidebarCollapsed', 'true');
+        } else {
+          icon.classList.remove('fa-bars');
+          icon.classList.add('fa-times');
+          // Store sidebar state in localStorage
+          localStorage.setItem('sidebarCollapsed', 'false');
+        }
+      }
+      
+      // Toggle sidebar collapse/expand
+      function toggleSidebarCollapse() {
+        const sidebar = document.getElementById('sidebar');
+        const closeBtn = document.getElementById('closeSidebarDesktop');
+        
+        sidebar.classList.toggle('lg:w-16');
+        sidebar.classList.toggle('lg:items-center');
+        
+        // Toggle between chevron left and right
+        if (sidebar.classList.contains('lg:w-16')) {
+          closeBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
+          closeBtn.title = 'Expand sidebar';
+          // Store collapsed state
+          localStorage.setItem('sidebarCollapsed', 'true');
+        } else {
+          closeBtn.innerHTML = '<i class="fas fa-chevron-left text-xs"></i>';
+          closeBtn.title = 'Collapse sidebar';
+          // Store expanded state
+          localStorage.setItem('sidebarCollapsed', 'false');
+        }
+      }
+      
+      // Initialize sidebar state from localStorage and set up navigation
+      document.addEventListener('DOMContentLoaded', function() {
+        const sidebar = document.getElementById('sidebar');
+        const closeBtn = document.getElementById('closeSidebarDesktop');
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        
+        if (isCollapsed) {
+          sidebar.classList.add('lg:w-16', 'lg:items-center');
+          if (closeBtn) {
+            closeBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
+            closeBtn.title = 'Expand sidebar';
+          }
+        }
+        
+        // Add click event for close button
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleSidebarCollapse();
+          });
+        }
+        
+        // Set up navigation for sidebar items
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const section = this.getAttribute('data-section');
+            if (section) {
+              navigateToSection(section);
+            }
+          });
+        });
+        
+        // Set up navigation for card items
+        document.querySelectorAll('a[data-section]').forEach(item => {
+          if (!item.classList.contains('nav-item')) {
+            item.addEventListener('click', function(e) {
+              e.preventDefault();
+              const section = this.getAttribute('data-section');
+              if (section) {
+                // Find the corresponding nav item and update its styles
+                const navItems = document.querySelectorAll(`.nav-item[data-section="${section}"]`);
+                
+                // Remove active styles from all nav items
+                document.querySelectorAll('.nav-item').forEach(navItem => {
+                  navItem.style.backgroundColor = '';
+                  navItem.style.borderLeft = '';
+                  navItem.style.color = 'rgba(255,255,255,0.9)';
+                  const icon = navItem.querySelector('i');
+                  if (icon) icon.style.color = 'rgba(255,255,255,0.9)';
+                });
+                
+                // Apply active styles to the target nav item
+                navItems.forEach(navItem => {
+                  navItem.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                  navItem.style.borderLeft = '3px solid white';
+                  navItem.style.color = 'white';
+                  const icon = navItem.querySelector('i');
+                  if (icon) icon.style.color = 'white';
+                });
+                
+                // Navigate to the section
+                navigateToSection(section);
+              }
+            });
+          }
+        });
+        
+        // Initialize with stored section or dashboard as default
+        const activeSection = localStorage.getItem('activeSection') || 'dashboard';
+        navigateToSection(activeSection);
+      });
+
+      // Close sidebar on mobile when clicking overlay or close button
+      document.getElementById('sidebarOverlay').addEventListener('click', toggleSidebar);
+      document.getElementById('closeSidebarBtn')?.addEventListener('click', toggleSidebar);
+
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (window.innerWidth >= 1024) {
+          // On desktop, ensure sidebar is visible and overlay is hidden
+          sidebar.classList.remove('-translate-x-full');
+          overlay.classList.add('hidden');
+        } else {
+          // On mobile, ensure sidebar is hidden by default
+          sidebar.classList.add('-translate-x-full');
+          overlay.classList.add('hidden');
+        }
+      });
+
+      // Navigation functionality
+      function setupNavigation() {
+        // Handle nav item clicks
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sectionId = this.getAttribute('data-section');
+            showSection(sectionId);
+            
+            // Update active state
+            document.querySelectorAll('.nav-item').forEach(navItem => {
+              navItem.style.background = '';
+              navItem.style.borderLeft = 'none';
+              navItem.style.color = '#e5e7eb';
+              navItem.style.fontWeight = '400';
+            });
+            
+            // Set active state for clicked item
+            this.style.background = 'rgba(255, 255, 255, 0.15)';
+            this.style.borderLeft = '3px solid #fff';
+            this.style.color = '#f9fafb';
+            this.style.fontWeight = '500';
+            
+            // Close sidebar on mobile after selection
+            if (window.innerWidth < 1024) {
+              toggleSidebar();
+            }
+          });
+        });
+      }
+      
+      // Initialize navigation when DOM is loaded
+      document.addEventListener('DOMContentLoaded', setupNavigation);
+
       // Initialize FullCalendar instances
       document.addEventListener('DOMContentLoaded', function () {
         if (window.FullCalendar) {
@@ -622,35 +1015,39 @@
 
       // SPA-style section switcher
       function showSection(sectionId) {
-        document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
-        const el = document.getElementById(sectionId);
-        if (el) el.classList.remove('hidden');
-        // active nav styling
-        document.querySelectorAll('.nav-item').forEach(a => {
-          a.classList.remove('text-white', 'bg-gray-800');
-          a.classList.add('text-gray-300');
+        // Hide all sections
+        document.querySelectorAll('.content-section').forEach(s => {
+          s.classList.add('hidden');
         });
-        const active = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
-        if (active) {
-          active.classList.remove('text-gray-300');
-          active.classList.add('text-white', 'bg-gray-800');
+        
+        // Show the selected section
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.classList.remove('hidden');
         }
-        // Initialize available fields map after the section becomes visible
-        if (sectionId === 'available-fields') {
-          // Lazy-load HTML from submenu/available_fields.html on first open
-          const container = document.getElementById('available-fields');
-          if (container && !container.dataset.loaded) {
-            fetch('../Worker/submenu/available_fields.html')
-              .then(r => r.text())
-              .then(html => {
-                container.innerHTML = html;
-                container.dataset.loaded = 'true';
-                initAvailableFieldsMap();
-              });
+        
+        // Update active nav styling in both sidebars
+        document.querySelectorAll('.nav-item').forEach(a => {
+          if (a.getAttribute('data-section') === sectionId) {
+            a.classList.remove('text-gray-300');
+            a.classList.add('text-white', 'bg-gray-800');
           } else {
-            setTimeout(initAvailableFieldsMap, 0);
+            a.classList.remove('text-white', 'bg-gray-800');
+            a.classList.add('text-gray-300');
           }
-        }
+        });
+        
+        // Update desktop nav links
+        document.querySelectorAll('[data-section]').forEach(link => {
+          if (link.getAttribute('data-section') === sectionId) {
+            link.classList.add('text-[var(--cane-600)]', 'font-semibold');
+          } else {
+            link.classList.remove('text-[var(--cane-600)]', 'font-semibold');
+            link.classList.add('text-gray-700');
+          }
+        });
+
+        // Load section content if needed
         if (sectionId === 'my-fields') {
           const container = document.getElementById('my-fields');
           if (container && !container.dataset.loaded) {
@@ -662,23 +1059,47 @@
               });
           }
         }
-      }
-      // Handle main nav items and submenu items
-      document.querySelectorAll('.nav-item, [data-section]').forEach(a => {
-        a.addEventListener('click', (e) => {
-          const section = a.getAttribute('data-section');
-          if (section) {
-            e.preventDefault();
-            showSection(section);
-          }
-          // Close mobile sidebar if open
+        
+        // Update URL without page reload
+        history.pushState({}, '', `#${sectionId}`);
+        
+        // Close mobile sidebar if open
+        if (window.innerWidth < 1024) {
           const sidebar = document.getElementById('sidebar');
           const overlay = document.getElementById('sidebarOverlay');
           if (sidebar && overlay) {
             sidebar.classList.add('-translate-x-full');
             overlay.classList.add('hidden');
+            document.body.style.overflow = '';
           }
-        });
+        }
+        
+        // Scroll to top of the page
+        window.scrollTo(0, 0);
+      }
+      // Handle main nav items and submenu items
+      document.addEventListener('click', function(e) {
+        // Find the closest data-section element that was clicked
+        const navItem = e.target.closest('[data-section]');
+        if (navItem) {
+          e.preventDefault();
+          const section = navItem.getAttribute('data-section');
+          if (section) {
+            showSection(section);
+          }
+        }
+      });
+      
+      // Handle browser back/forward buttons
+      window.addEventListener('popstate', function() {
+        const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+        showSection(sectionId);
+      });
+      
+      // Initialize the correct section on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+        showSection(sectionId);
       });
 
       // Leaflet map for Available Fields (initialized lazily)
