@@ -309,18 +309,9 @@
                                 <i class="fas fa-user-shield text-gray-900 text-sm"></i>
                         </div>
                             <span class="font-semibold" id="adminName">Admin</span>
-                            <i class="fas fa-chevron-down text-sm ml-1 text-gray-900" id="profileChevron"></i>
                         </button>
                         
-                        <!-- Profile Dropdown -->
-                        <div id="adminProfileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-300 transform scale-95 origin-top-right z-50">
-                            <div class="py-2">
-                                <a href="#" onclick="logout()" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                                    <i class="fas fa-sign-out-alt mr-3"></i>
-                                    Logout
-                                </a>
-                            </div>
-                        </div>
+                        <!-- Profile Dropdown removed -->
                             </div>
                         </div>
                     </div>
@@ -460,6 +451,14 @@
                 </a>
             </div>
         </nav>
+
+        <!-- Sidebar Footer: Logout at bottom -->
+        <div class="sidebar-footer px-6 pb-6">
+            <button onclick="logout()" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="ml-3">Logout</span>
+            </button>
+        </div>
 
                         </div>
 
@@ -724,8 +723,7 @@
                 initializeSidebarState();
                 if (window.wireAddUserModal) window.wireAddUserModal();
 
-                // Initialize profile dropdown
-                initializeProfileDropdown();
+                // Profile dropdown disabled
             });
         
         // Enhanced Sidebar functions
