@@ -451,7 +451,7 @@
                 </a>
             </div>
         </nav>
-        <div id="pinModalOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div id="pinModalOverlay" class="fixed inset-0 flex items-center justify-center z-50 hidden" style="backdrop-filter: blur(6px); background: rgba(255,255,255,0);">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
                 <div class="p-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-gray-900">Change Admin PIN</h3>
@@ -460,16 +460,16 @@
                 <div class="p-6 space-y-4">
                     <div id="pinScreen1" class="space-y-3">
                         <p class="text-sm text-gray-700">Verify current 6-digit PIN</p>
-                        <input id="currentPinInput" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <div class="flex items-center gap-2 text-sm">
-                            <div id="pinVerifySpinner" class="spinner hidden"></div>
+                        <input id="currentPinInput" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-600)]">
+                        <div class="flex items-center gap-2 text-sm min-h-[24px]">
+                            <div id="pinVerifySpinner" class="spinner hidden" style="display:inline-block"></div>
                             <span id="pinErrorMsg" class="text-red-600"></span>
                         </div>
                     </div>
                     <div id="pinScreen2" class="space-y-3 hidden">
                         <p class="text-sm text-gray-700">Set a new 6-digit PIN</p>
-                        <input id="newPinInput" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                        <input id="confirmPinInput" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                        <input id="newPinInput" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-600)]">
+                        <input id="confirmPinInput" type="password" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--cane-600)]">
                         <div class="flex items-center justify-end gap-3 pt-2">
                             <button id="pinCancelBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg">Cancel</button>
                             <button id="pinSaveBtn" class="px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg">Save Changes</button>
@@ -690,13 +690,16 @@
         var logo = document.getElementById('adminLogoBtn');
         function showTopCenterNotice(text, duration, allowClose){
             var el = document.createElement('div');
-            el.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white rounded-lg shadow-xl border border-gray-200 px-4 py-2 flex items-center gap-3';
+            el.className = 'fixed top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl shadow-lg border border-gray-200 bg-white flex items-center gap-3';
+            var dot = document.createElement('div');
+            dot.className = 'w-2 h-2 rounded-full bg-[var(--cane-600)]';
             var msg = document.createElement('span');
-            msg.className = 'text-gray-800 text-sm font-medium';
+            msg.className = 'text-[var(--cane-900)] text-sm font-semibold';
             msg.textContent = text;
             var close = document.createElement('button');
-            close.className = 'text-gray-500 hover:text-gray-700 text-sm';
+            close.className = 'ml-2 px-2 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800';
             close.innerHTML = allowClose ? 'Skip' : '<i class="fas fa-times"></i>';
+            el.appendChild(dot);
             el.appendChild(msg);
             el.appendChild(close);
             document.body.appendChild(el);
@@ -731,7 +734,7 @@
             s1.classList.remove('hidden'); s2.classList.add('hidden');
             err.textContent = ''; spin.classList.add('hidden'); input.value='';
             function proceed(){ s1.classList.add('hidden'); s2.classList.remove('hidden'); wireScreen2(); }
-            input.addEventListener('input', function(){
+            input.oninput = function(){
                 var v = input.value.replace(/\D/g,''); input.value = v;
                 if (v.length === 6){
                     spin.classList.remove('hidden');
@@ -750,7 +753,7 @@
                         }
                     });
                 }
-            }, { once: false });
+            };
             document.getElementById('pinModalClose').addEventListener('click', function(){ overlay.classList.add('hidden'); });
             function wireScreen2(){
                 var n1 = document.getElementById('newPinInput');
@@ -777,11 +780,15 @@
         }
         function startCountdown(){
             var seconds = 5;
-            var notice = showTopCenterNotice('A container for changing the PIN will appear in... ('+seconds+')', null, true);
+            var notice = showTopCenterNotice('A container for changing the PIN will appear in... ', null, true);
+            var counter = document.createElement('span');
+            counter.className = 'px-2 py-0.5 rounded bg-[var(--cane-50)] border border-[var(--cane-200)] text-[var(--cane-800)] text-xs';
+            counter.textContent = '('+seconds+')';
+            notice.element.insertBefore(counter, notice.element.querySelector('button'));
             var btn = notice.element.querySelector('button');
             var intv = setInterval(function(){
                 seconds--; if (seconds<=0){ clearInterval(intv); notice.close(); openPinModal(); return; }
-                notice.element.querySelector('span').textContent = 'A container for changing the PIN will appear in... ('+seconds+')';
+                counter.textContent = '('+seconds+')';
             }, 1000);
             btn.addEventListener('click', function(){ clearInterval(intv); notice.close(); });
         }
