@@ -702,6 +702,34 @@
             </div>
         </div>
     </div>
+
+    <!-- Activity Log Details Modal -->
+    <div id="activityLogDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold text-gray-800">Activity Details</h3>
+                <button onclick="closeActivityLogDetails()" class="px-2 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800">Close</button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <div class="text-xs text-gray-500">Type</div>
+                    <div id="al_type" class="text-sm font-medium text-gray-900">-</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Actor</div>
+                    <div id="al_actor" class="text-sm text-gray-900">-</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Message</div>
+                    <div id="al_message" class="text-sm text-gray-900 whitespace-pre-wrap break-words"></div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Timestamp</div>
+                    <div id="al_time" class="text-sm text-gray-900">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts -->
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
@@ -1062,7 +1090,7 @@
         function showDashboardContent() {
             // Show the main dashboard content
             const mainContent = document.querySelector('main');
-            mainContent.style.height = 'auto';
+            mainContent.style.height = '100vh';
             mainContent.style.overflow = 'auto';
             mainContent.innerHTML = `
                 <!-- Dashboard Title -->
@@ -1166,6 +1194,25 @@
                     </div>
                 </div>
 
+                <!-- Activity Logs Section -->
+                <div class="mt-6 bg-white rounded-xl shadow-lg fade-in">
+                    <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-stream text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900">Activity Logs</h2>
+                                <p class="text-sm text-gray-600">Recent activities from notifications</p>
+                            </div>
+                        </div>
+                        <button id="refreshActivityLogs" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Refresh</button>
+                    </div>
+                    <div class="p-4">
+                        <div id="activityLogsList" class="space-y-2" style="max-height: 24rem; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
             `;
 
             // Re-initialize the dashboard functionality
@@ -1192,6 +1239,76 @@
                     console.warn('⚠️ loadAnalyticsCharts function not found');
                 }
             }, 100);
+
+            // Load activity logs
+            setTimeout(() => {
+                try {
+                    loadActivityLogs();
+                    const btn = document.getElementById('refreshActivityLogs');
+                    if (btn) btn.onclick = () => loadActivityLogs();
+                } catch (e) { console.error('Activity logs init error', e); }
+            }, 120);
+        }
+
+        async function loadActivityLogs() {
+            const listEl = document.getElementById('activityLogsList');
+            if (!listEl || !window.db || !window.collection || !window.getDocs || !window.query || !window.orderBy) return;
+            listEl.innerHTML = '<p class="text-sm text-gray-500">Loading logs…</p>';
+            try {
+                const q = window.query(window.collection(window.db, 'notifications'), window.orderBy('timestamp', 'desc'));
+                const snap = await window.getDocs(q);
+                if (snap.empty) { listEl.innerHTML = '<p class="text-sm text-gray-600">No activity yet.</p>'; return; }
+                const rows = snap.docs.map(d => {
+                    const n = d.data();
+                    const ts = (n.timestamp && n.timestamp.toDate) ? n.timestamp.toDate() : (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate() : null);
+                    const when = ts ? ts.toLocaleString() : '';
+                    const who = n.email || n.userEmail || n.userId || n.role || '';
+                    const label = n.type || 'notification';
+                    const msg = (n.message || '').trim();
+                    const preview = msg ? (msg.length > 100 ? msg.slice(0,100)+'…' : msg) : 'No message';
+                    return (
+                        '<button class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition cursor-pointer" data-id="'+d.id+'">'
+                        + '<div class="flex items-start justify-between">'
+                        +   '<div class="flex-1">'
+                        +     '<div class="text-xs text-[var(--cane-700)] mb-1">'+(who ? String(who) : 'Activity')+'</div>'
+                        +     '<p class="text-sm font-semibold text-gray-900">'+label+'</p>'
+                        +     '<p class="text-sm text-gray-700">'+preview+'</p>'
+                        +   '</div>'
+                        +   '<div class="ml-4 text-xs text-gray-500">'+when+'</div>'
+                        + '</div>'
+                        + '</button>'
+                    );
+                }).join('');
+                listEl.innerHTML = rows;
+                listEl.querySelectorAll('button[data-id]').forEach(btn => {
+                    btn.addEventListener('click', () => openActivityLogDetails(btn.getAttribute('data-id')));
+                });
+            } catch (e) {
+                console.error('Failed to load activity logs:', e);
+                listEl.innerHTML = '<p class="text-sm text-red-600">Failed to load activity logs.</p>';
+            }
+        }
+
+        async function openActivityLogDetails(id) {
+            try {
+                const ref = window.doc(window.db, 'notifications', id);
+                const snap = await window.getDoc(ref);
+                if (!snap.exists()) return;
+                const n = snap.data();
+                var modal = document.getElementById('activityLogDetailsModal');
+                if (!modal) return;
+                document.getElementById('al_type').textContent = n.type || 'notification';
+                document.getElementById('al_actor').textContent = n.email || n.userEmail || n.userId || n.role || '-';
+                document.getElementById('al_message').textContent = n.message || '';
+                const ts = (n.timestamp && n.timestamp.toDate) ? n.timestamp.toDate() : (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate() : null);
+                document.getElementById('al_time').textContent = ts ? ts.toLocaleString() : '';
+                modal.classList.remove('hidden');
+            } catch (e) { console.error(e); }
+        }
+
+        function closeActivityLogDetails() {
+            var modal = document.getElementById('activityLogDetailsModal');
+            if (modal) modal.classList.add('hidden');
         }
         
         // Placeholder functions for other sections
