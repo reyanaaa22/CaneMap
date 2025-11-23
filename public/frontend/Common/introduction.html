@@ -306,9 +306,18 @@
                     </p>
                 </div>
                 
-                <button onclick="nextScreen(2)" class="w-full btn-next font-semibold">
-                    Next
-                </button>
+                <div class="mt-2">
+                    <div class="space-y-3">
+                        <div>
+                            <div class="text-xs text-[rgba(53,83,14,0.85)] mb-1">First time here? Start the walkthrough.</div>
+                            <button onclick="nextScreen(2)" class="w-full btn-next font-semibold">Start Now</button>
+                        </div>
+                        <div>
+                            <div class="text-xs text-[rgba(53,83,14,0.85)] mb-1">Already have an account? Go to Sign In.</div>
+                            <a href="./farmers_login.html" class="w-full btn-secondary font-semibold block text-center">Sign In</a>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Navigation Dots -->
                 <div class="flex justify-center space-x-2 mt-6">
@@ -596,4 +605,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 </body>
-</html> 
+</html>
