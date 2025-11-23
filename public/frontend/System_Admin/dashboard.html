@@ -674,6 +674,34 @@
             </div>
         </div>
     </div>
+
+    <!-- Feedback Details Modal -->
+    <div id="feedbackDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 mx-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold text-gray-800">Feedback Details</h3>
+                <button onclick="closeFeedbackDetails()" class="px-2 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800">Close</button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <div class="text-xs text-gray-500">Type</div>
+                    <div id="fd_type" class="text-sm font-medium text-gray-900">-</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Email</div>
+                    <div id="fd_email" class="text-sm text-gray-900">-</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Message</div>
+                    <div id="fd_message" class="text-sm text-gray-900 whitespace-pre-wrap break-words"></div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Submitted</div>
+                    <div id="fd_time" class="text-sm text-gray-900">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts -->
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
@@ -1550,10 +1578,78 @@ async function showBadgeRequestsContent() {
                         <div class="p-4 rounded-lg border border-gray-200">
                             <h3 class="font-semibold text-gray-900 mb-2">Report an Issue</h3>
                             <p class="text-gray-600 text-sm">Describe your issue and steps to reproduce; include screenshots if possible.</p>
+                            <div class="mt-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-gray-900">Feedback</h4>
+                                    <span class="text-xs text-gray-500">Latest submissions</span>
+                                </div>
+                                <div id="feedbackList" class="space-y-2"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
+            fetchAndRenderFeedbacks();
+        }
+
+        async function fetchAndRenderFeedbacks() {
+            const listEl = document.getElementById('feedbackList');
+            if (!listEl || !window.db || !window.collection || !window.getDocs || !window.query || !window.orderBy) return;
+            try {
+                const q = window.query(window.collection(window.db, 'feedbacks'), window.orderBy('createdAt', 'desc'));
+                const snap = await window.getDocs(q);
+                if (snap.empty) {
+                    listEl.innerHTML = '<p class="text-gray-600 text-sm">No feedback yet.</p>';
+                    return;
+                }
+                const rows = snap.docs.map(d => {
+                    const r = d.data();
+                    const typeLabel = r.type === 'like' ? 'I like something' : r.type === 'dislike' ? "I don't like something" : 'I have an idea';
+                    const msgPreview = (r.message || '').slice(0, 80) + ((r.message || '').length > 80 ? '…' : '');
+                    const submitted = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate().toLocaleString() : '';
+                    return (
+                        '<button class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition cursor-pointer" data-id="'+d.id+'">'
+                        + '<div class="flex items-start justify-between">'
+                        +   '<div class="flex-1">'
+                        +     '<div class="text-xs text-[var(--cane-700)] mb-1">Feedback</div>'
+                        +     '<p class="text-sm font-semibold text-gray-900">'+typeLabel+'</p>'
+                        +     '<p class="text-sm text-gray-700">'+msgPreview+'</p>'
+                        +     (r.email ? '<p class="text-xs text-gray-500 mt-1">'+r.email+'</p>' : '')
+                        +   '</div>'
+                        +   '<div class="ml-4 text-xs text-gray-500">'+submitted+'</div>'
+                        + '</div>'
+                        + '</button>'
+                    );
+                }).join('');
+                listEl.innerHTML = rows;
+                listEl.querySelectorAll('button[data-id]').forEach(btn => {
+                    btn.addEventListener('click', () => openFeedbackDetails(btn.getAttribute('data-id')));
+                });
+            } catch (e) {
+                console.error('Failed to load feedbacks:', e);
+                listEl.innerHTML = '<p class="text-red-600 text-sm">Failed to load feedbacks.</p>';
+            }
+        }
+
+        async function openFeedbackDetails(id) {
+            try {
+                const ref = window.doc(window.db, 'feedbacks', id);
+                const snap = await window.getDoc(ref);
+                if (!snap.exists()) return;
+                const r = snap.data();
+                var modal = document.getElementById('feedbackDetailsModal');
+                if (!modal) return;
+                document.getElementById('fd_type').textContent = r.type === 'like' ? 'I like something' : r.type === 'dislike' ? "I don't like something" : 'I have an idea';
+                document.getElementById('fd_email').textContent = r.email || '-';
+                document.getElementById('fd_message').textContent = r.message || '';
+                document.getElementById('fd_time').textContent = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate().toLocaleString() : '';
+                modal.classList.remove('hidden');
+            } catch (e) { console.error(e); }
+        }
+
+        function closeFeedbackDetails() {
+            var modal = document.getElementById('feedbackDetailsModal');
+            if (modal) modal.classList.add('hidden');
         }
 
         // Sidebar toggle function
