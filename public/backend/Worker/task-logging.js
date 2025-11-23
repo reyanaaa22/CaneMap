@@ -160,23 +160,148 @@ class TaskLoggingManager {
         const fieldNameElement = document.getElementById('field-name');
         const fieldLocationElement = document.getElementById('field-location');
         const fieldOwnerElement = document.getElementById('field-owner');
-        
+
         if (fieldNameElement && this.fieldData) {
             fieldNameElement.textContent = this.fieldData.field_name || 'Unknown Field';
         }
-        
+
         if (fieldLocationElement && this.fieldData) {
             const barangay = this.fieldData.barangay || 'Unknown';
             const municipality = this.fieldData.municipality || 'Unknown';
             fieldLocationElement.textContent = `${barangay}, ${municipality}`;
         }
-        
+
         if (fieldOwnerElement && this.fieldData) {
             // Get owner name from users collection
             this.getUserName(this.fieldData.registered_by).then(ownerName => {
                 fieldOwnerElement.textContent = ownerName || 'Unknown Owner';
             });
         }
+
+        // Populate filtered tasks dropdown
+        this.populateAvailableTasks();
+    }
+
+    // ========================================
+    // ✅ TASK FILTERING LOGIC - Populate dropdown based on field state
+    // ========================================
+    populateAvailableTasks() {
+        const taskSelect = document.getElementById('task_name');
+        if (!taskSelect || !this.fieldData) return;
+
+        const availableTasks = this.getAvailableTasksForField(this.fieldData);
+
+        // Clear and populate dropdown
+        taskSelect.innerHTML = '<option value="">Select a task...</option>';
+
+        availableTasks.forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.value;
+            option.textContent = task.label;
+            if (task.disabled) {
+                option.disabled = true;
+                option.textContent += ' (Not available)';
+            }
+            taskSelect.appendChild(option);
+        });
+    }
+
+    // Get available tasks based on field status
+    getAvailableTasksForField(fieldData) {
+        const tasks = [];
+        const status = fieldData.status?.toLowerCase() || 'active';
+        const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+        const harvestDate = fieldData.harvestDate?.toDate?.() || fieldData.harvestDate;
+
+        // Calculate DAP (Days After Planting)
+        let currentDAP = null;
+        if (plantingDate) {
+            const planting = new Date(plantingDate);
+            const today = new Date();
+            const diffTime = today.getTime() - planting.getTime();
+            currentDAP = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        // ========================================
+        // PRE-PLANTING TASKS (only if NOT planted)
+        // ========================================
+        if (!plantingDate || currentDAP === null) {
+            tasks.push(
+                { value: 'Plowing', label: 'Plowing (Land Preparation)' },
+                { value: 'Harrowing', label: 'Harrowing (Land Preparation)' },
+                { value: 'Furrowing', label: 'Furrowing (Land Preparation)' },
+                { value: 'Planting', label: 'Planting (0 DAP)' }
+            );
+        }
+
+        // ========================================
+        // POST-PLANTING TASKS (only if planted)
+        // ========================================
+        if (plantingDate && currentDAP !== null && currentDAP >= 0) {
+
+            // Re-planting (only if significant time has passed or field was harvested)
+            if (harvestDate || currentDAP > 365) {
+                tasks.push({ value: 'Replanting', label: 'Replanting' });
+            }
+
+            // Basal Fertilization (0-30 DAP)
+            if (currentDAP <= 30) {
+                tasks.push({ value: 'Basal Fertilization', label: `Basal Fertilization (0-30 DAP, Current: ${currentDAP} DAP)` });
+            } else if (currentDAP <= 45) {
+                tasks.push({ value: 'Basal Fertilization', label: `Basal Fertilization (Late - ${currentDAP} DAP)`, recommended: false });
+            }
+
+            // Main Fertilization (45-60 DAP)
+            if (currentDAP >= 40 && currentDAP <= 60) {
+                tasks.push({ value: 'Main Fertilization', label: `Main Fertilization (45-60 DAP, Current: ${currentDAP} DAP)` });
+            } else if (currentDAP > 60 && currentDAP <= 90) {
+                tasks.push({ value: 'Main Fertilization', label: `Main Fertilization (Late - ${currentDAP} DAP)`, recommended: false });
+            }
+
+            // General Maintenance (any time after planting)
+            tasks.push(
+                { value: 'Irrigation', label: 'Irrigation' },
+                { value: 'Weeding', label: 'Weeding' },
+                { value: 'Spraying', label: 'Spraying (Pest/Disease Control)' },
+                { value: 'Hilling Up', label: 'Hilling Up (Soil Banking)' }
+            );
+
+            // Harvesting (only if mature enough and NOT already harvested)
+            if (currentDAP >= 200 && !harvestDate && status !== 'harvested') {
+                const maturityMsg = currentDAP >= 300 ? 'Optimal Maturity' : 'Early Harvest';
+                tasks.push({ value: 'Harvesting', label: `Harvesting (${currentDAP} DAP - ${maturityMsg})` });
+            } else if (currentDAP < 200 && currentDAP >= 150) {
+                // Show but warn it's too early
+                tasks.push({
+                    value: 'Harvesting',
+                    label: `Harvesting (Too Early - ${currentDAP} DAP)`,
+                    disabled: true
+                });
+            }
+        }
+
+        // ========================================
+        // POST-HARVEST TASKS (only if harvested)
+        // ========================================
+        if (status === 'harvested' || harvestDate) {
+            tasks.push(
+                { value: 'Field Cleanup', label: 'Field Cleanup (Post-Harvest)' },
+                { value: 'Ratoon Management', label: 'Ratoon Management' },
+                { value: 'Trash Mulching', label: 'Trash Mulching' }
+            );
+        }
+
+        // ========================================
+        // GENERAL TASKS (always available)
+        // ========================================
+        tasks.push(
+            { value: 'Field Inspection', label: 'Field Inspection' },
+            { value: 'Equipment Maintenance', label: 'Equipment Maintenance' },
+            { value: 'Repair Work', label: 'Repair Work' },
+            { value: 'Others', label: 'Others (Specify in Description)' }
+        );
+
+        return tasks;
     }
 
     // Get user name from users collection
@@ -224,7 +349,7 @@ class TaskLoggingManager {
     }
 
     // ========================================
-    // ✅ TASK LOGIC VALIDATION (Soft warnings only)
+    // ✅ TASK LOGIC VALIDATION (Additional validation layer)
     // ========================================
     async checkTaskLogic(taskName, fieldData) {
         try {
@@ -240,37 +365,30 @@ class TaskLoggingManager {
                 return diffDays >= 0 ? diffDays : null;
             };
 
-            // VALIDATION 1: Harvesting too early (< 200 DAP)
-            if ((taskLower.includes('harvest') || taskLower.includes('cutting')) && fieldData.plantingDate) {
+            // VALIDATION 1: Double-check harvesting is appropriate
+            if (taskLower.includes('harvest') && !taskLower.includes('post')) {
+                if (fieldData.status === 'harvested' || fieldData.harvestDate) {
+                    return `❌ This field was already harvested.\n\nPlease select a post-harvest task instead.`;
+                }
+
                 const currentDAP = calculateDAP(fieldData.plantingDate);
                 if (currentDAP !== null && currentDAP < 200) {
-                    return `⚠️ Notice: This field is only ${currentDAP} days old.\n\n` +
-                           `Sugarcane is typically harvested at 300-400 days after planting (DAP).\n` +
-                           `Harvesting this early would result in very low sugar content and poor yield.`;
+                    return `❌ Cannot harvest: Field is only ${currentDAP} days old.\n\n` +
+                           `Sugarcane must be at least 200 DAP (preferably 300-400 DAP) for harvesting.`;
                 }
             }
 
-            // VALIDATION 2: Planting when already planted
-            if ((taskLower.includes('plant') && !taskLower.includes('replant')) && fieldData.plantingDate) {
+            // VALIDATION 2: Prevent duplicate planting
+            if (taskLower === 'planting' && fieldData.plantingDate && !fieldData.harvestDate) {
                 const plantingDateStr = fieldData.plantingDate.toDate
                     ? fieldData.plantingDate.toDate().toLocaleDateString()
                     : new Date(fieldData.plantingDate).toLocaleDateString();
 
-                return `⚠️ Notice: This field was already planted on ${plantingDateStr}.\n\n` +
-                       `Are you logging a replanting or correcting the planting date?`;
+                return `❌ This field was already planted on ${plantingDateStr}.\n\n` +
+                       `If you need to replant, please select "Replanting" instead.`;
             }
 
-            // VALIDATION 3: Post-harvest tasks when field is harvested
-            if (fieldData.status === 'harvested' &&
-                !taskLower.includes('harvest') &&
-                !taskLower.includes('cleanup') &&
-                !taskLower.includes('ratoon')) {
-
-                return `⚠️ Notice: This field was already harvested.\n\n` +
-                       `Are you logging cleanup work or ratooning activities?`;
-            }
-
-            // No warnings - task seems reasonable
+            // No issues found
             return null;
 
         } catch (error) {
@@ -357,14 +475,11 @@ class TaskLoggingManager {
             }
 
             // ========================================
-            // ✅ SOFT VALIDATION: Warn on obvious errors (non-blocking)
+            // ✅ STRICT VALIDATION: Block illogical tasks
             // ========================================
-            const validationWarning = await this.checkTaskLogic(taskName, this.fieldData);
-            if (validationWarning) {
-                const proceed = confirm(validationWarning + '\n\nDo you want to continue logging this task?');
-                if (!proceed) {
-                    return { success: false, message: 'Task logging cancelled.' };
-                }
+            const validationError = await this.checkTaskLogic(taskName, this.fieldData);
+            if (validationError) {
+                throw new Error(validationError);
             }
 
             // Handle file uploads
@@ -390,7 +505,8 @@ class TaskLoggingManager {
             // Create task log document
             const taskLogData = {
                 field_id: this.fieldId,
-                user_id: this.currentUser.uid,
+                user_uid: this.currentUser.uid,  // ✅ Fixed: Must match Firestore rules (user_uid not user_id)
+                user_id: this.currentUser.uid,   // Keep for backward compatibility
                 task_name: taskName,
                 description: description || '',
                 task_status: taskStatus,

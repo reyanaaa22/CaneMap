@@ -486,6 +486,137 @@ window.createTaskQuickFill = function(taskType) {
   }
 };
 
+/**
+ * ✅ Filter available tasks based on field status and growth stage
+ * @param {object} fieldData - Field data from Firestore
+ * @returns {Array} - Array of available task objects {value, label, disabled}
+ */
+function getAvailableTasksForHandler(fieldData) {
+  const tasks = [];
+  const status = fieldData.status?.toLowerCase() || 'active';
+  const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+  const harvestDate = fieldData.harvestDate?.toDate?.() || fieldData.harvestDate || fieldData.actualHarvestDate;
+
+  // Calculate DAP (Days After Planting)
+  let currentDAP = null;
+  if (plantingDate) {
+    currentDAP = calculateDAP(plantingDate);
+  }
+
+  // ========================================
+  // PRE-PLANTING TASKS (only if NOT planted)
+  // ========================================
+  if (!plantingDate || currentDAP === null) {
+    tasks.push(
+      { value: 'plowing', label: 'Plowing (Land Preparation)' },
+      { value: 'harrowing', label: 'Harrowing (Land Preparation)' },
+      { value: 'furrowing', label: 'Furrowing (Land Preparation)' },
+      { value: 'planting', label: 'Planting (0 DAP)' }
+    );
+  }
+
+  // ========================================
+  // POST-PLANTING TASKS (only if planted)
+  // ========================================
+  if (plantingDate && currentDAP !== null && currentDAP >= 0) {
+
+    // Basal Fertilization (0-30 DAP)
+    if (currentDAP <= 30) {
+      tasks.push({ value: 'basal_fertilizer', label: `Basal Fertilizer (0-30 DAP, Current: ${currentDAP} DAP)` });
+    } else if (currentDAP <= 45) {
+      tasks.push({ value: 'basal_fertilizer', label: `Basal Fertilizer (Late - ${currentDAP} DAP)` });
+    }
+
+    // Main Fertilization (45-60 DAP)
+    if (currentDAP >= 40 && currentDAP <= 60) {
+      tasks.push({ value: 'main_fertilization', label: `Main Fertilization (45-60 DAP, Current: ${currentDAP} DAP)` });
+    } else if (currentDAP > 60 && currentDAP <= 90) {
+      tasks.push({ value: 'main_fertilization', label: `Main Fertilization (Late - ${currentDAP} DAP)` });
+    }
+
+    // General Maintenance (any time after planting)
+    tasks.push(
+      { value: 'spraying', label: 'Spraying (Pest/Disease Control)' },
+      { value: 'weeding', label: 'Weeding' },
+      { value: 'irrigation', label: 'Irrigation' }
+    );
+
+    // Harvesting (only if mature enough and NOT already harvested)
+    if (currentDAP >= 200 && !harvestDate && status !== 'harvested') {
+      const maturityMsg = currentDAP >= 300 ? 'Optimal Maturity' : 'Early Harvest';
+      tasks.push({ value: 'harvesting', label: `Harvesting (${currentDAP} DAP - ${maturityMsg})` });
+    } else if (currentDAP < 200 && currentDAP >= 150) {
+      // Show but mark as disabled
+      tasks.push({
+        value: 'harvesting_disabled',
+        label: `Harvesting (Too Early - ${currentDAP} DAP)`,
+        disabled: true
+      });
+    }
+  }
+
+  // ========================================
+  // POST-HARVEST TASKS (only if harvested)
+  // ========================================
+  if (status === 'harvested' || harvestDate) {
+    tasks.push(
+      { value: 'field_cleanup', label: 'Field Cleanup (Post-Harvest)' },
+      { value: 'ratoon_management', label: 'Ratoon Management' }
+    );
+  }
+
+  // ========================================
+  // GENERAL TASKS (always available)
+  // ========================================
+  tasks.push(
+    { value: 'others', label: 'Others (Specify in Details)' }
+  );
+
+  return tasks;
+}
+
+/**
+ * ✅ Populate task dropdown with filtered tasks based on field status
+ * @param {HTMLElement} dropdown - The task dropdown element
+ * @param {string} fieldId - The field ID
+ */
+async function populateFilteredTaskDropdown(dropdown, fieldId) {
+  try {
+    // Fetch field data
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (!fieldSnap.exists()) {
+      console.error('Field not found:', fieldId);
+      dropdown.innerHTML = '<option value="">Field not found</option>';
+      return;
+    }
+
+    const fieldData = fieldSnap.data();
+    const availableTasks = getAvailableTasksForHandler(fieldData);
+
+    // Clear and populate dropdown
+    dropdown.innerHTML = '<option value="">Select task...</option>';
+
+    availableTasks.forEach(task => {
+      const option = document.createElement('option');
+      option.value = task.value;
+      option.textContent = task.label;
+      if (task.disabled) {
+        option.disabled = true;
+        option.textContent += ' (Not available)';
+      }
+      dropdown.appendChild(option);
+    });
+
+    console.log(`✅ Populated ${availableTasks.length} filtered tasks for field ${fieldId}`);
+
+  } catch (error) {
+    console.error('Error populating filtered tasks:', error);
+    dropdown.innerHTML = '<option value="">Error loading tasks</option>';
+  }
+}
+
 // Main function to open modal
 export async function openCreateTaskModal(fieldId) {
   const existing = document.getElementById('createTaskModal');
@@ -532,22 +663,14 @@ export async function openCreateTaskModal(fieldId) {
           <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
         </div>
 
-        <!-- TASK TYPE DROPDOWN -->
+        <!-- TASK TYPE DROPDOWN (populated dynamically based on field status) -->
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Task Type</label>
           <select id="ct_title"
               class="w-full px-3 py-2 border rounded-md text-sm">
-              <option value="">Select task...</option>
-              <option value="plowing">Plowing</option>
-              <option value="harrowing">Harrowing</option>
-              <option value="furrowing">Furrowing</option>
-              <option value="planting">Planting (0 DAP)</option>
-              <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
-              <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
-              <option value="spraying">Spraying</option>
-              <option value="harvesting">Harvesting</option>
-              <option value="others">Others</option>
+              <option value="">Loading available tasks...</option>
           </select>
+          <p class="text-xs text-gray-500 mt-1">Tasks are filtered based on field status and growth stage</p>
         </div>
 
         <!-- PLANTING → SHOW VARIETY -->
@@ -669,6 +792,12 @@ export async function openCreateTaskModal(fieldId) {
 
   // ✅ LOAD AND DISPLAY DAP-AWARE RECOMMENDATIONS
   await loadTaskRecommendations(fieldId, el);
+
+  // ✅ POPULATE FILTERED TASK DROPDOWN BASED ON FIELD STATUS
+  const titleDropdown = el('#ct_title');
+  if (titleDropdown) {
+    await populateFilteredTaskDropdown(titleDropdown, fieldId);
+  }
 
   // Extra sections
   const varietySec = el("#ct_variety_section");

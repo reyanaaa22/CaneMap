@@ -1043,6 +1043,109 @@ window.markDriverTaskAsDone = async function(taskId) {
 };
 
 // ============================================================
+// TASK FILTERING HELPER - Same logic as worker filtering
+// ============================================================
+
+/**
+ * Get available tasks based on field status and growth stage
+ */
+function getAvailableTasksForField(fieldData) {
+  const tasks = [];
+  const status = fieldData.status?.toLowerCase() || 'active';
+  const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+  const harvestDate = fieldData.harvestDate?.toDate?.() || fieldData.harvestDate;
+
+  // Calculate DAP (Days After Planting)
+  let currentDAP = null;
+  if (plantingDate) {
+    const planting = new Date(plantingDate);
+    const today = new Date();
+    const diffTime = today.getTime() - planting.getTime();
+    currentDAP = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  // ========================================
+  // PRE-PLANTING TASKS (only if NOT planted)
+  // ========================================
+  if (!plantingDate || currentDAP === null) {
+    tasks.push(
+      { value: 'plowing', label: 'Plowing (Land Preparation)' },
+      { value: 'harrowing', label: 'Harrowing (Land Preparation)' },
+      { value: 'furrowing', label: 'Furrowing (Land Preparation)' },
+      { value: 'planting', label: 'Planting (0 DAP)' }
+    );
+  }
+
+  // ========================================
+  // POST-PLANTING TASKS (only if planted)
+  // ========================================
+  if (plantingDate && currentDAP !== null && currentDAP >= 0) {
+
+    // Re-planting (only if significant time has passed or field was harvested)
+    if (harvestDate || currentDAP > 365) {
+      tasks.push({ value: 'replanting', label: 'Replanting' });
+    }
+
+    // Basal Fertilization (0-30 DAP)
+    if (currentDAP <= 30) {
+      tasks.push({ value: 'basal_fertilizer', label: `Basal Fertilizer (0-30 DAP, Current: ${currentDAP} DAP)` });
+    } else if (currentDAP <= 45) {
+      tasks.push({ value: 'basal_fertilizer', label: `Basal Fertilizer (Late - ${currentDAP} DAP)` });
+    }
+
+    // Main Fertilization (45-60 DAP)
+    if (currentDAP >= 40 && currentDAP <= 60) {
+      tasks.push({ value: 'main_fertilization', label: `Main Fertilization (45-60 DAP, Current: ${currentDAP} DAP)` });
+    } else if (currentDAP > 60 && currentDAP <= 90) {
+      tasks.push({ value: 'main_fertilization', label: `Main Fertilization (Late - ${currentDAP} DAP)` });
+    }
+
+    // General Maintenance (any time after planting)
+    tasks.push(
+      { value: 'spraying', label: 'Spraying (Pest/Disease Control)' },
+      { value: 'irrigation', label: 'Irrigation' },
+      { value: 'weeding', label: 'Weeding' }
+    );
+
+    // Harvesting (only if mature enough and NOT already harvested)
+    if (currentDAP >= 200 && !harvestDate && status !== 'harvested') {
+      const maturityMsg = currentDAP >= 300 ? 'Optimal Maturity' : 'Early Harvest';
+      tasks.push({ value: 'harvesting', label: `Harvesting (${currentDAP} DAP - ${maturityMsg})` });
+    } else if (currentDAP < 200 && currentDAP >= 150) {
+      // Show but mark as disabled
+      tasks.push({
+        value: 'harvesting_disabled',
+        label: `Harvesting (Too Early - ${currentDAP} DAP)`,
+        disabled: true
+      });
+    }
+  }
+
+  // ========================================
+  // POST-HARVEST TASKS (only if harvested)
+  // ========================================
+  if (status === 'harvested' || harvestDate) {
+    tasks.push(
+      { value: 'field_cleanup', label: 'Field Cleanup (Post-Harvest)' },
+      { value: 'ratoon_management', label: 'Ratoon Management' }
+    );
+  }
+
+  // ========================================
+  // GENERAL DRIVER TASKS (always available)
+  // ========================================
+  tasks.push(
+    { value: 'transport', label: 'Transport' },
+    { value: 'equipment_operation', label: 'Equipment Operation' },
+    { value: 'material_delivery', label: 'Material Delivery' },
+    { value: 'field_support', label: 'Field Support' },
+    { value: 'others', label: 'Others (Specify in Notes)' }
+  );
+
+  return tasks;
+}
+
+// ============================================================
 // MANUAL WORK LOGGING (REQ-10)
 // ============================================================
 
@@ -1098,20 +1201,9 @@ window.openDriverLogWorkModal = async function() {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Task Type *</label>
             <select id="swal-taskType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
-              <option value="">Select task...</option>
-              <option value="plowing">Plowing</option>
-              <option value="harrowing">Harrowing</option>
-              <option value="furrowing">Furrowing</option>
-              <option value="planting">Planting (0 DAP)</option>
-              <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
-              <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
-              <option value="spraying">Spraying</option>
-              <option value="transport">Transport</option>
-              <option value="equipment_operation">Equipment Operation</option>
-              <option value="material_delivery">Material Delivery</option>
-              <option value="field_support">Field Support</option>
-              <option value="others">Others</option>
+              <option value="">Select a field first...</option>
             </select>
+            <p class="text-xs text-gray-500 mt-1.5">Tasks are filtered based on field status and growth stage</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
@@ -1167,16 +1259,19 @@ window.openDriverLogWorkModal = async function() {
           const selectedFieldId = fieldSelect.value;
 
           if (!selectedFieldId) {
+            // Reset task dropdown
+            taskTypeSelect.innerHTML = '<option value="">Select a field first...</option>';
             suggestionsPanel.style.display = 'none';
             return;
           }
 
           try {
-            // Fetch field data to get planting date and variety
+            // Fetch field data to get planting date, status, and variety
             const fieldRef = doc(db, 'fields', selectedFieldId);
             const fieldSnap = await getDoc(fieldRef);
 
             if (!fieldSnap.exists()) {
+              taskTypeSelect.innerHTML = '<option value="">Field not found</option>';
               suggestionsPanel.style.display = 'none';
               return;
             }
@@ -1186,7 +1281,27 @@ window.openDriverLogWorkModal = async function() {
             const variety = fieldData.sugarcane_variety || fieldData.variety;
             const status = fieldData.status;
 
-            // Only show suggestions for active fields with planting date
+            // ========================================
+            // ✅ POPULATE TASKS DYNAMICALLY BASED ON FIELD STATUS
+            // ========================================
+            const availableTasks = getAvailableTasksForField(fieldData);
+
+            // Clear and populate task dropdown
+            taskTypeSelect.innerHTML = '<option value="">Select task...</option>';
+            availableTasks.forEach(task => {
+              const option = document.createElement('option');
+              option.value = task.value;
+              option.textContent = task.label;
+              if (task.disabled) {
+                option.disabled = true;
+                option.textContent += ' (Not available)';
+              }
+              taskTypeSelect.appendChild(option);
+            });
+
+            // ========================================
+            // ✅ SHOW TASK SUGGESTIONS (only for planted fields)
+            // ========================================
             if (!plantingDate || status === 'harvested' || status === 'inactive') {
               suggestionsPanel.style.display = 'none';
               return;
@@ -1235,7 +1350,8 @@ window.openDriverLogWorkModal = async function() {
 
             suggestionsPanel.style.display = 'block';
           } catch (error) {
-            console.error('Error loading task suggestions:', error);
+            console.error('Error loading field data:', error);
+            taskTypeSelect.innerHTML = '<option value="">Error loading tasks</option>';
             suggestionsPanel.style.display = 'none';
           }
         });
@@ -1289,6 +1405,82 @@ async function createDriverLog(logData) {
   }
 
   try {
+    // ========================================
+    // ✅ VALIDATE TASK LOGIC BEFORE SUBMITTING
+    // ========================================
+    const { db } = await import('../Common/firebase-config.js');
+    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+    // Fetch field data for validation
+    const fieldRef = doc(db, 'fields', logData.fieldId);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (fieldSnap.exists()) {
+      const fieldData = fieldSnap.data();
+      const taskLower = logData.taskType.toLowerCase();
+      const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+      const harvestDate = fieldData.harvestDate?.toDate?.() || fieldData.harvestDate;
+      const status = fieldData.status?.toLowerCase() || 'active';
+
+      // Calculate DAP
+      let currentDAP = null;
+      if (plantingDate) {
+        const planting = new Date(plantingDate);
+        const today = new Date();
+        currentDAP = Math.floor((today - planting) / (1000 * 60 * 60 * 24));
+      }
+
+      // VALIDATION 1: Prevent harvesting already harvested field
+      if (taskLower.includes('harvest') && !taskLower.includes('post') && !taskLower.includes('cleanup')) {
+        if (status === 'harvested' || harvestDate) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Task',
+            text: 'This field was already harvested. Please select a post-harvest task instead.',
+            confirmButtonColor: '#166534'
+          });
+          return;
+        }
+
+        if (currentDAP !== null && currentDAP < 200) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Cannot Harvest',
+            text: `This field is only ${currentDAP} days old. Sugarcane must be at least 200 DAP (preferably 300-400 DAP) for harvesting.`,
+            confirmButtonColor: '#166534'
+          });
+          return;
+        }
+      }
+
+      // VALIDATION 2: Prevent duplicate planting
+      if (taskLower === 'planting' && plantingDate && !harvestDate) {
+        const plantingDateStr = new Date(plantingDate).toLocaleDateString();
+        Swal.fire({
+          icon: 'error',
+          title: 'Already Planted',
+          text: `This field was already planted on ${plantingDateStr}. If you need to replant, please select "Replanting" instead.`,
+          confirmButtonColor: '#166534'
+        });
+        return;
+      }
+
+      // VALIDATION 3: Prevent pre-planting tasks on already planted field
+      const prePlantingTasks = ['plowing', 'harrowing', 'furrowing'];
+      if (prePlantingTasks.includes(taskLower) && plantingDate && !harvestDate && currentDAP < 365) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Invalid Task',
+          text: 'This field is already planted. Pre-planting tasks are not applicable.',
+          confirmButtonColor: '#166534'
+        });
+        return;
+      }
+    }
+
+    // ========================================
+    // ✅ PROCEED WITH WORK LOG CREATION
+    // ========================================
     Swal.fire({
       title: 'Creating work log...',
       allowOutsideClick: false,
