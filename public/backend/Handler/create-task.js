@@ -323,8 +323,26 @@ async function loadTaskRecommendations(fieldId, el) {
     // Calculate current DAP
     const currentDAP = calculateDAP(plantingDate);
 
-    // Get recommendations
-    const recommendations = getRecommendedTasksForDAP(currentDAP, variety);
+    // ✅ Fetch completed tasks for this field to track progress
+    const tasksQuery = query(collection(db, 'tasks'), where('fieldId', '==', fieldId));
+    const tasksSnap = await getDocs(tasksQuery);
+    const completedTasks = [];
+
+    if (!tasksSnap.empty) {
+      tasksSnap.docs.forEach(taskDoc => {
+        const taskData = taskDoc.data();
+        if (taskData.status === 'done') {
+          // Normalize task title to task type
+          const taskTitle = (taskData.title || '').toLowerCase().replace(/_/g, ' ').trim();
+          completedTasks.push(taskTitle);
+        }
+      });
+    }
+
+    console.log(`✅ Found ${completedTasks.length} completed tasks:`, completedTasks);
+
+    // Get enhanced recommendations with completed task awareness
+    const recommendations = getRecommendedTasksForDAP(currentDAP, variety, completedTasks);
 
     if (recommendations.length === 0) {
       console.log('No recommendations for current DAP:', currentDAP);
@@ -337,41 +355,66 @@ async function loadTaskRecommendations(fieldId, el) {
     // Update field info
     fieldInfo.textContent = `${fieldName} | ${currentDAP} DAP | ${variety || 'Unknown variety'}`;
 
-    // Display recommendations
-    recommendationsList.innerHTML = recommendations.map(rec => {
-      // Color coding based on urgency
-      let bgColor, borderColor, textColor, icon;
+    // ✅ Group recommendations by category
+    const nextTasks = recommendations.filter(r => r.category === 'next');
+    const skippedTasks = recommendations.filter(r => r.category === 'skipped');
+    const optionalTasks = recommendations.filter(r => r.category === 'optional');
 
-      switch (rec.urgency) {
-        case 'critical':
-          bgColor = 'bg-red-50';
-          borderColor = 'border-red-300';
-          textColor = 'text-red-900';
-          icon = '🚨';
-          break;
-        case 'overdue':
-          bgColor = 'bg-gray-100';
-          borderColor = 'border-gray-400';
-          textColor = 'text-gray-800';
-          icon = '❌';
-          break;
-        case 'high':
-          bgColor = 'bg-orange-50';
-          borderColor = 'border-orange-300';
-          textColor = 'text-orange-900';
-          icon = '⚠️';
-          break;
-        case 'medium':
-          bgColor = 'bg-yellow-50';
-          borderColor = 'border-yellow-300';
-          textColor = 'text-yellow-900';
-          icon = '💡';
-          break;
-        default:
-          bgColor = 'bg-blue-50';
-          borderColor = 'border-blue-300';
-          textColor = 'text-blue-900';
-          icon = 'ℹ️';
+    // Helper function to render a recommendation card
+    const renderRecommendation = (rec) => {
+      // Color coding based on urgency and category
+      let bgColor, borderColor, textColor, icon, categoryBadge = '';
+
+      // Category-specific styling
+      if (rec.category === 'skipped') {
+        bgColor = 'bg-gray-50';
+        borderColor = 'border-gray-300';
+        textColor = 'text-gray-700';
+        icon = '⏭️';
+        categoryBadge = `<span class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Missed</span>`;
+      } else if (rec.category === 'optional') {
+        bgColor = 'bg-blue-50';
+        borderColor = 'border-blue-200';
+        textColor = 'text-blue-700';
+        icon = 'ℹ️';
+        categoryBadge = `<span class="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded">Optional</span>`;
+      } else {
+        // Next tasks - use urgency-based colors
+        switch (rec.urgency) {
+          case 'critical':
+            bgColor = 'bg-red-50';
+            borderColor = 'border-red-300';
+            textColor = 'text-red-900';
+            icon = '🚨';
+            categoryBadge = `<span class="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded">Next Step</span>`;
+            break;
+          case 'overdue':
+            bgColor = 'bg-gray-100';
+            borderColor = 'border-gray-400';
+            textColor = 'text-gray-800';
+            icon = '❌';
+            categoryBadge = `<span class="text-xs bg-gray-300 text-gray-800 px-2 py-0.5 rounded">Overdue</span>`;
+            break;
+          case 'high':
+            bgColor = 'bg-orange-50';
+            borderColor = 'border-orange-300';
+            textColor = 'text-orange-900';
+            icon = '⚠️';
+            categoryBadge = `<span class="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded">Next Step</span>`;
+            break;
+          case 'medium':
+            bgColor = 'bg-yellow-50';
+            borderColor = 'border-yellow-300';
+            textColor = 'text-yellow-900';
+            icon = '💡';
+            categoryBadge = `<span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded">Upcoming</span>`;
+            break;
+          default:
+            bgColor = 'bg-blue-50';
+            borderColor = 'border-blue-300';
+            textColor = 'text-blue-900';
+            icon = 'ℹ️';
+        }
       }
 
       const daysInfo = rec.daysLeft !== null && rec.daysLeft !== undefined
@@ -385,22 +428,45 @@ async function loadTaskRecommendations(fieldId, el) {
           <div class="flex items-start gap-2">
             <span class="text-lg">${icon}</span>
             <div class="flex-1">
-              <p class="${textColor} font-semibold text-sm">${rec.task} ${daysInfo}</p>
+              <div class="flex items-center gap-2 mb-1">
+                <p class="${textColor} font-semibold text-sm">${rec.task} ${daysInfo}</p>
+                ${categoryBadge}
+              </div>
               <p class="text-xs ${textColor} mt-1">${rec.reason}</p>
               ${rec.stage ? `<span class="text-xs ${textColor} opacity-75 mt-1 block">Stage: ${rec.stage}</span>` : ''}
             </div>
             <button
               onclick="window.createTaskQuickFill('${rec.taskType}')"
-              class="px-2 py-1 text-xs rounded ${rec.urgency === 'critical' ? 'bg-red-600 hover:bg-red-700' : rec.urgency === 'high' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium transition-colors"
+              class="px-2 py-1 text-xs rounded ${rec.urgency === 'critical' ? 'bg-red-600 hover:bg-red-700' : rec.urgency === 'high' ? 'bg-orange-600 hover:bg-orange-700' : rec.category === 'skipped' ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium transition-colors"
               title="Quick fill this task">
               Use
             </button>
           </div>
         </div>
       `;
-    }).join('');
+    };
 
-    console.log(`✅ Displayed ${recommendations.length} recommendations for field ${fieldId} (${currentDAP} DAP)`);
+    // ✅ Display recommendations grouped by category
+    let htmlContent = '';
+
+    // Next Tasks (priority display)
+    if (nextTasks.length > 0) {
+      htmlContent += nextTasks.map(rec => renderRecommendation(rec)).join('');
+    }
+
+    // Skipped Tasks (show after next tasks)
+    if (skippedTasks.length > 0) {
+      htmlContent += skippedTasks.map(rec => renderRecommendation(rec)).join('');
+    }
+
+    // Optional Tasks (show last)
+    if (optionalTasks.length > 0) {
+      htmlContent += optionalTasks.map(rec => renderRecommendation(rec)).join('');
+    }
+
+    recommendationsList.innerHTML = htmlContent;
+
+    console.log(`✅ Displayed ${recommendations.length} recommendations (${nextTasks.length} next, ${skippedTasks.length} skipped, ${optionalTasks.length} optional) for field ${fieldId} (${currentDAP} DAP)`);
 
   } catch (error) {
     console.error('Error loading task recommendations:', error);

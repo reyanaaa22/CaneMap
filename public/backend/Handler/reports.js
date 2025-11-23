@@ -4,6 +4,7 @@
 import { db, auth } from '../Common/firebase-config.js';
 import { collection, addDoc, doc, getDocs, getDoc, query, where, orderBy, serverTimestamp, updateDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
 
 let currentUserId = null;
 onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; });
@@ -486,7 +487,7 @@ function renderFormField(field, prefillValue = '') {
           </label>
           <input type="file" name="${field.name}" accept="${accept}" ${multiple} ${required}
                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--cane-50)] file:text-[var(--cane-700)] hover:file:bg-[var(--cane-100)]">
-          <p class="text-xs text-gray-500 mt-1">Note: File uploads are for reference only. Files are not stored on the server.</p>
+          <p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>Photos will be uploaded to Firebase Storage and attached to this report.</p>
         </div>
       `;
 
@@ -515,23 +516,22 @@ function setupFormHandlers(reportType, containerId) {
         const formData = new FormData(form);
         const reportData = {};
         let fieldId = null;
+        const fileUploads = []; // Track file uploads
 
+        // First pass: collect non-file data and identify file inputs
         for (const [key, value] of formData.entries()) {
           if (key === 'fieldId') {
-            // Extract fieldId separately
             fieldId = value;
           } else if (key.endsWith('[]')) {
-            // Handle arrays
             const cleanKey = key.replace('[]', '');
             if (!reportData[cleanKey]) reportData[cleanKey] = [];
             if (value) reportData[cleanKey].push(value);
           } else {
-            // Handle file inputs - store file names as string
             const input = form.elements[key];
             if (input && input.type === 'file') {
+              // Mark for file upload processing
               if (input.files.length > 0) {
-                const fileNames = Array.from(input.files).map(f => f.name);
-                reportData[key] = fileNames.join(', ');
+                fileUploads.push({ key, files: Array.from(input.files) });
               }
             } else {
               reportData[key] = value;
@@ -544,8 +544,47 @@ function setupFormHandlers(reportType, containerId) {
           throw new Error('Please select a field for this report');
         }
 
-        // Submit report
+        // Upload files to Firebase Storage
+        if (fileUploads.length > 0) {
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Uploading photos...';
+
+          for (const upload of fileUploads) {
+            const uploadedURLs = [];
+
+            for (let i = 0; i < upload.files.length; i++) {
+              const file = upload.files[i];
+              const storage = getStorage();
+
+              // Create unique filename with timestamp
+              const timestamp = Date.now();
+              const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+              const storagePath = `report_photos/${currentUserId}/temp_${timestamp}/${sanitizedFileName}`;
+              const storageRef = ref(storage, storagePath);
+
+              // Upload file
+              await uploadBytes(storageRef, file);
+
+              // Get download URL
+              const downloadURL = await getDownloadURL(storageRef);
+              uploadedURLs.push(downloadURL);
+
+              console.log(`✅ Uploaded photo: ${file.name} -> ${downloadURL}`);
+            }
+
+            // Store URLs in reportData (single URL or array)
+            reportData[upload.key] = uploadedURLs.length === 1 ? uploadedURLs[0] : uploadedURLs;
+          }
+        }
+
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Submitting report...';
+
+        // Submit report with photo URLs
         const reportId = await submitReport(reportType, reportData, fieldId);
+
+        // Update storage path with actual reportId (move from temp to final location)
+        if (fileUploads.length > 0) {
+          await updatePhotoStoragePaths(reportId, reportData);
+        }
 
         // Show success message
         showSuccessMessage('Report submitted successfully!');
@@ -553,8 +592,7 @@ function setupFormHandlers(reportType, containerId) {
         // Clear form
         form.reset();
 
-        // Close modal instead of full page reload
-        // Reports list will auto-update via onSnapshot real-time listener
+        // Close modal
         setTimeout(() => {
           const modal = document.getElementById('reportModal');
           if (modal) modal.classList.remove('active');
@@ -566,10 +604,60 @@ function setupFormHandlers(reportType, containerId) {
 
         // Re-enable submit button
         submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Submit Report';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Report';
       }
     });
   }
+}
+
+/**
+ * Update photo storage paths after report creation (move from temp to final location)
+ */
+async function updatePhotoStoragePaths(reportId, reportData) {
+  try {
+    const storage = getStorage();
+
+    // Find all photo URLs in reportData
+    for (const [key, value] of Object.entries(reportData)) {
+      if (typeof value === 'string' && value.includes('report_photos/') && value.includes('/temp_')) {
+        // Single photo - update storage reference
+        const oldPath = extractStoragePathFromURL(value);
+        if (oldPath) {
+          const newPath = oldPath.replace(/\/temp_\d+\//, `/${reportId}/`);
+          // Note: Firebase Storage doesn't support rename, so we keep the temp path
+          // In production, you might want to implement a Cloud Function to clean this up
+          console.log(`Photo stored at: ${oldPath} (reportId: ${reportId})`);
+        }
+      } else if (Array.isArray(value)) {
+        // Multiple photos
+        for (const url of value) {
+          if (typeof url === 'string' && url.includes('report_photos/') && url.includes('/temp_')) {
+            const oldPath = extractStoragePathFromURL(url);
+            if (oldPath) {
+              console.log(`Photo stored at: ${oldPath} (reportId: ${reportId})`);
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Could not update photo storage paths (non-critical):', error);
+  }
+}
+
+/**
+ * Extract storage path from Firebase Storage URL
+ */
+function extractStoragePathFromURL(url) {
+  try {
+    const match = url.match(/\/o\/(.+?)\?/);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+  } catch (error) {
+    console.warn('Could not extract storage path from URL:', error);
+  }
+  return null;
 }
 
 /**

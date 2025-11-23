@@ -109,8 +109,24 @@
           <div class="flex items-start gap-2"><span class="mt-1 w-3 h-3 rounded-full bg-gray-300"></span><div><p class="font-semibold">Maturity</p><p class="text-xs text-gray-700" id="tlMat">Expected -</p></div></div>
         </div>
       </div>
+
+      <!-- ✅ Historical Planting & Harvest Data -->
+      <div id="historicalDataSection" class="section-card rounded-xl p-4" style="display: none;">
+        <div class="flex items-center justify-between mb-4">
+          <p class="font-semibold text-sm flex items-center gap-2">
+            <i class="fas fa-history text-[var(--cane-700)]"></i>
+            Previous Cycles History
+          </p>
+          <button id="toggleHistoryBtn" class="text-xs text-[var(--cane-700)] hover:text-[var(--cane-800)] font-medium">
+            <i class="fas fa-chevron-up"></i> Collapse
+          </button>
+        </div>
+        <div id="historicalDataContent" class="space-y-3">
+          <!-- Historical data will be populated here -->
+        </div>
+      </div>
     </section>
-    
+
 
   <script type="module">
     import { auth, db } from '../../backend/Common/firebase-config.js';
@@ -240,6 +256,9 @@
 
         // Show warnings for delays or overdue harvest
         showWarnings(growthData);
+
+        // ✅ Display historical planting & harvest data
+        await displayHistoricalData(fieldId);
 
       } catch (error) {
         console.error('Error displaying field growth data:', error);
@@ -391,6 +410,130 @@
       document.body.appendChild(errorDiv);
 
       setTimeout(() => errorDiv.remove(), 4000);
+    }
+
+    // ✅ Display historical planting & harvest data
+    async function displayHistoricalData(fieldId) {
+      try {
+        const selectedField = userFields.find(f => f.id === fieldId);
+        if (!selectedField) return;
+
+        const growthHistory = selectedField.growthHistory || {};
+        const plantingHistory = selectedField.plantingHistory || {};
+
+        // Combine both histories
+        const allHistory = [];
+
+        // Add ratoon cycles from growthHistory
+        for (const [key, cycleData] of Object.entries(growthHistory)) {
+          if (key.startsWith('cycle')) {
+            allHistory.push({
+              ...cycleData,
+              type: 'ratoon',
+              cycleNumber: cycleData.cycle
+            });
+          }
+        }
+
+        // Add planting cycles from plantingHistory
+        for (const [key, cycleData] of Object.entries(plantingHistory)) {
+          if (key.startsWith('cycle')) {
+            allHistory.push({
+              ...cycleData,
+              type: 'replant',
+              cycleNumber: cycleData.plantingCycle
+            });
+          }
+        }
+
+        // Sort by archived date (most recent first)
+        allHistory.sort((a, b) => {
+          const dateA = a.archivedAt?.toDate?.() || new Date(0);
+          const dateB = b.archivedAt?.toDate?.() || new Date(0);
+          return dateB - dateA;
+        });
+
+        // Show/hide historical section
+        const historicalSection = document.getElementById('historicalDataSection');
+        const historicalContent = document.getElementById('historicalDataContent');
+
+        if (allHistory.length === 0) {
+          historicalSection.style.display = 'none';
+          return;
+        }
+
+        historicalSection.style.display = 'block';
+
+        // Render historical data
+        historicalContent.innerHTML = allHistory.map((cycle, index) => {
+          const plantingDate = cycle.plantingDate?.toDate?.() || cycle.plantingDate;
+          const harvestDate = cycle.actualHarvestDate?.toDate?.() || cycle.actualHarvestDate;
+          const plantingStr = plantingDate ? plantingDate.toLocaleDateString() : '—';
+          const harvestStr = harvestDate ? harvestDate.toLocaleDateString() : 'Not harvested';
+          const dap = cycle.finalDAP || '—';
+          const yield_ = cycle.actualYield ? `${cycle.actualYield} tons` : '—';
+          const variety = cycle.variety || '—';
+          const ratoonNum = cycle.ratoonNumber || 0;
+
+          const typeLabel = cycle.type === 'ratoon' ? `Ratoon Cycle ${ratoonNum}` : `Planting Cycle ${cycle.cycleNumber}`;
+          const typeIcon = cycle.type === 'ratoon' ? 'fa-redo' : 'fa-seedling';
+          const typeColor = cycle.type === 'ratoon' ? 'text-blue-700' : 'text-green-700';
+          const bgColor = cycle.type === 'ratoon' ? 'bg-blue-50' : 'bg-green-50';
+          const borderColor = cycle.type === 'ratoon' ? 'border-blue-200' : 'border-green-200';
+
+          return `
+            <div class="border ${borderColor} ${bgColor} rounded-lg p-3 text-xs">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="font-semibold ${typeColor} flex items-center gap-1.5">
+                  <i class="fas ${typeIcon}"></i>
+                  ${typeLabel}
+                </h4>
+                <span class="text-[10px] text-gray-600">${cycle.archivedAt?.toDate?.()?.toLocaleDateString() || '—'}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-gray-700">
+                <div>
+                  <span class="font-medium text-gray-600">Planted:</span>
+                  <span class="block font-semibold">${plantingStr}</span>
+                </div>
+                <div>
+                  <span class="font-medium text-gray-600">Harvested:</span>
+                  <span class="block font-semibold">${harvestStr}</span>
+                </div>
+                <div>
+                  <span class="font-medium text-gray-600">Final DAP:</span>
+                  <span class="block font-semibold">${dap} days</span>
+                </div>
+                <div>
+                  <span class="font-medium text-gray-600">Yield:</span>
+                  <span class="block font-semibold">${yield_}</span>
+                </div>
+                <div class="col-span-2">
+                  <span class="font-medium text-gray-600">Variety:</span>
+                  <span class="block font-semibold">${variety}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Setup toggle button
+        const toggleBtn = document.getElementById('toggleHistoryBtn');
+        let isCollapsed = false;
+
+        toggleBtn.addEventListener('click', () => {
+          isCollapsed = !isCollapsed;
+          if (isCollapsed) {
+            historicalContent.style.display = 'none';
+            toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Expand';
+          } else {
+            historicalContent.style.display = 'block';
+            toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Collapse';
+          }
+        });
+
+      } catch (error) {
+        console.error('Error displaying historical data:', error);
+      }
     }
   </script>
 

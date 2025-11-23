@@ -201,90 +201,151 @@ export async function generateCropCycleTasks(fieldId, handlerId, variety, planti
  * @param {string} variety - Sugarcane variety
  * @returns {Array} Array of recommended tasks
  */
-export function getRecommendedTasksForDAP(currentDAP, variety) {
+export function getRecommendedTasksForDAP(currentDAP, variety, completedTasks = []) {
   const harvestDays = VARIETY_HARVEST_DAYS[variety] || 365;
   const recommendations = [];
 
-  // Basal Fertilization (0-30 DAP)
-  if (currentDAP >= 0 && currentDAP <= 30) {
-    recommendations.push({
-      task: "Basal Fertilizer",
-      taskType: "basal_fertilizer",
-      urgency: currentDAP > 25 ? "high" : "medium",
-      reason: `Should be done within 0-30 DAP window (currently ${currentDAP} DAP)`,
-      daysLeft: 30 - currentDAP,
-      stage: "Germination"
+  // ✅ Helper function to check if a task is completed
+  const isTaskCompleted = (taskType) => {
+    const normalizedTypes = [
+      taskType.toLowerCase().replace(/_/g, ' '),
+      taskType.toLowerCase()
+    ];
+    return completedTasks.some(completedTask => {
+      const normalized = completedTask.toLowerCase().trim();
+      return normalizedTypes.some(type =>
+        normalized.includes(type) || type.includes(normalized)
+      );
     });
-  }
+  };
 
-  // Main Fertilization (45-60 DAP)
-  if (currentDAP >= 40 && currentDAP <= 65) {
-    let urgency = "medium";
-    let reason = `Approaching main fertilization window (45-60 DAP, currently ${currentDAP} DAP)`;
+  // ✅ Define task sequence and their DAP windows
+  const taskSequence = [
+    {
+      name: "Basal Fertilizer",
+      taskType: "basal_fertilizer",
+      startDAP: 0,
+      endDAP: 30,
+      criticalStart: 25,
+      stage: "Germination"
+    },
+    {
+      name: "Main Fertilization",
+      taskType: "main_fertilization",
+      startDAP: 45,
+      endDAP: 60,
+      criticalStart: 45,
+      stage: "Tillering"
+    },
+    {
+      name: "Top Dressing",
+      taskType: "topdress",
+      startDAP: 90,
+      endDAP: 150,
+      criticalStart: 120,
+      stage: "Grand Growth"
+    },
+    {
+      name: "Harvest Preparation",
+      taskType: "harvest_prep",
+      startDAP: harvestDays - 45,
+      endDAP: harvestDays,
+      criticalStart: harvestDays - 30,
+      stage: "Maturity"
+    },
+    {
+      name: "Harvesting",
+      taskType: "harvesting",
+      startDAP: harvestDays - 10,
+      endDAP: harvestDays + 10,
+      criticalStart: harvestDays - 5,
+      stage: "Harvest"
+    }
+  ];
 
-    if (currentDAP >= 45 && currentDAP <= 60) {
-      urgency = "critical";
-      reason = `🚨 URGENT: Within critical fertilization window! (${60 - currentDAP} days remaining)`;
-    } else if (currentDAP > 60) {
-      urgency = "overdue";
-      reason = `❌ OVERDUE: Should have been done at 45-60 DAP (${currentDAP - 60} days late)`;
+  // ✅ Process each task in sequence
+  taskSequence.forEach((taskDef, index) => {
+    const isCompleted = isTaskCompleted(taskDef.taskType);
+    const isInWindow = currentDAP >= taskDef.startDAP - 10 && currentDAP <= taskDef.endDAP + 10;
+    const isPastWindow = currentDAP > taskDef.endDAP;
+
+    // Determine if this is the next logical task
+    const isNextTask = !isCompleted && (
+      // Within the task's window
+      (currentDAP >= taskDef.startDAP && currentDAP <= taskDef.endDAP) ||
+      // OR it's the first uncompleted task after current DAP
+      (currentDAP < taskDef.startDAP && taskSequence.slice(0, index).every(t => isTaskCompleted(t.taskType)))
+    );
+
+    // Skip if task is completed (unless it's overdue - we might want to show warnings)
+    if (isCompleted && !isPastWindow) return;
+
+    let urgency, reason, category, daysLeft = null, daysLate = null;
+
+    if (isCompleted) {
+      return; // Already completed, skip
+    } else if (isPastWindow) {
+      // Skipped/Missed task
+      category = 'skipped';
+      urgency = 'overdue';
+      reason = `⏭️ Window passed (${taskDef.startDAP}-${taskDef.endDAP} DAP). Can still be completed if needed.`;
+      daysLate = currentDAP - taskDef.endDAP;
+    } else if (isNextTask) {
+      // Next task to complete
+      category = 'next';
+
+      if (currentDAP >= taskDef.criticalStart && currentDAP <= taskDef.endDAP) {
+        urgency = 'critical';
+        reason = `🚨 URGENT: Within critical window! (${taskDef.endDAP - currentDAP} days remaining)`;
+        daysLeft = taskDef.endDAP - currentDAP;
+      } else if (currentDAP >= taskDef.startDAP) {
+        urgency = 'high';
+        reason = `⚠️ Within recommended window (${taskDef.startDAP}-${taskDef.endDAP} DAP)`;
+        daysLeft = taskDef.endDAP - currentDAP;
+      } else {
+        urgency = 'medium';
+        reason = `Upcoming task (starts at ${taskDef.startDAP} DAP)`;
+        daysLeft = taskDef.startDAP - currentDAP;
+      }
+    } else if (isInWindow) {
+      // Optional task (in window but not the immediate next step)
+      category = 'optional';
+      urgency = 'medium';
+      reason = `Available now (${taskDef.startDAP}-${taskDef.endDAP} DAP window)`;
+      daysLeft = taskDef.endDAP - currentDAP;
+    } else {
+      return; // Not relevant yet
     }
 
     recommendations.push({
-      task: "Main Fertilization",
-      taskType: "main_fertilization",
+      task: taskDef.name,
+      taskType: taskDef.taskType,
       urgency: urgency,
       reason: reason,
-      daysLeft: currentDAP <= 60 ? 60 - currentDAP : null,
-      daysLate: currentDAP > 60 ? currentDAP - 60 : null,
-      stage: "Tillering"
+      category: category,
+      daysLeft: daysLeft,
+      daysLate: daysLate,
+      stage: taskDef.stage
     });
-  }
+  });
 
-  // Weeding (30-90 DAP)
-  if (currentDAP >= 30 && currentDAP <= 100) {
+  // ✅ Also check Weeding (can be done anytime during 30-100 DAP, optional)
+  if (currentDAP >= 30 && currentDAP <= 100 && !isTaskCompleted('weeding')) {
     recommendations.push({
       task: "Weeding & Cultivation",
       taskType: "weeding",
       urgency: "medium",
       reason: `Recommended during tillering/grand growth stage (${currentDAP} DAP)`,
+      category: "optional",
       stage: "Tillering/Grand Growth"
     });
   }
 
-  // Harvest Preparation
-  if (currentDAP >= harvestDays - 45 && currentDAP < harvestDays) {
-    recommendations.push({
-      task: "Harvest Preparation",
-      taskType: "harvest_prep",
-      urgency: "high",
-      reason: `Approaching harvest date (${harvestDays} DAP, currently ${currentDAP} DAP)`,
-      daysLeft: harvestDays - currentDAP,
-      stage: "Maturity"
-    });
-  }
-
-  // Harvesting
-  if (currentDAP >= harvestDays - 10) {
-    let urgency = "high";
-    let reason = `Harvest window is near (optimal: ${harvestDays} DAP)`;
-
-    if (currentDAP >= harvestDays - 5 && currentDAP <= harvestDays + 5) {
-      urgency = "critical";
-      reason = `🌾 HARVEST NOW: Within optimal window (${harvestDays} DAP ± 5 days)`;
-    } else if (currentDAP > harvestDays + 10) {
-      urgency = "overdue";
-      reason = `⚠️ OVERDUE: Harvest is ${currentDAP - harvestDays} days late. Quality may be declining.`;
-    }
-
-    recommendations.push({
-      task: "Harvesting",
-      taskType: "harvesting",
-      urgency: urgency,
-      reason: reason,
-      stage: "Harvest"
-    });
-  }
+  // ✅ Sort: next tasks first, then skipped, then optional
+  recommendations.sort((a, b) => {
+    const categoryOrder = { 'next': 1, 'skipped': 2, 'optional': 3 };
+    return (categoryOrder[a.category] || 999) - (categoryOrder[b.category] || 999);
+  });
 
   return recommendations;
 }

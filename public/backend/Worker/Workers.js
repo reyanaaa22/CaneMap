@@ -23,6 +23,7 @@ import {
     handleMainFertilizationCompletion,
     handleHarvestCompletion
 } from '../Handler/growth-tracker.js';
+import { getRecommendedTasksForDAP, VARIETY_HARVEST_DAYS } from '../Handler/task-automation.js';
 
 // Helper function to get display-friendly task names
 function getTaskDisplayName(taskValue) {
@@ -1355,6 +1356,18 @@ async function showWorkLogModal() {
                         </select>
                         <p class="text-xs text-gray-500 mt-1.5">Select the field where this work was done</p>
                     </div>
+
+                    <!-- ✅ Task suggestions panel (dynamically populated) -->
+                    <div id="task-suggestions-panel" style="display: none;" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-xs font-semibold text-blue-900">Common Tasks for This Field:</span>
+                        </div>
+                        <div id="task-suggestions-chips" class="flex flex-wrap gap-2"></div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Task Type *</label>
                         <select id="swal-taskType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
@@ -1410,6 +1423,90 @@ async function showWorkLogModal() {
                 confirmButton: 'px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md mr-2',
                 cancelButton: 'px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors shadow-md',
                 actions: 'gap-3 mt-6'
+            },
+            didOpen: () => {
+                // ✅ Setup field change listener to update task suggestions dynamically
+                const fieldSelect = document.getElementById('swal-fieldId');
+                const taskTypeSelect = document.getElementById('swal-taskType');
+                const suggestionsPanel = document.getElementById('task-suggestions-panel');
+                const suggestionsChips = document.getElementById('task-suggestions-chips');
+
+                fieldSelect.addEventListener('change', async () => {
+                    const selectedFieldId = fieldSelect.value;
+
+                    if (!selectedFieldId) {
+                        suggestionsPanel.style.display = 'none';
+                        return;
+                    }
+
+                    try {
+                        // Fetch field data to get planting date and variety
+                        const fieldRef = doc(db, 'fields', selectedFieldId);
+                        const fieldSnap = await getDoc(fieldRef);
+
+                        if (!fieldSnap.exists()) {
+                            suggestionsPanel.style.display = 'none';
+                            return;
+                        }
+
+                        const fieldData = fieldSnap.data();
+                        const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+                        const variety = fieldData.sugarcane_variety || fieldData.variety;
+                        const status = fieldData.status;
+
+                        // Only show suggestions for active fields with planting date
+                        if (!plantingDate || status === 'harvested' || status === 'inactive') {
+                            suggestionsPanel.style.display = 'none';
+                            return;
+                        }
+
+                        // Calculate current DAP
+                        const currentDAP = Math.floor((new Date() - new Date(plantingDate)) / (1000 * 60 * 60 * 24));
+
+                        if (currentDAP < 0) {
+                            suggestionsPanel.style.display = 'none';
+                            return;
+                        }
+
+                        // Get recommendations (limit to top 3)
+                        const recommendations = getRecommendedTasksForDAP(currentDAP, variety);
+                        const topRecommendations = recommendations.slice(0, 3);
+
+                        if (topRecommendations.length === 0) {
+                            suggestionsPanel.style.display = 'none';
+                            return;
+                        }
+
+                        // Render suggestion chips
+                        suggestionsChips.innerHTML = topRecommendations.map(rec => {
+                            // Map taskType to dropdown values
+                            const taskValue = rec.taskType;
+                            const urgencyColors = {
+                                'critical': 'bg-red-100 border-red-300 text-red-800 hover:bg-red-200',
+                                'high': 'bg-orange-100 border-orange-300 text-orange-800 hover:bg-orange-200',
+                                'medium': 'bg-blue-100 border-blue-300 text-blue-800 hover:bg-blue-200',
+                                'low': 'bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200'
+                            };
+                            const colorClass = urgencyColors[rec.urgency] || urgencyColors['medium'];
+
+                            return `
+                                <button
+                                    type="button"
+                                    class="text-xs px-3 py-1.5 rounded-full border ${colorClass} font-medium transition-colors cursor-pointer"
+                                    data-task-value="${taskValue}"
+                                    onclick="document.getElementById('swal-taskType').value='${taskValue}';"
+                                >
+                                    ${rec.task}
+                                </button>
+                            `;
+                        }).join('');
+
+                        suggestionsPanel.style.display = 'block';
+                    } catch (error) {
+                        console.error('Error loading task suggestions:', error);
+                        suggestionsPanel.style.display = 'none';
+                    }
+                });
             },
             preConfirm: () => {
                 const fieldId = document.getElementById('swal-fieldId').value;

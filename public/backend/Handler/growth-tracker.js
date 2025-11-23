@@ -276,15 +276,16 @@ export async function handlePlantingCompletion(userId, fieldId, variety, plantin
     await updateFieldGrowthData(userId, fieldId, updates);
     console.log(`🌱 Planting completed for field ${fieldId}. Expected harvest: ${expectedHarvestDate?.toLocaleDateString()}`);
 
-    // ✅ AUTO-GENERATE CROP CYCLE TASKS
-    try {
-      console.log(`🤖 Generating automated crop cycle tasks...`);
-      const taskIds = await generateCropCycleTasks(fieldId, userId, variety, planting);
-      console.log(`✅ Generated ${taskIds.length} automated tasks for field ${fieldId}`);
-    } catch (error) {
-      console.error('❌ Error generating automated tasks:', error);
-      // Don't fail the whole operation if task generation fails
-    }
+    // ❌ AUTO-GENERATION DISABLED - Tasks now appear only as suggestions in create task modal
+    // Users must manually create tasks from the recommendations panel
+    // try {
+    //   console.log(`🤖 Generating automated crop cycle tasks...`);
+    //   const taskIds = await generateCropCycleTasks(fieldId, userId, variety, planting);
+    //   console.log(`✅ Generated ${taskIds.length} automated tasks for field ${fieldId}`);
+    // } catch (error) {
+    //   console.error('❌ Error generating automated tasks:', error);
+    //   // Don't fail the whole operation if task generation fails
+    // }
 
     return { success: true, expectedHarvestDate, currentGrowthStage };
 
@@ -475,7 +476,7 @@ export async function handleHarvestCompletion(userId, fieldId, harvestDate = new
  * @param {Date} ratoonStartDate - Start date of ratooning (optional, defaults to today)
  * @returns {Promise<{success: boolean, ratoonNumber: number}>}
  */
-export async function handleRatooning(userId, fieldId, ratoonStartDate = new Date()) {
+export async function handleRatooning(userId, fieldId, ratoonStartDate = null) {
   try {
     console.log(`🌱 Starting ratooning for field ${fieldId}`);
 
@@ -492,6 +493,22 @@ export async function handleRatooning(userId, fieldId, ratoonStartDate = new Dat
     if (fieldData.status !== 'harvested') {
       throw new Error('Can only ratoon harvested fields');
     }
+
+    // ✅ Use last harvest date as ratoon start date (unless explicitly overridden)
+    let ratoonDate = ratoonStartDate;
+    if (!ratoonDate) {
+      const harvestDate = fieldData.actualHarvestDate?.toDate?.() || fieldData.actualHarvestDate;
+      if (!harvestDate) {
+        throw new Error('No harvest date found. Cannot determine ratoon start date.');
+      }
+      ratoonDate = harvestDate;
+    }
+    ratoonDate = ratoonDate instanceof Date ? ratoonDate : new Date(ratoonDate);
+
+    // Get variety for calculating expected harvest
+    const variety = fieldData.sugarcane_variety || fieldData.variety;
+    const expectedHarvestDate = calculateExpectedHarvestDate(ratoonDate, variety);
+    const currentGrowthStage = getGrowthStage(calculateDAP(ratoonDate));
 
     // Increment ratoon cycle number
     const ratoonNumber = (fieldData.ratoonNumber || 0) + 1;
@@ -511,10 +528,12 @@ export async function handleRatooning(userId, fieldId, ratoonStartDate = new Dat
     // Reset field for new ratoon cycle
     const updates = {
       status: 'active',
-      plantingDate: Timestamp.fromDate(ratoonStartDate),
+      plantingDate: Timestamp.fromDate(ratoonDate),
+      expectedHarvestDate: expectedHarvestDate,
       ratoonNumber: ratoonNumber,
-      currentGrowthStage: 'Ratoon Establishment (0-30 DAP)',
+      currentGrowthStage: currentGrowthStage,
       isRatoon: true,
+      delayDays: 0,
 
       // Archive previous cycle
       [`growthHistory.cycle${ratoonNumber - 1}`]: archiveData,
@@ -527,21 +546,23 @@ export async function handleRatooning(userId, fieldId, ratoonStartDate = new Dat
       harvestTimingDays: null,
       harvestedAt: null,
 
-      // Keep fertilization dates from previous cycle (optional, can be cleared)
-      // basalFertilizationDate: null,
-      // mainFertilizationDate: null,
+      // Clear fertilization dates for new cycle
+      basalFertilizationDate: null,
+      mainFertilizationDate: null,
 
       ratoonedAt: serverTimestamp(),
-      lastUpdated: serverTimestamp()
+      updatedAt: serverTimestamp()
     };
 
     await updateDoc(fieldRef, updates);
 
     console.log(`✅ Ratooning completed for field ${fieldId}`);
     console.log(`   Ratoon Number: ${ratoonNumber}`);
-    console.log(`   Start Date: ${ratoonStartDate.toLocaleDateString()}`);
+    console.log(`   Ratoon Start Date (from harvest): ${ratoonDate.toLocaleDateString()}`);
+    console.log(`   Expected Harvest: ${expectedHarvestDate?.toLocaleDateString()}`);
+    console.log(`   Variety: ${variety || 'Unknown'}`);
 
-    return { success: true, ratoonNumber };
+    return { success: true, ratoonNumber, ratoonDate, expectedHarvestDate };
 
   } catch (error) {
     console.error('Error handling ratooning:', error);
@@ -558,7 +579,7 @@ export async function handleRatooning(userId, fieldId, ratoonStartDate = new Dat
  * @param {string} variety - Optional: New sugarcane variety
  * @returns {Promise<{success: boolean}>}
  */
-export async function handleReplanting(userId, fieldId, newPlantingDate = new Date(), variety = null) {
+export async function handleReplanting(userId, fieldId, newPlantingDate = null, variety = null) {
   try {
     console.log(`🌾 Starting replanting for field ${fieldId}`);
 
@@ -575,6 +596,22 @@ export async function handleReplanting(userId, fieldId, newPlantingDate = new Da
     if (fieldData.status !== 'harvested') {
       throw new Error('Can only replant harvested fields');
     }
+
+    // ✅ Use last harvest date as planting date (unless explicitly overridden)
+    let plantingDate = newPlantingDate;
+    if (!plantingDate) {
+      const harvestDate = fieldData.actualHarvestDate?.toDate?.() || fieldData.actualHarvestDate;
+      if (!harvestDate) {
+        throw new Error('No harvest date found. Cannot determine replanting date.');
+      }
+      plantingDate = harvestDate;
+    }
+    plantingDate = plantingDate instanceof Date ? plantingDate : new Date(plantingDate);
+
+    // Use provided variety or keep existing variety
+    const newVariety = variety || fieldData.sugarcane_variety || fieldData.variety;
+    const expectedHarvestDate = calculateExpectedHarvestDate(plantingDate, newVariety);
+    const currentGrowthStage = getGrowthStage(calculateDAP(plantingDate));
 
     // Increment planting cycle number
     const plantingCycleNumber = (fieldData.plantingCycleNumber || 0) + 1;
@@ -595,11 +632,14 @@ export async function handleReplanting(userId, fieldId, newPlantingDate = new Da
     // Complete reset for new planting cycle
     const updates = {
       status: 'active',
-      plantingDate: Timestamp.fromDate(newPlantingDate),
+      plantingDate: Timestamp.fromDate(plantingDate),
+      expectedHarvestDate: expectedHarvestDate,
+      sugarcane_variety: newVariety,
       plantingCycleNumber: plantingCycleNumber,
-      currentGrowthStage: 'Germination (0-30 DAP)',
+      currentGrowthStage: currentGrowthStage,
       isRatoon: false,
       ratoonNumber: 0,
+      delayDays: 0,
 
       // Archive previous planting cycle
       [`plantingHistory.cycle${plantingCycleNumber - 1}`]: archiveData,
@@ -613,24 +653,21 @@ export async function handleReplanting(userId, fieldId, newPlantingDate = new Da
       harvestedAt: null,
       basalFertilizationDate: null,
       mainFertilizationDate: null,
-      expectedHarvestDate: null,
       growthHistory: {},
 
-      // Update variety if provided
-      ...(variety && { sugarcane_variety: variety }),
-
       replantedAt: serverTimestamp(),
-      lastUpdated: serverTimestamp()
+      updatedAt: serverTimestamp()
     };
 
     await updateDoc(fieldRef, updates);
 
     console.log(`✅ Replanting completed for field ${fieldId}`);
     console.log(`   Planting Cycle: ${plantingCycleNumber}`);
-    console.log(`   New Planting Date: ${newPlantingDate.toLocaleDateString()}`);
-    if (variety) console.log(`   New Variety: ${variety}`);
+    console.log(`   New Planting Date (from harvest): ${plantingDate.toLocaleDateString()}`);
+    console.log(`   Expected Harvest: ${expectedHarvestDate?.toLocaleDateString()}`);
+    console.log(`   Variety: ${newVariety || 'Unknown'}`);
 
-    return { success: true, plantingCycleNumber };
+    return { success: true, plantingCycleNumber, plantingDate, expectedHarvestDate };
 
   } catch (error) {
     console.error('Error handling replanting:', error);

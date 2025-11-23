@@ -9,7 +9,7 @@ import { collection, query, where, onSnapshot, doc,
   collectionGroup } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { openCreateTaskModal } from './create-task.js';
-import { handleRatooning, handleReplanting } from './growth-tracker.js';
+import { handleRatooning, handleReplanting, VARIETY_HARVEST_DAYS } from './growth-tracker.js';
 
 
 // Global variables for map and data
@@ -1002,20 +1002,66 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
     // Append modal
     document.body.appendChild(modal);
 
+    // scroll to top of modal content
+    modal.querySelector('section')?.scrollTo?.({ top: 0 });
+
+    // ✅ Real-time field status listener - updates buttons and status badge when field is harvested
+    const fieldRef = doc(db, 'fields', fieldId);
+    const fieldStatusUnsub = onSnapshot(fieldRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+
+      const updatedField = snapshot.data();
+      const newStatus = (updatedField.status || 'active').toString().toLowerCase();
+
+      // Update status badge in real-time
+      const statusEl = modal.querySelector('#fd_status');
+      if (statusEl) {
+        statusEl.textContent = (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
+        // Update badge colors based on new status
+        if (newStatus.includes('review') || newStatus.includes('active')) {
+          statusEl.style.background = 'rgba(124, 207, 0, 0.12)';
+          statusEl.style.color = '#166534';
+        } else if (newStatus.includes('pending') || newStatus.includes('edit')) {
+          statusEl.style.background = 'rgba(250, 204, 21, 0.12)';
+          statusEl.style.color = '#92400e';
+        } else if (newStatus.includes('harvest')) {
+          statusEl.style.background = 'rgba(139, 69, 19, 0.12)';
+          statusEl.style.color = '#78350f';
+        } else {
+          statusEl.style.background = 'rgba(239, 68, 68, 0.08)';
+          statusEl.style.color = '#991b1b';
+        }
+      }
+
+      // ✅ Toggle ratoon/replant buttons visibility based on status in real-time
+      const harvestActions = modal.querySelector('#fd_harvest_actions');
+      if (harvestActions) {
+        if (newStatus === 'harvested') {
+          harvestActions.classList.remove('invisible');
+        } else {
+          harvestActions.classList.add('invisible');
+        }
+      }
+
+      console.log(`📡 Field ${fieldId} status updated in real-time: ${newStatus}`);
+    }, (error) => {
+      console.error('Error listening to field status:', error);
+    });
+
     // update visible count on resize / orientation change
     const resizeHandler = () => adjustTasksContainerVisibleCount(modal, 4, 5);
     window.addEventListener('resize', resizeHandler);
     window.addEventListener('orientationchange', resizeHandler);
-    // remove listeners when modal is removed
+
+    // ✅ Cleanup all listeners when modal is removed
     modal.addEventListener('remove', () => {
       window.removeEventListener('resize', resizeHandler);
       window.removeEventListener('orientationchange', resizeHandler);
+      fieldStatusUnsub();
+      console.log(`🧹 Cleaned up all listeners for field ${fieldId}`);
     });
 
-    // scroll to top of modal content
-    modal.querySelector('section')?.scrollTo?.({ top: 0 });
-
-    // --- Status badge ---
+    // --- Status badge (initial render - will be updated by listener above) ---
     const statusEl = modal.querySelector('#fd_status');
     if (statusEl) {
       const status = (field.status || 'active').toString().toLowerCase();
@@ -1062,7 +1108,8 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         `• Start a new ratoon cycle (regrowth from existing roots)\n` +
         `• Archive the previous harvest data\n` +
         `• Reset growth tracking\n\n` +
-        `Ratoon start date will be set to today.\n\n` +
+        `Ratoon start date will be set to the last harvest date.\n` +
+        `Expected harvest will be calculated based on your cane variety.\n\n` +
         `Continue?`
       );
 
@@ -1073,7 +1120,14 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
 
       try {
         const result = await handleRatooning(currentUserId, fieldId);
-        alert(`✅ Ratooning started successfully!\n\nRatoon Cycle: #${result.ratoonNumber}`);
+        const ratoonDateStr = result.ratoonDate ? new Date(result.ratoonDate).toLocaleDateString() : 'N/A';
+        const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
+        alert(
+          `✅ Ratooning started successfully!\n\n` +
+          `Ratoon Cycle: #${result.ratoonNumber}\n` +
+          `Ratoon Start Date: ${ratoonDateStr}\n` +
+          `Expected Harvest: ${expectedHarvestStr}`
+        );
         modal.remove(); // Close modal
         // Refresh the fields list
         window.location.reload();
@@ -1098,7 +1152,8 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         `• Archive ALL previous data (including all ratoons)\n` +
         `• Clear all growth tracking data\n` +
         `• Reset fertilization dates\n\n` +
-        `Planting date will be set to today.\n\n` +
+        `Planting date will be set to the last harvest date.\n` +
+        `Expected harvest will be calculated based on your cane variety.\n\n` +
         `Continue?`
       );
 
@@ -1109,7 +1164,14 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
 
       try {
         const result = await handleReplanting(currentUserId, fieldId);
-        alert(`✅ Replanting started successfully!\n\nPlanting Cycle: #${result.plantingCycleNumber}`);
+        const plantingDateStr = result.plantingDate ? new Date(result.plantingDate).toLocaleDateString() : 'N/A';
+        const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
+        alert(
+          `✅ Replanting started successfully!\n\n` +
+          `Planting Cycle: #${result.plantingCycleNumber}\n` +
+          `Planting Date: ${plantingDateStr}\n` +
+          `Expected Harvest: ${expectedHarvestStr}`
+        );
         modal.remove(); // Close modal
         // Refresh the fields list
         window.location.reload();
@@ -1252,7 +1314,13 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
               basalFertilizationDate: fieldData.basalFertilizationDate,
               mainFertilizationDate: fieldData.mainFertilizationDate,
               delayDays: fieldData.delayDays || 0,
-              variety: fieldData.sugarcane_variety || fieldData.variety
+              variety: fieldData.sugarcane_variety || fieldData.variety,
+              // ✅ Include harvest data for harvested fields
+              status: fieldData.status,
+              actualHarvestDate: fieldData.actualHarvestDate,
+              finalDAP: fieldData.finalDAP,
+              actualYield: fieldData.actualYield,
+              harvestTiming: fieldData.harvestTiming
             };
           }
         }
@@ -1456,6 +1524,10 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         const expectedHarvest = data.expectedHarvestDate ? (data.expectedHarvestDate.toDate ? data.expectedHarvestDate.toDate() : new Date(data.expectedHarvestDate)) : null;
         const basalFert = data.basalFertilizationDate ? (data.basalFertilizationDate.toDate ? data.basalFertilizationDate.toDate() : new Date(data.basalFertilizationDate)) : null;
         const mainFert = data.mainFertilizationDate ? (data.mainFertilizationDate.toDate ? data.mainFertilizationDate.toDate() : new Date(data.mainFertilizationDate)) : null;
+        const actualHarvestDate = data.actualHarvestDate ? (data.actualHarvestDate.toDate ? data.actualHarvestDate.toDate() : new Date(data.actualHarvestDate)) : null;
+
+        // ✅ Check if field is harvested
+        const isHarvested = data.status === 'harvested';
 
         // Calculate DAP
         let DAP = 0;
@@ -1467,6 +1539,81 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
           daysToHarvest = Math.ceil((expectedHarvest - new Date()) / (1000 * 60 * 60 * 24));
         }
 
+        // ✅ Calculate suggested next planting date and expected harvest for next cycle (for harvested fields)
+        let suggestedPlantingDate = null;
+        let suggestedHarvestDate = null;
+        if (isHarvested && actualHarvestDate && data.variety) {
+          // Suggested planting date is the harvest date
+          suggestedPlantingDate = actualHarvestDate;
+
+          // Calculate expected harvest for next cycle
+          const harvestDays = VARIETY_HARVEST_DAYS[data.variety] || 365;
+          suggestedHarvestDate = new Date(actualHarvestDate.getTime() + harvestDays * 24 * 60 * 60 * 1000);
+        }
+
+        // ✅ Different display for harvested vs active fields
+        if (isHarvested) {
+          return `
+            <div class="space-y-3">
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div class="text-[var(--cane-700)] font-medium mb-1">Variety</div>
+                  <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${escapeHtml(data.variety || 'N/A')}</div>
+                </div>
+                <div>
+                  <div class="text-[var(--cane-700)] font-medium mb-1">Final DAP</div>
+                  <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${data.finalDAP || 'N/A'} days</div>
+                </div>
+                <div>
+                  <div class="text-[var(--cane-700)] font-medium mb-1">Actual Yield</div>
+                  <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${data.actualYield ? data.actualYield + ' tons/ha' : 'Not recorded'}</div>
+                </div>
+                <div>
+                  <div class="text-[var(--cane-700)] font-medium mb-1">Harvest Timing</div>
+                  <div class="px-3 py-2 bg-[var(--cane-50)] rounded border border-[var(--cane-200)]">${data.harvestTiming ? escapeHtml(data.harvestTiming.charAt(0).toUpperCase() + data.harvestTiming.slice(1)) : 'N/A'}</div>
+                </div>
+              </div>
+              <div class="text-xs space-y-2">
+                <div class="flex justify-between py-2 border-b border-[var(--cane-200)]">
+                  <span class="text-[var(--cane-700)]">Planted On:</span>
+                  <span class="font-medium">${plantingDate ? plantingDate.toLocaleDateString() : 'N/A'}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-[var(--cane-200)]">
+                  <span class="text-[var(--cane-700)]">Harvested On:</span>
+                  <span class="font-medium">${actualHarvestDate ? actualHarvestDate.toLocaleDateString() : 'N/A'}</span>
+                </div>
+              </div>
+              ${suggestedPlantingDate && suggestedHarvestDate ? `
+                <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                  <h4 class="text-xs font-semibold text-green-900 mb-2 flex items-center gap-1">
+                    <i class="fas fa-lightbulb"></i>
+                    Next Cycle Suggestions
+                  </h4>
+                  <div class="text-xs space-y-1.5 text-green-800">
+                    <div class="flex justify-between">
+                      <span class="font-medium">Suggested Planting:</span>
+                      <span class="font-semibold">${suggestedPlantingDate.toLocaleDateString()}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-medium">Expected Harvest:</span>
+                      <span class="font-semibold">${suggestedHarvestDate.toLocaleDateString()}</span>
+                    </div>
+                    <p class="text-xs mt-2 opacity-80">
+                      💡 Based on your ${escapeHtml(data.variety)} variety (${VARIETY_HARVEST_DAYS[data.variety] || 365} days growth cycle)
+                    </p>
+                  </div>
+                </div>
+              ` : ''}
+              <div class="mt-3">
+                <a href="GrowthTracker.html" class="inline-block px-4 py-2 bg-[var(--cane-700)] text-white rounded hover:bg-[var(--cane-800)] text-xs transition">
+                  View Full Growth Tracker →
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Active field display (original)
         return `
           <div class="space-y-3">
             <div class="grid grid-cols-2 gap-3 text-xs">
