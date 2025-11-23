@@ -75,7 +75,7 @@ service cloud.firestore {
 
 
     // Allow creation of notifications
-    match /notifications/{notificationId} {
+  match /notifications/{notificationId} {
       // Allow reading single notifications if user is the recipient OR role matches
       allow get: if request.auth != null && (
         // Personal notification
@@ -447,6 +447,12 @@ service cloud.firestore {
       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra', 'admin', 'system_admin']
     );
   }
+
+    match /admin_settings/{docId} {
+      allow read, write: if request.auth != null &&
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'system_admin']);
+    }
 
     
     // Allow admin dashboard to fetch Driver Badge requests
