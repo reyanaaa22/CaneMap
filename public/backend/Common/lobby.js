@@ -3252,60 +3252,29 @@ window.scrollToTop = scrollToTop;
       }
 
       try {
-        // simple duplicate check by sourcePath
-        if (docRefToUpdate?.path) {
-          const { query, collection, where, getDocs } = await import(
-            "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"
-          );
-          const existingQ = query(
-            collection(db, "fields"),
-            where("sourcePath", "==", docRefToUpdate.path)
-          );
-          const existingSnap = await getDocs(existingQ);
-          if (!existingSnap.empty) {
-            console.info(
-              "Top-level fields doc already exists for",
-              docRefToUpdate.path
-            );
-            // skip addDoc - but still send notification
-            skipAddToFields = true;
+        const user = window.auth && window.auth.currentUser ? window.auth.currentUser : null;
+        const email = user && user.email ? user.email : feedbackEmail || null;
+        const uid = user && user.uid ? user.uid : null;
+        const data = {
+          type: feedbackType,
+          message: feedbackMsg,
+          email: email,
+          userId: uid,
+          createdAt: window.serverTimestamp(),
+        };
+        const ref = window.doc(window.collection(window.db, "feedbacks"));
+        await window.setDoc(ref, data);
+        try {
+          if (window.NotificationSystem && typeof window.NotificationSystem.createBroadcastNotification === "function") {
+            const summary = (feedbackType === "like" ? "Like" : feedbackType === "dislike" ? "Dislike" : "Idea") + 
+              (email ? ` from ${email}` : "") + 
+              ": " + (feedbackMsg.length > 80 ? feedbackMsg.slice(0,80) + "…" : feedbackMsg);
+            await window.NotificationSystem.createBroadcastNotification("system_admin", summary, "feedback_submitted", null);
           }
-        }
+        } catch (_) {}
+        showConfirmationPopup();
       } catch (err) {
-        console.warn("Dedupe check failed (continuing):", err);
-      }
-
-      try {
-        // Build clean numeric coordinates (if available)
-        const latNum = appData.latitude ?? appData.lat ?? null;
-        const lngNum = appData.longitude ?? appData.lng ?? null;
-
-        // Create a top-level 'fields' doc with explicit 'status' so lobby can filter
-        await addDoc(collection(db, "fields"), {
-          userId:
-            appData.requestedBy || appData.userId || appData.requester || null,
-          barangay: appData.barangay || appData.location || null,
-          size: appData.field_size || appData.size || appData.fieldSize || null,
-          terrain: appData.terrain_type || appData.terrain || null,
-          lat: typeof latNum === "string" ? parseFloat(latNum) : latNum,
-          lng: typeof lngNum === "string" ? parseFloat(lngNum) : lngNum,
-          registeredAt: serverTimestamp(),
-          applicantName:
-            appData.applicantName ||
-            appData.requester ||
-            appData.requestedBy ||
-            null,
-
-          // NEW: status + dedupe info
-          status: "reviewed",
-          sourcePath: docRefToUpdate?.path || null, // e.g. field_applications/{uid}/fields/{fieldId}
-          sourceDocId: docRefToUpdate?.id || null,
-        });
-      } catch (e) {
-        console.warn(
-          "Adding to top-level fields collection failed (best-effort):",
-          e
-        );
+        showInlineError("Failed to send feedback. Please try again.");
       }
     });
   }
@@ -3391,6 +3360,20 @@ function showInlineError(msg) {
 function showConfirmationPopup() {
   // Create a lightweight custom popup overlay
   try {
+    const modal = document.getElementById("feedbackModal");
+    const dialog = document.getElementById("feedbackDialog");
+    if (modal && dialog) {
+      modal.classList.add("opacity-0", "invisible");
+      modal.classList.remove("opacity-100", "visible");
+      dialog.classList.add(
+        "translate-y-2",
+        "scale-95",
+        "opacity-0",
+        "pointer-events-none"
+      );
+      dialog.classList.remove("translate-y-0", "scale-100", "opacity-100");
+    }
+
     const popup = document.createElement("div");
     popup.id = "feedbackConfirmPopup";
     popup.className =
@@ -3398,21 +3381,8 @@ function showConfirmationPopup() {
     popup.innerHTML =
       '<div class="flex-shrink-0 text-2xl">✅</div><div class="text-sm text-[var(--cane-900)]">Your feedback has been successfully sent to the System Admin. Thank you for your response!</div>';
     document.body.appendChild(popup);
-    // close modal and remove popup after 3s
+
     setTimeout(() => {
-      const modal = document.getElementById("feedbackModal");
-      const dialog = document.getElementById("feedbackDialog");
-      if (modal && dialog) {
-        modal.classList.add("opacity-0", "invisible");
-        modal.classList.remove("opacity-100", "visible");
-        dialog.classList.add(
-          "translate-y-2",
-          "scale-95",
-          "opacity-0",
-          "pointer-events-none"
-        );
-        dialog.classList.remove("translate-y-0", "scale-100", "opacity-100");
-      }
       try {
         popup.remove();
       } catch (_) {}
