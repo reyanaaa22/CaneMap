@@ -7,25 +7,73 @@
 <link rel="stylesheet" href="../../css/output.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-  :root{--cane-50:#f7fee7;--cane-100:#ecfcca;--cane-200:#d8f999;--cane-300:#bbf451;--cane-400:#9ae600;--cane-500:#7ccf00;--cane-600:#5ea500;--cane-700:#497d00;--cane-800:#3c6300;--cane-900:#35530e;--cane-950:#192e03;}
-  .section-card{background:white;border:1px solid var(--cane-200);} .inner-box{background:var(--cane-50);border:1px solid var(--cane-200);} .badge{padding:.15rem .5rem;border-radius:.375rem;font-size:.75rem;font-weight:600}
-  .badge-done{background:#e6fffa;color:#047857;border:1px solid #99f6e4}
-  .badge-progress{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
-  .badge-not{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
-  .badge-delayed{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
-  .stage-active{border-color:var(--cane-500);}
-  .drop-zone{border:2px dashed var(--cane-200);}
+  :root {
+    --cane-50: #f0f7e9;
+    --cane-100: #d4e8b3;
+    --cane-200: #b8d97d;
+    --cane-300: #9bcb47;
+    --cane-400: #7fbd11;
+    --cane-500: #2c5a0b;
+    --cane-600: #3a7a0f;
+    --cane-700: #2c5a0b;
+    --cane-800: #1e3e08;
+    --cane-900: #1a3607;
+    --cane-950: #0f1f04;
+  }
+  .section-card {
+    background: white;
+    border: 1px solid var(--cane-200);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  } 
+  .inner-box {
+    background: var(--cane-50);
+    border: 1px solid var(--cane-200);
+  } 
+  .badge {
+    padding: .15rem .5rem;
+    border-radius: .375rem;
+    font-size: .75rem;
+    font-weight: 600;
+  }
+  .badge-done {
+    background: #e6f7e6;
+    color: #0d5a0d;
+    border: 1px solid #b3e6b3;
+  }
+  .badge-progress {
+    background: #e6f0ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
+  .badge-not {
+    background: #fff3e6;
+    color: #8c4d00;
+    border: 1px solid #ffd9b3;
+  }
+  .badge-delayed {
+    background: #ffe6e6;
+    color: #b30000;
+    border: 1px solid #ffb3b3;
+  }
+  .stage-active {
+    border-color: var(--cane-600);
+    box-shadow: 0 0 0 2px rgba(58, 122, 15, 0.5);
+  }
+  .drop-zone {
+    border: 2px dashed var(--cane-300);
+    background: rgba(212, 232, 179, 0.2);
+  }
 </style>
 </head>
-<body class="bg-gradient-to-br from-[var(--cane-100)] to-[var(--cane-200)] min-h-screen text-[var(--cane-900)]">
+<body class="bg-gradient-to-br from-[var(--cane-50)] to-[var(--cane-100)] min-h-screen text-[var(--cane-900)]">
 
-  <header class="bg-white/80 backdrop-blur border-b border-[var(--cane-200)]">
+  <header class="bg-white/90 backdrop-blur border-b border-[var(--cane-200)]">
     <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
       <div class="flex items-center gap-3">
         <a href="dashboard.html" class="text-[var(--cane-700)] hover:text-[var(--cane-800)] transition-colors">
           <i class="fa-solid fa-arrow-left text-lg"></i>
         </a>
-        <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-500)] bg-clip-text text-transparent">Growth Tracker</h1>
+        <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-500)] bg-clip-text text-transparent">Growth Tracker</h1>
       </div>
     </div>
   </header>
@@ -39,7 +87,7 @@
       </div>
       <!-- Field select -->
       <div class="section-card rounded-xl p-0 overflow-hidden">
-        <div class="px-3 py-2 text-xs text-[var(--cane-800)] bg-[var(--cane-50)] border-b border-[var(--cane-200)]">Select Field</div>
+        <div class="px-3 py-2 text-xs text-[var(--cane-700)] bg-[var(--cane-100)] border-b border-[var(--cane-200)] font-medium">Select Field</div>
         <div class="relative">
           <select id="gtField" class="appearance-none w-full px-4 py-2 pr-10 text-sm bg-white focus:outline-none">
             <option>Field A</option>

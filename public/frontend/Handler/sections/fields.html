@@ -288,8 +288,9 @@
       </div>
       
       <div class="absolute top-3 right-3 flex flex-col gap-1.5 z-[400]">
-        <button id="mapZoomIn" class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white shadow border border-gray-200 hover:bg-gray-50 transition-colors">
-          <i class="fas fa-plus text-[var(--cane-700)] text-sm"></i>
+        <button id="addNewField" class="flex items-center gap-2 px-4 py-2 bg-[var(--cane-600)] text-white text-sm font-semibold rounded-lg hover:bg-[var(--cane-700)] hover:shadow-md transition-all duration-200 ease-in-out transform hover:-translate-y-0.5">
+          <i class="fas fa-plus"></i>
+          <span>New Field</span>
         </button>
         <button id="mapZoomOut" class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white shadow border border-gray-200 hover:bg-gray-50 transition-colors">
           <i class="fas fa-minus text-[var(--cane-700)] text-sm"></i>
@@ -338,7 +339,7 @@
 
 <div id="fieldsRegister" class="hidden">
   <div class="flex items-center justify-between mb-4">
-    <button id="backToFields" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700">
+    <button id="backToFields" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 ease-in-out">
       <i class="fas fa-arrow-left"></i>
       <span>Back to My Fields</span>
     </button>

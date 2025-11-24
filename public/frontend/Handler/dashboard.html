@@ -18,7 +18,12 @@
         const nick = localStorage.getItem('farmerNickname');
         const name = localStorage.getItem('farmerName');
         const email = localStorage.getItem('userEmail');
-        return (nick && nick.trim()) || (name && name.trim()) || (email ? email.split('@')[0] : 'Handler');
+        // Return first name only if name exists and has multiple parts, otherwise return the full name or fallback
+        if (name && name.trim()) {
+          const nameParts = name.trim().split(' ');
+          return nameParts[0].toUpperCase(); // Return only the first name in uppercase
+        }
+        return (nick && nick.trim()) || (email ? email.split('@')[0] : 'Handler');
       } catch(_) { return 'Handler'; }
     }
     function apply(){
@@ -203,29 +208,100 @@
             --text-light: #6C757D;        /* Light text */
             
             /* Cane Color Palette (for compatibility) */
-            --cane-50: #f0fdf4;
-            --cane-100: #dcfce7;
-            --cane-200: #bbf7d0;
-            --cane-300: #86efac;
-            --cane-400: #4ade80;
-            --cane-500: #22c55e;
-            --cane-600: #16a34a;
-            --cane-700: #15803d;
-            --cane-800: #166534;
-            --cane-900: #14532d;
+            --cane-50: #f0f7e9;
+            --cane-100: #d4e8b3;
+            --cane-200: #b8d97d;
+            --cane-300: #9bcb47;
+            --cane-400: #7fbd11;
+            --cane-500: #2c5a0b;
+            --cane-600: #3a7a0f;
+            --cane-700: #2c5a0b;
+            --cane-800: #1e3e08;
+            --cane-900: #1a3607;
+            --cane-950: #0f1f04;
+
+            /* Legacy variable mapping for compatibility */
+            --primary-dark: var(--cane-800);
+            --primary-medium: var(--cane-500);
+            --primary-light: var(--cane-600);
+            --accent-light: var(--cane-400);
+            --accent-lighter: var(--cane-100);
+            --text-dark: var(--cane-900);
+            --text-light: #E8F5E9;
+            --success: var(--cane-600);
+            --warning: #FFA000;
+            --error: #D32F2F;
+            --background: #f5f9f2
         }
         .section-card { 
             background: linear-gradient(135deg, #ffffff, var(--cane-50)); 
             border: 1px solid var(--cane-200); 
             transition: all 0.3s ease;
         }
-        .section-card:hover { box-shadow: 0 8px 25px rgba(94,165,0,0.15); transform: translateY(-2px); }
-        .metric-card { 
-            background: linear-gradient(135deg, #ffffff, var(--cane-50));
-            border: 1px solid var(--cane-200);
+        .section-card:hover { box-shadow: 0 8px 25px rgba(44, 90, 11, 0.15); transform: translateY(-2px); }
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff, #f8faf7);
+            border: 1px solid #e5e7eb;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            height: 100%;
+            border-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
         }
-        .metric-card:hover { box-shadow: 0 4px 15px rgba(94,165,0,0.2); transform: translateY(-1px); }
+        
+        .metric-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            font-size: 0.6rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 9999px;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            line-height: 1;
+            opacity: 0.9;
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--cane-400), var(--cane-600));
+            opacity: 0.7;
+        }
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+            background: linear-gradient(135deg, #ffffff, #f5f9f2);
+        }
+        /* Status color coding */
+        .status-completed {
+            background: linear-gradient(135deg, var(--cane-400), var(--cane-600)) !important;
+            box-shadow: 0 2px 4px rgba(44, 90, 11, 0.15);
+        }
+        .status-pending {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.15);
+        }
+        .status-info {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+        }
+        .status-warning {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+            box-shadow: 0 2px 4px rgba(249, 115, 22, 0.15);
+        }
+        .status-error {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+        }
         .inner-box { background: var(--primary-light); border: 1px solid var(--neutral-medium); }
         /* Sidebar animation */
         #sidebar { transition: transform 300ms ease, opacity 300ms ease; }
@@ -248,10 +324,10 @@
         }
         #handlerFieldsMap { min-height: 26rem; width: 100%; }
         .btn-register-field {
-            background: linear-gradient(to right, #497d00, #5ea500);
+            background: linear-gradient(to right, var(--cane-500), var(--cane-600));
             color: #fff;
             transition: transform 0.2s ease, filter 0.2s ease;
-            box-shadow: 0 4px 12px rgba(73, 125, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(44, 90, 11, 0.2);
         }
 
         .btn-register-field:hover {
@@ -260,9 +336,9 @@
         }
 
         #tasks .task-card {
-            background: linear-gradient(180deg, #ffffff 0%, #f0ffe1 100%);
-            border: 1px solid #d4f2a8;
-            box-shadow: 0 18px 36px rgba(76, 140, 0, 0.12);
+            background: linear-gradient(180deg, #ffffff 0%, #e8f5e0 100%);
+            border: 1px solid #b8d89b;
+            box-shadow: 0 18px 36px rgba(44, 90, 11, 0.12);
             border-radius: 24px;
         }
 
@@ -400,7 +476,7 @@
             gap: 0.45rem;
             padding: 0.6rem 1.1rem;
             border-radius: 0.85rem;
-            background: linear-gradient(135deg, var(--primary-medium), #6eb741);
+            background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
             color: #fff;
             font-size: 0.8rem;
             font-weight: 600;
@@ -440,9 +516,9 @@
         }
 
         #workers .requests-card {
-            background: linear-gradient(135deg, #eef9e2, #d9f1bc);
-            border: 1px solid rgba(148, 214, 59, 0.35);
-            box-shadow: 0 14px 24px rgba(118, 171, 36, 0.18);
+            background: linear-gradient(135deg, #f0f7e9, #d4e8b3);
+            border: 1px solid rgba(184, 216, 155, 0.5);
+            box-shadow: 0 14px 24px rgba(44, 90, 11, 0.12);
         }
 
         #workers .request-item {
@@ -479,7 +555,7 @@
         }
 
         #workers .filter-btn.active {
-            background: linear-gradient(135deg, var(--primary-medium), #6eb741);
+            background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
             color: #fff;
             border-color: var(--primary-medium);
             box-shadow: 0 4px 12px rgba(76, 140, 0, 0.25);
@@ -522,7 +598,7 @@
         }
 
         .btn-task-submit {
-            background: linear-gradient(135deg, #4a8b00 0%, #79bd0c 100%);
+            background: linear-gradient(135deg, var(--cane-500) 0%, var(--cane-600) 100%);
             color: #ffffff;
             border-radius: 18px;
             padding: 0.65rem 1.95rem;
@@ -545,27 +621,92 @@
         body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
         body.sidebar-collapsed #sidebar #sidebarUserRole { display: none; }
         body.sidebar-collapsed #sidebar .px-4.text-xs { display: none; }
+
+        /* Status Badges - Consistent Color Coding */
+        .status-badge {
+            @apply px-2.5 py-1 rounded-full text-xs font-medium border border-opacity-20;
+        }
+        /* Green - Completed / Active / Positive */
+        .status-completed, .status-active, .status-success, .status-available {
+            @apply bg-green-50 text-green-800 border-green-200;
+        }
+        /* Yellow - Pending / Waiting */
+        .status-pending, .status-waiting, .status-scheduled {
+            @apply bg-yellow-50 text-yellow-800 border-yellow-200;
+        }
+        /* Red - Issues / Overdue / Critical */
+        .status-overdue, .status-issue, .status-error, .status-critical, .status-rejected {
+            @apply bg-red-50 text-red-800 border-red-200;
+        }
+        /* Blue - Information / In Progress */
+        .status-in-progress, .status-processing, .status-info, .status-pending-approval {
+            @apply bg-blue-50 text-blue-800 border-blue-200;
+        }
+        /* Gray - Neutral / Inactive / Default */
+        .status-neutral, .status-draft, .status-inactive {
+            @apply bg-gray-100 text-gray-700 border-gray-200;
+        }
+
+        /* Alert Styling - Consistent with Status Colors */
+        .alert {
+            @apply p-4 rounded-lg mb-4 border border-opacity-30;
+        }
+        .alert-success {
+            @apply bg-green-50 text-green-800 border-green-200;
+        }
+        .alert-warning {
+            @apply bg-yellow-50 text-yellow-800 border-yellow-200;
+        }
+        .alert-error, .alert-danger {
+            @apply bg-red-50 text-red-800 border-red-200;
+        }
+        .alert-info {
+            @apply bg-blue-50 text-blue-800 border-blue-200;
+        }
+        .alert-neutral {
+            @apply bg-gray-50 text-gray-800 border-gray-200;
+        }
+
+        /* Task Cards with Status Indicators */
+        .task-card {
+            @apply bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-all border-l-4 border-transparent;
+        }
+        .task-card.completed {
+            @apply border-l-green-500 bg-green-50/30;
+        }
+        .task-card.in-progress {
+            @apply border-l-blue-500 bg-blue-50/20;
+        }
+        .task-card.overdue {
+            @apply border-l-red-500 bg-red-50/20;
+        }
+        .task-card.due-soon {
+            @apply border-l-yellow-500 bg-yellow-50/20;
+        }
+        .task-card.pending {
+            @apply border-l-gray-400 bg-gray-50/20;
+        }
     </style>
  </head>
 <body class="min-h-screen bg-gray-100">
 
     <!-- Header (aligned with Worker/SRA) -->
-    <header class="shadow-lg" style="background: linear-gradient(to right, var(--cane-700), var(--cane-600));">
-        <div id="handlerHeaderContainer" class="container mx-auto px-6 py-3 lg:pl-64">
-            <div class="flex items-center justify-between">
+    <header class="shadow-lg bg-white py-1">
+        <div id="handlerHeaderContainer" class="container mx-auto px-4 py-1 lg:pl-64">
+            <div class="flex items-center justify-between h-12">
                 <div class="flex items-center space-x-4"></div>
                 <div class="text-center"></div>
                 <div class="flex items-center space-x-4">
                     <!-- Back to Lobby Button -->
-                    <a href="../Common/lobby.html" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors px-3 py-2 rounded-lg hover:bg-white/10" title="Back to Lobby">
-                        <i class="fas fa-home text-lg"></i>
-                        <span class="hidden md:inline text-sm font-medium">Lobby</span>
+                    <a href="../Common/lobby.html" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100" title="Back to Lobby">
+                        <i class="fas fa-home text-base text-gray-800"></i>
+                        <span class="hidden md:inline text-xs font-medium text-gray-800">Lobby</span>
                     </a>
 
                     <!-- Notification Bell with Dropdown -->
                     <div class="relative">
-                        <button id="notificationBellBtn" class="relative text-white hover:text-gray-200 transition-colors p-2">
-                            <i class="fas fa-bell text-lg"></i>
+                        <button id="notificationBellBtn" class="relative text-gray-800 hover:text-gray-600 transition-colors p-2">
+                            <i class="fas fa-bell text-base text-gray-800"></i>
                             <!-- Notification Badge -->
                             <span id="notificationBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
                         </button>
@@ -589,12 +730,12 @@
 
                     <!-- Header profile dropdown -->
                     <div class="relative">
-                        <button id="handlerHeaderMenuBtn" class="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors">
-                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
-                                <i class="fas fa-user text-white text-sm"></i>
+                        <button id="handlerHeaderMenuBtn" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors">
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center shadow-md border border-gray-300">
+                                <i class="fas fa-user text-gray-700 text-sm"></i>
                             </div>
-                            <span class="font-medium" id="topUserNameHeader">Handler</span>
-                            <i class="fas fa-chevron-down text-xs"></i>
+                            <span class="font-medium text-gray-800" id="topUserNameHeader">Handler</span>
+                            <i class="fas fa-chevron-down text-xs text-gray-800"></i>
                         </button>
                         <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right z-50">
                             <button id="handlerGoProfile" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile Information</button>
@@ -608,7 +749,7 @@
 
     <div class="flex relative">
   <!-- Sidebar (fixed overlay) -->
-  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg bg-gray-900 z-50">
+  <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg" style="background: linear-gradient(180deg, #2c5a0b 0%, #3a7a0f 100%);">
             <!-- Profile Section -->
             <div class="p-6 border-b border-white/10">
                 <div class="flex items-center justify-between mb-4">
@@ -754,52 +895,59 @@
         <!-- Page Title (simple, since global header exists) -->
         <div class="px-4 lg:px-0 py-4 mb-2">
             <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-900">Dashboard</h2>
+            <p class="text-gray-600 mt-1">Manage your fields and workers</p>
+            <div class="w-16 h-0.5 bg-[var(--cane-700)] my-3"></div>
         </div>
 
         <!-- Metrics row (Total Fields, Pending Review, Active Workers, Pending Task, Join Request) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
-            <div class="metric-card rounded-xl p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-500)] to-[var(--cane-600)]"><i class="fas fa-map text-white text-xl"></i></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8 mb-10">
+            <div class="metric-card rounded-xl">
+                <span class="metric-badge" style="background-color: #4CAF50;">Fields</span>
+                <div class="w-full">
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-700)]">Total Fields</p>
-                        <p id="mFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-lg font-semibold text-gray-800 mb-2">Total Fields</p>
+                        <p id="mFields" class="text-4xl font-bold text-[var(--cane-900)] mb-2">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Managed fields</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-yellow-400 to-yellow-500"><i class="fas fa-hourglass-half text-white text-xl"></i></div>
+            <div class="metric-card rounded-xl">
+                <span class="metric-badge" style="background-color: #FFC107;">Review</span>
+                <div class="w-full">
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-700)]">Pending Review</p>
-                        <p id="mPendingFields" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-lg font-semibold text-gray-800 mb-2">Pending Review</p>
+                        <p id="mPendingFields" class="text-4xl font-bold text-[var(--cane-900)] mb-2">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Needs your attention</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)]"><i class="fas fa-users text-white text-xl"></i></div>
+            <div class="metric-card rounded-xl">
+                <span class="metric-badge" style="background-color: #2196F3;">Workers</span>
+                <div class="w-full">
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-700)]">Active Workers</p>
-                        <p id="mWorkers" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-lg font-semibold text-gray-800 mb-2">Active Workers</p>
+                        <p id="mWorkers" class="text-4xl font-bold text-[var(--cane-900)] mb-2">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Currently active</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-300)] to-[var(--cane-400)]"><i class="fas fa-clock text-white text-xl"></i></div>
+            <div class="metric-card rounded-xl">
+                <span class="metric-badge" style="background-color: #FF9800;">Tasks</span>
+                <div class="w-full">
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-700)]">Pending Task</p>
-                        <p id="mTasks" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-lg font-semibold text-gray-800 mb-2">Pending Task</p>
+                        <p id="mTasks" class="text-4xl font-bold text-[var(--cane-900)] mb-2">0</p>
+                        <p class="text-xs text-gray-500 mt-1">To-do items</p>
                     </div>
                 </div>
             </div>
-            <div class="metric-card rounded-xl p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gradient-to-br from-[var(--cane-200)] to-[var(--cane-300)]"><i class="fas fa-user-plus text-white text-xl"></i></div>
+            <div class="metric-card rounded-xl">
+                <span class="metric-badge" style="background-color: #3F51B5;">Requests</span>
+                <div class="w-full">
                     <div>
-                        <p class="text-sm font-medium text-[var(--cane-700)]">Join Request</p>
-                        <p id="mRequests" class="text-2xl font-semibold text-[var(--cane-900)]">0</p>
+                        <p class="text-lg font-semibold text-gray-800 mb-2">Join Request</p>
+                        <p id="mRequests" class="text-4xl font-bold text-[var(--cane-900)] mb-2">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Worker applications</p>
                     </div>
                 </div>
             </div>
