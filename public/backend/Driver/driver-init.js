@@ -13,27 +13,38 @@ import {
   signOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import {
-  handlePlantingCompletion,
-  handleBasalFertilizationCompletion,
-  handleMainFertilizationCompletion,
-  handleHarvestCompletion,
-} from "../Handler/growth-tracker.js";
+
+// NOTE: Growth tracking imports removed - drivers don't handle planting/fertilization
+// Drivers handle transport and logistics tasks only
+// Growth tracking is handled by workers in Worker/Workers.js
+
 import {
   getRecommendedTasksForDAP,
 } from "../Handler/task-automation.js";
 
-// Helper function to get display-friendly task names
+// Helper function to get display-friendly DRIVER task names
 function getTaskDisplayName(taskValue) {
   const taskMap = {
-    plowing: "Plowing",
-    harrowing: "Harrowing",
-    furrowing: "Furrowing",
-    planting: "Planting (0 DAP)",
-    basal_fertilizer: "Basal Fertilizer (0–30 DAP)",
-    main_fertilization: "Main Fertilization (45–60 DAP)",
-    spraying: "Spraying",
-    harvesting: "Harvesting",
+    // Pre-harvest transport tasks
+    transport_materials: "Transport Materials to Field",
+    transport_fertilizer: "Transport Fertilizer to Field",
+    transport_equipment: "Transport Equipment to Field",
+
+    // Harvest-related driver tasks
+    pickup_harvested_cane: "Pickup Harvested Sugarcane from Field",
+    transport_cane_to_mill: "Transport Cane from Field to Mill",
+    deliver_to_collection: "Deliver Cane to Collection Points",
+    assist_loading_unloading: "Assist in Loading/Unloading Sugarcane",
+    coordinate_harvest_crew: "Coordinate with Harvest Crew for Timing",
+    check_cane_weight: "Check Cane Weight at Weighbridge",
+    return_empty_truck: "Bring Empty Trucks Back to Fields",
+
+    // General driver tasks
+    vehicle_maintenance: "Vehicle Maintenance/Inspection",
+    fuel_refill: "Fuel Refill",
+    driver_others: "Others",
+
+    // Legacy fallbacks (for old tasks)
     transport: "Transport",
     equipment_operation: "Equipment Operation",
     material_delivery: "Material Delivery",
@@ -1099,81 +1110,15 @@ window.markDriverTaskAsDone = async function (taskId) {
       completedBy: currentUserId,
     });
 
-    // REQ-5: Trigger growth tracking if this is a planting or fertilization task
-    const fieldId = task.fieldId;
-    const handlerId = task.created_by || task.createdBy;
+    // NOTE: Drivers do NOT trigger growth tracking (planting/fertilization)
+    // Growth tracking is handled by workers only
+    // Drivers handle transport and logistics tasks
+    console.log(
+      `✅ Driver marked task as done - Title: "${task.title}", Field: ${task.fieldId}`
+    );
 
-    if (fieldId && handlerId) {
-      // Normalize task title: replace underscores with spaces and convert to lowercase
-      const taskTitle = (task.title || "").toLowerCase().replace(/_/g, " ");
-
-      console.log(
-        `📋 Driver marked task as done - Title: "${task.title}", Field: ${fieldId}`
-      );
-
-      // Check if this is a planting task
-      if (taskTitle === "planting" || taskTitle.includes("planting")) {
-        const variety = task.metadata?.variety || task.variety;
-        if (variety) {
-          try {
-            console.log(
-              `🌱 Triggering planting completion for field ${fieldId} with variety ${variety}`
-            );
-            await handlePlantingCompletion(handlerId, fieldId, variety);
-            console.log(`✅ Growth tracking initialized for field ${fieldId}`);
-          } catch (error) {
-            console.error("❌ Error triggering growth tracking:", error);
-          }
-        }
-      }
-      // Check if this is basal fertilization
-      else if (
-        taskTitle === "basal fertilizer" ||
-        taskTitle.includes("basal")
-      ) {
-        try {
-          console.log(`🌿 Triggering basal fertilization for field ${fieldId}`);
-          await handleBasalFertilizationCompletion(handlerId, fieldId);
-          console.log(`✅ Basal fertilization tracked for field ${fieldId}`);
-        } catch (error) {
-          console.error("❌ Error triggering basal fertilization:", error);
-        }
-      }
-      // Check if this is main fertilization
-      else if (
-        taskTitle === "main fertilization" ||
-        taskTitle.includes("main fertiliz")
-      ) {
-        try {
-          console.log(`🌾 Triggering main fertilization for field ${fieldId}`);
-          await handleMainFertilizationCompletion(handlerId, fieldId);
-          console.log(`✅ Main fertilization tracked for field ${fieldId}`);
-        } catch (error) {
-          console.error("❌ Error triggering main fertilization:", error);
-        }
-      }
-      // Check if this is harvesting
-      else if (taskTitle === "harvesting" || taskTitle.includes("harvest")) {
-        try {
-          console.log(`🚜 Triggering harvest completion for field ${fieldId}`);
-          const yieldData =
-            task.metadata?.expected_yield ||
-            task.metadata?.actual_yield ||
-            null;
-          await handleHarvestCompletion(
-            handlerId,
-            fieldId,
-            new Date(),
-            yieldData
-          );
-          console.log(
-            `✅ Harvest completed and field finalized for ${fieldId}`
-          );
-        } catch (error) {
-          console.error("❌ Error triggering harvest completion:", error);
-        }
-      }
-    }
+    // Skip growth tracking for drivers - they don't do planting/fertilization
+    // This code is intentionally removed for driver workflows
 
     // Notify handler
     if (handlerId) {
@@ -1730,114 +1675,12 @@ async function createDriverLog(logData) {
 
     const taskRef = await addDoc(collection(db, "tasks"), taskData);
 
-    // REQ-5: Trigger growth tracking if this is a relevant task type
-    // Normalize task title: replace underscores with spaces and convert to lowercase
-    const taskTitle = logData.taskType.toLowerCase().replace(/_/g, " ");
+    // NOTE: Drivers do NOT trigger growth tracking
+    // Growth tracking (planting/fertilization) is handled by workers only
+    // Drivers handle transport and logistics tasks
     console.log(
-      `📋 Driver log created - Task: "${logData.taskType}", Field: ${logData.fieldId}, Variety: ${fieldVariety}`
+      `✅ Driver log created - Task: "${logData.taskType}", Field: ${logData.fieldId}`
     );
-
-    // Check if this is a planting task (handles: "planting", "Planting (0 DAP)")
-    if (taskTitle === "planting" || taskTitle.includes("planting")) {
-      if (fieldVariety && handlerId && logData.fieldId) {
-        try {
-          console.log(
-            `🌱 Triggering planting completion for field ${logData.fieldId} with variety ${fieldVariety}`
-          );
-          await handlePlantingCompletion(
-            handlerId,
-            logData.fieldId,
-            fieldVariety,
-            completionDate.toDate()
-          );
-          console.log(
-            `✅ Growth tracking initialized successfully for field ${logData.fieldId}`
-          );
-        } catch (error) {
-          console.error("❌ Error triggering growth tracking:", error);
-          console.error("Error details:", error.message, error.stack);
-        }
-      } else {
-        console.warn(
-          `⚠️ Missing data for growth tracking: variety=${fieldVariety}, handlerId=${handlerId}, fieldId=${logData.fieldId}`
-        );
-      }
-    }
-    // Check if this is basal fertilization (handles: "basal_fertilizer", "basal fertilizer", "Basal Fertilizer (0–30 DAP)")
-    else if (taskTitle === "basal fertilizer" || taskTitle.includes("basal")) {
-      if (handlerId && logData.fieldId) {
-        try {
-          console.log(
-            `🌿 Triggering basal fertilization completion for field ${logData.fieldId}`
-          );
-          await handleBasalFertilizationCompletion(
-            handlerId,
-            logData.fieldId,
-            completionDate.toDate()
-          );
-          console.log(
-            `✅ Basal fertilization tracked successfully for field ${logData.fieldId}`
-          );
-        } catch (error) {
-          console.error(
-            "❌ Error triggering basal fertilization tracking:",
-            error
-          );
-          console.error("Error details:", error.message, error.stack);
-        }
-      }
-    }
-    // Check if this is main fertilization (handles: "main_fertilization", "main fertilization", "Main Fertilization (45–60 DAP)")
-    else if (
-      taskTitle === "main fertilization" ||
-      taskTitle.includes("main fertiliz")
-    ) {
-      if (handlerId && logData.fieldId) {
-        try {
-          console.log(
-            `🌾 Triggering main fertilization completion for field ${logData.fieldId}`
-          );
-          await handleMainFertilizationCompletion(
-            handlerId,
-            logData.fieldId,
-            completionDate.toDate()
-          );
-          console.log(
-            `✅ Main fertilization tracked successfully for field ${logData.fieldId}`
-          );
-        } catch (error) {
-          console.error(
-            "❌ Error triggering main fertilization tracking:",
-            error
-          );
-          console.error("Error details:", error.message, error.stack);
-        }
-      }
-    }
-    // Check if this is harvesting (handles: "harvesting", "Harvesting")
-    else if (taskTitle === "harvesting" || taskTitle.includes("harvest")) {
-      if (handlerId && logData.fieldId) {
-        try {
-          console.log(
-            `🚜 Triggering harvest completion for field ${logData.fieldId}`
-          );
-          // Check if yield was logged
-          const yieldData = logData.yield || null;
-          await handleHarvestCompletion(
-            handlerId,
-            logData.fieldId,
-            completionDate.toDate(),
-            yieldData
-          );
-          console.log(
-            `✅ Harvest completed and field finalized for ${logData.fieldId}`
-          );
-        } catch (error) {
-          console.error("❌ Error completing harvest:", error);
-          console.error("Error details:", error.message, error.stack);
-        }
-      }
-    }
 
     // Notify handler if available
     if (handlerId) {
