@@ -21,7 +21,6 @@ import {
 } from "../Handler/growth-tracker.js";
 import {
   getRecommendedTasksForDAP,
-  VARIETY_HARVEST_DAYS,
 } from "../Handler/task-automation.js";
 
 // Helper function to get display-friendly task names
