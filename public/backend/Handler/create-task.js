@@ -37,7 +37,7 @@ function getTaskDisplayName(taskValue) {
 async function updateFieldVariety(fieldId, variety) {
   if (!variety || !currentUserId) return;
   try {
-    const fieldRef = doc(db, 'field_applications', currentUserId, 'fields', fieldId);
+    const fieldRef = doc(db, 'fields', fieldId);
     await updateDoc(fieldRef, { sugarcane_variety: variety });
     console.log(`Field ${fieldId} sugarcane_variety updated to ${variety}`);
   } catch (err) {
