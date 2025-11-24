@@ -160,9 +160,9 @@
             }
         }
         
-        /* Fixed layout - prevent scrolling */
+        /* Fixed layout - allow scrolling by default (mobile needs scroll) */
         body {
-            overflow: hidden;
+            overflow: auto;
         }
         
         .main {
@@ -193,7 +193,7 @@
         }
         .sidebar-collapsed .sidebar-logo h2,
         .sidebar-collapsed .nav-item-text,
-        .sidebar-collapsed .sidebar-footer {
+        .sidebar-collapsed .sidebar-footer span {
             display: none;
         }
         .sidebar-collapsed nav .fa-chevron-down {
@@ -257,7 +257,7 @@
                 <div class="flex items-center space-x-4">
                     <!-- Hamburger Menu -->
                     <div class="relative">
-                        <button onclick="toggleSidebar()" class="bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors">
+                        <button onclick="toggleSidebar()" class="hamburger-icon bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors">
                             <i class="fas fa-bars text-xl text-gray-900"></i>
                         </button>
                     </div>
@@ -319,7 +319,7 @@
         </header>
         
     <!-- Sidebar -->
-    <div class="fixed left-0 top-0 h-full w-80 bg-gradient-to-b from-[var(--cane-800)] to-[var(--cane-700)] shadow-lg z-20 transition-all duration-300 ease-in-out" id="sidebar">
+    <div class="sidebar fixed left-0 top-0 h-full w-80 bg-gradient-to-b from-[var(--cane-800)] to-[var(--cane-700)] shadow-lg z-20 transition-all duration-300 ease-in-out" id="sidebar">
         <!-- Sidebar Header -->
         <div class="border-b border-[var(--cane-600)]">
             <!-- Logo and Title Row -->
@@ -1775,6 +1775,32 @@ async function showBadgeRequestsContent() {
             const sidebar = document.getElementById('sidebar');
             const main = document.getElementById('mainContent');
             const header = document.getElementById('mainHeader');
+            // Mobile behavior: toggle overlay / expanded state
+            if (window.innerWidth <= 768) {
+                const isNowExpanded = body.classList.toggle('sidebar-expanded');
+                if (sidebar) {
+                    if (isNowExpanded) {
+                        sidebar.style.transform = 'translateX(0)';
+                        sidebar.style.width = '100%';
+                        sidebar.style.left = '0';
+                    } else {
+                        sidebar.style.transform = 'translateX(-100%)';
+                    }
+                }
+                if (main) {
+                    if (isNowExpanded) {
+                        main.style.opacity = '0.35';
+                        main.style.pointerEvents = 'none';
+                    } else {
+                        main.style.opacity = '';
+                        main.style.pointerEvents = '';
+                    }
+                }
+                // update hamburger icon visual
+                const hamburgerIcon = document.querySelector('.hamburger-icon i');
+                if (hamburgerIcon) hamburgerIcon.className = isNowExpanded ? 'fas fa-times text-sm' : 'fas fa-bars text-sm';
+                return;
+            }
             
             // Toggle the collapsed class on the body
             const isCollapsing = !body.classList.contains('sidebar-collapsed');

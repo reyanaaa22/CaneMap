@@ -230,7 +230,13 @@
     <!-- Header -->
     <header class="app-header shadow-md lg:pl-64">
         <div class="container mx-auto px-6 py-2 text-gray-800">
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <!-- Hamburger Menu (header, left) -->
+                    <button id="sraHeaderHamburger" onclick="document.getElementById('sraCollapseSidebarBtn')?.click()" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors mr-4 lg:hidden">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
                 <div class="flex items-center space-x-4">
                     <!-- Notification Bell with Dropdown -->
                     <div class="relative">
