@@ -433,6 +433,12 @@
           return;
         }
 
+        // Check if html2pdf library is loaded
+        if (typeof window.html2pdf === 'undefined') {
+          alert('PDF library not loaded. Please refresh the page and try again.');
+          return;
+        }
+
         // Clone the element to modify it for PDF
         const clone = element.cloneNode(true);
 
@@ -440,17 +446,37 @@
         const buttons = clone.querySelectorAll('button');
         buttons.forEach(btn => btn.remove());
 
+        // Wait for all images to load before generating PDF
+        const images = clone.querySelectorAll('img');
+        const imagePromises = Array.from(images).map(img => {
+          return new Promise((resolve) => {
+            if (img.complete) {
+              resolve();
+            } else {
+              img.onload = resolve;
+              img.onerror = resolve; // Continue even if image fails to load
+            }
+          });
+        });
+        await Promise.all(imagePromises);
+
         // Configure PDF options
         const opt = {
           margin: 10,
-          filename: `${reportTypeLabel.replace(/\s+/g, '_')}_${new Date().toLocaleDateString()}.pdf`,
+          filename: `${reportTypeLabel.replace(/\s+/g, '_')}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false
+          },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        // Generate PDF
-        await html2pdf().set(opt).from(clone).save();
+        // Generate PDF using window.html2pdf
+        await window.html2pdf().set(opt).from(clone).save();
+        console.log('✅ PDF generated successfully');
       } catch (error) {
         console.error('Error generating PDF:', error);
         alert('Failed to generate PDF. Please try again.');

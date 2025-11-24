@@ -668,9 +668,7 @@ function formatFieldName(fieldName) {
 function formatFieldValue(value) {
   // Check if value is a photo URL (string containing image extensions or Firebase Storage URL)
   if (typeof value === 'string' && (value.includes('firebasestorage.googleapis.com') || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(value))) {
-    return `<a href="${value}" target="_blank" class="inline-block">
-              <img src="${value}" alt="Report photo" class="max-w-xs rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px;">
-            </a>`;
+    return `<img src="${value}" alt="Report photo" class="max-w-xs rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px;" onclick="window.viewPhotoModal('${value}')">`;
   }
 
   // Check if value is an array of photo URLs
@@ -683,9 +681,7 @@ function formatFieldValue(value) {
     if (allPhotos && value.length > 0) {
       return `<div class="grid grid-cols-2 gap-2">
                 ${value.map(url => `
-                  <a href="${url}" target="_blank" class="inline-block">
-                    <img src="${url}" alt="Report photo" class="w-full rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px; object-fit: cover;">
-                  </a>
+                  <img src="${url}" alt="Report photo" class="w-full rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px; object-fit: cover;" onclick="window.viewPhotoModal('${url}')">
                 `).join('')}
               </div>`;
     }
@@ -877,13 +873,32 @@ window.downloadSRAReportPDF = async function(reportId, reportTypeName) {
     const hiddenElements = clone.querySelectorAll('.print\\:hidden');
     hiddenElements.forEach(el => el.remove());
 
+    // Wait for all images to load before generating PDF
+    const images = clone.querySelectorAll('img');
+    const imagePromises = Array.from(images).map(img => {
+      return new Promise((resolve) => {
+        if (img.complete) {
+          resolve();
+        } else {
+          img.onload = resolve;
+          img.onerror = resolve; // Continue even if image fails to load
+        }
+      });
+    });
+    await Promise.all(imagePromises);
+
     // Configure PDF options
     const timestamp = new Date().toLocaleDateString().replace(/\//g, '-');
     const opt = {
       margin: 10,
       filename: `SRA_Report_${reportTypeName.replace(/\s+/g, '_')}_${timestamp}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -894,6 +909,28 @@ window.downloadSRAReportPDF = async function(reportId, reportTypeName) {
     console.error('Error generating PDF:', error);
     alert('Failed to generate PDF. Please try again.');
   }
+};
+
+/**
+ * View photo in modal (enlarge)
+ */
+window.viewPhotoModal = function(photoUrl) {
+  const photoModal = document.createElement('div');
+  photoModal.className = 'fixed inset-0 z-[99999] flex items-center justify-center bg-black/80';
+  photoModal.innerHTML = `
+    <div class="relative max-w-4xl max-h-[90vh] p-4">
+      <button onclick="this.closest('.fixed').remove()" class="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition z-10">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+      <img src="${photoUrl}" alt="Photo" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+    </div>
+  `;
+  photoModal.addEventListener('click', (e) => {
+    if (e.target === photoModal) {
+      photoModal.remove();
+    }
+  });
+  document.body.appendChild(photoModal);
 };
 
 /**
