@@ -740,5 +740,41 @@ match /field_workers/{requestId} {
       );
     }
 
+    // === User Activities Collection Rules ===
+    match /user_activities/{activityId} {
+      // Users can read their own activities
+      // System admins can read all activities
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'system_admin']
+        )
+      );
+
+      // Users can create their own activities
+      // All authenticated users can log their activities
+      allow create: if request.auth != null &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own activities (if needed for corrections)
+      allow update: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'system_admin']
+        )
+      );
+
+      // Users can delete their own activities, admins can delete all
+      allow delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'system_admin']
+        )
+      );
+    }
+
   }
 }

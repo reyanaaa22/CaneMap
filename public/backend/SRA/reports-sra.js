@@ -636,17 +636,13 @@ function showReportDetailsModal(reportId, report) {
 
         <!-- Export Actions -->
         <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-200 print:hidden">
-          <button onclick="printReport()"
+          <button onclick="downloadSRAReportPDF('${reportId}', '${reportTypeName}')"
                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2">
-            <i class="fas fa-print"></i> Print Report
+            <i class="fas fa-download"></i> Download PDF
           </button>
-          <button onclick="exportReportJSON('${reportId}')"
+          <button onclick="printReport()"
                   class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2">
-            <i class="fas fa-download"></i> Export JSON
-          </button>
-          <button onclick="exportReportCSV('${reportId}')"
-                  class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2">
-            <i class="fas fa-file-csv"></i> Export CSV
+            <i class="fas fa-print"></i> Print Report
           </button>
         </div>
       </div>
@@ -854,74 +850,54 @@ window.printReport = function() {
 };
 
 /**
- * Export single report as JSON
+ * Download single report as PDF
  */
-window.exportReportJSON = async function(reportId) {
+window.downloadSRAReportPDF = async function(reportId, reportTypeName) {
   try {
-    const reportRef = doc(db, 'reports', reportId);
-    const reportSnap = await getDoc(reportRef);
-
-    if (!reportSnap.exists()) {
-      alert('Report not found');
+    const element = document.getElementById('reportDetailsPrintArea');
+    if (!element) {
+      alert('Report content not found');
       return;
     }
 
-    const reportData = reportSnap.data();
-
-    // Fetch handler and field names
-    const handlerName = await getHandlerName(reportData.handlerId);
-    let fieldName = 'No field';
-    if (reportData.fieldId) {
-      fieldName = await getFieldName(reportData.fieldId);
+    // Check if html2pdf library is loaded
+    if (typeof html2pdf === 'undefined') {
+      alert('PDF library not loaded. Please refresh the page and try again.');
+      return;
     }
 
-    // Prepare export data
-    const exportData = {
-      reportId: reportId,
-      reportType: reportData.reportType,
-      reportTypeLabel: getReportTypeLabel(reportData.reportType),
-      handler: {
-        id: reportData.handlerId,
-        name: handlerName
-      },
-      field: {
-        id: reportData.fieldId || null,
-        name: fieldName
-      },
-      status: reportData.status || 'pending_review',
-      submittedDate: reportData.submittedDate?.toDate ? reportData.submittedDate.toDate().toISOString() : null,
-      reviewedAt: reportData.reviewedAt?.toDate ? reportData.reviewedAt.toDate().toISOString() : null,
-      reviewedBy: reportData.reviewedBy || null,
-      remarks: reportData.remarks || '',
-      data: reportData.data || {}
+    // Clone the content to modify for PDF
+    const clone = element.cloneNode(true);
+
+    // Remove buttons from clone
+    const buttons = clone.querySelectorAll('button');
+    buttons.forEach(btn => btn.remove());
+
+    // Remove elements with print:hidden class
+    const hiddenElements = clone.querySelectorAll('.print\\:hidden');
+    hiddenElements.forEach(el => el.remove());
+
+    // Configure PDF options
+    const timestamp = new Date().toLocaleDateString().replace(/\//g, '-');
+    const opt = {
+      margin: 10,
+      filename: `SRA_Report_${reportTypeName.replace(/\s+/g, '_')}_${timestamp}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Create JSON blob and download
-    const jsonString = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-
-    const timestamp = new Date().toISOString().split('T')[0];
-    const reportType = reportData.reportType || 'report';
-    const filename = `report_${reportType}_${timestamp}.json`;
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    console.log(`✅ Exported report ${reportId} as JSON`);
+    // Generate PDF
+    await html2pdf().set(opt).from(clone).save();
+    console.log(`✅ Downloaded report ${reportId} as PDF`);
   } catch (error) {
-    console.error('Error exporting report as JSON:', error);
-    alert('Failed to export report: ' + error.message);
+    console.error('Error generating PDF:', error);
+    alert('Failed to generate PDF. Please try again.');
   }
 };
 
 /**
- * Export single report as detailed CSV
+ * Export single report as detailed CSV (DEPRECATED - Use PDF instead)
  */
 window.exportReportCSV = async function(reportId) {
   try {

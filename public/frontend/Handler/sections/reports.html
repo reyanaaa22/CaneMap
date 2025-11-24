@@ -6,6 +6,8 @@
 <title>CaneMap - Reports</title>
 <link rel="stylesheet" href="/css/output.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- PDF Generation Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   :root{
     --cane-50:#f7fee7;--cane-100:#ecfcca;--cane-200:#d8f999;--cane-300:#bbf451;--cane-400:#9ae600;--cane-500:#7ccf00;--cane-600:#5ea500;--cane-700:#497d00;--cane-800:#3c6300;--cane-900:#35530e;--cane-950:#192e03;
@@ -319,22 +321,61 @@
         if (report.data && typeof report.data === 'object') {
           dataHTML = Object.entries(report.data).map(([key, value]) => {
             const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-            return `
-              <div class="flex justify-between py-2 border-b border-gray-200">
-                <span class="font-medium text-gray-700">${label}:</span>
-                <span class="text-gray-900">${Array.isArray(value) ? value.join(', ') : value}</span>
-              </div>
-            `;
+
+            // Check if value is a photo URL or array of photo URLs
+            const isPhotoURL = (val) => typeof val === 'string' && (
+              val.includes('firebase') ||
+              val.includes('storage.googleapis.com') ||
+              val.startsWith('http') && (val.includes('.jpg') || val.includes('.png') || val.includes('.jpeg') || val.includes('.webp'))
+            );
+
+            if (isPhotoURL(value)) {
+              // Single photo
+              return `
+                <div class="py-3 border-b border-gray-200">
+                  <span class="font-medium text-gray-700 block mb-2">${label}:</span>
+                  <img src="${value}" alt="Report photo" class="w-48 h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition" onclick="window.viewPhotoModal('${value}')">
+                </div>
+              `;
+            } else if (Array.isArray(value) && value.length > 0 && isPhotoURL(value[0])) {
+              // Array of photos
+              return `
+                <div class="py-3 border-b border-gray-200">
+                  <span class="font-medium text-gray-700 block mb-2">${label}:</span>
+                  <div class="grid grid-cols-3 gap-2">
+                    ${value.map(url => `
+                      <img src="${url}" alt="Report photo" class="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition" onclick="window.viewPhotoModal('${url}')">
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            } else {
+              // Regular text value
+              return `
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                  <span class="font-medium text-gray-700">${label}:</span>
+                  <span class="text-gray-900">${Array.isArray(value) ? value.join(', ') : value}</span>
+                </div>
+              `;
+            }
           }).join('');
         }
 
         modal.innerHTML = `
-          <div class="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+          <div class="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl" id="reportDetailContent">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-xl font-bold text-gray-900">${reportTypeLabel}</h3>
-              <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-              </button>
+              <h3 class="text-xl font-bold text-gray-900" id="reportTitle">${reportTypeLabel}</h3>
+              <div class="flex gap-2">
+                <button onclick="window.downloadReportPDF('${reportId}', '${reportTypeLabel}')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                  <i class="fas fa-download mr-1"></i>Download PDF
+                </button>
+                <button onclick="window.printReport()" class="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm">
+                  <i class="fas fa-print mr-1"></i>Print
+                </button>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                  <i class="fas fa-times text-xl"></i>
+                </button>
+              </div>
             </div>
 
             <div class="mb-4">
@@ -361,6 +402,84 @@
         console.error('Error viewing report:', error);
         alert('Failed to load report details');
       }
+    };
+
+    // View photo in modal (enlarge)
+    window.viewPhotoModal = function(photoUrl) {
+      const photoModal = document.createElement('div');
+      photoModal.className = 'fixed inset-0 z-[99999] flex items-center justify-center bg-black/80';
+      photoModal.innerHTML = `
+        <div class="relative max-w-4xl max-h-[90vh] p-4">
+          <button onclick="this.closest('.fixed').remove()" class="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+          <img src="${photoUrl}" alt="Photo" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+        </div>
+      `;
+      photoModal.addEventListener('click', (e) => {
+        if (e.target === photoModal) {
+          photoModal.remove();
+        }
+      });
+      document.body.appendChild(photoModal);
+    };
+
+    // Download report as PDF
+    window.downloadReportPDF = async function(reportId, reportTypeLabel) {
+      try {
+        const element = document.getElementById('reportDetailContent');
+        if (!element) {
+          alert('Report content not found');
+          return;
+        }
+
+        // Clone the element to modify it for PDF
+        const clone = element.cloneNode(true);
+
+        // Remove buttons from the clone
+        const buttons = clone.querySelectorAll('button');
+        buttons.forEach(btn => btn.remove());
+
+        // Configure PDF options
+        const opt = {
+          margin: 10,
+          filename: `${reportTypeLabel.replace(/\s+/g, '_')}_${new Date().toLocaleDateString()}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Generate PDF
+        await html2pdf().set(opt).from(clone).save();
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+      }
+    };
+
+    // Print report
+    window.printReport = function() {
+      const reportContent = document.getElementById('reportDetailContent');
+      if (!reportContent) return;
+
+      const printWindow = window.open('', '', 'height=800,width=800');
+      printWindow.document.write('<html><head><title>Print Report</title>');
+      printWindow.document.write('<style>');
+      printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; }');
+      printWindow.document.write('.flex { display: flex; justify-content: space-between; }');
+      printWindow.document.write('.border-b { border-bottom: 1px solid #e5e7eb; padding: 10px 0; }');
+      printWindow.document.write('.font-medium { font-weight: 600; }');
+      printWindow.document.write('img { max-width: 200px; margin: 10px 0; }');
+      printWindow.document.write('button { display: none; }');
+      printWindow.document.write('</style></head><body>');
+      printWindow.document.write(reportContent.innerHTML);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
     };
 
     // Modal controls

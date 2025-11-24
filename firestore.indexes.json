@@ -129,6 +129,14 @@
         { "fieldPath": "fieldId", "order": "ASCENDING" },
         { "fieldPath": "archived", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "user_activities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
