@@ -2,7 +2,7 @@
 // Implements REQ-5: Growth Tracking System
 
 import { db } from '../Common/firebase-config.js';
-import { doc, updateDoc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { doc, updateDoc, getDoc, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { generateCropCycleTasks } from './task-automation.js';
 
 // Variety-specific harvest days mapping
