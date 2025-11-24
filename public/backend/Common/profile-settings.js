@@ -1,8 +1,9 @@
 import { auth, db } from "./firebase-config.js";
-import { showPopupMessage, showConfirm } from "./ui-popup.js";
+import { showPopupMessage } from "./ui-popup.js";
 import { getAuth, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider, updateEmail, updateProfile } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+import { createNotification } from "./notifications.js";
 
 const ui = {
   updateBtn: document.getElementById('viewUpdateBtn'),
@@ -11,12 +12,6 @@ const ui = {
   updateFields: document.getElementById('updateModalFields'),
   updateSaveBtn: document.getElementById('updateModalSaveBtn'),
   editSaveBtn: document.getElementById('editSaveBtn'),
-  ro: {
-    fullname: document.getElementById('ro_fullname'),
-    email: document.getElementById('ro_email'),
-    contact: document.getElementById('ro_contact'),
-    location: document.getElementById('ro_location'),
-  },
   input: {
     fullname: document.getElementById('in_fullname'),
     email: document.getElementById('in_email'),
@@ -27,8 +22,6 @@ const ui = {
     gender: document.getElementById('in_gender'),
     birthday: document.getElementById('in_birthday'),
     address: document.getElementById('in_address'),
-    newpass: document.getElementById('in_newpass'),
-    newpass2: document.getElementById('in_newpass2'),
   },
   photo: {
     img: document.getElementById('profilePhoto'),
@@ -259,19 +252,9 @@ async function uploadProfilePhoto(user) {
   return url;
 }
 
+// Remove confirm modal reference and implement with notifications only
 function confirmBeforeSave() {
-  return new Promise((resolve) => {
-    openModal(ui.confirmModal);
-    const yes = () => { cleanup(); resolve(true); };
-    const no = () => { cleanup(); resolve(false); };
-    function cleanup() {
-      ui.confirmYes.removeEventListener('click', yes);
-      ui.confirmNo.removeEventListener('click', no);
-      closeModal(ui.confirmModal);
-    }
-    ui.confirmYes.addEventListener('click', yes);
-    ui.confirmNo.addEventListener('click', no);
-  });
+  return Promise.resolve(true); // Auto-confirm saves now with notifications
 }
 
 function init() {
@@ -303,20 +286,62 @@ function init() {
 }
 
 ui.viewEditBtn?.addEventListener('click', () => {
-  const nowExpanded = !ui.editPanel.classList.contains('expanded');
-  setExpanded(ui.editPanel, nowExpanded);
-  toggleEditMode(nowExpanded);
+  const editWrap = document.getElementById('editPanelWrap');
+  if (!editWrap) return;
+  
+  // Toggle visibility
+  const isHidden = editWrap.classList.contains('hidden');
+  if (isHidden) {
+    editWrap.classList.remove('hidden');
+    editWrap.classList.add('opacity-0');
+    requestAnimationFrame(() => editWrap.classList.remove('opacity-0'));
+  } else {
+    editWrap.classList.add('opacity-0');
+    setTimeout(() => editWrap.classList.add('hidden'), 300);
+  }
 });
 
 ui.updateBtn?.addEventListener('click', () => {
   openModal(ui.updateModal);
+  // Sync read-only data to modal
   try {
-    const map = [['ro_fullname','modal_ro_fullname'],['ro_email','modal_ro_email'],['ro_contact','modal_ro_contact'],['ro_location','modal_ro_location']];
-    map.forEach(([from,to])=>{ const a=document.getElementById(from); const b=document.getElementById(to); if(a&&b) b.textContent=a.textContent||'-'; });
-  } catch(e) {}
+    document.getElementById('modal_ro_fullname').textContent = document.getElementById('v_fullname')?.textContent || '-';
+    document.getElementById('modal_ro_email').textContent = document.getElementById('v_email')?.textContent || '-';
+    document.getElementById('modal_ro_contact').textContent = document.getElementById('v_contact')?.textContent || '-';
+    document.getElementById('modal_ro_address').textContent = document.getElementById('v_address')?.textContent || '-';
+    // Sync profile photo to modal
+    const profileImg = document.getElementById('viewProfilePhoto');
+    const modalImg = document.getElementById('updateModalProfilePhoto');
+    if (profileImg && modalImg) {
+      modalImg.src = profileImg.src;
+    }
+  } catch (e) { console.error('Error syncing modal data:', e); }
 });
-ui.updateModalCancelBtn?.addEventListener('click', () => closeModal(ui.updateModal));
-ui.updateModalCancelSecondaryBtn?.addEventListener('click', () => closeModal(ui.updateModal));
+ui.updateModalCancelBtn?.addEventListener('click', () => {
+  closeModal(ui.updateModal);
+  // Clear file inputs
+  const updatePhotoFile = document.getElementById('updateModalPhotoFile');
+  if (updatePhotoFile) updatePhotoFile.value = '';
+});
+
+ui.updateModalCancelSecondaryBtn?.addEventListener('click', () => {
+  closeModal(ui.updateModal);
+  // Clear file inputs
+  const updatePhotoFile = document.getElementById('updateModalPhotoFile');
+  if (updatePhotoFile) updatePhotoFile.value = '';
+});
+
+// Edit Cancel button
+const editCancelBtn = document.getElementById('editCancelBtn');
+if (editCancelBtn) {
+  editCancelBtn.addEventListener('click', () => {
+    const editWrap = document.getElementById('editPanelWrap');
+    if (editWrap) {
+      editWrap.classList.add('opacity-0');
+      setTimeout(() => editWrap.classList.add('hidden'), 300);
+    }
+  });
+}
 
 ui.photo.btn?.addEventListener('click', () => ui.photo.file.click());
 ui.photo.file?.addEventListener('change', () => {
@@ -329,39 +354,74 @@ ui.photo.file?.addEventListener('change', () => {
 });
 
 ui.updateSaveBtn?.addEventListener('click', async () => {
-  const proceed = await confirmBeforeSave();
-  if (!proceed) return;
   const user = auth.currentUser;
   if (!user) return;
-  const updatePayload = {};
-  const missNickname = document.getElementById('miss_nickname')?.value?.trim();
-  const missGender = document.getElementById('miss_gender')?.value?.trim();
-  const missBirthday = document.getElementById('miss_birthday')?.value?.trim();
-  const missAddress = document.getElementById('miss_address')?.value?.trim();
-  if (missNickname) updatePayload.nickname = missNickname;
-  if (missGender) updatePayload.gender = missGender;
-  if (missBirthday) updatePayload.birthday = missBirthday;
-  if (missAddress) updatePayload.address = missAddress;
-  if (Object.keys(updatePayload).length === 0) return;
-  await ensureUserDoc(user.uid, { ...updatePayload, profileCompleted: true, updatedAt: serverTimestamp() });
-  const refreshed = await fetchUserDoc(user.uid);
-  userDocCache = refreshed || userDocCache;
-  populateReadOnly(userDocCache || {}, user);
-  buildMissingFieldsUI(userDocCache || {});
-  closeModal(ui.updateModal);
-  if (updatePayload.nickname) localStorage.setItem('farmerNickname', updatePayload.nickname);
-  // Permanently hide Update button after first completion
-  setUpdateButtonHidden(true);
-  setEditEnabled(true);
-  try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
+  
+  try {
+    await showPopupMessage('Saving your profile...', 'info', { autoClose: true, timeout: 1500 });
+    
+    const updatePayload = {};
+    const missNickname = document.getElementById('miss_nickname')?.value?.trim();
+    const missGender = document.getElementById('miss_gender')?.value?.trim();
+    const missBirthday = document.getElementById('miss_birthday')?.value?.trim();
+    const missAddress = document.getElementById('miss_address')?.value?.trim();
+    
+    if (missNickname) updatePayload.nickname = missNickname;
+    if (missGender) updatePayload.gender = missGender;
+    if (missBirthday) updatePayload.birthday = missBirthday;
+    if (missAddress) updatePayload.address = missAddress;
+    
+    // Handle profile photo upload for update modal
+    const updatePhotoFile = document.getElementById('updateModalPhotoFile');
+    if (updatePhotoFile?.files?.[0]) {
+      const storage = getStorage();
+      const storageRef = ref(storage, `profilePhotos/${user.uid}/${Date.now()}_${updatePhotoFile.files[0].name}`);
+      await uploadBytes(storageRef, updatePhotoFile.files[0]);
+      const url = await getDownloadURL(storageRef);
+      await updateProfile(user, { photoURL: url });
+      updatePayload.photoURL = url;
+    }
+    
+    if (Object.keys(updatePayload).length === 0) {
+      await showPopupMessage('No changes to save', 'info');
+      return;
+    }
+    
+    updatePayload.profileCompleted = true;
+    updatePayload.updatedAt = serverTimestamp();
+    
+    await setDoc(doc(db, 'users', user.uid), updatePayload, { merge: true });
+    
+    // Refresh UI
+    const refreshed = await fetchUserDoc(user.uid);
+    userDocCache = refreshed || userDocCache;
+    populateReadOnly(userDocCache || {}, user);
+    buildMissingFieldsUI(userDocCache || {});
+    closeModal(ui.updateModal);
+    setUpdateButtonHidden(true);
+    setEditEnabled(true);
+    
+    await showPopupMessage('Profile updated successfully!', 'success', { autoClose: true, timeout: 2000 });
+    
+    // Create notification
+    try {
+      await createNotification(user.uid, 'Your profile has been updated successfully', 'profile_updated');
+    } catch (err) {
+      console.error('Failed to create notification:', err);
+    }
+  } catch (err) {
+    console.error('Save failed:', err);
+    await showPopupMessage('Failed to save: ' + (err?.message || err), 'error');
+  }
 });
 
 ui.editSaveBtn?.addEventListener('click', async () => {
-  const proceed = await confirmBeforeSave();
-  if (!proceed) return;
   const user = auth.currentUser;
   if (!user) return;
+  
   try {
+    await showPopupMessage('Saving your changes...', 'info', { autoClose: true, timeout: 1500 });
+    
     const payload = {
       fullname: ui.input.fullname.value.trim(),
       contact: ui.input.contact.value.trim(),
@@ -373,53 +433,65 @@ ui.editSaveBtn?.addEventListener('click', async () => {
       address: ui.input.address.value.trim(),
       updatedAt: serverTimestamp()
     };
+    
     const newEmail = ui.input.email.value.trim();
     const promises = [];
+    
+    // Handle profile photo upload
     if (ui.photo.file.files?.length) {
-      promises.push(uploadProfilePhoto(user));
+      const storage = getStorage();
+      const file = ui.photo.file.files[0];
+      const storageRef = ref(storage, `profilePhotos/${user.uid}/${Date.now()}_${file.name}`);
+      promises.push(
+        uploadBytes(storageRef, file).then(async () => {
+          const url = await getDownloadURL(storageRef);
+          await updateProfile(user, { photoURL: url });
+          payload.photoURL = url;
+          return url;
+        })
+      );
     }
+    
+    // Handle email update
     if (newEmail && newEmail !== user.email) {
-      try { await updateEmail(user, newEmail); } catch (e) { /* ignore for now */ }
+      try { await updateEmail(user, newEmail); } catch (e) { console.error('Email update failed:', e); }
     }
+    
+    // Handle name update
     if (payload.fullname && payload.fullname !== (user.displayName || '')) {
-      try { await updateProfile(user, { displayName: payload.fullname }); } catch (e) { /* ignore */ }
+      try { await updateProfile(user, { displayName: payload.fullname }); } catch (e) { console.error('Name update failed:', e); }
     }
+    
     await Promise.allSettled(promises);
-    await ensureUserDoc(user.uid, payload);
+    await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
+    
+    // Refresh UI
     const refreshed = await fetchUserDoc(user.uid);
     userDocCache = refreshed || userDocCache;
     populateReadOnly(userDocCache || {}, user);
-    // Stay in edit mode as requested
-    setExpanded(ui.editPanel, true);
+    
+    // Store in localStorage
     if (payload.fullname) localStorage.setItem('farmerName', payload.fullname);
     if (payload.contact) localStorage.setItem('farmerContact', payload.contact);
     if (payload.nickname) localStorage.setItem('farmerNickname', payload.nickname);
-    toggleEditMode(true);
-    // Show success modal
-    if (ui.successModal) {
-      openModal(ui.successModal);
-      const close = () => {
-        if (ui.successOk) ui.successOk.removeEventListener('click', close);
-        closeModal(ui.successModal);
-      };
-      if (ui.successOk) ui.successOk.addEventListener('click', close);
+    
+    await showPopupMessage('Profile saved successfully!', 'success', { autoClose: true, timeout: 2000 });
+    
+    // Create notification
+    try {
+      await createNotification(user.uid, 'Your profile changes have been saved', 'profile_updated');
+    } catch (err) {
+      console.error('Failed to create notification:', err);
     }
-    // If after editing, all additional info is complete, mark profileCompleted and hide Update
+    
+    // Check if all info is complete
     if (isAdditionalInfoComplete(userDocCache)) {
-      await ensureUserDoc(user.uid, { profileCompleted: true, updatedAt: serverTimestamp() });
+      await setDoc(doc(db, 'users', user.uid), { profileCompleted: true, updatedAt: serverTimestamp() }, { merge: true });
       setUpdateButtonHidden(true);
-      if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
-    } else {
-      setUpdateButtonHidden(false);
     }
   } catch (err) {
     console.error('Save failed:', err);
-    try { 
-      await showPopupMessage('Saving failed: ' + (err?.message || err), 'error');
-    } catch (e) {
-      // fallback to console if UI fails
-      console.error('Popup failed', e);
-    }
+    await showPopupMessage('Failed to save: ' + (err?.message || err), 'error');
   }
 });
 

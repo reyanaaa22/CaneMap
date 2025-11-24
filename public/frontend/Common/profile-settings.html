@@ -37,16 +37,6 @@
         <div class="w-full mx-auto bg-white/90 backdrop-blur-sm border border-[var(--cane-200)] rounded-2xl shadow-green-md p-6 sm:p-8 md:p-10">
             <div class="flex items-center justify-between mb-4">
                 <h1 class="text-2xl sm:text-3xl font-bold text-[var(--cane-950)]">Profile Information</h1>
-                <div class="flex items-center gap-2">
-                    <button id="updateBtn" class="hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 sm:px-4 py-2 rounded-lg">
-                        <i class="fa-solid fa-arrow-rotate-right"></i>
-                        <span>Update Profile</span>
-                    </button>
-                    <button id="editBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 sm:px-4 py-2 rounded-lg">
-                        <i class="fa-solid fa-pen"></i>
-                        <span>Edit Profile</span>
-                    </button>
-                </div>
             </div>
             <div class="mb-4 border-b">
                 <button class="px-3 py-2 text-sm font-semibold text-[var(--cane-800)] border-b-2 border-[var(--cane-700)]">Personal</button>
@@ -54,10 +44,14 @@
 
             <!-- Read-only Profile View (default visible) -->
             <section id="viewPanel" class="bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-6 transition-opacity duration-300">
-              <div class="flex justify-end mb-2">
-                <button id="viewUpdateBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 sm:px-4 py-2 rounded-lg">
+              <div class="flex justify-end gap-2 mb-4">
+                <button id="viewUpdateBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-4 py-2 rounded-lg hover:bg-[var(--cane-50)]">
                   <i class="fa-solid fa-arrow-rotate-right"></i>
                   <span>Update Profile Information</span>
+                </button>
+                <button id="viewEditBtn" class="hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
+                  <i class="fa-solid fa-pen"></i>
+                  <span>Edit Profile</span>
                 </button>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -72,44 +66,42 @@
                 </div>
 
                 <!-- Right: Info -->
-                <div class="md:col-span-2 space-y-3">
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Full Name</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_fullname">-</div>
+                <div class="md:col-span-2 space-y-4">
+                  <div class="rounded-lg bg-gradient-to-br from-[var(--cane-50)] to-white border border-[var(--cane-200)] p-4 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Full Name</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_fullname">-</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Email Address</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_email">-</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Contact Number</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_contact">-</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Brgy/Municipality</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_location">-</div>
+                    </div>
                   </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Email Address</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_email">-</div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Contact Number</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_contact">-</div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Brgy/Municipality</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_location">-</div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Nickname</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_nickname">-</div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Gender</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_gender">-</div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                    <div class="text-sm text-gray-600">Birthday</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_birthday">-</div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 items-start gap-3">
-                    <div class="text-sm text-gray-600">Complete Address</div>
-                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)] break-words" id="v_address">-</div>
-                  </div>
-                  <div class="pt-2">
-                    <button id="viewEditBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg shadow-md">
-                      <i class="fa-solid fa-pen"></i>
-                      <span>Edit Profile</span>
-                    </button>
+                  <div class="rounded-lg bg-gradient-to-br from-[var(--cane-50)] to-white border border-[var(--cane-200)] p-4 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Nickname</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_nickname">-</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Gender</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_gender">-</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Birthday</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_birthday">-</div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 items-start gap-3">
+                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Complete Address</div>
+                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)] break-words" id="v_address">-</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -233,16 +225,13 @@
                       <label class="col-span-1 text-sm text-gray-700">Birthday:</label>
                       <div class="col-span-2"><input id="in_birthday" type="date" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-start gap-3">
+                      <div class="grid grid-cols-1 sm:grid-cols-3 items-start gap-3">
                       <label class="col-span-1 text-sm text-gray-700">Complete Address:</label>
                       <div class="col-span-2"><textarea id="in_address" rows="3" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"></textarea></div>
                     </div>
                   </div>
                 </div>
-                <div class="flex justify-between md:justify-end gap-2 mt-4">
-                    <button id="editCancelBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-800)] bg-white"><i class="fa-solid fa-xmark"></i><span>Cancel</span></button>
-                    <button id="editSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] shadow-md"><i class="fa-solid fa-floppy-disk"></i><span>Save Changes</span></button>
-                </div>
+              </div>
             </section>
             </div>
 
@@ -256,53 +245,10 @@
     <script>
       (function(){
         function qs(id){ return document.getElementById(id); }
-        function syncView(){
-          var map = [
-            ['ro_fullname','v_fullname'],
-            ['ro_email','v_email'],
-            ['ro_contact','v_contact'],
-            ['ro_location','v_location'],
-            ['ro_nickname','v_nickname'],
-            ['ro_gender','v_gender'],
-            ['ro_birthday','v_birthday'],
-            ['ro_address','v_address']
-          ];
-          map.forEach(function([from,to]){
-            var src = qs(from); var dst = qs(to);
-            if (src && dst && src.textContent) dst.textContent = src.textContent;
-          });
-          var photo = qs('profilePhoto');
-          var vphoto = qs('viewProfilePhoto');
-          if (photo && vphoto && photo.src) vphoto.src = photo.src;
-          var dn = qs('displayName');
-          var vdn = qs('viewDisplayName');
-          if (dn && vdn) vdn.textContent = dn.textContent || '';
-        }
-
-        function showView(){
-          var v = qs('viewPanel');
-          var ewrap = qs('editPanelWrap');
-          if (v){ v.classList.add('opacity-0'); v.classList.remove('hidden'); requestAnimationFrame(function(){ v.classList.remove('opacity-0'); }); }
-          if (ewrap) ewrap.classList.add('hidden');
-        }
-        function showEdit(){
-          var v = qs('viewPanel');
-          var ewrap = qs('editPanelWrap');
-          if (v) v.classList.add('hidden');
-          if (ewrap){ ewrap.classList.add('opacity-0'); ewrap.classList.remove('hidden'); requestAnimationFrame(function(){ ewrap.classList.remove('opacity-0'); }); }
-        }
-
         document.addEventListener('DOMContentLoaded', function(){
-          // Default to view mode
-          showView();
-          syncView();
-          var btn = qs('viewEditBtn');
-          if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); showEdit(); });
           var pbtn = qs('viewPhotoBtn');
           if (pbtn) pbtn.addEventListener('click', function(e){ e.preventDefault(); var pm = document.getElementById('photoModal'); var img = document.getElementById('photoModalImg'); var vimg = document.getElementById('viewProfilePhoto'); if (img && vimg) img.src = vimg.src; if(pm){ pm.classList.remove('hidden'); pm.classList.add('flex'); } });
         });
-        // Also expose for future use if needed
-        window.__profileViewSync = syncView;
       })();
     </script>
 
@@ -399,35 +345,73 @@
             </button>
           </div>
         </div>
-        <div class="px-6 sm:px-8 pb-6 sm:pb-8">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5">
-              <div class="space-y-3">
+        <div class="px-6 sm:px-8 pb-6 sm:pb-8 max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div class="space-y-6">
+            <!-- Existing Information Section -->
+            <div>
+              <h4 class="text-sm font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-check-circle text-[var(--cane-700)]"></i>
+                Existing Information
+              </h4>
+              <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5 space-y-3">
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Full Name</div>
+                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Full Name</div>
                   <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_fullname">-</div>
                 </div>
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Email</div>
+                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Email</div>
                   <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_email">-</div>
                 </div>
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Contact</div>
+                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Contact</div>
                   <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_contact">-</div>
                 </div>
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Location</div>
-                  <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_location">-</div>
+                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Complete Address</div>
+                  <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_address">-</div>
                 </div>
               </div>
             </div>
-            <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="updateModalFields"></div>
+            <!-- Missing Information Section -->
+            <div>
+              <h4 class="text-sm font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-pencil-alt text-[var(--cane-700)]"></i>
+                Complete the Following Fields
+              </h4>
+              <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="updateModalFields"></div>
+              </div>
+            </div>
+            <!-- Profile Photo Section -->
+            <div>
+              <h4 class="text-sm font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-image text-[var(--cane-700)]"></i>
+                Profile Photo
+              </h4>
+              <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-6">
+                <div class="flex flex-col sm:flex-row gap-6 items-start">
+                  <div class="mx-auto sm:mx-0">
+                    <img id="updateModalProfilePhoto" alt="Profile Photo" class="w-32 h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-white" src=""/>
+                  </div>
+                  <div class="flex-1 flex flex-col gap-3">
+                    <p class="text-sm text-[var(--cane-700)] font-semibold">Choose how to update your photo:</p>
+                    <button id="updateModalTakeSelfie" type="button" class="inline-flex items-center justify-center gap-2 bg-white border border-[var(--cane-300)] text-[var(--cane-800)] px-4 py-2.5 rounded-lg hover:bg-[var(--cane-50)] transition">
+                      <i class="fa-solid fa-camera"></i>
+                      <span>Take Selfie</span>
+                    </button>
+                    <button id="updateModalUploadPhoto" type="button" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2.5 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition">
+                      <i class="fa-solid fa-upload"></i>
+                      <span>Upload File</span>
+                    </button>
+                    <input id="updateModalPhotoFile" type="file" accept="image/*" class="hidden" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="mt-6 flex items-center justify-end gap-3">
-            <button id="updateModalCancelSecondaryBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] bg-white text-[var(--cane-800)] hover:bg-[var(--cane-50)]">Cancel</button>
-            <button id="updateModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-5 py-2.5 rounded-xl shadow-green-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
+          <div class="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-[var(--cane-200)]">
+            <button id="updateModalCancelSecondaryBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] bg-white text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition">Cancel</button>
+            <button id="updateModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-5 py-2.5 rounded-xl shadow-green-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition">
               <i class="fa-solid fa-floppy-disk"></i>
               <span>Update</span>
             </button>
@@ -476,7 +460,39 @@
             var dt = new DataTransfer(); dt.items.add(file);
             var fileInput = qs('photoFileInput'); if (fileInput) fileInput.files = dt.files;
             var img = qs('profilePhoto'); if (img) img.src = dataUrl;
+            var vimg = qs('updateModalProfilePhoto'); if (vimg) vimg.src = dataUrl;
             closeM(qs('cameraModal')); stopStream();
+          });
+          // Update Modal Camera - Similar logic for modal
+          var updateCamBtn = qs('updateModalTakeSelfie'); var updateStreamRef = null;
+          function updateStopStream(){ try { updateStreamRef?.getTracks()?.forEach(function(t){ t.stop(); }); } catch(e){} }
+          if (updateCamBtn) updateCamBtn.addEventListener('click', async function(){
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+              updateStreamRef = stream;
+              qs('cameraVideo').srcObject = stream;
+              openM(qs('cameraModal'));
+            } catch (e) {
+              alert('Camera access denied or unavailable');
+            }
+          });
+          // Ensure camera is closed when modal closes
+          var cameraClose = qs('cameraClose');
+          if (cameraClose) cameraClose.addEventListener('click', function(){
+            closeM(qs('cameraModal'));
+            updateStopStream();
+          });
+          // Update Modal Photo Upload
+          var updatePhotoFile = qs('updateModalPhotoFile');
+          var updateUploadBtn = qs('updateModalUploadPhoto');
+          if (updateUploadBtn) updateUploadBtn.addEventListener('click', function(){ if (updatePhotoFile) updatePhotoFile.click(); });
+          if (updatePhotoFile) updatePhotoFile.addEventListener('change', function(){
+            var f = updatePhotoFile.files?.[0];
+            if (f) {
+              var reader = new FileReader();
+              reader.onload = function(e) { var vimg = qs('updateModalProfilePhoto'); if (vimg) vimg.src = e.target.result; };
+              reader.readAsDataURL(f);
+            }
           });
         });
       })();
