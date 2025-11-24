@@ -5,6 +5,19 @@ import { db } from '../Common/firebase-config.js';
 import { doc, updateDoc, getDoc, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { generateCropCycleTasks } from './task-automation.js';
 
+/**
+ * Remove undefined values from object (Firestore doesn't accept undefined)
+ */
+function removeUndefined(obj) {
+  const cleaned = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = obj[key];
+    }
+  }
+  return cleaned;
+}
+
 // Variety-specific harvest days mapping
 export const VARIETY_HARVEST_DAYS = {
   "PSR 07-195": 345,
@@ -514,7 +527,7 @@ export async function handleRatooning(userId, fieldId, ratoonStartDate = null) {
     const ratoonNumber = (fieldData.ratoonNumber || 0) + 1;
 
     // Archive previous cycle data
-    const archiveData = {
+    const archiveData = removeUndefined({
       cycle: ratoonNumber - 1,
       plantingDate: fieldData.plantingDate,
       actualHarvestDate: fieldData.actualHarvestDate,
@@ -523,7 +536,7 @@ export async function handleRatooning(userId, fieldId, ratoonStartDate = null) {
       harvestTiming: fieldData.harvestTiming,
       harvestedAt: fieldData.harvestedAt,
       archivedAt: serverTimestamp()
-    };
+    });
 
     // Reset field for new ratoon cycle
     const updates = {
@@ -617,7 +630,7 @@ export async function handleReplanting(userId, fieldId, newPlantingDate = null, 
     const plantingCycleNumber = (fieldData.plantingCycleNumber || 0) + 1;
 
     // Archive previous cycle data (including all ratoons)
-    const archiveData = {
+    const archiveData = removeUndefined({
       plantingCycle: plantingCycleNumber - 1,
       plantingDate: fieldData.plantingDate,
       actualHarvestDate: fieldData.actualHarvestDate,
@@ -627,7 +640,7 @@ export async function handleReplanting(userId, fieldId, newPlantingDate = null, 
       variety: fieldData.sugarcane_variety || fieldData.variety,
       growthHistory: fieldData.growthHistory || {},
       archivedAt: serverTimestamp()
-    };
+    });
 
     // Complete reset for new planting cycle
     const updates = {
