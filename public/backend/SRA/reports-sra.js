@@ -668,7 +668,7 @@ function formatFieldName(fieldName) {
 function formatFieldValue(value) {
   // Check if value is a photo URL (string containing image extensions or Firebase Storage URL)
   if (typeof value === 'string' && (value.includes('firebasestorage.googleapis.com') || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(value))) {
-    return `<img src="${value}" alt="Report photo" class="max-w-xs rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px;" onclick="window.viewPhotoModal('${value}')">`;
+    return `<img src="${value}" alt="Report photo" class="max-w-xs rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px;" crossorigin="anonymous" onclick="window.viewPhotoModal('${value}')">`;
   }
 
   // Check if value is an array of photo URLs
@@ -681,7 +681,7 @@ function formatFieldValue(value) {
     if (allPhotos && value.length > 0) {
       return `<div class="grid grid-cols-2 gap-2">
                 ${value.map(url => `
-                  <img src="${url}" alt="Report photo" class="w-full rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px; object-fit: cover;" onclick="window.viewPhotoModal('${url}')">
+                  <img src="${url}" alt="Report photo" class="w-full rounded-lg shadow hover:shadow-lg transition cursor-pointer" style="max-height: 200px; object-fit: cover;" crossorigin="anonymous" onclick="window.viewPhotoModal('${url}')">
                 `).join('')}
               </div>`;
     }
