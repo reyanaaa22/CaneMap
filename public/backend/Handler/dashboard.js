@@ -764,6 +764,211 @@ function updateJoinRequestCounts(count) {
   if (badge) badge.textContent = `${count} pending`;
 }
 
+// =============================
+// 🟢 Load Recent Task Activity (Last 10 completed tasks)
+// =============================
+async function loadRecentTaskActivity(handlerId) {
+  const container = document.getElementById("recentTaskActivityList");
+  if (!container) return;
+
+  container.innerHTML = `<div class="text-center py-4 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading recent activity...</div>`;
+
+  try {
+    // Get handler's fields first
+    const fieldsQuery = query(
+      collection(db, "fields"),
+      where("userId", "==", handlerId)
+    );
+    const fieldsSnapshot = await getDocs(fieldsQuery);
+    const fieldIds = fieldsSnapshot.docs.map(doc => doc.id);
+
+    if (fieldIds.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8">
+          <i class="fas fa-map-marked-alt text-4xl text-gray-300 mb-3"></i>
+          <p class="text-gray-500">No fields registered yet</p>
+          <p class="text-sm text-gray-400 mt-1">Register a field to start tracking tasks</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Get recent completed tasks for handler's fields
+    const tasksQuery = query(
+      collection(db, "tasks"),
+      where("handlerId", "==", handlerId),
+      where("status", "==", "done"),
+      orderBy("completedAt", "desc"),
+      limit(10)
+    );
+
+    const tasksSnapshot = await getDocs(tasksQuery);
+
+    if (tasksSnapshot.empty) {
+      container.innerHTML = `
+        <div class="text-center py-8">
+          <i class="fas fa-check-circle text-4xl text-gray-300 mb-3"></i>
+          <p class="text-gray-500">No completed tasks yet</p>
+          <p class="text-sm text-gray-400 mt-1">Completed tasks will appear here</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Fetch user and field data for each task
+    const tasksWithDetails = await Promise.all(
+      tasksSnapshot.docs.map(async (taskDoc) => {
+        const taskData = taskDoc.data();
+        let workerName = "Unknown Worker";
+        let fieldName = "Unknown Field";
+
+        // Get worker name
+        if (taskData.assignedTo && taskData.assignedTo.length > 0) {
+          try {
+            const workerId = taskData.assignedTo[0];
+            const workerDoc = await getDoc(doc(db, "users", workerId));
+            if (workerDoc.exists()) {
+              const workerData = workerDoc.data();
+              workerName = workerData.name || workerData.email || "Unknown Worker";
+            }
+          } catch (err) {
+            console.error("Error fetching worker:", err);
+          }
+        }
+
+        // Get field name
+        if (taskData.fieldId) {
+          try {
+            const fieldDoc = await getDoc(doc(db, "fields", taskData.fieldId));
+            if (fieldDoc.exists()) {
+              fieldName = fieldDoc.data().fieldName || "Unknown Field";
+            }
+          } catch (err) {
+            console.error("Error fetching field:", err);
+          }
+        }
+
+        return {
+          id: taskDoc.id,
+          ...taskData,
+          workerName,
+          fieldName
+        };
+      })
+    );
+
+    // Render tasks
+    container.innerHTML = tasksWithDetails.map(task => {
+      const completedDate = task.completedAt?.toDate ? task.completedAt.toDate() : new Date();
+      const timeAgo = getTimeAgo(completedDate);
+      const taskName = getTaskDisplayName(task.taskName || task.task);
+
+      // Get task type icon
+      let taskIcon = 'fa-tasks';
+      let iconColor = 'text-green-600';
+      if (task.assignType === 'driver') {
+        taskIcon = 'fa-truck';
+        iconColor = 'text-blue-600';
+      } else if (task.taskName?.includes('harvest')) {
+        taskIcon = 'fa-cut';
+        iconColor = 'text-orange-600';
+      } else if (task.taskName?.includes('plant')) {
+        taskIcon = 'fa-seedling';
+        iconColor = 'text-green-700';
+      } else if (task.taskName?.includes('fertil')) {
+        taskIcon = 'fa-flask';
+        iconColor = 'text-purple-600';
+      }
+
+      return `
+        <div class="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+          <div class="flex-shrink-0 w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
+            <i class="fas ${taskIcon} ${iconColor}"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1">
+                <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(taskName)}</p>
+                <p class="text-xs text-gray-600 mt-0.5">
+                  <i class="fas fa-user text-gray-400 mr-1"></i>${escapeHtml(task.workerName)}
+                  <span class="mx-1">•</span>
+                  <i class="fas fa-map-marker-alt text-gray-400 mr-1"></i>${escapeHtml(task.fieldName)}
+                </p>
+              </div>
+              <span class="text-xs text-gray-500 whitespace-nowrap">${timeAgo}</span>
+            </div>
+            ${task.notes ? `<p class="text-xs text-gray-500 mt-1 line-clamp-1">${escapeHtml(task.notes)}</p>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error("Error loading recent task activity:", error);
+    container.innerHTML = `
+      <div class="text-center py-8">
+        <i class="fas fa-exclamation-circle text-4xl text-red-300 mb-3"></i>
+        <p class="text-red-600">Failed to load recent activity</p>
+        <p class="text-sm text-gray-500 mt-1">${escapeHtml(error.message)}</p>
+      </div>
+    `;
+  }
+}
+
+// Helper function to get time ago string
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+  return date.toLocaleDateString();
+}
+
+// Helper function to get task display name
+function getTaskDisplayName(taskValue) {
+  const taskMap = {
+    // Worker tasks
+    'plowing': 'Plowing',
+    'harrowing': 'Harrowing',
+    'furrowing': 'Furrowing',
+    'planting': 'Planting Sugarcane',
+    'basal_fertilization': 'Basal Fertilization',
+    'main_fertilization': 'Main/Top Fertilization',
+    'weeding': 'Weeding',
+    'pest_control': 'Pest Control',
+    'irrigation': 'Irrigation',
+    'harvesting': 'Harvesting',
+    'ratooning': 'Ratooning',
+
+    // Driver tasks
+    'transport_materials': 'Transport Materials to Field',
+    'transport_fertilizer': 'Transport Fertilizer to Field',
+    'transport_equipment': 'Transport Equipment to Field',
+    'pickup_harvested_cane': 'Pickup Harvested Sugarcane',
+    'transport_cane_to_mill': 'Transport Cane to Mill',
+    'deliver_to_collection': 'Deliver to Collection Points',
+    'weighbridge_documentation': 'Weighbridge Documentation',
+    'load_cane': 'Load Sugarcane onto Vehicle',
+    'unload_cane': 'Unload Sugarcane',
+    'vehicle_maintenance': 'Vehicle Maintenance/Inspection',
+    'fuel_refill': 'Fuel Refill/Management',
+    'route_planning': 'Route Planning and Coordination'
+  };
+
+  return taskMap[taskValue] || taskValue;
+}
+
+// Helper to escape HTML
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 // =============================
 // 🟢 Auth Check
@@ -852,6 +1057,7 @@ onAuthStateChanged(auth, async (user) => {
 
   loadUserProfile(user);
   loadJoinRequests(user.uid);
+  loadRecentTaskActivity(user.uid);
   setupJoinRequestsListener(user.uid);
   initNotifications(user.uid);
 
@@ -878,17 +1084,39 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshBtn.addEventListener("click", async () => {
       const user = auth.currentUser;
       if (!user) return;
-      
+
       refreshBtn.disabled = true;
       const icon = refreshBtn.querySelector("i");
       if (icon) icon.classList.add("fa-spin");
-      
+
       try {
         await loadJoinRequests(user.uid);
       } catch (err) {
         console.error("Error refreshing join requests:", err);
       } finally {
         refreshBtn.disabled = false;
+        if (icon) icon.classList.remove("fa-spin");
+      }
+    });
+  }
+
+  // Add refresh button event listener for recent task activity
+  const refreshTaskActivityBtn = document.getElementById("refreshTaskActivity");
+  if (refreshTaskActivityBtn) {
+    refreshTaskActivityBtn.addEventListener("click", async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      refreshTaskActivityBtn.disabled = true;
+      const icon = refreshTaskActivityBtn.querySelector("i");
+      if (icon) icon.classList.add("fa-spin");
+
+      try {
+        await loadRecentTaskActivity(user.uid);
+      } catch (err) {
+        console.error("Error refreshing task activity:", err);
+      } finally {
+        refreshTaskActivityBtn.disabled = false;
         if (icon) icon.classList.remove("fa-spin");
       }
     });

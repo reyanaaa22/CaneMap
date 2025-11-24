@@ -636,7 +636,7 @@ function showReportDetailsModal(reportId, report) {
 
         <!-- Export Actions -->
         <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-200 print:hidden">
-          <button onclick="downloadSRAReportPDF('${reportId}', '${reportTypeName}')"
+          <button onclick="downloadSRAReportPDF('${reportId}', '${escapeHtml(getReportTypeLabel(report.reportType))}')"
                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2">
             <i class="fas fa-download"></i> Download PDF
           </button>
@@ -860,8 +860,8 @@ window.downloadSRAReportPDF = async function(reportId, reportTypeName) {
       return;
     }
 
-    // Check if html2pdf library is loaded
-    if (typeof html2pdf === 'undefined') {
+    // Check if html2pdf library is loaded (check window scope since we're in a module)
+    if (typeof window.html2pdf === 'undefined') {
       alert('PDF library not loaded. Please refresh the page and try again.');
       return;
     }
@@ -887,8 +887,8 @@ window.downloadSRAReportPDF = async function(reportId, reportTypeName) {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Generate PDF
-    await html2pdf().set(opt).from(clone).save();
+    // Generate PDF using window.html2pdf (since we're in a module)
+    await window.html2pdf().set(opt).from(clone).save();
     console.log(`✅ Downloaded report ${reportId} as PDF`);
   } catch (error) {
     console.error('Error generating PDF:', error);
