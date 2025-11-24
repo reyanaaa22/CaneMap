@@ -160,6 +160,57 @@
         #recentAppsList > :nth-child(n+4) {
             display: none;
         }
+
+        /* Print styles for report export */
+        @media print {
+            /* Hide everything except the report modal */
+            body > *:not(#reportDetailsModal) {
+                display: none !important;
+            }
+
+            #reportDetailsModal {
+                position: static !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            #reportDetailsPrintArea {
+                max-height: none !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                max-width: 100% !important;
+            }
+
+            /* Hide print buttons and close button */
+            .print\\:hidden {
+                display: none !important;
+            }
+
+            /* Ensure photos print properly */
+            img {
+                max-width: 100% !important;
+                page-break-inside: avoid;
+            }
+
+            /* Better page breaks */
+            .divide-y > * {
+                page-break-inside: avoid;
+            }
+
+            /* Print-friendly colors */
+            .bg-gray-50 {
+                background-color: #f9fafb !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .bg-yellow-50 {
+                background-color: #fefce8 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
     </style>
 </head>
 <body class="bg-[#eef2f7] min-h-screen">
