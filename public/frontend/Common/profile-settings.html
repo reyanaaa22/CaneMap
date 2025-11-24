@@ -24,6 +24,19 @@
         .expandable { transition: max-height 400ms ease, opacity 300ms ease, transform 300ms ease; }
         .expandable.collapsed { max-height: 0; opacity: 0; transform: translateY(-6px); overflow: hidden; }
         .expandable.expanded { max-height: 1600px; opacity: 1; transform: translateY(0); }
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-[var(--cane-50)] via-white to-[var(--cane-100)]">
@@ -36,72 +49,80 @@
         </div>
         <div class="w-full mx-auto bg-white/90 backdrop-blur-sm border border-[var(--cane-200)] rounded-2xl shadow-green-md p-6 sm:p-8 md:p-10">
             <div class="flex items-center justify-between mb-4">
-                <h1 class="text-2xl sm:text-3xl font-bold text-[var(--cane-950)]">Profile Information</h1>
+                <h1 class="text-2xl sm:text-3xl font-bold text-[var(--cane-950)] bg-gradient-to-r from-[var(--cane-50)] to-transparent px-4 py-2 rounded-lg border-l-4 border-[var(--cane-600)]">Profile Information</h1>
+                <div class="flex items-center gap-2">
+                    <button id="updateBtn" class="hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 sm:px-4 py-2 rounded-lg">
+                        <i class="fa-solid fa-arrow-rotate-right"></i>
+                        <span>Update Profile</span>
+                    </button>
+                    <button id="editBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 sm:px-4 py-2 rounded-lg">
+                        <i class="fa-solid fa-pen"></i>
+                        <span>Edit Profile</span>
+                    </button>
+                </div>
             </div>
             <div class="mb-4 border-b">
                 <button class="px-3 py-2 text-sm font-semibold text-[var(--cane-800)] border-b-2 border-[var(--cane-700)]">Personal</button>
             </div>
 
-            <!-- Read-only Profile View (default visible) -->
             <section id="viewPanel" class="bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-6 transition-opacity duration-300">
-              <div class="flex justify-end gap-2 mb-4">
-                <button id="viewUpdateBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-4 py-2 rounded-lg hover:bg-[var(--cane-50)]">
+              <div class="flex justify-end mb-2 hidden" id="viewUpdateBtnWrapper">
+                <button id="viewUpdateBtn" class="inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 sm:px-4 py-2 rounded-lg hover:bg-[var(--cane-50)]">
                   <i class="fa-solid fa-arrow-rotate-right"></i>
                   <span>Update Profile Information</span>
-                </button>
-                <button id="viewEditBtn" class="hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
-                  <i class="fa-solid fa-pen"></i>
-                  <span>Edit Profile</span>
                 </button>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Left: Photo (read-only) -->
                 <div class="flex md:block items-center md:items-start md:space-y-3">
-                  <div class="mx-auto md:mx-0 relative">
+                  <div class="mx-auto md:mx-0 relative flex flex-col items-center">
+                    <p class="text-sm font-semibold text-[var(--cane-700)] mb-2 bg-[var(--cane-50)] px-3 py-1 rounded-full">Profile Photo</p>
                     <button id="viewPhotoBtn" class="rounded-full overflow-hidden border-4 border-[var(--cane-200)] shadow-md bg-[var(--cane-50)] focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                      <img id="viewProfilePhoto" alt="Profile Photo" class="w-28 h-28 rounded-full object-cover" src=""/>
+                      <img id="viewProfilePhoto" alt="Profile Photo" class="w-36 h-36 rounded-full object-cover" src=""/>
                     </button>
                   </div>
                   <p id="viewDisplayName" class="mt-2 text-base font-semibold text-[var(--cane-900)] md:mt-3 text-center md:text-left"></p>
                 </div>
 
                 <!-- Right: Info -->
-                <div class="md:col-span-2 space-y-4">
-                  <div class="rounded-lg bg-gradient-to-br from-[var(--cane-50)] to-white border border-[var(--cane-200)] p-4 space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Full Name</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_fullname">-</div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Email Address</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_email">-</div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Contact Number</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_contact">-</div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Brgy/Municipality</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_location">-</div>
-                    </div>
+                <div class="md:col-span-2 space-y-3">
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Full Name</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_fullname">-</div>
                   </div>
-                  <div class="rounded-lg bg-gradient-to-br from-[var(--cane-50)] to-white border border-[var(--cane-200)] p-4 space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Nickname</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_nickname">-</div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Gender</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_gender">-</div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Birthday</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_birthday">-</div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-start gap-3">
-                      <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Complete Address</div>
-                      <div class="sm:col-span-2 font-semibold text-[var(--cane-950)] break-words" id="v_address">-</div>
-                    </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Email Address</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_email">-</div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Contact Number</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_contact">-</div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Complete Address</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_address">-</div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Nickname</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_nickname">-</div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Gender</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_gender">-</div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
+                    <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Birthday</div>
+                    <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_birthday">-</div>
+                  </div>
+                  <div class="pt-2 flex items-center gap-2">
+                    <button id="viewEditBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
+                      <i class="fa-solid fa-pen"></i>
+                      <span>Edit Profile</span>
+                    </button>
+                    <button id="viewUpdateBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-4 py-2 rounded-lg hover:bg-[var(--cane-50)]">
+                      <i class="fa-solid fa-arrow-rotate-right"></i>
+                      <span>Update Profile Information</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -116,139 +137,94 @@
               </div>
             </section>
 
-            
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 hidden">
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Full Name</p>
-                    <p id="ro_fullname" class="text-[var(--cane-950)] font-semibold break-words">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Email Address</p>
-                    <p id="ro_email" class="text-[var(--cane-950)] font-semibold break-words">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Contact Number</p>
-                    <p id="ro_contact" class="text-[var(--cane-950)] font-semibold">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Brgy/Municipality</p>
-                    <p id="ro_location" class="text-[var(--cane-950)] font-semibold">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Nickname</p>
-                    <p id="ro_nickname" class="text-[var(--cane-950)] font-semibold">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Gender</p>
-                    <p id="ro_gender" class="text-[var(--cane-950)] font-semibold">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Birthday</p>
-                    <p id="ro_birthday" class="text-[var(--cane-950)] font-semibold">-</p>
-                </div>
-                <div class="bg-white rounded-xl border border-[var(--cane-200)] p-4">
-                    <p class="text-xs text-[var(--cane-600)] font-semibold">Complete Address</p>
-                    <p id="ro_address" class="text-[var(--cane-950)] font-semibold break-words">-</p>
-                </div>
-            </div>
-
-            <div id="sensitiveInfoBanner" class="hidden bg-gradient-to-r from-[var(--cane-100)] to-[var(--cane-200)] border border-[var(--cane-300)] rounded-xl p-4 mb-4 flex items-start justify-between gap-4">
-                <div class="text-[var(--cane-950)] text-sm font-medium">
-                    Registered information — sensitive information is protected and requires authentication to view.
-                </div>
-                <button id="showSensitiveBtn" class="flex items-center gap-2 bg-white border border-[var(--cane-300)] text-[var(--cane-800)] px-3 py-2 rounded-lg hover:bg-[var(--cane-50)]">
-                    <i class="fa-solid fa-lock"></i>
-                    <span>Show Information</span>
-                </button>
-            </div>
-
-            <section id="updatePanel" class="expandable collapsed bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-4">
-                <h2 class="text-lg font-bold text-[var(--cane-900)] mb-4">Complete Missing Information</h2>
-                <div id="updateFields" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
-                <div class="flex justify-end mt-4">
-                    <button id="updateSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] shadow-md">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Update Changes</span>
-                    </button>
-                </div>
-            </section>
-
-            <div id="editPanelWrap" class="hidden transition-opacity duration-300">
-            <section id="editPanel" class="expandable expanded bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6">
-                <h2 class="text-lg font-bold text-[var(--cane-900)] mb-4">Personal</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <!-- Left: Photo -->
-                  <div class="flex md:block items-center md:items-start md:space-y-3">
-                    <div class="mx-auto md:mx-0">
-                      <img id="profilePhoto" alt="Profile Photo" class="w-28 h-28 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-[var(--cane-50)]" src=""/>
-                      <div class="mt-3 flex items-center gap-2">
-                        <button id="photoUploadBtn" class="bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 py-1.5 text-xs rounded shadow-md" title="Upload photo"><i class="fa-solid fa-upload"></i><span class="ml-1">Upload</span></button>
-                        <button id="photoCameraBtn" class="bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 py-1.5 text-xs rounded shadow-md" title="Take selfie"><i class="fa-solid fa-camera"></i><span class="ml-1">Selfie</span></button>
-                      </div>
-                    </div>
-                    <input id="photoFileInput" type="file" accept="image/*" class="hidden" />
-                    <p id="displayName" class="mt-2 text-base font-semibold text-[var(--cane-900)] md:mt-3"></p>
-                  </div>
-
-                  <!-- Right: Form -->
-                  <div class="md:col-span-2 grid grid-cols-1 gap-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Name:</label>
-                      <div class="col-span-2"><input id="in_fullname" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Email:</label>
-                      <div class="col-span-2"><input id="in_email" type="email" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Contact Number:</label>
-                      <div class="col-span-2"><input id="in_contact" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Brgy:</label>
-                      <div class="col-span-2"><input id="in_barangay" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Municipality:</label>
-                      <div class="col-span-2"><input id="in_municipality" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Nickname:</label>
-                      <div class="col-span-2"><input id="in_nickname" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Gender:</label>
-                      <div class="col-span-2"><select id="in_gender" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Birthday:</label>
-                      <div class="col-span-2"><input id="in_birthday" type="date" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" /></div>
-                    </div>
-                      <div class="grid grid-cols-1 sm:grid-cols-3 items-start gap-3">
-                      <label class="col-span-1 text-sm text-gray-700">Complete Address:</label>
-                      <div class="col-span-2"><textarea id="in_address" rows="3" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"></textarea></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-            </div>
-
             <section id="sensitiveInfoPanel" class="expandable collapsed mt-4 bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6">
                 <h2 class="text-lg font-bold text-[var(--cane-900)] mb-2">Verified Information</h2>
                 <div class="text-[var(--cane-700)] text-sm">You are verified. Additional sensitive details will appear here.</div>
             </section>
+            
+            <!-- Hidden elements for backward compatibility -->
+            <div class="hidden">
+                <div id="ro_fullname"></div>
+                <div id="ro_email"></div>
+                <div id="ro_contact"></div>
+                <div id="ro_location"></div>
+                <div id="ro_nickname"></div>
+                <div id="ro_gender"></div>
+                <div id="ro_birthday"></div>
+                <div id="ro_address"></div>
+                <img id="profilePhoto" />
+                <input id="photoFileInput" type="file" />
+                <button id="photoUploadBtn"></button>
+                <button id="photoCameraBtn"></button>
+                <div id="displayName"></div>
+                <input id="in_fullname" />
+                <input id="in_email" />
+                <input id="in_contact" />
+                <input id="in_barangay" />
+                <input id="in_municipality" />
+                <input id="in_nickname" />
+                <select id="in_gender"></select>
+                <input id="in_birthday" />
+                <textarea id="in_address"></textarea>
+                <div id="editPanel"></div>
+                <div id="updatePanel"></div>
+                <button id="editSaveBtn"></button>
+                <div id="sensitiveInfoBanner"></div>
+                <button id="showSensitiveBtn"></button>
+            </div>
         </div>
     </main>
 
     <script>
       (function(){
         function qs(id){ return document.getElementById(id); }
+        function syncView(){
+          var map = [
+            ['ro_fullname','v_fullname'],
+            ['ro_email','v_email'],
+            ['ro_contact','v_contact'],
+            ['ro_location','v_location'],
+            ['ro_nickname','v_nickname'],
+            ['ro_gender','v_gender'],
+            ['ro_birthday','v_birthday'],
+            ['ro_address','v_address']
+          ];
+          map.forEach(function([from,to]){
+            var src = qs(from); var dst = qs(to);
+            if (src && dst && src.textContent) dst.textContent = src.textContent;
+          });
+          var photo = qs('profilePhoto');
+          var vphoto = qs('viewProfilePhoto');
+          if (photo && vphoto && photo.src) vphoto.src = photo.src;
+          var dn = qs('displayName');
+          var vdn = qs('viewDisplayName');
+          if (dn && vdn) vdn.textContent = dn.textContent || '';
+        }
+
+        function showView(){
+          var v = qs('viewPanel');
+          var ewrap = qs('editPanelWrap');
+          if (v){ v.classList.add('opacity-0'); v.classList.remove('hidden'); requestAnimationFrame(function(){ v.classList.remove('opacity-0'); }); }
+          if (ewrap) ewrap.classList.add('hidden');
+        }
+        function showEdit(){
+          var v = qs('viewPanel');
+          var ewrap = qs('editPanelWrap');
+          if (v) v.classList.add('hidden');
+          if (ewrap){ ewrap.classList.add('opacity-0'); ewrap.classList.remove('hidden'); requestAnimationFrame(function(){ ewrap.classList.remove('opacity-0'); }); }
+        }
+
         document.addEventListener('DOMContentLoaded', function(){
+          // Default to view mode
+          showView();
+          syncView();
+          var btn = qs('viewEditBtn');
+          if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); showEdit(); });
           var pbtn = qs('viewPhotoBtn');
           if (pbtn) pbtn.addEventListener('click', function(e){ e.preventDefault(); var pm = document.getElementById('photoModal'); var img = document.getElementById('photoModalImg'); var vimg = document.getElementById('viewProfilePhoto'); if (img && vimg) img.src = vimg.src; if(pm){ pm.classList.remove('hidden'); pm.classList.add('flex'); } });
         });
+        // Also expose for future use if needed
+        window.__profileViewSync = syncView;
       })();
     </script>
 
@@ -329,7 +305,7 @@
 
     <!-- Update Profile Information Modal -->
     <div id="updateInfoModal" class="fixed inset-0 hidden items-center justify-center p-4 z-50 bg-black/50 backdrop-blur-sm">
-      <div class="w-full max-w-3xl bg-white/95 border border-[var(--cane-200)] rounded-3xl shadow-green-md">
+      <div class="w-full max-w-4xl bg-white/95 border border-[var(--cane-200)] rounded-3xl shadow-green-md max-h-[90vh] overflow-hidden flex flex-col">
         <div class="px-6 sm:px-8 pt-6 sm:pt-8">
           <div class="flex items-start justify-between">
             <div>
@@ -345,75 +321,181 @@
             </button>
           </div>
         </div>
-        <div class="px-6 sm:px-8 pb-6 sm:pb-8 max-h-[calc(100vh-200px)] overflow-y-auto">
-          <div class="space-y-6">
-            <!-- Existing Information Section -->
-            <div>
-              <h4 class="text-sm font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-check-circle text-[var(--cane-700)]"></i>
-                Existing Information
-              </h4>
-              <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5 space-y-3">
+        <div class="px-6 sm:px-8 pb-6 sm:pb-8 overflow-y-auto flex-1">
+          <!-- Existing Information Section -->
+          <div class="mb-6">
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-[var(--cane-600)]"></i>
+              Existing Information
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Full Name</div>
+                  <div class="text-xs sm:text-sm text-gray-600">Full Name</div>
                   <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_fullname">-</div>
                 </div>
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Email</div>
+                  <div class="text-xs sm:text-sm text-gray-600">Email</div>
                   <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_email">-</div>
                 </div>
                 <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Contact</div>
+                  <div class="text-xs sm:text-sm text-gray-600">Contact</div>
                   <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_contact">-</div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm font-semibold text-[var(--cane-700)] uppercase tracking-wide">Complete Address</div>
-                  <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_address">-</div>
-                </div>
-              </div>
-            </div>
-            <!-- Missing Information Section -->
-            <div>
-              <h4 class="text-sm font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-pencil-alt text-[var(--cane-700)]"></i>
-                Complete the Following Fields
-              </h4>
-              <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="updateModalFields"></div>
-              </div>
-            </div>
-            <!-- Profile Photo Section -->
-            <div>
-              <h4 class="text-sm font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-image text-[var(--cane-700)]"></i>
-                Profile Photo
-              </h4>
-              <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-6">
-                <div class="flex flex-col sm:flex-row gap-6 items-start">
-                  <div class="mx-auto sm:mx-0">
-                    <img id="updateModalProfilePhoto" alt="Profile Photo" class="w-32 h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-white" src=""/>
-                  </div>
-                  <div class="flex-1 flex flex-col gap-3">
-                    <p class="text-sm text-[var(--cane-700)] font-semibold">Choose how to update your photo:</p>
-                    <button id="updateModalTakeSelfie" type="button" class="inline-flex items-center justify-center gap-2 bg-white border border-[var(--cane-300)] text-[var(--cane-800)] px-4 py-2.5 rounded-lg hover:bg-[var(--cane-50)] transition">
-                      <i class="fa-solid fa-camera"></i>
-                      <span>Take Selfie</span>
-                    </button>
-                    <button id="updateModalUploadPhoto" type="button" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2.5 rounded-lg hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition">
-                      <i class="fa-solid fa-upload"></i>
-                      <span>Upload File</span>
-                    </button>
-                    <input id="updateModalPhotoFile" type="file" accept="image/*" class="hidden" />
-                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-[var(--cane-200)]">
-            <button id="updateModalCancelSecondaryBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] bg-white text-[var(--cane-800)] hover:bg-[var(--cane-50)] transition">Cancel</button>
-            <button id="updateModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-5 py-2.5 rounded-xl shadow-green-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)] transition">
+          <!-- Missing Information Section -->
+          <div class="mb-6">
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-circle-exclamation text-orange-600"></i>
+              Missing Information
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="updateModalFields"></div>
+            </div>
+          </div>
+          <!-- Profile Photo Upload Section -->
+          <div>
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-camera text-[var(--cane-600)]"></i>
+              Profile Photo
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5">
+              <div class="flex flex-col items-center gap-3">
+                <div class="relative">
+                  <img id="updateModalPhotoPreview" alt="Profile Photo Preview" class="w-32 h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-white" src=""/>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="updateModalPhotoUploadBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 py-2 rounded-lg text-sm shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>Upload File</span>
+                  </button>
+                  <button id="updateModalPhotoCameraBtn" class="inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 py-2 rounded-lg text-sm shadow-md hover:bg-[var(--cane-50)]">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Take Selfie</span>
+                  </button>
+                </div>
+                <input id="updateModalPhotoFileInput" type="file" accept="image/*" class="hidden" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 sm:px-8 pb-6 border-t border-[var(--cane-200)] pt-4 bg-white">
+          <div class="flex items-center justify-end gap-3">
+            <button id="updateModalCancelSecondaryBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] bg-white text-[var(--cane-800)] hover:bg-[var(--cane-50)]">Cancel</button>
+            <button id="updateModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-5 py-2.5 rounded-xl shadow-green-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
               <i class="fa-solid fa-floppy-disk"></i>
-              <span>Update</span>
+              <span>Save & Update</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="fixed inset-0 hidden items-center justify-center p-4 z-50 bg-black/50 backdrop-blur-sm">
+      <div class="w-full max-w-4xl bg-white/95 border border-[var(--cane-200)] rounded-3xl shadow-green-md max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="px-6 sm:px-8 pt-6 sm:pt-8">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--cane-50)] border border-[var(--cane-200)] text-[var(--cane-800)] text-xs font-semibold">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Edit Profile</span>
+              </div>
+              <h3 class="mt-3 text-xl sm:text-2xl font-bold text-[var(--cane-900)]">Edit Your Profile</h3>
+              <p class="text-sm text-[var(--cane-700)] mt-1">Update your personal information and profile photo.</p>
+            </div>
+            <button id="editModalCancelBtn" class="text-[var(--cane-800)] hover:text-[var(--cane-900)] bg-[var(--cane-100)] hover:bg-[var(--cane-200)] w-9 h-9 rounded-full flex items-center justify-center border border-[var(--cane-200)]">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+        <div class="px-6 sm:px-8 pb-6 sm:pb-8 overflow-y-auto flex-1">
+          <!-- Profile Photo Section -->
+          <div class="mb-6">
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-camera text-[var(--cane-600)]"></i>
+              Profile Photo
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5">
+              <div class="flex flex-col items-center gap-3">
+                <div class="relative">
+                  <img id="editModalPhotoPreview" alt="Profile Photo Preview" class="w-32 h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md bg-white" src=""/>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="editModalPhotoUploadBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-3 py-2 rounded-lg text-sm shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>Upload File</span>
+                  </button>
+                  <button id="editModalPhotoCameraBtn" class="inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 py-2 rounded-lg text-sm shadow-md hover:bg-[var(--cane-50)]">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Take Selfie</span>
+                  </button>
+                </div>
+                <input id="editModalPhotoFileInput" type="file" accept="image/*" class="hidden" />
+              </div>
+            </div>
+          </div>
+          <!-- Profile Information Section -->
+          <div>
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-user-pen text-[var(--cane-600)]"></i>
+              Personal Information
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Full Name</label>
+                  <input id="edit_fullname" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Email Address</label>
+                  <input id="edit_email" type="email" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Contact Number</label>
+                  <input id="edit_contact" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Barangay</label>
+                  <input id="edit_barangay" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Municipality</label>
+                  <input id="edit_municipality" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Nickname</label>
+                  <input id="edit_nickname" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Gender</label>
+                  <select id="edit_gender" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Birthday</label>
+                  <input id="edit_birthday" type="date" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="text-xs text-[var(--cane-700)] font-semibold">Complete Address</label>
+                  <textarea id="edit_address" rows="3" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 sm:px-8 pb-6 border-t border-[var(--cane-200)] pt-4 bg-white">
+          <div class="flex items-center justify-end gap-3">
+            <button id="editModalCancelSecondaryBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] bg-white text-[var(--cane-800)] hover:bg-[var(--cane-50)]">Cancel</button>
+            <button id="editModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-5 py-2.5 rounded-xl shadow-green-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Save Changes</span>
             </button>
           </div>
         </div>
@@ -460,39 +542,7 @@
             var dt = new DataTransfer(); dt.items.add(file);
             var fileInput = qs('photoFileInput'); if (fileInput) fileInput.files = dt.files;
             var img = qs('profilePhoto'); if (img) img.src = dataUrl;
-            var vimg = qs('updateModalProfilePhoto'); if (vimg) vimg.src = dataUrl;
             closeM(qs('cameraModal')); stopStream();
-          });
-          // Update Modal Camera - Similar logic for modal
-          var updateCamBtn = qs('updateModalTakeSelfie'); var updateStreamRef = null;
-          function updateStopStream(){ try { updateStreamRef?.getTracks()?.forEach(function(t){ t.stop(); }); } catch(e){} }
-          if (updateCamBtn) updateCamBtn.addEventListener('click', async function(){
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-              updateStreamRef = stream;
-              qs('cameraVideo').srcObject = stream;
-              openM(qs('cameraModal'));
-            } catch (e) {
-              alert('Camera access denied or unavailable');
-            }
-          });
-          // Ensure camera is closed when modal closes
-          var cameraClose = qs('cameraClose');
-          if (cameraClose) cameraClose.addEventListener('click', function(){
-            closeM(qs('cameraModal'));
-            updateStopStream();
-          });
-          // Update Modal Photo Upload
-          var updatePhotoFile = qs('updateModalPhotoFile');
-          var updateUploadBtn = qs('updateModalUploadPhoto');
-          if (updateUploadBtn) updateUploadBtn.addEventListener('click', function(){ if (updatePhotoFile) updatePhotoFile.click(); });
-          if (updatePhotoFile) updatePhotoFile.addEventListener('change', function(){
-            var f = updatePhotoFile.files?.[0];
-            if (f) {
-              var reader = new FileReader();
-              reader.onload = function(e) { var vimg = qs('updateModalProfilePhoto'); if (vimg) vimg.src = e.target.result; };
-              reader.readAsDataURL(f);
-            }
           });
         });
       })();
