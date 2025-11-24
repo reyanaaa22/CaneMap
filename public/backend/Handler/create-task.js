@@ -487,7 +487,70 @@ window.createTaskQuickFill = function(taskType) {
 };
 
 /**
- * ✅ Filter available tasks based on field status and growth stage
+ * ✅ Get available tasks for DRIVERS
+ * @param {object} fieldData - Field data from Firestore
+ * @returns {Array} - Array of available driver task objects {value, label, disabled}
+ */
+function getAvailableDriverTasks(fieldData) {
+  const tasks = [];
+  const status = fieldData.status?.toLowerCase() || 'active';
+  const plantingDate = fieldData.plantingDate?.toDate?.() || fieldData.plantingDate;
+  const harvestDate = fieldData.harvestDate?.toDate?.() || fieldData.harvestDate || fieldData.actualHarvestDate;
+
+  // Calculate DAP (Days After Planting)
+  let currentDAP = null;
+  if (plantingDate) {
+    currentDAP = calculateDAP(plantingDate);
+  }
+
+  // ========================================
+  // DRIVER-SPECIFIC TRANSPORT TASKS
+  // ========================================
+
+  // Pre-harvest driver tasks (materials transport)
+  if (plantingDate && currentDAP !== null && currentDAP < 200) {
+    tasks.push(
+      { value: 'transport_materials', label: 'Transport Materials to Field' },
+      { value: 'transport_fertilizer', label: 'Transport Fertilizer to Field' },
+      { value: 'transport_equipment', label: 'Transport Equipment to Field' }
+    );
+  }
+
+  // Harvest-related driver tasks (available when field is ready for harvest)
+  if (currentDAP >= 200 && !harvestDate && status !== 'harvested') {
+    tasks.push(
+      { value: 'pickup_harvested_cane', label: 'Pickup Harvested Sugarcane from Field' },
+      { value: 'transport_cane_to_mill', label: 'Transport Cane from Field to Mill' },
+      { value: 'deliver_to_collection', label: 'Deliver Cane to Collection Points' },
+      { value: 'assist_loading_unloading', label: 'Assist in Loading/Unloading Sugarcane' },
+      { value: 'coordinate_harvest_crew', label: 'Coordinate with Harvest Crew for Timing' },
+      { value: 'check_cane_weight', label: 'Check Cane Weight at Weighbridge' },
+      { value: 'return_empty_truck', label: 'Bring Empty Trucks Back to Fields' }
+    );
+  }
+
+  // Post-harvest driver tasks
+  if (status === 'harvested' || harvestDate) {
+    tasks.push(
+      { value: 'transport_cane_to_mill', label: 'Transport Cane from Field to Mill' },
+      { value: 'deliver_to_collection', label: 'Deliver Cane to Collection Points' },
+      { value: 'check_cane_weight', label: 'Check Cane Weight at Weighbridge' },
+      { value: 'return_empty_truck', label: 'Bring Empty Trucks Back to Fields' }
+    );
+  }
+
+  // General driver tasks (always available)
+  tasks.push(
+    { value: 'vehicle_maintenance', label: 'Vehicle Maintenance/Inspection' },
+    { value: 'fuel_refill', label: 'Fuel Refill' },
+    { value: 'driver_others', label: 'Others (Specify in Details)' }
+  );
+
+  return tasks;
+}
+
+/**
+ * ✅ Filter available tasks based on field status and growth stage FOR WORKERS
  * @param {object} fieldData - Field data from Firestore
  * @returns {Array} - Array of available task objects {value, label, disabled}
  */
@@ -576,11 +639,12 @@ function getAvailableTasksForHandler(fieldData) {
 }
 
 /**
- * ✅ Populate task dropdown with filtered tasks based on field status
+ * ✅ Populate task dropdown with filtered tasks based on field status and assignment type
  * @param {HTMLElement} dropdown - The task dropdown element
  * @param {string} fieldId - The field ID
+ * @param {string} assignType - 'worker' or 'driver'
  */
-async function populateFilteredTaskDropdown(dropdown, fieldId) {
+async function populateFilteredTaskDropdown(dropdown, fieldId, assignType = 'worker') {
   try {
     // Fetch field data
     const fieldRef = doc(db, 'fields', fieldId);
@@ -593,7 +657,11 @@ async function populateFilteredTaskDropdown(dropdown, fieldId) {
     }
 
     const fieldData = fieldSnap.data();
-    const availableTasks = getAvailableTasksForHandler(fieldData);
+
+    // Get appropriate task list based on assignment type
+    const availableTasks = assignType === 'driver'
+      ? getAvailableDriverTasks(fieldData)
+      : getAvailableTasksForHandler(fieldData);
 
     // Clear and populate dropdown
     dropdown.innerHTML = '<option value="">Select task...</option>';
@@ -609,7 +677,7 @@ async function populateFilteredTaskDropdown(dropdown, fieldId) {
       dropdown.appendChild(option);
     });
 
-    console.log(`✅ Populated ${availableTasks.length} filtered tasks for field ${fieldId}`);
+    console.log(`✅ Populated ${availableTasks.length} filtered ${assignType} tasks for field ${fieldId}`);
 
   } catch (error) {
     console.error('Error populating filtered tasks:', error);
@@ -987,8 +1055,17 @@ function updateAssignUI() {
     updateAssignUI();
     clearAssignError();
     await populateWorkerList();
+    // Update task dropdown to show worker-specific tasks
+    await populateFilteredTaskDropdown(taskTitle, fieldId, 'worker');
   });
-  btnDriver.addEventListener('click', async () => { assignType='driver'; updateAssignUI(); clearAssignError(); await populateDriverDropdown(modal, fieldId); });
+  btnDriver.addEventListener('click', async () => {
+    assignType='driver';
+    updateAssignUI();
+    clearAssignError();
+    await populateDriverDropdown(modal, fieldId);
+    // Update task dropdown to show driver-specific tasks
+    await populateFilteredTaskDropdown(taskTitle, fieldId, 'driver');
+  });
 
 
   // --- Date / This week ---

@@ -1207,7 +1207,7 @@ window.markDriverTaskAsDone = async function (taskId) {
 // ============================================================
 
 /**
- * Get available tasks based on field status and growth stage
+ * Get available DRIVER-SPECIFIC tasks based on field status and growth stage
  */
 function getAvailableTasksForField(fieldData) {
   const tasks = [];
@@ -1227,84 +1227,40 @@ function getAvailableTasksForField(fieldData) {
   }
 
   // ========================================
-  // PRE-PLANTING TASKS (only if NOT planted)
+  // PRE-HARVEST DRIVER TASKS (materials transport)
   // ========================================
-  if (!plantingDate || currentDAP === null) {
+  if (plantingDate && currentDAP !== null && currentDAP < 200) {
     tasks.push(
-      { value: "plowing", label: "Plowing (Land Preparation)" },
-      { value: "harrowing", label: "Harrowing (Land Preparation)" },
-      { value: "furrowing", label: "Furrowing (Land Preparation)" },
-      { value: "planting", label: "Planting (0 DAP)" }
+      { value: "transport_materials", label: "Transport Materials to Field" },
+      { value: "transport_fertilizer", label: "Transport Fertilizer to Field" },
+      { value: "transport_equipment", label: "Transport Equipment to Field" }
     );
   }
 
   // ========================================
-  // POST-PLANTING TASKS (only if planted)
+  // HARVEST-RELATED DRIVER TASKS
   // ========================================
-  if (plantingDate && currentDAP !== null && currentDAP >= 0) {
-    // Re-planting (only if significant time has passed or field was harvested)
-    if (harvestDate || currentDAP > 365) {
-      tasks.push({ value: "replanting", label: "Replanting" });
-    }
-
-    // Basal Fertilization (0-30 DAP)
-    if (currentDAP <= 30) {
-      tasks.push({
-        value: "basal_fertilizer",
-        label: `Basal Fertilizer (0-30 DAP, Current: ${currentDAP} DAP)`,
-      });
-    } else if (currentDAP <= 45) {
-      tasks.push({
-        value: "basal_fertilizer",
-        label: `Basal Fertilizer (Late - ${currentDAP} DAP)`,
-      });
-    }
-
-    // Main Fertilization (45-60 DAP)
-    if (currentDAP >= 40 && currentDAP <= 60) {
-      tasks.push({
-        value: "main_fertilization",
-        label: `Main Fertilization (45-60 DAP, Current: ${currentDAP} DAP)`,
-      });
-    } else if (currentDAP > 60 && currentDAP <= 90) {
-      tasks.push({
-        value: "main_fertilization",
-        label: `Main Fertilization (Late - ${currentDAP} DAP)`,
-      });
-    }
-
-    // General Maintenance (any time after planting)
+  if (currentDAP >= 200 && !harvestDate && status !== "harvested") {
     tasks.push(
-      { value: "spraying", label: "Spraying (Pest/Disease Control)" },
-      { value: "irrigation", label: "Irrigation" },
-      { value: "weeding", label: "Weeding" }
+      { value: "pickup_harvested_cane", label: "Pickup Harvested Sugarcane from Field" },
+      { value: "transport_cane_to_mill", label: "Transport Cane from Field to Mill" },
+      { value: "deliver_to_collection", label: "Deliver Cane to Collection Points" },
+      { value: "assist_loading_unloading", label: "Assist in Loading/Unloading Sugarcane" },
+      { value: "coordinate_harvest_crew", label: "Coordinate with Harvest Crew for Timing" },
+      { value: "check_cane_weight", label: "Check Cane Weight at Weighbridge" },
+      { value: "return_empty_truck", label: "Bring Empty Trucks Back to Fields" }
     );
-
-    // Harvesting (only if mature enough and NOT already harvested)
-    if (currentDAP >= 200 && !harvestDate && status !== "harvested") {
-      const maturityMsg =
-        currentDAP >= 300 ? "Optimal Maturity" : "Early Harvest";
-      tasks.push({
-        value: "harvesting",
-        label: `Harvesting (${currentDAP} DAP - ${maturityMsg})`,
-      });
-    } else if (currentDAP < 200 && currentDAP >= 150) {
-      // Show but mark as disabled
-      tasks.push({
-        value: "harvesting_disabled",
-        label: `Harvesting (Too Early - ${currentDAP} DAP)`,
-        disabled: true,
-      });
-    }
   }
 
   // ========================================
-  // POST-HARVEST TASKS (only if harvested)
+  // POST-HARVEST DRIVER TASKS
   // ========================================
   if (status === "harvested" || harvestDate) {
     tasks.push(
-      { value: "field_cleanup", label: "Field Cleanup (Post-Harvest)" },
-      { value: "ratoon_management", label: "Ratoon Management" }
+      { value: "transport_cane_to_mill", label: "Transport Cane from Field to Mill" },
+      { value: "deliver_to_collection", label: "Deliver Cane to Collection Points" },
+      { value: "check_cane_weight", label: "Check Cane Weight at Weighbridge" },
+      { value: "return_empty_truck", label: "Bring Empty Trucks Back to Fields" }
     );
   }
 
@@ -1312,11 +1268,9 @@ function getAvailableTasksForField(fieldData) {
   // GENERAL DRIVER TASKS (always available)
   // ========================================
   tasks.push(
-    { value: "transport", label: "Transport" },
-    { value: "equipment_operation", label: "Equipment Operation" },
-    { value: "material_delivery", label: "Material Delivery" },
-    { value: "field_support", label: "Field Support" },
-    { value: "others", label: "Others (Specify in Notes)" }
+    { value: "vehicle_maintenance", label: "Vehicle Maintenance/Inspection" },
+    { value: "fuel_refill", label: "Fuel Refill" },
+    { value: "driver_others", label: "Others (Specify in Notes)" }
   );
 
   return tasks;
@@ -1659,57 +1613,31 @@ async function createDriverLog(logData) {
         currentDAP = Math.floor((today - planting) / (1000 * 60 * 60 * 24));
       }
 
-      // VALIDATION 1: Prevent harvesting already harvested field
+      // VALIDATION 1: Prevent harvest-related tasks on already harvested field
+      const harvestTasks = ["pickup_harvested_cane"];
       if (
-        taskLower.includes("harvest") &&
-        !taskLower.includes("post") &&
-        !taskLower.includes("cleanup")
+        harvestTasks.some(task => taskLower.includes(task)) &&
+        (status === "harvested" || harvestDate)
       ) {
-        if (status === "harvested" || harvestDate) {
-          Swal.fire({
-            icon: "error",
-            title: "Invalid Task",
-            text: "This field was already harvested. Please select a post-harvest task instead.",
-            confirmButtonColor: "#166534",
-          });
-          return;
-        }
-
-        if (currentDAP !== null && currentDAP < 200) {
-          Swal.fire({
-            icon: "error",
-            title: "Cannot Harvest",
-            text: `This field is only ${currentDAP} days old. Sugarcane must be at least 200 DAP (preferably 300-400 DAP) for harvesting.`,
-            confirmButtonColor: "#166534",
-          });
-          return;
-        }
-      }
-
-      // VALIDATION 2: Prevent duplicate planting
-      if (taskLower === "planting" && plantingDate && !harvestDate) {
-        const plantingDateStr = new Date(plantingDate).toLocaleDateString();
         Swal.fire({
-          icon: "error",
-          title: "Already Planted",
-          text: `This field was already planted on ${plantingDateStr}. If you need to replant, please select "Replanting" instead.`,
+          icon: "warning",
+          title: "Field Already Harvested",
+          text: "This field was already harvested. Transport and delivery tasks are still available.",
           confirmButtonColor: "#166534",
         });
-        return;
+        // Allow to continue - just a warning
       }
 
-      // VALIDATION 3: Prevent pre-planting tasks on already planted field
-      const prePlantingTasks = ["plowing", "harrowing", "furrowing"];
+      // VALIDATION 2: Warn if trying to pickup cane from immature field
       if (
-        prePlantingTasks.includes(taskLower) &&
-        plantingDate &&
-        !harvestDate &&
-        currentDAP < 365
+        taskLower.includes("pickup_harvested_cane") &&
+        currentDAP !== null &&
+        currentDAP < 200
       ) {
         Swal.fire({
           icon: "error",
-          title: "Invalid Task",
-          text: "This field is already planted. Pre-planting tasks are not applicable.",
+          title: "Field Not Ready",
+          text: `This field is only ${currentDAP} days old. Sugarcane must be at least 200 DAP for harvesting.`,
           confirmButtonColor: "#166534",
         });
         return;
