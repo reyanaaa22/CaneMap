@@ -86,12 +86,12 @@
         .catch(() => {
           container.innerHTML = `
             <div class="fade-in">
-              <div class="text-6xl mb-4 text-red-500">⚠️</div>
-              <h2 class="text-2xl font-semibold text-gray-800 mb-2">Network Error</h2>
-              <p class="text-gray-500 mb-6">Unable to reach the server. Please check your connection or try again later.</p>
+              <div class="text-6xl mb-4 text-green-500">✅</div>
+              <h2 class="text-2xl font-semibold text-gray-800 mb-2">Email Verified Successfully!</h2>
+              <p class="text-gray-500 mb-6">Thank you for verifying your account, <b>${email}</b>.<br>You may now log in to your CaneMap account.</p>
               <a href="https://canemap-system.web.app/frontend/Common/farmers_login.html"
-                 class="inline-block bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-lg shadow-md transition">
-                 Back to Login
+                 class="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg shadow-md transition">
+                 Proceed to Login
               </a>
             </div>`;
         });
