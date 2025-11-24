@@ -962,14 +962,6 @@ function getTaskDisplayName(taskValue) {
   return taskMap[taskValue] || taskValue;
 }
 
-// Helper to escape HTML
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 // =============================
 // 🟢 Auth Check
 // =============================
