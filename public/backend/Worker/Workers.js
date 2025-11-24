@@ -49,6 +49,7 @@ let userType = 'worker';
 let hasDriverBadge = false;
 let currentSection = 'dashboard';
 let currentUserId = null;
+let currentUserEmail = '';
 let unsubscribeListeners = [];
 let currentTasks = []; // ✅ Store current tasks data for filter re-rendering
 let tasksListenerUnsubscribe = null; // ✅ Track tasks listener separately
@@ -80,6 +81,7 @@ async function initAuthSession() {
 
             // Store current user ID
             currentUserId = user.uid;
+            currentUserEmail = user.email || '';
 
             // Persist uid for other modules
             try { 
@@ -310,17 +312,20 @@ function initializeCalendar() {
 
 // Sidebar functionality
 function toggleSidebar() {
+    // Desktop: collapse/expand to icon-only
+    if (window.innerWidth >= 1024) {
+        return toggleSidebarCollapse();
+    }
+    // Mobile: slide-in/out with overlay
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    
-    if (sidebar && overlay) {
-        if (sidebar.classList.contains('-translate-x-full')) {
-            sidebar.classList.remove('-translate-x-full');
-            overlay.classList.remove('hidden');
-        } else {
-            sidebar.classList.add('-translate-x-full');
-            overlay.classList.add('hidden');
-        }
+    if (!sidebar || !overlay) return;
+    if (sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
     }
 }
 
@@ -614,7 +619,7 @@ async function setupWorkerTasksListener() {
             tasksListenerUnsubscribe();
         }
 
-        tasksListenerUnsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+        tasksListenerUnsubscribe = onSnapshot(tasksQuery, async (snapshot) => {
             // ✅ Prevent concurrent renders
             if (isRenderingTasks) {
                 console.log('⏳ Tasks render already in progress, skipping...');
@@ -624,7 +629,7 @@ async function setupWorkerTasksListener() {
 
             try {
                 console.log(`📋 Worker tasks loaded: ${snapshot.size} tasks`);
-                const tasks = [];
+                let tasks = [];
                 const now = new Date();
                 const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -634,6 +639,18 @@ async function setupWorkerTasksListener() {
                     tasks.push(task);
                     console.log(`  - Task: ${task.taskType}, Status: ${task.status}, Field: ${task.fieldId}`);
                 });
+
+                // Fallback: also include tasks filtered by worker email when userId-based query returned none
+                if (tasks.length === 0 && currentUserEmail) {
+                    try {
+                        const emailQuery1 = query(tasksRef, where('assignedToEmails', 'array-contains', currentUserEmail));
+                        const emailQuery2 = query(tasksRef, where('assignedToEmail', '==', currentUserEmail));
+                        const [snap1, snap2] = await Promise.all([getDocs(emailQuery1), getDocs(emailQuery2)]);
+                        snap1.forEach((doc) => { const t = doc.data(); t.id = doc.id; tasks.push(t); });
+                        snap2.forEach((doc) => { const t = doc.data(); t.id = doc.id; tasks.push(t); });
+                        console.log(`🔁 Fallback tasks by email loaded: ${tasks.length} tasks`);
+                    } catch(e) { console.warn('Tasks email fallback failed:', e); }
+                }
 
                 // Sort tasks by createdAt (client-side sorting to avoid index requirement)
                 tasks.sort((a, b) => {
@@ -799,18 +816,18 @@ async function setupWorkerNotificationsListener() {
 
     try {
         const notificationsRef = collection(db, 'notifications');
-        const notificationsQuery = query(
-            notificationsRef,
-            where('userId', '==', currentUserId),
-            orderBy('timestamp', 'desc'),
-            limit(25)
-        );
-
-        const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-            const notifications = [];
-            snapshot.forEach((doc) => {
-                notifications.push({ id: doc.id, ...doc.data() });
-            });
+        const qByUser = query(notificationsRef, where('userId', '==', currentUserId), orderBy('timestamp', 'desc'), limit(25));
+        const unsubscribe = onSnapshot(qByUser, async (snapshot) => {
+            let notifications = [];
+            snapshot.forEach((doc) => { notifications.push({ id: doc.id, ...doc.data() }); });
+            // Fallback: include notifications targeted by user email
+            if (notifications.length === 0 && currentUserEmail) {
+                try {
+                    const qByEmail = query(notificationsRef, where('userEmail', '==', currentUserEmail), orderBy('timestamp', 'desc'), limit(25));
+                    const emailSnap = await getDocs(qByEmail);
+                    emailSnap.forEach((doc) => { notifications.push({ id: doc.id, ...doc.data() }); });
+                } catch(e) { console.warn('Notifications email fallback failed:', e); }
+            }
 
             const unreadCount = notifications.filter(n => !n.read).length;
 
