@@ -2636,6 +2636,25 @@ if (shouldHide) {
     if (regFieldDropdown) regFieldDropdown.style.display = shouldHide ? "none" : "";
     if (regBtn) regBtn.style.display = shouldHide ? "none" : "";
 
+    // Extra safety: if visibility toggling is overridden by late DOM changes, disable clicks for worker
+    function disableLink(a){
+      try {
+        a.setAttribute('aria-disabled','true');
+        a.style.pointerEvents = 'none';
+        a.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); }, { capture: true });
+      } catch(_){}
+    }
+    function enableLink(a){
+      try {
+        a.removeAttribute('aria-disabled');
+        a.style.pointerEvents = '';
+      } catch(_){}
+    }
+    if (role === 'worker'){
+      if (dropdownDriverLink) { if (shouldHide) disableLink(dropdownDriverLink); else enableLink(dropdownDriverLink); }
+      if (regFieldDropdown) { if (shouldHide) disableLink(regFieldDropdown); else enableLink(regFieldDropdown); }
+    }
+
   } catch (err) {
     console.warn("hideDriverBadgeElements error:", err);
   }
