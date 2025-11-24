@@ -836,7 +836,7 @@ function initMap() {
         // 🔹 2. If at least one field matches
         if (matchedFields.length > 0) {
           const { marker, data } = matchedFields[0]; // focus on the first one
-          map.setView([data.lat, data.lng], 15);
+          map.setView([data.lat, data.lng], 18);
           marker.openTooltip();
 
           // Optional — bounce animation to draw attention
@@ -861,7 +861,7 @@ function initMap() {
             iconAnchor: [18, 34],
             popupAnchor: [0, -28],
           });
-          map.setView(brgyMatch.coords, 14);
+          map.setView(brgyMatch.coords, 17);
           L.marker(brgyMatch.coords, { icon: caneIcon })
             .addTo(map)
             .bindPopup(`<b>${brgyMatch.name}</b>`)
@@ -913,7 +913,7 @@ function initMap() {
         }
 
         const { marker, data } = found;
-        map.setView([data.lat, data.lng], 15);
+        map.setView([data.lat, data.lng], 18);
         marker.openTooltip();
       }
 
@@ -924,7 +924,7 @@ function initMap() {
         popupAnchor: [0, -32],
       });
 
-      map.setView(match.coords, 14);
+      map.setView(match.coords, 17);
       L.marker(match.coords, { icon: caneIcon })
         .addTo(map)
         .bindPopup(`<b>${match.name}</b>`)
