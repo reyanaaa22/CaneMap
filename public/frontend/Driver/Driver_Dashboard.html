@@ -235,7 +235,7 @@
           <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <!-- Hamburger (header, left) -->
-            <button id="hamburgerBtn" class="lg:hidden text-white hover:text-gray-200 transition-colors mr-3 hamburger-icon">
+            <button id="hamburgerBtn" class="lg:hidden text-white hover:text-gray-200 transition-colors mr-3 hamburger-icon" onclick="toggleSidebar()">
               <i class="fas fa-bars text-lg"></i>
             </button>
           </div>
@@ -258,6 +258,12 @@
               <i class="fas fa-home text-lg"></i>
               <span class="hidden md:inline text-sm font-medium">Lobby</span>
             </a>
+
+            <!-- Open a Rental (Driver) -->
+            <button id="btnDriverRental" class="hidden flex items-center space-x-2 text-white hover:text-gray-200 transition-colors px-3 py-2 rounded-lg hover:bg-white/10" title="Open a Rental">
+              <i class="fas fa-truck-moving"></i>
+              <span class="hidden sm:inline text-sm font-medium">Open a Rental</span>
+            </button>
 
             <!-- Notification Bell -->
             <div class="relative">
@@ -377,6 +383,7 @@
               id="collapseSidebarBtn"
               class="hidden lg:inline-flex items-center justify-center text-gray-300 hover:text-white p-2 rounded"
               title="Collapse sidebar"
+              onclick="toggleSidebarCollapse()"
             >
               <i class="fas fa-bars"></i>
             </button>
@@ -787,5 +794,112 @@
         });
       });
     </script>
+
+    <script>
+      // Driver rental header button: try to use shared lobby helpers if available,
+      // otherwise create a simple iframe overlay fallback.
+      (function(){
+        function createFallbackOverlay(){
+          let wrapper = document.getElementById('driverRentalModalWrapper');
+          if (!wrapper){
+            wrapper = document.createElement('div');
+            wrapper.id = 'driverRentalModalWrapper';
+            wrapper.style.position = 'fixed';
+            wrapper.style.inset = '0';
+            wrapper.style.background = 'rgba(0,0,0,0.45)';
+            wrapper.style.zIndex = '60';
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'center';
+            const frame = document.createElement('iframe');
+            frame.id = 'driverRentalFrame';
+            frame.src = '../Driver/Driver_Rental.html';
+            frame.style.width = '980px';
+            frame.style.height = '640px';
+            frame.style.border = '0';
+            frame.style.borderRadius = '8px';
+            frame.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)';
+            wrapper.appendChild(frame);
+            wrapper.addEventListener('click', function(e){ if (e.target === wrapper) wrapper.remove(); });
+            document.body.appendChild(wrapper);
+          }
+          return wrapper;
+        }
+
+        function openFallback(){ createFallbackOverlay(); }
+        function closeFallback(){ const w = document.getElementById('driverRentalModalWrapper'); if (w) w.remove(); }
+
+        document.addEventListener('DOMContentLoaded', function(){
+          const btn = document.getElementById('btnDriverRental');
+          if (!btn) return;
+
+          // Show button for drivers (best-effort). If you want it always visible, remove condition.
+          try { if (localStorage.getItem('userRole') === 'driver') btn.classList.remove('hidden'); } catch(_) { btn.classList.remove('hidden'); }
+
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            // Prefer shared helper if present
+            if (window.openDriverRentalIframe && typeof window.openDriverRentalIframe === 'function'){
+              try { window.openDriverRentalIframe(); return; } catch(_){}
+            }
+            // Fallback overlay
+            openFallback();
+          });
+
+          // Also expose open/close for other scripts
+          window.openDriverRentalModal = function(){ if (window.openDriverRentalIframe) return window.openDriverRentalIframe(); return openFallback(); };
+          window.closeDriverRentalModal = closeFallback;
+        });
+      })();
+    </script>
   </body>
 </html>
+    <script>
+      function toggleSidebar(){
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (!sidebar || !overlay) return;
+        if (window.innerWidth >= 1024){
+          return toggleSidebarCollapse();
+        }
+        const hidden = sidebar.classList.contains('-translate-x-full');
+        if (hidden){
+          sidebar.classList.remove('-translate-x-full');
+          overlay.classList.remove('hidden');
+        } else {
+          sidebar.classList.add('-translate-x-full');
+          overlay.classList.add('hidden');
+        }
+      }
+      function toggleSidebarCollapse(){
+        const isDesktop = window.innerWidth >= 1024;
+        const body = document.body;
+        const mainWrapper = document.getElementById('driverMainWrapper');
+        if (!isDesktop || !mainWrapper) return;
+        const collapsing = !body.classList.contains('sidebar-collapsed');
+        body.classList.toggle('sidebar-collapsed');
+        mainWrapper.style.marginLeft = collapsing ? '5rem' : '16rem';
+        const header = document.getElementById('driverHeaderContainer');
+        if (header) header.style.paddingLeft = collapsing ? '5rem' : '16rem';
+      }
+      (function(){
+        const closeBtn = document.getElementById('closeSidebarBtn');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (closeBtn) closeBtn.addEventListener('click', function(){
+          const sidebar = document.getElementById('sidebar');
+          if (sidebar) sidebar.classList.add('-translate-x-full');
+          if (overlay) overlay.classList.add('hidden');
+        });
+        if (overlay) overlay.addEventListener('click', function(){
+          const sidebar = document.getElementById('sidebar');
+          if (sidebar) sidebar.classList.add('-translate-x-full');
+          overlay.classList.add('hidden');
+        });
+        window.addEventListener('resize', function(){
+          const mainWrapper = document.getElementById('driverMainWrapper');
+          if (window.innerWidth >= 1024 && mainWrapper){
+            mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
+          }
+        });
+      })();
+    </script>
