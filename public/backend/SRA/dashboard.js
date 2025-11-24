@@ -1227,30 +1227,24 @@ async function initNotifications(userId) {
         }
 
         // Sidebar functionality
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            
-            if (sidebar && overlay) {
-                if (sidebar.classList.contains('-translate-x-full')) {
-                    sidebar.classList.remove('-translate-x-full');
-                    overlay.classList.remove('hidden');
-                } else {
-                    sidebar.classList.add('-translate-x-full');
-                    overlay.classList.add('hidden');
-                }
-            }
-        }
+        function toggleSidebar() { return toggleSidebarCollapse(); }
 
         // Desktop collapse/expand (icon-only) toggle
         function toggleSidebarCollapse() {
-            const isDesktop = window.innerWidth >= 1024; // lg breakpoint
             const body = document.body;
             const main = document.getElementById('sraMain');
-            if (!isDesktop || !main) return;
+            const header = document.getElementById('sraHeaderContainer');
+            const sidebar = document.getElementById('sidebar');
+            if (!main || !sidebar) return;
+            const isDesktop = window.innerWidth >= 1024; // lg breakpoint
             const collapsing = !body.classList.contains('sidebar-collapsed');
             body.classList.toggle('sidebar-collapsed');
-            main.style.marginLeft = collapsing ? '5rem' : '16rem';
+            if (!isDesktop) {
+                if (collapsing) sidebar.classList.remove('-translate-x-full');
+                else sidebar.classList.add('-translate-x-full');
+            }
+            main.style.marginLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
+            if (header) header.style.paddingLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
         }
 
         function closeSidebar() {
@@ -1335,12 +1329,12 @@ async function initNotifications(userId) {
             
             // Handle window resize
             window.addEventListener('resize', function() {
-                if (window.innerWidth >= 1024) {
-                    closeSidebar();
-                    const main = document.getElementById('sraMain');
-                    if (main) {
-                        main.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
-                    }
+                const main = document.getElementById('sraMain');
+                const header = document.getElementById('sraHeaderContainer');
+                if (main) {
+                    const isDesktop = window.innerWidth >= 1024;
+                    main.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
+                    if (header) header.style.paddingLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
                 }
             });
 

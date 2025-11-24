@@ -312,44 +312,38 @@ function initializeCalendar() {
 
 // Sidebar functionality
 function toggleSidebar() {
-    // Desktop: collapse/expand to icon-only
-    if (window.innerWidth >= 1024) {
-        return toggleSidebarCollapse();
-    }
-    // Mobile: slide-in/out with overlay
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (!sidebar || !overlay) return;
-    if (sidebar.classList.contains('-translate-x-full')) {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-    } else {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    }
+    return toggleSidebarCollapse();
 }
 
 // Desktop collapse/expand (icon-only) toggle
 function toggleSidebarCollapse() {
-    const isDesktop = window.innerWidth >= 1024; // lg breakpoint
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
-    if (!isDesktop || !mainWrapper) return;
+    const header = document.getElementById('workerHeaderContainer');
+    const sidebar = document.getElementById('sidebar');
+    if (!mainWrapper || !sidebar) return;
+    const isDesktop = window.innerWidth >= 1024;
     const collapsing = !body.classList.contains('sidebar-collapsed');
     body.classList.toggle('sidebar-collapsed');
-    // Adjust main content margin to match 5rem when collapsed, 16rem when expanded
-    mainWrapper.style.marginLeft = collapsing ? '5rem' : '16rem';
-    applyHeaderPadding();
+    // Ensure sidebar visibility on mobile when collapsed, hide when expanded
+    if (!isDesktop) {
+        if (collapsing) {
+            sidebar.classList.remove('-translate-x-full');
+        } else {
+            sidebar.classList.add('-translate-x-full');
+        }
+    }
+    // Adjust main content margin and header padding
+    mainWrapper.style.marginLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
+    if (header) header.style.paddingLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
 }
 
 function closeSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    
-    if (sidebar && overlay) {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    }
+    if (sidebar) sidebar.classList.add('-translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.classList.remove('sidebar-collapsed');
 }
 
 // Navigation functionality
@@ -391,13 +385,13 @@ function showSection(sectionId) {
     currentSection = targetId;
     // Ensure layout aligns with sidebar state on desktop after section switch
     try {
-        if (window.innerWidth >= 1024) {
-            const mainWrapper = document.getElementById('mainWrapper');
-            if (mainWrapper) {
-                mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
-            }
-            if (typeof applyHeaderPadding === 'function') applyHeaderPadding();
+        const isDesktop = window.innerWidth >= 1024;
+        const mainWrapper = document.getElementById('mainWrapper');
+        const header = document.getElementById('workerHeaderContainer');
+        if (mainWrapper) {
+            mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
         }
+        if (header) header.style.paddingLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
     } catch(_) {}
 }
 
@@ -1763,3 +1757,12 @@ function showWorkerToast(msg){
     }, 1000);
 }
 window.showWorkerToast = showWorkerToast;
+// Attach basic listeners for mobile close
+document.addEventListener('DOMContentLoaded', function(){
+    try {
+        var closeBtn = document.getElementById('closeSidebarBtn');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+    } catch(_){}
+});
