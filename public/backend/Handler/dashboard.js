@@ -1049,10 +1049,12 @@ onAuthStateChanged(auth, async (user) => {
 
   loadUserProfile(user);
   loadJoinRequests(user.uid);
-  loadRecentTaskActivity(user.uid);
+loadRecentTaskActivity(user.uid);
+setupRecentTaskActivityListener(user.uid);
   setupJoinRequestsListener(user.uid);
   initNotifications(user.uid);
 loadActivityLogs(user.uid);
+setupActivityLogsListener(user.uid);
 
   // REQ-3: Initialize dashboard statistics with realtime listeners
   initActiveWorkersMetric(user.uid);
@@ -1215,32 +1217,26 @@ async function loadActivityLogs(handlerId) {
       );
     }
 
-    // sort newest first
-    logs.sort((a, b) => {
-      const nameA = (a.user_name || "").toLowerCase();
-      const nameB = (b.user_name || "").toLowerCase();
+// UI DISPLAY SORT — newest → oldest (NO GROUPING)
+logs.sort((a, b) => {
+  const ta = a.logged_at && a.logged_at.toMillis
+    ? a.logged_at.toMillis()
+    : (a.logged_at ? new Date(a.logged_at).getTime() : 0);
 
-      // If names are different → group by alphabetical name
-      if (nameA < nameB) return -1;
-      if (nameA > nameB) return 1;
+  const tb = b.logged_at && b.logged_at.toMillis
+    ? b.logged_at.toMillis()
+    : (b.logged_at ? new Date(b.logged_at).getTime() : 0);
 
-      // If same name → sort by newest log first
-      const ta = a.logged_at && a.logged_at.toMillis
-        ? a.logged_at.toDate().getTime()
-        : (a.logged_at ? new Date(a.logged_at).getTime() : 0);
+  return tb - ta;  
+});
 
-      const tb = b.logged_at && b.logged_at.toMillis
-        ? b.logged_at.toDate().getTime()
-        : (b.logged_at ? new Date(b.logged_at).getTime() : 0);
-
-      return tb - ta;
-    });
     // Save logs in-memory on window so filters/buttons can access
     window.__activityLogsCache = logs;
 
     // Populate user and type filters
     populateUserAndTypeFilters(logs);
 
+    
     // Render initial UI (unfiltered)
     renderActivityLogs(logs);
 
@@ -1448,6 +1444,26 @@ function applyPreset(preset) {
 
 /* Prepare printable table in #activityLogsPrintArea */
 function preparePrintableActivityTable(logs = []) {
+
+    logs.sort((a, b) => {
+    const nameA = (a.user_name || "").toLowerCase();
+    const nameB = (b.user_name || "").toLowerCase();
+
+    // group alphabetically A → Z
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+
+    // same person → newest → oldest
+    const ta = a.logged_at && a.logged_at.toMillis
+      ? a.logged_at.toMillis()
+      : (a.logged_at ? new Date(a.logged_at).getTime() : 0);
+
+    const tb = b.logged_at && b.logged_at.toMillis
+      ? b.logged_at.toMillis()
+      : (b.logged_at ? new Date(b.logged_at).getTime() : 0);
+
+    return tb - ta;
+  });
   const printArea = document.getElementById("activityLogsPrintArea") || (function(){
     const div = document.createElement('div');
     div.id = 'activityLogsPrintArea';
@@ -2906,3 +2922,57 @@ document.addEventListener("DOMContentLoaded", () => {
   if (closeSidebar) closeSidebar.addEventListener("click", closeSidebarFn);
   if (overlay) overlay.addEventListener("click", closeSidebarFn);
 });
+
+/* === Realtime Activity Logs Listener === */
+let activityLogsUnsub = null;
+
+function setupActivityLogsListener(handlerId) {
+  if (!handlerId) return;
+
+  if (activityLogsUnsub) activityLogsUnsub();
+
+  // top-level task_logs
+  const q1 = query(
+    collection(db, "task_logs"),
+    where("handlerId", "==", handlerId)
+  );
+
+  // driver logs come from tasks collection
+  const q2 = query(
+    collection(db, "tasks"),
+    where("handlerId", "==", handlerId),
+    where("taskType", "==", "driver_log")
+  );
+
+  activityLogsUnsub = [
+    onSnapshot(q1, () => {
+      console.log("🔄 Worker activity updated");
+      loadActivityLogs(handlerId);
+    }),
+    onSnapshot(q2, () => {
+      console.log("🔄 Driver activity updated");
+      loadActivityLogs(handlerId);
+    })
+  ];
+}
+
+/* === Realtime Recent Task Activity Listener === */
+let recentActivityUnsub = null;
+
+function setupRecentTaskActivityListener(handlerId) {
+  if (!handlerId) return;
+
+  if (recentActivityUnsub) recentActivityUnsub();
+
+  const q = query(
+    collection(db, "tasks"),
+    where("handlerId", "==", handlerId),
+    where("status", "==", "done")
+  );
+
+  recentActivityUnsub = onSnapshot(q, () => {
+    console.log("🔄 Recent task activity updated");
+    loadRecentTaskActivity(handlerId);
+  });
+}
+

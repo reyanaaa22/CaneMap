@@ -1,6 +1,6 @@
 // CaneMap Workers handler hooked to Firestore (falls back to localStorage)
 import { db } from '../../backend/Common/firebase-config.js';
-import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, where, collectionGroup, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+import { collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, where, collectionGroup, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
 const NAME_PLACEHOLDERS = new Set([
   '',
@@ -323,21 +323,37 @@ export function initializeHandlerWorkersSection() {
               ${fieldBadges || '<span class="text-xs text-gray-400">No assignments</span>'}
             </div>
           </td>
-          <td class="py-4 pr-4 text-right">
-            <button class="see-details-btn bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-all duration-200"
-              data-id="${worker.id}">
-              See Details
-            </button>
-          </td>
+        <td class="py-4 pr-4 text-right flex items-center justify-end gap-2">
+
+          <!-- See Details -->
+          <button class="see-details-btn bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold px-3 py-1.5 rounded-lg text-sm transition-all duration-200"
+            data-id="${worker.id}">
+            See Details
+          </button>
+
+          <!-- Kick User Icon -->
+          <button class="kick-user-btn text-red-600 hover:text-red-800 transition text-xl"
+            title="Kick user"
+            data-id="${worker.id}">
+            <i class="fas fa-user-slash"></i>
+          </button>
+
+        </td>
+
         </tr>
       `;
     }).join('');
 
     refs.workersTbody.innerHTML = rows;
 
-    refs.workersTbody.querySelectorAll('.see-details-btn').forEach(btn => {
-      btn.addEventListener('click', e => showDetailsModal(e.target.dataset.id));
+    // Kick user button click
+    refs.workersTbody.querySelectorAll('.kick-user-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const uid = e.currentTarget.dataset.id;
+        openKickFieldSelectionModal(uid);
+      });
     });
+
   }
 
   function renderRequests(){
@@ -857,6 +873,165 @@ const address =
       console.error('Failed to set up join requests listener:', err);
     }
   }
+
+//kick user modal
+async function openKickFieldSelectionModal(userId) {
+  const userFields = await getUserAssignedFields(userId);
+  
+  if (userFields.length === 0) {
+    alert("This user is not assigned to any of your fields.");
+    return;
+  }
+
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[99999]";
+
+  const options = userFields.map(f => `
+    <option value="${f.fieldId}">
+      ${f.fieldName} (${f.role})
+    </option>
+  `).join("");
+
+  modal.innerHTML = `
+    <div class="bg-white p-6 rounded-xl shadow-xl w-[90%] max-w-md border">
+      <h2 class="text-lg font-semibold mb-3">Kick User From Field</h2>
+      <p class="text-sm text-gray-600 mb-3">Choose which field to remove this user from.</p>
+
+      <label class="text-sm font-medium">Select Field</label>
+      <select id="kickFieldSelect" class="w-full border rounded-lg p-2 mt-1 mb-3">
+        ${options}
+      </select>
+
+      <label class="flex items-center gap-2 mt-2">
+        <input type="checkbox" id="kickAllFieldsChk">
+        <span class="text-sm text-gray-700">Kick from ALL fields</span>
+      </label>
+
+      <div class="flex justify-end gap-2 mt-6">
+        <button class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" id="kickCancelBtn">Cancel</button>
+        <button class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700" id="kickNextBtn">Next</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#kickCancelBtn").onclick = () => modal.remove();
+
+modal.querySelector("#kickNextBtn").onclick = () => {
+    const selectedField = modal.querySelector("#kickFieldSelect").value;
+    const kickAll = modal.querySelector("#kickAllFieldsChk").checked;
+
+    modal.remove();
+    confirmKickUser(userId, selectedField, kickAll);
+};
+}
+
+// Fetch fields where user is assigned
+async function getUserAssignedFields(userId) {
+  const handlerId = localStorage.getItem("userId");
+  const qSnap = await getDocs(
+    query(
+      collection(db, "field_joins"),
+      where("userId", "==", userId),
+      where("handlerId", "==", handlerId),
+      where("status", "==", "approved")
+    )
+  );
+
+  const list = [];
+  qSnap.forEach(docSnap => {
+    const d = docSnap.data();
+    list.push({
+      joinId: docSnap.id,
+      fieldId: d.fieldId,
+      fieldName: d.fieldName || "Unknown Field",
+      role: d.role || d.joinAs || "worker"
+    });
+  });
+
+  return list;
+}
+
+// Confirm modal
+function confirmKickUser(userId, fieldId, kickAll) {
+  const modal = document.createElement("div");
+  modal.className = "fixed inset-0 bg-black/40 flex items-center justify-center z-[99999]";
+
+  modal.innerHTML = `
+    <div class="bg-white p-6 rounded-xl shadow-xl w-[90%] max-w-md border text-center">
+      <h3 class="text-lg font-semibold mb-3">Are you sure?</h3>
+      <p class="text-sm text-gray-600 mb-5">
+        This user will be removed from ${kickAll ? "<strong>ALL fields</strong>" : "the selected field"}.
+      </p>
+      <div class="flex justify-center gap-3">
+        <button class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300" id="kickCancel2">Cancel</button>
+        <button class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700" id="kickConfirmBtn">Kick</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#kickCancel2").onclick = () => modal.remove();
+
+  modal.querySelector("#kickConfirmBtn").onclick = async () => {
+    modal.remove();
+    await kickUser(userId, fieldId, kickAll);
+  };
+}
+
+// Actual kick logic
+// Actual kick logic
+async function kickUser(userId, fieldId, kickAll) {
+  const handlerId = localStorage.getItem("userId");
+
+  const qSnap = await getDocs(
+    query(
+      collection(db, "field_joins"),
+      where("userId", "==", userId),
+      where("handlerId", "==", handlerId),
+      where("status", "==", "approved")
+    )
+  );
+
+  const batchDeletes = [];
+  let kickedFields = []; // store kicked field names for notification
+
+  qSnap.forEach(docSnap => {
+    const d = docSnap.data();
+    if (kickAll || d.fieldId === fieldId) {
+      batchDeletes.push(deleteDoc(doc(db, "field_joins", docSnap.id)));
+      kickedFields.push({
+        fieldId: d.fieldId,
+        fieldName: d.fieldName || "Unknown Field"
+      });
+    }
+  });
+
+  await Promise.all(batchDeletes);
+
+  /* 🟩 ADD FIRESTORE NOTIFICATION FOR THE USER */
+  if (kickedFields.length > 0) {
+    for (const f of kickedFields) {
+      await addDoc(collection(db, "notifications"), {
+        userId: userId,
+        title: "Removed From Field",
+        message: `You have been removed from the field "${f.fieldName}".`,
+        type: "kick",
+        relatedEntityId: f.fieldId,
+        status: "unread",
+        timestamp: serverTimestamp()
+      });
+    }
+  }
+  /* 🟩 END NOTIFICATION SECTION */
+
+  alert("User successfully kicked.");
+
+  await fetchAllData();
+  renderWorkers();
+}
 
   async function init(){
     grabRefs();
