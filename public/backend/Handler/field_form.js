@@ -1,6 +1,7 @@
 import { auth, db } from '../Common/firebase-config.js';
 import {
-  collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc
+  collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc,
+  serverTimestamp, addDoc
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import {
@@ -40,19 +41,25 @@ let allFields = []; // store all fields locally for search/sort
 let currentSearch = "";
 let currentFilter = "all";
 
-// 🔹 Helper: show nice alert modal
+// 🔹 Friendly alert modal, centered
 function showAlert(message, type = "info") {
   const modal = document.createElement('div');
-  modal.className = 'modal-alert';
+  modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/40';
+
   modal.innerHTML = `
-    <div class="bg-white rounded-xl p-6 max-w-sm w-[90%] text-center">
-      <h3 class="text-lg font-semibold mb-2 text-[var(--cane-800)]">${type === 'error' ? '⚠️' : 'ℹ️'} Notice</h3>
-      <p class="text-sm text-[var(--cane-700)] mb-4">${message}</p>
-      <button class="btn-primary px-4 py-2 rounded-lg">OK</button>
-    </div>`;
+    <div class="bg-white rounded-xl p-6 max-w-sm w-[90%] text-center shadow-lg animate-fadeIn">
+      <h3 class="text-lg font-semibold mb-2 ${type === 'error' ? 'text-red-600' : 'text-blue-600'}">
+        ${type === 'error' ? '⚠️ Error' : 'ℹ️ Notice'}
+      </h3>
+      <p class="text-sm text-gray-700 mb-4">${message}</p>
+      <button class="px-5 py-2 bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white rounded-lg font-medium">OK</button>
+    </div>
+  `;
+
+  // Button handler
   modal.querySelector('button').onclick = () => modal.remove();
+
   document.body.appendChild(modal);
-  
 }
 
 // 🔹 Helper: open fullscreen viewer
@@ -106,49 +113,79 @@ document.querySelectorAll('.sortOption').forEach(opt => {
   };
 });
 
-// Toggle Sort Dropdown
 const sortBtn = document.getElementById('sortDropdownBtn');
 const sortMenu = document.getElementById('sortDropdownMenu');
 
 sortBtn.addEventListener('click', (e) => {
-  e.stopPropagation(); // prevent accidental close
+  e.stopPropagation();
+
+  const rect = sortBtn.getBoundingClientRect();
+
+  sortMenu.style.position = 'fixed'; // use fixed instead of absolute
+  sortMenu.style.top = `${rect.bottom}px`;
+  sortMenu.style.left = `${rect.left}px`;
+  sortMenu.style.minWidth = `${rect.width}px`;
+  sortMenu.style.zIndex = 9999; // ensure it's above everything
   sortMenu.classList.toggle('hidden');
 });
 
-//  Hide dropdown when clicking anywhere else
-document.addEventListener('click', (e) => {
-  if (!sortMenu.contains(e.target) && !sortBtn.contains(e.target)) {
-    sortMenu.classList.add('hidden');
-  }
+// Close dropdown when clicking outside
+document.addEventListener('click', () => {
+  sortMenu.classList.add('hidden');
 });
-
-
 
 // 🔸 Filter and render based on search and sort
 function applyFilters() {
   const searchVal = document.getElementById('searchFieldInput').value.trim().toLowerCase();
   currentSearch = searchVal;
 
-  let filtered = allFields.filter(f => {
-    const matchesSearch = 
-      f.field_name?.toLowerCase().includes(searchVal) ||
-      f.barangay?.toLowerCase().includes(searchVal) ||
-      f.street?.toLowerCase().includes(searchVal) ||
-      f.status?.toLowerCase().includes(searchVal);
+let filtered = allFields.filter(f => {
+  const matchesSearch = 
+    f.field_name?.toLowerCase().includes(searchVal) ||
+    f.barangay?.toLowerCase().includes(searchVal) ||
+    f.street?.toLowerCase().includes(searchVal) ||
+    f.status?.toLowerCase().includes(searchVal);
 
-    const matchesFilter = currentFilter === "all" ? true : (f.status?.toLowerCase() === currentFilter);
-    return matchesSearch && matchesFilter;
-  });
+  // 🔹 Custom filter logic
+  let matchesFilter;
+  if (currentFilter === "all") {
+    matchesFilter = true;
+  } else if (currentFilter === "reviewed") {
+    matchesFilter = ['reviewed', 'active'].includes(f.status?.toLowerCase());
+  } else {
+    matchesFilter = f.status?.toLowerCase() === currentFilter;
+  }
 
-  // Sort descending by createdAt by default (fallback to submittedAt for old data)
-  filtered.sort((a,b) => {
-    const aTime = (a.createdAt?.seconds || a.submittedAt?.seconds || 0);
-    const bTime = (b.createdAt?.seconds || b.submittedAt?.seconds || 0);
+  return matchesSearch && matchesFilter;
+});
+
+
+  // Custom sort: by status priority then by updatedAt descending
+  const statusPriority = {
+    'to edit': 3,
+    'pending': 2,
+    'reviewed': 1,
+    'approved': 1
+  };
+
+  filtered.sort((a, b) => {
+    const aStatus = a.status?.toLowerCase() || 'pending';
+    const bStatus = b.status?.toLowerCase() || 'pending';
+
+    const aPriority = statusPriority[aStatus] || 0;
+    const bPriority = statusPriority[bStatus] || 0;
+
+    if (bPriority !== aPriority) return bPriority - aPriority;
+
+    // If same priority, sort by updatedAt descending (latest first)
+    const aTime = a.updatedAt?.seconds || a.createdAt?.seconds || 0;
+    const bTime = b.updatedAt?.seconds || b.createdAt?.seconds || 0;
     return bTime - aTime;
   });
 
   renderFields(filtered);
 }
+
 
 function renderFields(list) {
   container.innerHTML = '';
@@ -199,12 +236,14 @@ function renderFields(list) {
     `;
 
     card.onclick = async () => {
-      if (data.isNew) {
-        await updateDoc(doc(db, 'field_applications', currentUid, 'fields', data.id), {
-          isNew: false,
-        });
-      }
-      openEditModal(currentUid, data.id, data);
+if (data.isNew) {
+  // update the top-level fields document (matches your Firestore rules & queries)
+  await updateDoc(doc(db, 'fields', data.id), {
+    isNew: false,
+  });
+}
+openEditModal(currentUid, data.id, data);
+
     };
 
     container.appendChild(card);
@@ -345,7 +384,10 @@ async function openEditModal(uid, fieldId, data){
           </div>
         </div>
 
-        <div id="docSection" class="grid md:grid-cols-2 gap-4"></div>
+        <div class="space-y-3">
+  <div id="docSection" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+</div>
+
 
         <!-- Policy agreement text (only visible when "to edit") -->
           <div id="policyNotice" class="hidden mt-3 text-sm text-gray-700">
@@ -419,86 +461,78 @@ async function openEditModal(uid, fieldId, data){
 
 // 🔹 Document Section — perfectly aligned 2-column, centered in modal
 docSection.innerHTML = `
-  <div class="w-full max-w-5xl mx-auto">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+<div class="w-full mx-auto px-1">
 
-      <!-- Barangay Certificate -->
-      <div>
-        <label class="block text-sm font-medium mb-1">Barangay Certificate</label>
-        <div class="w-full border px-3 py-2 rounded bg-white flex flex-col gap-2">
-          <div id="prev_barangayCertUrl" class="text-sm text-gray-700"></div>
-          ${editable ? `
-            <button type="button" data-doc="barangayCertUrl"
-              class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
-              <i class="fa-solid fa-camera mr-1"></i> Change Photo
-            </button>` : ''}
-          <input type="file" id="file_barangayCertUrl" accept="image/*" style="display:none">
-          <input type="hidden" id="b64_barangayCertUrl">
-        </div>
-      </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 justify-items-center">
 
-      <!-- Land Title -->
-      <div>
-        <label class="block text-sm font-medium mb-1">Land Title</label>
-        <div class="w-full border px-3 py-2 rounded bg-white flex flex-col gap-2">
-          <div id="prev_landTitleUrl" class="text-sm text-gray-700"></div>
-          ${editable ? `
-            <button type="button" data-doc="landTitleUrl"
-              class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
-              <i class="fa-solid fa-camera mr-1"></i> Change Photo
-            </button>` : ''}
-          <input type="file" id="file_landTitleUrl" accept="image/*" style="display:none">
-          <input type="hidden" id="b64_landTitleUrl">
-        </div>
-      </div>
 
-      <!-- Valid ID (Front) -->
-      <div>
-        <label class="block text-sm font-medium mb-1">Valid ID (Front)</label>
-        <div class="w-full border px-3 py-2 rounded bg-white flex flex-col gap-2">
-          <div id="prev_validFrontUrl" class="text-sm text-gray-700"></div>
-          ${editable ? `
-            <button type="button" data-doc="validFrontUrl"
-              class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
-              <i class="fa-solid fa-camera mr-1"></i> Change Photo
-            </button>` : ''}
-          <input type="file" id="file_validFrontUrl" accept="image/*" style="display:none">
-          <input type="hidden" id="b64_validFrontUrl">
-        </div>
-      </div>
-
-      <!-- Valid ID (Back) -->
-      <div>
-        <label class="block text-sm font-medium mb-1">Valid ID (Back)</label>
-        <div class="w-full border px-3 py-2 rounded bg-white flex flex-col gap-2">
-          <div id="prev_validBackUrl" class="text-sm text-gray-700"></div>
-          ${editable ? `
-            <button type="button" data-doc="validBackUrl"
-              class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
-              <i class="fa-solid fa-camera mr-1"></i> Change Photo
-            </button>` : ''}
-          <input type="file" id="file_validBackUrl" accept="image/*" style="display:none">
-          <input type="hidden" id="b64_validBackUrl">
-        </div>
-      </div>
-
-      <!-- Selfie with ID (full width) -->
-      <div class="md:col-span-2">
-        <label class="block text-sm font-medium mb-1">Selfie with ID</label>
-        <div class="w-full border px-3 py-2 rounded bg-white flex flex-col gap-2">
-          <div id="prev_selfieUrl" class="text-sm text-gray-700"></div>
-          ${editable ? `
-            <button type="button" data-doc="selfieUrl"
-              class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
-              <i class="fa-solid fa-camera mr-1"></i> Change Photo
-            </button>` : ''}
-          <input type="file" id="file_selfieUrl" accept="image/*" style="display:none">
-          <input type="hidden" id="b64_selfieUrl">
-        </div>
-      </div>
-
+    <!-- Barangay Certificate -->
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+      <label class="block text-sm font-semibold mb-2">Barangay Certificate</label>
+      <div id="prev_barangayCertUrl" class="text-sm text-gray-700"></div>
+      ${editable ? `
+        <button type="button" data-doc="barangayCertUrl"
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          <i class="fa-solid fa-camera mr-1"></i> Change Photo
+        </button>` : ''}
+      <input type="file" id="file_barangayCertUrl" accept="image/*" style="display:none">
+      <input type="hidden" id="b64_barangayCertUrl">
     </div>
+
+    <!-- Land Title -->
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+      <label class="block text-sm font-semibold mb-2">Land Title</label>
+      <div id="prev_landTitleUrl" class="text-sm text-gray-700"></div>
+      ${editable ? `
+        <button type="button" data-doc="landTitleUrl"
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          <i class="fa-solid fa-camera mr-1"></i> Change Photo
+        </button>` : ''}
+      <input type="file" id="file_landTitleUrl" accept="image/*" style="display:none">
+      <input type="hidden" id="b64_landTitleUrl">
+    </div>
+
+    <!-- Valid ID (Front) -->
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+      <label class="block text-sm font-semibold mb-2">Valid ID (Front)</label>
+      <div id="prev_validFrontUrl" class="text-sm text-gray-700"></div>
+      ${editable ? `
+        <button type="button" data-doc="validFrontUrl"
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          <i class="fa-solid fa-camera mr-1"></i> Change Photo
+        </button>` : ''}
+      <input type="file" id="file_validFrontUrl" accept="image/*" style="display:none">
+      <input type="hidden" id="b64_validFrontUrl">
+    </div>
+
+    <!-- Valid ID (Back) -->
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+      <label class="block text-sm font-semibold mb-2">Valid ID (Back)</label>
+      <div id="prev_validBackUrl" class="text-sm text-gray-700"></div>
+      ${editable ? `
+        <button type="button" data-doc="validBackUrl"
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          <i class="fa-solid fa-camera mr-1"></i> Change Photo
+        </button>` : ''}
+      <input type="file" id="file_validBackUrl" accept="image/*" style="display:none">
+      <input type="hidden" id="b64_validBackUrl">
+    </div>
+
+    <!-- Selfie with ID -->
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm md:col-span-2">
+      <label class="block text-sm font-semibold mb-2">Selfie with ID</label>
+      <div id="prev_selfieUrl" class="text-sm text-gray-700"></div>
+      ${editable ? `
+        <button type="button" data-doc="selfieUrl"
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          <i class="fa-solid fa-camera mr-1"></i> Change Photo
+        </button>` : ''}
+      <input type="file" id="file_selfieUrl" accept="image/*" style="display:none">
+      <input type="hidden" id="b64_selfieUrl">
+    </div>
+
   </div>
+</div>
 `;
 
 
@@ -736,17 +770,45 @@ modal.querySelectorAll('.change-btn').forEach(btn => {
     longitude:parseFloat(f('#m_lng').value)
   };
 
-  // check if no changes
-  if(JSON.stringify(newData)===JSON.stringify({
-    field_name:data.field_name,street:data.street,terrain_type:data.terrain_type,
-    sugarcane_variety:data.sugarcane_variety,field_size:data.field_size,
-    latitude:data.latitude,longitude:data.longitude
-  })){
-    showAlert("No changes detected — nothing to save.");
-    return;
+function hasChanges(orig, updated) {
+  for (const key in updated) {
+    if (updated[key] !== orig[key]) return true;
   }
+  return false;
+}
 
-  // ✅ Show confirmation modal
+function logChanges(orig, updated) {
+  const changes = [];
+  for (const key in updated) {
+    if (updated[key] !== orig[key]) {
+      changes.push({ field: key, before: orig[key], after: updated[key] });
+    }
+  }
+  console.table(changes);
+  return changes.length > 0;
+}
+
+// Step 1: log changes for debugging
+const textChanged = logChanges(data, newData);
+
+const fileKeys = ['barangayCertUrl','landTitleUrl','validFrontUrl','validBackUrl','selfieUrl'];
+let fileChanged = false;
+
+fileKeys.forEach(k => {
+  const val = modal.querySelector(`#b64_${k}`).value;
+  if (val && val !== (data[k] || '')) {
+    console.log(`File changed: ${k}`, 'Before:', data[k], 'After:', val);
+    fileChanged = true;
+  }
+});
+
+if (!textChanged && !fileChanged) {
+  showAlert("No changes detected. Please modify some fields before saving.", "error");
+  return;
+}
+
+
+  // Show confirmation modal
   const confirmBox = document.createElement("div");
   confirmBox.className = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[200]";
   confirmBox.innerHTML = `
@@ -770,37 +832,81 @@ modal.querySelectorAll('.change-btn').forEach(btn => {
     };
   };
 
-  // Fetch & Watch SRA remarks
+// --- NEW: Fetch & Watch SRA remarks from top-level 'fields/{fieldId}/remarks'
 const remarkBox = modal.querySelector("#sraRemarkBox");
 const remarkText = modal.querySelector("#sraRemarkText");
 
-const fieldRef = doc(db, "field_applications", uid, "fields", fieldId);
+// Build a ref to the remarks subcollection under top-level fields/{fieldId}
+const remarksCollectionRef = collection(db, "fields", fieldId, "remarks");
 
-onSnapshot(fieldRef, (docSnap) => {
-  if (!docSnap.exists()) return;
-
-  const fieldData = docSnap.data();
-  const remark = fieldData.latestRemark;
-  const remarkAt = fieldData.latestRemarkAt;
-  const status = fieldData.status;
-
-  // Hide box if field is reviewed or no remarks exist
-  if (!remark || status === "reviewed") {
+// Keep unsubscribe so we can stop listening when modal closes
+let unsubscribeRemarks = onSnapshot(remarksCollectionRef, (snap) => {
+  // If no remarks, hide the box
+  if (snap.empty) {
     remarkBox.classList.add("hidden");
     return;
   }
 
-  // Otherwise, show remark box
-  remarkBox.classList.remove("hidden");
-  remarkText.innerHTML = `
-    <span class="block text-sm">${remark}</span>
-    ${remarkAt ? `<p class="text-xs text-gray-500 mt-1">${formatFullDate(remarkAt)}</p>` : ""}
-  `;
+  // Convert docs to array and sort by createdAt desc (newest first)
+  const remarks = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      const ta = a.createdAt?.seconds || 0;
+      const tb = b.createdAt?.seconds || 0;
+      return tb - ta;
+    });
 
-  // Optional visual cue when remark changes
-  remarkBox.classList.add("animate-pulse");
-  setTimeout(() => remarkBox.classList.remove("animate-pulse"), 1200);
+  const latest = remarks[0];
+  if (!latest || !latest.message) {
+    remarkBox.classList.add("hidden");
+    return;
+  }
+
+  // Optionally read status from the top-level fields doc (to hide on 'reviewed')
+  // If you want to hide the remark when status === 'reviewed', read the field doc once:
+  (async () => {
+    try {
+      const topFieldDoc = await getDoc(doc(db, "fields", fieldId));
+      const status = topFieldDoc.exists() ? (topFieldDoc.data().status || '') : '';
+      if (status === 'reviewed') {
+        remarkBox.classList.add("hidden");
+        return;
+      }
+    } catch (e) {
+      // ignore read error; still show remark if available
+    }
+
+    // Show the latest remark
+    remarkBox.classList.remove("hidden");
+    remarkText.innerHTML = `
+      <span class="block text-sm">${latest.message}</span>
+      ${latest.createdAt ? `<p class="text-xs text-gray-500 mt-1">${formatFullDate(latest.createdAt)}</p>` : ""}
+    `;
+
+    // Visual pulse to show change
+    remarkBox.classList.add("animate-pulse");
+    setTimeout(() => remarkBox.classList.remove("animate-pulse"), 1200);
+  })();
+}, (err) => {
+  console.error("Remarks listener error:", err);
+  // hide on error
+  remarkBox.classList.add("hidden");
 });
+
+// Unsubscribe when modal is closed to avoid memory leaks
+modal.querySelector('#closeModalBtn').addEventListener('click', () => {
+  if (typeof unsubscribeRemarks === 'function') unsubscribeRemarks();
+  modal.remove();
+});
+
+// Also unsubscribe if you cancel via Cancel button
+const cancelBtn = modal.querySelector('#m_cancel');
+if (cancelBtn) {
+  cancelBtn.addEventListener('click', () => {
+    if (typeof unsubscribeRemarks === 'function') unsubscribeRemarks();
+    modal.remove();
+  });
+}
 
 
 }
@@ -824,23 +930,56 @@ document.body.appendChild(savingOverlay);
       isNew: true
     };
 
-    const storage=getStorage();
-    for(const key of ['barangayCertUrl','landTitleUrl','validFrontUrl','validBackUrl','selfieUrl']){
-      const fileEl=modal.querySelector(`#file_${key}`);
-      const b64=modal.querySelector(`#b64_${key}`).value;
-      if(fileEl?.files?.length||b64.startsWith('data:')){
-        const refPath=`field_applications/${uid}/${fieldId}/${key}_${Date.now()}.png`;
-        const refObj=sref(storage,refPath);
-        const uploadTask=b64.startsWith('data:')?uploadString(refObj,b64,'data_url'):uploadBytes(refObj,fileEl.files[0]);
-        await uploadTask;
-        const url=await getDownloadURL(refObj);
-        if(origData[key]) await deleteStorageFileIfUrl(origData[key]);
-        updates[key]=url;
-      }
-    }
+const uploadKeys = ['barangayCertUrl','landTitleUrl','validFrontUrl','validBackUrl','selfieUrl'];
 
-    await updateDoc(doc(db,'field_applications',uid,'fields',fieldId),updates);
+await Promise.all(uploadKeys.map(async key => {
+  const fileEl = modal.querySelector(`#file_${key}`);
+  const b64 = modal.querySelector(`#b64_${key}`).value;
+
+  if(fileEl?.files?.length || b64.startsWith('data:')){
+    const refPath = `field_applications/${uid}/${fieldId}/${key}_${Date.now()}.png`;
+    const refObj = sref(storage, refPath);
+    const url = b64.startsWith('data:') 
+      ? await uploadString(refObj, b64, 'data_url').then(() => getDownloadURL(refObj))
+      : await uploadBytes(refObj, fileEl.files[0]).then(() => getDownloadURL(refObj));
+
+    if(origData[key]) deleteStorageFileIfUrl(origData[key]); // no await here
+    updates[key] = url;
+  }
+}));
+
+
+    await updateDoc(doc(db,'fields',fieldId), updates);
     savingOverlay.remove();
+// Notify SRA about the field update
+await notifySRAFieldUpdate(newData.field_name);
+/**
+ * Send notification to SRA when a field is updated
+ * @param {string} fieldName - Name of the updated field
+ * @param {string} SRA_UID - UID of the SRA officer (or null for broadcast)
+ */
+async function notifySRAFieldUpdate(fieldName, SRA_UID = null) {
+  try {
+    await addDoc(collection(db, 'notifications'), {
+      role: 'sra', // Broadcast to all SRA officers if you want
+      title: 'Field Updated for Review',
+      message: `A user has updated their field <b>${fieldName}</b> and resubmitted it for SRA review.`,
+      type: 'field_updated', // optional, for filtering notification types
+      relatedEntity: 'field',
+      relatedEntityName: fieldName,
+      status: 'unread',
+      read: false,
+      readAt: null,
+      timestamp: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      userId: SRA_UID // Optional: can be null for broadcast
+    });
+
+    console.log(`✅ SRA notified about updated field: ${fieldName}`);
+  } catch (error) {
+    console.error('⚠️ Failed to notify SRA:', error);
+  }
+}
 
     //  Success modal with smooth fade
     const successModal = document.createElement('div');

@@ -39,6 +39,59 @@
     });
   })();
 </script>
+        <script>
+            // Header hamburger for Handler: reuse desktop collapse button when possible,
+            // and provide mobile open/close overlay behavior.
+            document.addEventListener('DOMContentLoaded', function(){
+                const btn = document.getElementById('handlerHamburgerBtn');
+                const sidebar = document.getElementById('sidebar');
+                if (!btn || !sidebar) return;
+
+                function ensureOverlay(){
+                    let ov = document.getElementById('handlerSidebarOverlay');
+                    if (!ov){
+                        ov = document.createElement('div');
+                        ov.id = 'handlerSidebarOverlay';
+                        ov.className = 'fixed inset-0 bg-black bg-opacity-30 z-30 lg:hidden';
+                        ov.style.display = 'none';
+                        document.body.appendChild(ov);
+                        ov.addEventListener('click', function(){ sidebar.classList.add('closed'); ov.style.display = 'none'; });
+                    }
+                    return ov;
+                }
+
+                btn.addEventListener('click', function(e){
+                    if (window.innerWidth >= 1024){
+                        // Trigger the existing collapse button so we reuse its logic
+                        const desktopBtn = document.getElementById('handlerCollapseSidebarBtn');
+                        if (desktopBtn) desktopBtn.click();
+                        return;
+                    }
+
+                    const ov = ensureOverlay();
+                    if (sidebar.classList.contains('closed')){
+                        sidebar.classList.remove('closed');
+                        ov.style.display = 'block';
+                    } else {
+                        sidebar.classList.add('closed');
+                        ov.style.display = 'none';
+                    }
+                });
+
+                // Start mobile with sidebar closed
+                if (window.innerWidth < 1024) sidebar.classList.add('closed');
+
+                window.addEventListener('resize', function(){
+                    const ov = document.getElementById('handlerSidebarOverlay');
+                    if (window.innerWidth >= 1024){
+                        if (ov) ov.style.display = 'none';
+                        sidebar.classList.remove('closed');
+                    } else {
+                        sidebar.classList.add('closed');
+                    }
+                });
+            });
+        </script>
 <script>
 // Sidebar collapse and header dropdown (bind after DOM ready)
 (function(){
@@ -694,7 +747,12 @@
     <header class="shadow-lg bg-white py-1">
         <div id="handlerHeaderContainer" class="container mx-auto px-4 py-1 lg:pl-64">
             <div class="flex items-center justify-between h-12">
-                <div class="flex items-center space-x-4"></div>
+                <div class="flex items-center space-x-4">
+                    <!-- Header hamburger for mobile/desktop: reuse collapse button on desktop -->
+                    <button id="handlerHamburgerBtn" class="lg:hidden bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors hamburger-icon" title="Menu">
+                        <i class="fas fa-bars text-gray-900"></i>
+                    </button>
+                </div>
                 <div class="text-center"></div>
                 <div class="flex items-center space-x-4">
                     <!-- Back to Lobby Button -->

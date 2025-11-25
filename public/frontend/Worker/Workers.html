@@ -87,30 +87,63 @@
         
         /* Sidebar transitions */
         .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
         }
         
         /* Mobile sidebar overlay */
         .sidebar-overlay {
             transition: opacity 0.3s ease-in-out;
         }
-        /* Desktop collapsed sidebar */
-        body.sidebar-collapsed #sidebar { width: 5rem; }
-        body.sidebar-collapsed #sidebar .nav-item span { display: none; }
-        body.sidebar-collapsed #sidebar .nav-item { justify-content: center; }
-        body.sidebar-collapsed #sidebar .nav-item i { margin: 0; }
-        body.sidebar-collapsed #sidebar .ml-6 { display: none; }
-        body.sidebar-collapsed #sidebar .text-xs, 
-        body.sidebar-collapsed #sidebar .text-gray-400, 
-        body.sidebar-collapsed #sidebar .text-white.font-semibold { display: none; }
-        body.sidebar-collapsed #sidebar .space-x-3 { gap: 0; }
-        body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
+        
+        /* Desktop collapsed sidebar - icon-only mode */
+        @media (min-width: 1024px) {
+            body.sidebar-collapsed #sidebar {
+                width: 5rem;
+            }
+            body.sidebar-collapsed #sidebar .nav-item span {
+                opacity: 0;
+                width: 0;
+                overflow: hidden;
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar .nav-item {
+                justify-content: center;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            body.sidebar-collapsed #sidebar .nav-item i {
+                margin: 0;
+            }
+            body.sidebar-collapsed #sidebar #sidebarUserName,
+            body.sidebar-collapsed #sidebar #sidebarUserType {
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar #profileImageContainer {
+                width: 2.5rem;
+                height: 2.5rem;
+                font-size: 1rem;
+            }
+            body.sidebar-collapsed #sidebar .space-x-3 {
+                gap: 0;
+            }
+            body.sidebar-collapsed #sidebar div[style*="text-transform: uppercase"] {
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar nav {
+                padding-left: 0;
+                padding-right: 0;
+            }
+        }
+        
         /* Ensure content/header shift with sidebar state on desktop */
         @media (min-width: 1024px) {
-            body:not(.sidebar-collapsed) #mainWrapper { margin-left: 16rem !important; }
-            body.sidebar-collapsed #mainWrapper { margin-left: 5rem !important; }
-            body:not(.sidebar-collapsed) #workerHeaderContainer { padding-left: 16rem !important; }
-            body.sidebar-collapsed #workerHeaderContainer { padding-left: 5rem !important; }
+            body:not(.sidebar-collapsed) #mainWrapper {
+                margin-left: 16rem !important;
+            }
+            body.sidebar-collapsed #mainWrapper {
+                margin-left: 5rem !important;
+            }
+            /* Header stays full width, no left padding */
         }
         
         /* FullCalendar customization */
@@ -260,39 +293,19 @@
     <div class="h-12"></div>
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 z-30 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
-        <div class="w-full px-4 lg:ml-64 lg:pr-4">
-            <div class="flex items-center justify-between">
-                <!-- Left side with hamburger and logo -->
-                <div class="flex items-center">
-                    <!-- Hamburger Menu Button -->
-                    <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors mr-4" onclick="toggleSidebar()">
-                        <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
-                    </button>
-                    
-                    <!-- Vertical Separator - Only show on desktop -->
-                    <div class="hidden lg:block h-8 w-px bg-gray-300 mx-2"></div>
-                    
-                    <!-- Logo or Title - Only show on desktop -->
-                    <div class="hidden lg:block ml-2">
-                        <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
-                    </div>
-                </div>
+        <div id="workerHeaderContainer" class="w-full flex items-center justify-between px-4">
+            <!-- Left side: Hamburger and Logo (always at far left) -->
+            <div class="flex items-center space-x-3">
+                <!-- Hamburger Menu Button (far left) -->
+                <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors" onclick="toggleSidebar()">
+                    <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
+                </button>
                 
-                <!-- Navigation Links - Desktop -->
-                <nav class="hidden lg:flex space-x-6">
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="dashboard">
-                        <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
-                    </a>
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="my-fields">
-                        <i class="fas fa-map-marked-alt mr-2"></i> My Fields
-                    </a>
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="my-tasks">
-                        <i class="fas fa-tasks mr-2"></i> My Tasks
-                    </a>
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="reports">
-                        <i class="fas fa-chart-bar mr-2"></i> Reports
-                    </a>
-                </nav>
+                <!-- Logo/Title -->
+                <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
+            </div>
+                
+                <!-- Navigation links removed - now only in sidebar -->
                 
                 <!-- Right side with user controls -->
                 <div class="flex items-center space-x-4">
@@ -351,7 +364,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
         </div>
     </header>
 
@@ -385,6 +397,7 @@
                             font-weight: 600;
                             font-size: 1.5rem;
                             border: 2px solid rgba(255,255,255,0.3);
+                            transition: all 0.3s ease;
                         " id="userInitials">
                             U
                         </div>
@@ -393,6 +406,7 @@
                             <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
                         </div>
                     </div>
+                    <!-- Mobile close button only -->
                     <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white">
                         <i class="fas fa-times" style="font-size: 1.25rem; line-height: 1.75rem;"></i>
                     </button>
@@ -769,80 +783,17 @@
         // Close mobile sidebar if open
         const sidebar = document.getElementById('sidebar');
         if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
-          toggleSidebar();
+          const overlay = document.getElementById('sidebarOverlay');
+          sidebar.classList.add('-translate-x-full');
+          if (overlay) overlay.classList.add('hidden');
         }
         
         // Store the active section in localStorage
         localStorage.setItem('activeSection', sectionId);
       }
       
-      // Toggle sidebar function
-      function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const icon = document.getElementById('hamburgerIcon');
-        
-        sidebar.classList.toggle('-translate-x-full');
-        overlay.classList.toggle('hidden');
-        
-        // Toggle between bars and times icon
-        if (sidebar.classList.contains('-translate-x-full')) {
-          icon.classList.remove('fa-times');
-          icon.classList.add('fa-bars');
-          // Store sidebar state in localStorage
-          localStorage.setItem('sidebarCollapsed', 'true');
-        } else {
-          icon.classList.remove('fa-bars');
-          icon.classList.add('fa-times');
-          // Store sidebar state in localStorage
-          localStorage.setItem('sidebarCollapsed', 'false');
-        }
-      }
-      
-      // Toggle sidebar collapse/expand
-      function toggleSidebarCollapse() {
-        const sidebar = document.getElementById('sidebar');
-        const closeBtn = document.getElementById('closeSidebarDesktop');
-        
-        sidebar.classList.toggle('lg:w-16');
-        sidebar.classList.toggle('lg:items-center');
-        
-        // Toggle between chevron left and right
-        if (sidebar.classList.contains('lg:w-16')) {
-          closeBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
-          closeBtn.title = 'Expand sidebar';
-          // Store collapsed state
-          localStorage.setItem('sidebarCollapsed', 'true');
-        } else {
-          closeBtn.innerHTML = '<i class="fas fa-chevron-left text-xs"></i>';
-          closeBtn.title = 'Collapse sidebar';
-          // Store expanded state
-          localStorage.setItem('sidebarCollapsed', 'false');
-        }
-      }
-      
-      // Initialize sidebar state from localStorage and set up navigation
+      // Initialize navigation when DOM is loaded
       document.addEventListener('DOMContentLoaded', function() {
-        const sidebar = document.getElementById('sidebar');
-        const closeBtn = document.getElementById('closeSidebarDesktop');
-        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        
-        if (isCollapsed) {
-          sidebar.classList.add('lg:w-16', 'lg:items-center');
-          if (closeBtn) {
-            closeBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
-            closeBtn.title = 'Expand sidebar';
-          }
-        }
-        
-        // Add click event for close button
-        if (closeBtn) {
-          closeBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleSidebarCollapse();
-          });
-        }
-        
         // Set up navigation for sidebar items
         document.querySelectorAll('.nav-item').forEach(item => {
           item.addEventListener('click', function(e) {
@@ -893,60 +844,6 @@
         const activeSection = localStorage.getItem('activeSection') || 'dashboard';
         navigateToSection(activeSection);
       });
-
-      // Close sidebar on mobile when clicking overlay or close button
-      document.getElementById('sidebarOverlay').addEventListener('click', toggleSidebar);
-      document.getElementById('closeSidebarBtn')?.addEventListener('click', toggleSidebar);
-
-      // Handle window resize
-      window.addEventListener('resize', function() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        if (window.innerWidth >= 1024) {
-          // On desktop, ensure sidebar is visible and overlay is hidden
-          sidebar.classList.remove('-translate-x-full');
-          overlay.classList.add('hidden');
-        } else {
-          // On mobile, ensure sidebar is hidden by default
-          sidebar.classList.add('-translate-x-full');
-          overlay.classList.add('hidden');
-        }
-      });
-
-      // Navigation functionality
-      function setupNavigation() {
-        // Handle nav item clicks
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const sectionId = this.getAttribute('data-section');
-            showSection(sectionId);
-            
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(navItem => {
-              navItem.style.background = '';
-              navItem.style.borderLeft = 'none';
-              navItem.style.color = '#e5e7eb';
-              navItem.style.fontWeight = '400';
-            });
-            
-            // Set active state for clicked item
-            this.style.background = 'rgba(255, 255, 255, 0.15)';
-            this.style.borderLeft = '3px solid #fff';
-            this.style.color = '#f9fafb';
-            this.style.fontWeight = '500';
-            
-            // Close sidebar on mobile after selection
-            if (window.innerWidth < 1024) {
-              toggleSidebar();
-            }
-          });
-        });
-      }
-      
-      // Initialize navigation when DOM is loaded
-      document.addEventListener('DOMContentLoaded', setupNavigation);
 
       // Initialize FullCalendar instances
       document.addEventListener('DOMContentLoaded', function () {

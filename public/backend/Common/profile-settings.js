@@ -1,11 +1,12 @@
 import { auth, db } from "./firebase-config.js";
-import { showPopupMessage, showConfirm } from "./ui-popup.js";
+import { createNotification } from "./notifications.js";
 import { getAuth, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider, updateEmail, updateProfile } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 const ui = {
   updateBtn: document.getElementById('viewUpdateBtn'),
+  viewUpdateBtnWrapper: document.getElementById('viewUpdateBtnWrapper'),
   viewEditBtn: document.getElementById('viewEditBtn'),
   editPanel: document.getElementById('editPanel'),
   updateFields: document.getElementById('updateModalFields'),
@@ -47,17 +48,46 @@ const ui = {
   updateModal: document.getElementById('updateInfoModal'),
   updateModalCancelBtn: document.getElementById('updateModalCancelBtn'),
   updateModalCancelSecondaryBtn: document.getElementById('updateModalCancelSecondaryBtn'),
+  updateModalPhotoPreview: document.getElementById('updateModalPhotoPreview'),
+  updateModalPhotoUploadBtn: document.getElementById('updateModalPhotoUploadBtn'),
+  updateModalPhotoCameraBtn: document.getElementById('updateModalPhotoCameraBtn'),
+  updateModalPhotoFileInput: document.getElementById('updateModalPhotoFileInput'),
+  editProfileModal: document.getElementById('editProfileModal'),
+  editModalCancelBtn: document.getElementById('editModalCancelBtn'),
+  editModalCancelSecondaryBtn: document.getElementById('editModalCancelSecondaryBtn'),
+  editModalPhotoPreview: document.getElementById('editModalPhotoPreview'),
+  editModalPhotoUploadBtn: document.getElementById('editModalPhotoUploadBtn'),
+  editModalPhotoCameraBtn: document.getElementById('editModalPhotoCameraBtn'),
+  editModalPhotoFileInput: document.getElementById('editModalPhotoFileInput'),
+  editModalSaveBtn: document.getElementById('editModalSaveBtn'),
+  edit: {
+    fullname: document.getElementById('edit_fullname'),
+    email: document.getElementById('edit_email'),
+    contact: document.getElementById('edit_contact'),
+    barangay: document.getElementById('edit_barangay'),
+    municipality: document.getElementById('edit_municipality'),
+    nickname: document.getElementById('edit_nickname'),
+    gender: document.getElementById('edit_gender'),
+    birthday: document.getElementById('edit_birthday'),
+    address: document.getElementById('edit_address'),
+  },
   verifyModal: document.getElementById('verifyModal'),
   attemptsLabel: document.getElementById('attemptsLabel'),
   verifyPassword: document.getElementById('verifyPassword'),
   verifyError: document.getElementById('verifyError'),
   verifyConfirm: document.getElementById('verifyConfirm'),
-  verifyCancel: document.getElementById('verifyCancel')
+  verifyCancel: document.getElementById('verifyCancel'),
+  cameraModal: document.getElementById('cameraModal'),
+  cameraVideo: document.getElementById('cameraVideo'),
+  cameraClose: document.getElementById('cameraClose'),
+  cameraCapture: document.getElementById('cameraCapture')
 };
 
 let userDocCache = null;
 let role = 'worker';
 let remainingAttempts = 3;
+let currentCameraStream = null;
+let currentPhotoContext = null; // 'update' or 'edit'
 
 function normalizeRole(r){
   const s = (r || '').toLowerCase();
@@ -134,6 +164,8 @@ function buildMissingField(name, label, type = 'text') {
         </select>
       ` : type === 'date' ? `
         <input id="${id}" type="date" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+      ` : type === 'textarea' ? `
+        <textarea id="${id}" rows="3" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"></textarea>
       ` : `
         <input id="${id}" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
       `}
@@ -165,7 +197,6 @@ function populateReadOnly(data, user) {
   const v_fullname = document.getElementById('v_fullname');
   const v_email = document.getElementById('v_email');
   const v_contact = document.getElementById('v_contact');
-  const v_location = document.getElementById('v_location');
   const v_nickname = document.getElementById('v_nickname');
   const v_gender = document.getElementById('v_gender');
   const v_birthday = document.getElementById('v_birthday');
@@ -175,7 +206,6 @@ function populateReadOnly(data, user) {
   if (v_fullname) v_fullname.textContent = fullname;
   if (v_email) v_email.textContent = email;
   if (v_contact) v_contact.textContent = contact;
-  if (v_location) v_location.textContent = [barangay, municipality].filter(Boolean).join(', ') || '-';
   if (v_nickname) v_nickname.textContent = data.nickname || '-';
   if (v_gender) v_gender.textContent = data.gender || '-';
   if (v_birthday) v_birthday.textContent = data.birthday || '-';
@@ -204,10 +234,12 @@ function buildMissingFieldsUI(data) {
     return;
   }
   const missing = [];
+  if (!data.barangay) missing.push(['barangay', 'Barangay']);
+  if (!data.municipality) missing.push(['municipality', 'Municipality']);
   if (!data.nickname) missing.push(['nickname', 'Nickname']);
   if (!data.gender) missing.push(['gender', 'Gender', 'select']);
   if (!data.birthday) missing.push(['birthday', 'Birthday', 'date']);
-  if (!data.address) missing.push(['address', 'Complete Address']);
+  if (!data.address) missing.push(['address', 'Complete Address', 'textarea']);
   ui.updateFields.innerHTML = missing.map(([n,l,t]) => buildMissingField(n,l,t)).join('');
   // Show Update button only when at least one required additional field is missing; otherwise hide forever
   if (missing.length === 0) {
@@ -223,7 +255,9 @@ function isAdditionalInfoComplete(data) {
   return Boolean((data.nickname && data.nickname.trim()) &&
                  (data.gender && data.gender.trim()) &&
                  (data.birthday && data.birthday.trim()) &&
-                 (data.address && data.address.trim()));
+                 (data.address && data.address.trim()) &&
+                 (data.barangay && data.barangay.trim()) &&
+                 (data.municipality && data.municipality.trim()));
 }
 
 async function fetchUserDoc(uid) {
@@ -257,6 +291,152 @@ async function uploadProfilePhoto(user) {
   await updateProfile(user, { photoURL: url });
   await updateDoc(doc(db, 'users', user.uid), { photoURL: url, updatedAt: serverTimestamp() });
   return url;
+}
+
+async function uploadProfilePhotoFromInput(user, fileInput) {
+  const file = fileInput.files?.[0];
+  if (!file) return null;
+  const storage = getStorage();
+  const storageRef = ref(storage, `profilePhotos/${user.uid}/${Date.now()}_${file.name}`);
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  await updateProfile(user, { photoURL: url });
+  await updateDoc(doc(db, 'users', user.uid), { photoURL: url, updatedAt: serverTimestamp() });
+  return url;
+}
+
+function populateEditModal() {
+  const user = auth.currentUser;
+  if (!user || !userDocCache) return;
+  
+  ui.edit.fullname.value = userDocCache.fullname || user?.displayName || '';
+  ui.edit.email.value = user?.email || '';
+  ui.edit.contact.value = userDocCache.contact || '';
+  ui.edit.barangay.value = userDocCache.barangay || '';
+  ui.edit.municipality.value = userDocCache.municipality || '';
+  ui.edit.nickname.value = userDocCache.nickname || '';
+  ui.edit.gender.value = userDocCache.gender || '';
+  ui.edit.birthday.value = userDocCache.birthday || '';
+  ui.edit.address.value = userDocCache.address || '';
+  
+  // Set photo preview
+  const photoUrl = userDocCache.photoURL || user?.photoURL || '';
+  ui.editModalPhotoPreview.src = photoUrl || `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><rect width='100%' height='100%' fill='%23ecfcca'/><g fill='%235ea500'><circle cx='64' cy='48' r='22'/><rect x='28' y='80' width='72' height='28' rx='14'/></g></svg>`)}`;
+}
+
+function startCamera() {
+  if (!ui.cameraModal || !ui.cameraVideo) return;
+  
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    .then(stream => {
+      currentCameraStream = stream;
+      ui.cameraVideo.srcObject = stream;
+      openModal(ui.cameraModal);
+    })
+    .catch(err => {
+      console.error('Camera access denied:', err);
+      showNotification('Camera access denied or unavailable', 'error');
+    });
+}
+
+function stopCamera() {
+  if (currentCameraStream) {
+    currentCameraStream.getTracks().forEach(track => track.stop());
+    currentCameraStream = null;
+  }
+  if (ui.cameraVideo) {
+    ui.cameraVideo.srcObject = null;
+  }
+}
+
+ui.cameraClose?.addEventListener('click', () => {
+  closeModal(ui.cameraModal);
+  stopCamera();
+});
+
+ui.cameraCapture?.addEventListener('click', () => {
+  if (!ui.cameraVideo) return;
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = ui.cameraVideo.videoWidth || 640;
+  canvas.height = ui.cameraVideo.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(ui.cameraVideo, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL('image/png');
+  
+  // Convert to file
+  const byteString = atob(dataUrl.split(',')[1]);
+  const mimeString = 'image/png';
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  const blob = new Blob([ab], { type: mimeString });
+  const file = new File([blob], 'selfie.png', { type: 'image/png' });
+  
+  // Set to appropriate file input based on context
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  
+  if (currentPhotoContext === 'update') {
+    ui.updateModalPhotoFileInput.files = dt.files;
+    ui.updateModalPhotoPreview.src = dataUrl;
+  } else if (currentPhotoContext === 'edit') {
+    ui.editModalPhotoFileInput.files = dt.files;
+    ui.editModalPhotoPreview.src = dataUrl;
+  }
+  
+  closeModal(ui.cameraModal);
+  stopCamera();
+});
+
+function showNotification(message, type = 'info') {
+  try {
+    // Create notification div
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 z-[10000] max-w-md';
+    
+    const colors = {
+      success: 'bg-green-500',
+      error: 'bg-red-500',
+      warning: 'bg-orange-500',
+      info: 'bg-blue-500'
+    };
+    
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-times-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    };
+    
+    notification.innerHTML = `
+      <div class="${colors[type] || colors.info} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in">
+        <i class="fas ${icons[type] || icons.info} text-xl"></i>
+        <span class="flex-1">${message}</span>
+        <button class="notification-close ml-2 hover:bg-white/20 rounded p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    const closeBtn = notification.querySelector('.notification-close');
+    const remove = () => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => notification.remove(), 300);
+    };
+    
+    closeBtn.addEventListener('click', remove);
+    setTimeout(remove, 5000);
+    
+  } catch (e) {
+    console.error('Notification error:', e);
+    alert(message);
+  }
 }
 
 function confirmBeforeSave() {
@@ -311,12 +491,60 @@ ui.viewEditBtn?.addEventListener('click', () => {
 ui.updateBtn?.addEventListener('click', () => {
   openModal(ui.updateModal);
   try {
-    const map = [['ro_fullname','modal_ro_fullname'],['ro_email','modal_ro_email'],['ro_contact','modal_ro_contact'],['ro_location','modal_ro_location']];
+    const map = [['ro_fullname','modal_ro_fullname'],['ro_email','modal_ro_email'],['ro_contact','modal_ro_contact']];
     map.forEach(([from,to])=>{ const a=document.getElementById(from); const b=document.getElementById(to); if(a&&b) b.textContent=a.textContent||'-'; });
+    // Set photo preview
+    const currentPhoto = document.getElementById('viewProfilePhoto');
+    if (ui.updateModalPhotoPreview && currentPhoto) {
+      ui.updateModalPhotoPreview.src = currentPhoto.src;
+    }
   } catch(e) {}
 });
 ui.updateModalCancelBtn?.addEventListener('click', () => closeModal(ui.updateModal));
 ui.updateModalCancelSecondaryBtn?.addEventListener('click', () => closeModal(ui.updateModal));
+
+// Update Modal Photo Upload
+ui.updateModalPhotoUploadBtn?.addEventListener('click', () => ui.updateModalPhotoFileInput.click());
+ui.updateModalPhotoFileInput?.addEventListener('change', () => {
+  const f = ui.updateModalPhotoFileInput.files?.[0];
+  if (f) {
+    const reader = new FileReader();
+    reader.onload = e => { 
+      ui.updateModalPhotoPreview.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  }
+});
+ui.updateModalPhotoCameraBtn?.addEventListener('click', () => {
+  currentPhotoContext = 'update';
+  startCamera();
+});
+
+// Edit Modal Handlers
+ui.viewEditBtn?.addEventListener('click', () => {
+  openModal(ui.editProfileModal);
+  // Populate edit modal with current data
+  populateEditModal();
+});
+ui.editModalCancelBtn?.addEventListener('click', () => closeModal(ui.editProfileModal));
+ui.editModalCancelSecondaryBtn?.addEventListener('click', () => closeModal(ui.editProfileModal));
+
+// Edit Modal Photo Upload
+ui.editModalPhotoUploadBtn?.addEventListener('click', () => ui.editModalPhotoFileInput.click());
+ui.editModalPhotoFileInput?.addEventListener('change', () => {
+  const f = ui.editModalPhotoFileInput.files?.[0];
+  if (f) {
+    const reader = new FileReader();
+    reader.onload = e => { 
+      ui.editModalPhotoPreview.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  }
+});
+ui.editModalPhotoCameraBtn?.addEventListener('click', () => {
+  currentPhotoContext = 'edit';
+  startCamera();
+});
 
 ui.photo.btn?.addEventListener('click', () => ui.photo.file.click());
 ui.photo.file?.addEventListener('change', () => {
@@ -329,81 +557,104 @@ ui.photo.file?.addEventListener('change', () => {
 });
 
 ui.updateSaveBtn?.addEventListener('click', async () => {
-  const proceed = await confirmBeforeSave();
-  if (!proceed) return;
   const user = auth.currentUser;
   if (!user) return;
+  
   const updatePayload = {};
   const missNickname = document.getElementById('miss_nickname')?.value?.trim();
   const missGender = document.getElementById('miss_gender')?.value?.trim();
   const missBirthday = document.getElementById('miss_birthday')?.value?.trim();
   const missAddress = document.getElementById('miss_address')?.value?.trim();
+  const missBarangay = document.getElementById('miss_barangay')?.value?.trim();
+  const missMunicipality = document.getElementById('miss_municipality')?.value?.trim();
+  
   if (missNickname) updatePayload.nickname = missNickname;
   if (missGender) updatePayload.gender = missGender;
   if (missBirthday) updatePayload.birthday = missBirthday;
   if (missAddress) updatePayload.address = missAddress;
-  if (Object.keys(updatePayload).length === 0) return;
-  await ensureUserDoc(user.uid, { ...updatePayload, profileCompleted: true, updatedAt: serverTimestamp() });
-  const refreshed = await fetchUserDoc(user.uid);
-  userDocCache = refreshed || userDocCache;
-  populateReadOnly(userDocCache || {}, user);
-  buildMissingFieldsUI(userDocCache || {});
-  closeModal(ui.updateModal);
-  if (updatePayload.nickname) localStorage.setItem('farmerNickname', updatePayload.nickname);
-  // Permanently hide Update button after first completion
-  setUpdateButtonHidden(true);
-  setEditEnabled(true);
-  try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
+  if (missBarangay) updatePayload.barangay = missBarangay;
+  if (missMunicipality) updatePayload.municipality = missMunicipality;
+  
+  if (Object.keys(updatePayload).length === 0 && !ui.updateModalPhotoFileInput.files?.length) {
+    showNotification('Please fill in at least one field or upload a photo.', 'warning');
+    return;
+  }
+  
+  try {
+    // Upload photo if selected
+    if (ui.updateModalPhotoFileInput.files?.length) {
+      const photoUrl = await uploadProfilePhotoFromInput(user, ui.updateModalPhotoFileInput);
+      if (photoUrl) {
+        updatePayload.photoURL = photoUrl;
+      }
+    }
+    
+    await ensureUserDoc(user.uid, { ...updatePayload, profileCompleted: true, updatedAt: serverTimestamp() });
+    const refreshed = await fetchUserDoc(user.uid);
+    userDocCache = refreshed || userDocCache;
+    populateReadOnly(userDocCache || {}, user);
+    buildMissingFieldsUI(userDocCache || {});
+    closeModal(ui.updateModal);
+    
+    if (updatePayload.nickname) localStorage.setItem('farmerNickname', updatePayload.nickname);
+    
+    // Permanently hide Update button after first completion
+    setUpdateButtonHidden(true);
+    setEditEnabled(true);
+    
+    try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
+    
+    showNotification('Profile updated successfully!', 'success');
+  } catch (error) {
+    console.error('Save failed:', error);
+    showNotification('Failed to update profile: ' + (error?.message || 'Unknown error'), 'error');
+  }
 });
 
-ui.editSaveBtn?.addEventListener('click', async () => {
-  const proceed = await confirmBeforeSave();
-  if (!proceed) return;
+// Edit Modal Save Handler
+ui.editModalSaveBtn?.addEventListener('click', async () => {
   const user = auth.currentUser;
   if (!user) return;
   try {
     const payload = {
-      fullname: ui.input.fullname.value.trim(),
-      contact: ui.input.contact.value.trim(),
-      barangay: ui.input.barangay.value.trim(),
-      municipality: ui.input.municipality.value.trim(),
-      nickname: ui.input.nickname.value.trim(),
-      gender: ui.input.gender.value.trim(),
-      birthday: ui.input.birthday.value.trim(),
-      address: ui.input.address.value.trim(),
+      fullname: ui.edit.fullname.value.trim(),
+      contact: ui.edit.contact.value.trim(),
+      barangay: ui.edit.barangay.value.trim(),
+      municipality: ui.edit.municipality.value.trim(),
+      nickname: ui.edit.nickname.value.trim(),
+      gender: ui.edit.gender.value.trim(),
+      birthday: ui.edit.birthday.value.trim(),
+      address: ui.edit.address.value.trim(),
       updatedAt: serverTimestamp()
     };
-    const newEmail = ui.input.email.value.trim();
-    const promises = [];
-    if (ui.photo.file.files?.length) {
-      promises.push(uploadProfilePhoto(user));
+    const newEmail = ui.edit.email.value.trim();
+    
+    // Upload photo if selected
+    if (ui.editModalPhotoFileInput.files?.length) {
+      const photoUrl = await uploadProfilePhotoFromInput(user, ui.editModalPhotoFileInput);
+      if (photoUrl) {
+        payload.photoURL = photoUrl;
+      }
     }
+    
     if (newEmail && newEmail !== user.email) {
-      try { await updateEmail(user, newEmail); } catch (e) { /* ignore for now */ }
+      try { await updateEmail(user, newEmail); } catch (e) { console.error('Email update failed:', e); }
     }
     if (payload.fullname && payload.fullname !== (user.displayName || '')) {
-      try { await updateProfile(user, { displayName: payload.fullname }); } catch (e) { /* ignore */ }
+      try { await updateProfile(user, { displayName: payload.fullname }); } catch (e) { console.error('Display name update failed:', e); }
     }
-    await Promise.allSettled(promises);
+    
     await ensureUserDoc(user.uid, payload);
     const refreshed = await fetchUserDoc(user.uid);
     userDocCache = refreshed || userDocCache;
     populateReadOnly(userDocCache || {}, user);
-    // Stay in edit mode as requested
-    setExpanded(ui.editPanel, true);
+    
     if (payload.fullname) localStorage.setItem('farmerName', payload.fullname);
     if (payload.contact) localStorage.setItem('farmerContact', payload.contact);
     if (payload.nickname) localStorage.setItem('farmerNickname', payload.nickname);
-    toggleEditMode(true);
-    // Show success modal
-    if (ui.successModal) {
-      openModal(ui.successModal);
-      const close = () => {
-        if (ui.successOk) ui.successOk.removeEventListener('click', close);
-        closeModal(ui.successModal);
-      };
-      if (ui.successOk) ui.successOk.addEventListener('click', close);
-    }
+    
+    closeModal(ui.editProfileModal);
+    
     // If after editing, all additional info is complete, mark profileCompleted and hide Update
     if (isAdditionalInfoComplete(userDocCache)) {
       await ensureUserDoc(user.uid, { profileCompleted: true, updatedAt: serverTimestamp() });
@@ -412,14 +663,14 @@ ui.editSaveBtn?.addEventListener('click', async () => {
     } else {
       setUpdateButtonHidden(false);
     }
+    
+    try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
+    
+    showNotification('Profile changes saved successfully!', 'success');
+    
   } catch (err) {
     console.error('Save failed:', err);
-    try { 
-      await showPopupMessage('Saving failed: ' + (err?.message || err), 'error');
-    } catch (e) {
-      // fallback to console if UI fails
-      console.error('Popup failed', e);
-    }
+    showNotification('Saving failed: ' + (err?.message || err), 'error');
   }
 });
 
@@ -502,14 +753,11 @@ function setEditEnabled(enabled) {
 }
 
 function setUpdateButtonHidden(hidden) {
-  if (!ui.updateBtn) return;
+  if (!ui.updateBtn || !ui.viewUpdateBtnWrapper) return;
   if (hidden) {
-    ui.updateBtn.classList.add('hidden');
-    ui.updateBtn.classList.remove('inline-flex');
-    ui.updateBtn.classList.remove('sm:inline-flex');
+    ui.viewUpdateBtnWrapper.classList.add('hidden');
   } else {
-    ui.updateBtn.classList.remove('hidden');
-    ui.updateBtn.classList.add('inline-flex');
+    ui.viewUpdateBtnWrapper.classList.remove('hidden');
   }
 }
 

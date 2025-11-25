@@ -312,44 +312,55 @@ function initializeCalendar() {
 
 // Sidebar functionality
 function toggleSidebar() {
-    // Desktop: collapse/expand to icon-only
-    if (window.innerWidth >= 1024) {
-        return toggleSidebarCollapse();
-    }
-    // Mobile: slide-in/out with overlay
+    const isDesktop = window.innerWidth >= 1024;
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    if (!sidebar || !overlay) return;
-    if (sidebar.classList.contains('-translate-x-full')) {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
+    const body = document.body;
+    const mainWrapper = document.getElementById('mainWrapper');
+    
+    if (!sidebar) return;
+    
+    if (isDesktop) {
+        // Desktop: Toggle collapse/expand (icon-only mode)
+        body.classList.toggle('sidebar-collapsed');
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        
+        if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
     } else {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
+        // Mobile: Toggle sidebar visibility with overlay
+        const isHidden = sidebar.classList.contains('-translate-x-full');
+        if (isHidden) {
+            sidebar.classList.remove('-translate-x-full');
+            if (overlay) overlay.classList.remove('hidden');
+        } else {
+            sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+        }
     }
 }
 
-// Desktop collapse/expand (icon-only) toggle
+// Desktop collapse/expand (icon-only) toggle - same as toggleSidebar on desktop
 function toggleSidebarCollapse() {
-    const isDesktop = window.innerWidth >= 1024; // lg breakpoint
+    const isDesktop = window.innerWidth >= 1024;
+    if (!isDesktop) return; // Only works on desktop
+    
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
-    if (!isDesktop || !mainWrapper) return;
-    const collapsing = !body.classList.contains('sidebar-collapsed');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (!mainWrapper || !sidebar) return;
+    
     body.classList.toggle('sidebar-collapsed');
-    // Adjust main content margin to match 5rem when collapsed, 16rem when expanded
-    mainWrapper.style.marginLeft = collapsing ? '5rem' : '16rem';
-    applyHeaderPadding();
+    const isCollapsed = body.classList.contains('sidebar-collapsed');
+    
+    mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
 }
 
 function closeSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    
-    if (sidebar && overlay) {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    }
+    if (sidebar) sidebar.classList.add('-translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
 }
 
 // Navigation functionality
@@ -391,13 +402,13 @@ function showSection(sectionId) {
     currentSection = targetId;
     // Ensure layout aligns with sidebar state on desktop after section switch
     try {
-        if (window.innerWidth >= 1024) {
-            const mainWrapper = document.getElementById('mainWrapper');
-            if (mainWrapper) {
-                mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : '16rem';
-            }
-            if (typeof applyHeaderPadding === 'function') applyHeaderPadding();
+        const isDesktop = window.innerWidth >= 1024;
+        const mainWrapper = document.getElementById('mainWrapper');
+        const header = document.getElementById('workerHeaderContainer');
+        if (mainWrapper) {
+            mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
         }
+        if (header) header.style.paddingLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
     } catch(_) {}
 }
 
@@ -1763,3 +1774,36 @@ function showWorkerToast(msg){
     }, 1000);
 }
 window.showWorkerToast = showWorkerToast;
+
+// Attach sidebar event listeners
+document.addEventListener('DOMContentLoaded', function(){
+    try {
+        // Mobile close button and overlay
+        const closeBtn = document.getElementById('closeSidebarBtn');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+        
+        // Handle window resize to adjust sidebar state
+        window.addEventListener('resize', function() {
+            const mainWrapper = document.getElementById('mainWrapper');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isDesktop = window.innerWidth >= 1024;
+            
+            if (isDesktop) {
+                // On desktop, ensure sidebar is visible and respect collapsed state
+                if (sidebar) sidebar.classList.remove('-translate-x-full');
+                if (overlay) overlay.classList.add('hidden');
+                
+                const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+                if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+            } else {
+                // On mobile, reset to default hidden state
+                if (mainWrapper) mainWrapper.style.marginLeft = '0';
+                // Remove collapsed class on mobile
+                document.body.classList.remove('sidebar-collapsed');
+            }
+        });
+    } catch(_){}
+});
