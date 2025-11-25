@@ -317,7 +317,6 @@ function toggleSidebar() {
     const overlay = document.getElementById('sidebarOverlay');
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
-    const header = document.getElementById('workerHeaderContainer');
     
     if (!sidebar) return;
     
@@ -327,7 +326,6 @@ function toggleSidebar() {
         const isCollapsed = body.classList.contains('sidebar-collapsed');
         
         if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
-        if (header) header.style.paddingLeft = isCollapsed ? 'calc(5rem + 1rem)' : 'calc(16rem + 1rem)';
     } else {
         // Mobile: Toggle sidebar visibility with overlay
         const isHidden = sidebar.classList.contains('-translate-x-full');
@@ -348,7 +346,6 @@ function toggleSidebarCollapse() {
     
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
-    const header = document.getElementById('workerHeaderContainer');
     const sidebar = document.getElementById('sidebar');
     
     if (!mainWrapper || !sidebar) return;
@@ -357,7 +354,6 @@ function toggleSidebarCollapse() {
     const isCollapsed = body.classList.contains('sidebar-collapsed');
     
     mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
-    if (header) header.style.paddingLeft = isCollapsed ? 'calc(5rem + 1rem)' : 'calc(16rem + 1rem)';
 }
 
 function closeSidebar() {
@@ -1791,7 +1787,6 @@ document.addEventListener('DOMContentLoaded', function(){
         // Handle window resize to adjust sidebar state
         window.addEventListener('resize', function() {
             const mainWrapper = document.getElementById('mainWrapper');
-            const header = document.getElementById('workerHeaderContainer');
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             const isDesktop = window.innerWidth >= 1024;
@@ -1803,11 +1798,9 @@ document.addEventListener('DOMContentLoaded', function(){
                 
                 const isCollapsed = document.body.classList.contains('sidebar-collapsed');
                 if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
-                if (header) header.style.paddingLeft = isCollapsed ? 'calc(5rem + 1rem)' : 'calc(16rem + 1rem)';
             } else {
                 // On mobile, reset to default hidden state
                 if (mainWrapper) mainWrapper.style.marginLeft = '0';
-                if (header) header.style.paddingLeft = '1rem';
                 // Remove collapsed class on mobile
                 document.body.classList.remove('sidebar-collapsed');
             }

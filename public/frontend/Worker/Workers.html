@@ -143,12 +143,7 @@
             body.sidebar-collapsed #mainWrapper {
                 margin-left: 5rem !important;
             }
-            body:not(.sidebar-collapsed) #workerHeaderContainer {
-                padding-left: calc(16rem + 1rem) !important;
-            }
-            body.sidebar-collapsed #workerHeaderContainer {
-                padding-left: calc(5rem + 1rem) !important;
-            }
+            /* Header stays full width, no left padding */
         }
         
         /* FullCalendar customization */
@@ -298,20 +293,17 @@
     <div class="h-12"></div>
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 z-30 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
-        <div id="workerHeaderContainer" class="w-full px-4 lg:ml-64 lg:pr-4">
-            <div class="flex items-center justify-between">
-                <!-- Left side: Hamburger and Logo -->
-                <div class="flex items-center space-x-4">
-                    <!-- Hamburger Menu Button (far left) -->
-                    <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors" onclick="toggleSidebar()">
-                        <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
-                    </button>
-                    
-                    <!-- Logo/Title -->
-                    <div class="flex items-center">
-                        <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
-                    </div>
-                </div>
+        <div id="workerHeaderContainer" class="w-full flex items-center justify-between px-4">
+            <!-- Left side: Hamburger and Logo (always at far left) -->
+            <div class="flex items-center space-x-3">
+                <!-- Hamburger Menu Button (far left) -->
+                <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors" onclick="toggleSidebar()">
+                    <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
+                </button>
+                
+                <!-- Logo/Title -->
+                <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
+            </div>
                 
                 <!-- Navigation links removed - now only in sidebar -->
                 
@@ -372,7 +364,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
         </div>
     </header>
 
@@ -792,80 +783,17 @@
         // Close mobile sidebar if open
         const sidebar = document.getElementById('sidebar');
         if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
-          toggleSidebar();
+          const overlay = document.getElementById('sidebarOverlay');
+          sidebar.classList.add('-translate-x-full');
+          if (overlay) overlay.classList.add('hidden');
         }
         
         // Store the active section in localStorage
         localStorage.setItem('activeSection', sectionId);
       }
       
-      // Toggle sidebar function
-      function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const icon = document.getElementById('hamburgerIcon');
-        
-        sidebar.classList.toggle('-translate-x-full');
-        overlay.classList.toggle('hidden');
-        
-        // Toggle between bars and times icon
-        if (sidebar.classList.contains('-translate-x-full')) {
-          icon.classList.remove('fa-times');
-          icon.classList.add('fa-bars');
-          // Store sidebar state in localStorage
-          localStorage.setItem('sidebarCollapsed', 'true');
-        } else {
-          icon.classList.remove('fa-bars');
-          icon.classList.add('fa-times');
-          // Store sidebar state in localStorage
-          localStorage.setItem('sidebarCollapsed', 'false');
-        }
-      }
-      
-      // Toggle sidebar collapse/expand
-      function toggleSidebarCollapse() {
-        const sidebar = document.getElementById('sidebar');
-        const closeBtn = document.getElementById('closeSidebarDesktop');
-        
-        sidebar.classList.toggle('lg:w-16');
-        sidebar.classList.toggle('lg:items-center');
-        
-        // Toggle between chevron left and right
-        if (sidebar.classList.contains('lg:w-16')) {
-          closeBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
-          closeBtn.title = 'Expand sidebar';
-          // Store collapsed state
-          localStorage.setItem('sidebarCollapsed', 'true');
-        } else {
-          closeBtn.innerHTML = '<i class="fas fa-chevron-left text-xs"></i>';
-          closeBtn.title = 'Collapse sidebar';
-          // Store expanded state
-          localStorage.setItem('sidebarCollapsed', 'false');
-        }
-      }
-      
-      // Initialize sidebar state from localStorage and set up navigation
+      // Initialize navigation when DOM is loaded
       document.addEventListener('DOMContentLoaded', function() {
-        const sidebar = document.getElementById('sidebar');
-        const closeBtn = document.getElementById('closeSidebarDesktop');
-        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        
-        if (isCollapsed) {
-          sidebar.classList.add('lg:w-16', 'lg:items-center');
-          if (closeBtn) {
-            closeBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
-            closeBtn.title = 'Expand sidebar';
-          }
-        }
-        
-        // Add click event for close button
-        if (closeBtn) {
-          closeBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleSidebarCollapse();
-          });
-        }
-        
         // Set up navigation for sidebar items
         document.querySelectorAll('.nav-item').forEach(item => {
           item.addEventListener('click', function(e) {
@@ -916,60 +844,6 @@
         const activeSection = localStorage.getItem('activeSection') || 'dashboard';
         navigateToSection(activeSection);
       });
-
-      // Close sidebar on mobile when clicking overlay or close button
-      document.getElementById('sidebarOverlay').addEventListener('click', toggleSidebar);
-      document.getElementById('closeSidebarBtn')?.addEventListener('click', toggleSidebar);
-
-      // Handle window resize
-      window.addEventListener('resize', function() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        if (window.innerWidth >= 1024) {
-          // On desktop, ensure sidebar is visible and overlay is hidden
-          sidebar.classList.remove('-translate-x-full');
-          overlay.classList.add('hidden');
-        } else {
-          // On mobile, ensure sidebar is hidden by default
-          sidebar.classList.add('-translate-x-full');
-          overlay.classList.add('hidden');
-        }
-      });
-
-      // Navigation functionality
-      function setupNavigation() {
-        // Handle nav item clicks
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const sectionId = this.getAttribute('data-section');
-            showSection(sectionId);
-            
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(navItem => {
-              navItem.style.background = '';
-              navItem.style.borderLeft = 'none';
-              navItem.style.color = '#e5e7eb';
-              navItem.style.fontWeight = '400';
-            });
-            
-            // Set active state for clicked item
-            this.style.background = 'rgba(255, 255, 255, 0.15)';
-            this.style.borderLeft = '3px solid #fff';
-            this.style.color = '#f9fafb';
-            this.style.fontWeight = '500';
-            
-            // Close sidebar on mobile after selection
-            if (window.innerWidth < 1024) {
-              toggleSidebar();
-            }
-          });
-        });
-      }
-      
-      // Initialize navigation when DOM is loaded
-      document.addEventListener('DOMContentLoaded', setupNavigation);
 
       // Initialize FullCalendar instances
       document.addEventListener('DOMContentLoaded', function () {
