@@ -148,6 +148,23 @@
       ]
     },
     {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fieldId", "order": "ASCENDING" },
+        { "fieldPath": "taskType", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "task_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "field_id", "order": "ASCENDING" },
+        { "fieldPath": "logged_at", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "user_activities",
       "queryScope": "COLLECTION",
       "fields": [
