@@ -300,18 +300,15 @@
     <header class="fixed top-0 left-0 right-0 z-30 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
         <div id="workerHeaderContainer" class="w-full px-4 lg:ml-64 lg:pr-4">
             <div class="flex items-center justify-between">
-                <!-- Left side with hamburger and logo -->
-                <div class="flex items-center">
-                    <!-- Hamburger Menu Button -->
-                    <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors mr-4" onclick="toggleSidebar()">
+                <!-- Left side: Hamburger and Logo -->
+                <div class="flex items-center space-x-4">
+                    <!-- Hamburger Menu Button (far left) -->
+                    <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors" onclick="toggleSidebar()">
                         <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
                     </button>
                     
-                    <!-- Vertical Separator - Only show on desktop -->
-                    <div class="hidden lg:block h-8 w-px bg-gray-300 mx-2"></div>
-                    
-                    <!-- Logo or Title - Only show on desktop -->
-                    <div class="hidden lg:block ml-2">
+                    <!-- Logo/Title -->
+                    <div class="flex items-center">
                         <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
                     </div>
                 </div>
@@ -418,11 +415,7 @@
                             <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
                         </div>
                     </div>
-                    <!-- Desktop collapse button -->
-                    <button id="collapseSidebarBtn" class="hidden lg:inline-flex" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer; padding: 0.5rem;" title="Collapse sidebar">
-                        <i class="fas fa-bars" style="font-size: 1.25rem;"></i>
-                    </button>
-                    <!-- Mobile close button -->
+                    <!-- Mobile close button only -->
                     <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white">
                         <i class="fas fa-times" style="font-size: 1.25rem; line-height: 1.75rem;"></i>
                     </button>

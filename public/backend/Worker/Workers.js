@@ -313,41 +313,49 @@ function initializeCalendar() {
 // Sidebar functionality
 function toggleSidebar() {
     const isDesktop = window.innerWidth >= 1024;
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const body = document.body;
+    const mainWrapper = document.getElementById('mainWrapper');
+    const header = document.getElementById('workerHeaderContainer');
+    
+    if (!sidebar) return;
+    
     if (isDesktop) {
-        // On desktop, toggle collapse state (icon-only mode)
-        toggleSidebarCollapse();
+        // Desktop: Toggle collapse/expand (icon-only mode)
+        body.classList.toggle('sidebar-collapsed');
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        
+        if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+        if (header) header.style.paddingLeft = isCollapsed ? 'calc(5rem + 1rem)' : 'calc(16rem + 1rem)';
     } else {
-        // On mobile, toggle sidebar visibility
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        if (sidebar && overlay) {
-            const isHidden = sidebar.classList.contains('-translate-x-full');
-            if (isHidden) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
+        // Mobile: Toggle sidebar visibility with overlay
+        const isHidden = sidebar.classList.contains('-translate-x-full');
+        if (isHidden) {
+            sidebar.classList.remove('-translate-x-full');
+            if (overlay) overlay.classList.remove('hidden');
+        } else {
+            sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
         }
     }
 }
 
-// Desktop collapse/expand (icon-only) toggle
+// Desktop collapse/expand (icon-only) toggle - same as toggleSidebar on desktop
 function toggleSidebarCollapse() {
+    const isDesktop = window.innerWidth >= 1024;
+    if (!isDesktop) return; // Only works on desktop
+    
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
     const header = document.getElementById('workerHeaderContainer');
     const sidebar = document.getElementById('sidebar');
-    if (!mainWrapper || !sidebar) return;
     
-    const isDesktop = window.innerWidth >= 1024;
-    if (!isDesktop) return; // Only allow collapse on desktop
+    if (!mainWrapper || !sidebar) return;
     
     body.classList.toggle('sidebar-collapsed');
     const isCollapsed = body.classList.contains('sidebar-collapsed');
     
-    // Update margins and padding
     mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
     if (header) header.style.paddingLeft = isCollapsed ? 'calc(5rem + 1rem)' : 'calc(16rem + 1rem)';
 }
@@ -1779,15 +1787,6 @@ document.addEventListener('DOMContentLoaded', function(){
         const overlay = document.getElementById('sidebarOverlay');
         if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
         if (overlay) overlay.addEventListener('click', closeSidebar);
-        
-        // Desktop collapse button
-        const collapseBtn = document.getElementById('collapseSidebarBtn');
-        if (collapseBtn) {
-            collapseBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSidebarCollapse();
-            });
-        }
         
         // Handle window resize to adjust sidebar state
         window.addEventListener('resize', function() {
