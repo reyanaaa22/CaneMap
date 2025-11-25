@@ -1645,7 +1645,18 @@ async function createDriverLog(logData) {
           "Unknown Field";
         handlerId = fieldData.userId || fieldData.handlerId || null;
         fieldVariety = fieldData.sugarcane_variety || fieldData.variety || null;
+        console.log(`📋 Field data retrieved for work log:`, {
+          fieldId: logData.fieldId,
+          fieldName,
+          handlerId,
+          userId: fieldData.userId,
+          fieldHandlerId: fieldData.handlerId
+        });
+      } else {
+        console.warn(`⚠️ Field ${logData.fieldId} not found!`);
       }
+    } else {
+      console.warn(`⚠️ No fieldId provided in work log data!`);
     }
 
     // Create task document with driver_log type (similar to worker_log)
@@ -1674,13 +1685,22 @@ async function createDriverLog(logData) {
       },
     };
 
+    console.log(`📝 Creating driver work log task with data:`, {
+      taskType: taskData.taskType,
+      title: taskData.title,
+      fieldId: taskData.fieldId,
+      fieldName: taskData.fieldName,
+      handlerId: taskData.handlerId,
+      status: taskData.status
+    });
+
     const taskRef = await addDoc(collection(db, "tasks"), taskData);
 
     // NOTE: Drivers do NOT trigger growth tracking
     // Growth tracking (planting/fertilization) is handled by workers only
     // Drivers handle transport and logistics tasks
     console.log(
-      `✅ Driver log created - Task: "${logData.taskType}", Field: ${logData.fieldId}`
+      `✅ Driver log created - Task ID: ${taskRef.id}, Type: "${logData.taskType}", Field: ${logData.fieldId}, Handler: ${handlerId || 'NONE'}`
     );
 
     // Notify handler if available
