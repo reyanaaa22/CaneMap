@@ -1052,6 +1052,7 @@ onAuthStateChanged(auth, async (user) => {
   loadRecentTaskActivity(user.uid);
   setupJoinRequestsListener(user.uid);
   initNotifications(user.uid);
+loadActivityLogs(user.uid);
 
   // REQ-3: Initialize dashboard statistics with realtime listeners
   initActiveWorkersMetric(user.uid);
@@ -1115,9 +1116,532 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// =============================
-// ✅ Dropdown + Sidebar Navigation
-// =============================
+/* ====== loadActivityLogs + helpers (replace existing loadActivityLogs in dashboard.js) ====== */
+
+async function loadActivityLogs(handlerId) {
+  const container = document.getElementById("activityLogsContainer");
+  if (!container) return;
+
+  // show loading
+  container.innerHTML = `
+    <div class="text-center py-6 text-gray-500">
+      <i class="fas fa-spinner fa-spin mr-2"></i>Loading activity logs...
+    </div>
+  `;
+
+  try {
+    // 1) get handler's fields
+    const fieldsQuery = query(collection(db, "fields"), where("userId", "==", handlerId));
+    const fieldsSnap = await getDocs(fieldsQuery);
+    const handlerFields = fieldsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const fieldIds = handlerFields.map(f => f.id);
+
+    if (fieldIds.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-6 text-gray-500">
+          <i class="fas fa-map-marker-alt text-4xl text-gray-300 mb-3"></i>
+          No fields found.
+        </div>
+      `;
+      return;
+    }
+
+    // Populate Field filter dropdown + mapping
+    populateFieldFilter(handlerFields);
+
+    // For user & type dropdowns we'll collect unique values as we fetch logs
+    let logs = [];
+
+    // chunk helper for Firestore IN queries
+    const chunk = (arr, size) =>
+      arr.length > size ? [arr.slice(0, size), ...chunk(arr.slice(size), size)] : [arr];
+
+    const fieldChunks = chunk(fieldIds, 10);
+
+    // 2) fetch worker logs (task_logs)
+    for (const group of fieldChunks) {
+      const wq = query(collection(db, "task_logs"), where("field_id", "in", group), orderBy("logged_at", "desc"));
+      const ws = await getDocs(wq);
+      logs.push(
+        ...ws.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            source: "task_logs",
+            type: "worker",
+            task_name: data.task_name || data.task || "Worker Task",
+            user_id: data.user_uid || data.user_id || data.user || null,
+            user_name: data.worker_name || data.worker || data.userName || "",
+            task_type: data.task_name || data.task || "",
+            description: data.description || "",
+            field_id: data.field_id || data.fieldId || null,
+            field_name: data.field_name || data.fieldName || "",
+            logged_at: data.logged_at || null,
+            selfie_path: data.selfie_path || null,
+            field_photo_path: data.field_photo_path || null
+          };
+        })
+      );
+    }
+
+    // 3) fetch driver logs (tasks with taskType = 'driver_log')
+    for (const group of fieldChunks) {
+      const dq = query(
+        collection(db, "tasks"),
+        where("fieldId", "in", group),
+        where("taskType", "==", "driver_log"),
+        orderBy("completedAt", "desc")
+      );
+      const ds = await getDocs(dq);
+      logs.push(
+        ...ds.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            source: "tasks",
+            type: "driver",
+            task_name: data.title || data.description || data.details || "Driver Activity",
+            user_id: (Array.isArray(data.assignedTo) && data.assignedTo[0]) || data.createdBy || data.created_by || null,
+            user_name: data.driverName || data.driver_name || "",
+            task_type: data.title || data.details || data.taskType || "",
+            description: data.details || data.notes || data.description || "",
+            field_id: data.fieldId || null,
+            field_name: data.fieldName || data.field_name || "",
+            logged_at: data.completedAt || data.createdAt || null,
+            selfie_path: null,
+            field_photo_path: data.photoURL || data.photo || null
+          };
+        })
+      );
+    }
+
+    // sort newest first
+    logs.sort((a, b) => {
+      const nameA = (a.user_name || "").toLowerCase();
+      const nameB = (b.user_name || "").toLowerCase();
+
+      // If names are different → group by alphabetical name
+      if (nameA < nameB) return -1;
+      if (nameA > nameB) return 1;
+
+      // If same name → sort by newest log first
+      const ta = a.logged_at && a.logged_at.toMillis
+        ? a.logged_at.toDate().getTime()
+        : (a.logged_at ? new Date(a.logged_at).getTime() : 0);
+
+      const tb = b.logged_at && b.logged_at.toMillis
+        ? b.logged_at.toDate().getTime()
+        : (b.logged_at ? new Date(b.logged_at).getTime() : 0);
+
+      return tb - ta;
+    });
+    // Save logs in-memory on window so filters/buttons can access
+    window.__activityLogsCache = logs;
+
+    // Populate user and type filters
+    populateUserAndTypeFilters(logs);
+
+    // Render initial UI (unfiltered)
+    renderActivityLogs(logs);
+
+    // wire up filter and export buttons (first load only)
+    setupActivityLogsControls();
+
+  } catch (err) {
+    console.error("Activity Logs Error:", err);
+    container.innerHTML = `
+      <div class="text-center py-6 text-red-600">
+        Failed to load activity logs.
+      </div>
+    `;
+  }
+}
+
+/* ===== Helpers ===== */
+
+function populateFieldFilter(handlerFields = []) {
+  const sel = document.getElementById("filterField");
+  if (!sel) return;
+  sel.innerHTML = `<option value="all">All fields</option>`;
+  handlerFields.forEach(f => {
+    const name = f.field_name || f.fieldName || f.name || `Field ${f.id}`;
+    const opt = document.createElement("option");
+    opt.value = f.id;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+function populateUserAndTypeFilters(logs = []) {
+  const userSel = document.getElementById("filterUser");
+  const typeSel = document.getElementById("filterType");
+  if (!userSel || !typeSel) return;
+
+  const users = new Map();
+  const types = new Set();
+
+  logs.forEach(l => {
+    if (l.user_id) users.set(l.user_id, l.user_name || l.user_id);
+    if (l.task_type && l.task_type !== "driver_log") {
+    types.add(l.task_type);
+}
+  });
+
+  userSel.innerHTML = `<option value="all">All users</option>`;
+  Array.from(users.entries()).sort((a,b) => a[1].localeCompare(b[1])).forEach(([uid, name]) => {
+    const o = document.createElement("option");
+    o.value = uid;
+    o.textContent = name;
+    userSel.appendChild(o);
+  });
+
+  typeSel.innerHTML = `<option value="all">All task types</option>`;
+  Array.from(types).sort().forEach(t => {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t;
+    typeSel.appendChild(o);
+  });
+}
+
+function renderActivityLogs(logs = []) {
+  const container = document.getElementById("activityLogsContainer");
+  if (!container) return;
+
+  if (!logs.length) {
+    container.innerHTML = `
+      <div class="text-center py-6 text-gray-500">
+        <i class="fas fa-clipboard text-4xl text-gray-300 mb-3"></i>
+        No activity logs yet.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = logs.map(log => {
+    const date = (log.logged_at && log.logged_at.toDate) ? log.logged_at.toDate().toLocaleString() :
+                 (log.logged_at ? new Date(log.logged_at).toLocaleString() : "—");
+
+    const tag = log.type === "driver"
+      ? `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">Driver</span>`
+      : `<span class="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">Worker</span>`;
+
+    return `
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow mb-3">
+        <div class="flex justify-between items-start">
+          <h3 class="font-semibold text-gray-900">${escapeHtml(log.task_name)}</h3>
+          <div class="flex items-center gap-2">
+            ${tag}
+            <span class="text-xs text-gray-500">${escapeHtml(date)}</span>
+          </div>
+        </div>
+
+        <p class="text-sm text-gray-600 mt-1">
+          <i class="fas fa-user mr-1"></i> ${escapeHtml(log.user_name || "Unknown")}
+        </p>
+
+        <p class="text-sm text-gray-600">
+          <i class="fas fa-map-marker-alt mr-1"></i> ${escapeHtml(log.field_name || "Unknown Field")}
+        </p>
+
+        ${log.description ? `<p class="text-sm text-gray-700 mt-2">${escapeHtml(log.description)}</p>` : ""}
+
+        <div class="flex gap-3 mt-3 text-sm">
+          ${log.selfie_path ? `<a href="${log.selfie_path}" target="_blank" class="text-blue-600 hover:underline">Selfie</a>` : ""}
+          ${log.field_photo_path ? `<a href="${log.field_photo_path}" target="_blank" class="text-blue-600 hover:underline">Field Photo</a>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+
+
+/* Filter application (reads controls -> filters cache -> renders) */
+function applyActivityFilters() {
+  const logs = window.__activityLogsCache || [];
+  let filtered = logs.slice();
+
+  const fieldVal = (document.getElementById("filterField") || {}).value || "all";
+  const roleVal = (document.getElementById("filterRole") || {}).value || "all";
+  const userVal = (document.getElementById("filterUser") || {}).value || "all";
+  const typeVal = (document.getElementById("filterType") || {}).value || "all";
+  const startVal = (document.getElementById("filterStartDate") || {}).value;
+  const endVal = (document.getElementById("filterEndDate") || {}).value;
+
+  if (fieldVal && fieldVal !== "all") {
+    filtered = filtered.filter(l => l.field_id === fieldVal);
+  }
+  if (roleVal && roleVal !== "all") {
+    filtered = filtered.filter(l => (l.type || "").toLowerCase() === roleVal.toLowerCase());
+  }
+  if (userVal && userVal !== "all") {
+    filtered = filtered.filter(l => (l.user_id || "") === userVal);
+  }
+  if (typeVal && typeVal !== "all") {
+    filtered = filtered.filter(l => (l.task_type || "").toLowerCase() === typeVal.toLowerCase());
+  }
+
+  // date filtering (inclusive)
+  if (startVal) {
+    const startTs = new Date(startVal);
+    filtered = filtered.filter(l => {
+      const t = l.logged_at && l.logged_at.toMillis ? l.logged_at.toDate() : (l.logged_at ? new Date(l.logged_at) : null);
+      return t ? t >= startTs : false;
+    });
+  }
+  if (endVal) {
+    const endTs = new Date(endVal);
+    endTs.setHours(23,59,59,999);
+    filtered = filtered.filter(l => {
+      const t = l.logged_at && l.logged_at.toMillis ? l.logged_at.toDate() : (l.logged_at ? new Date(l.logged_at) : null);
+      return t ? t <= endTs : false;
+    });
+  }
+
+  // render filtered
+  renderActivityLogs(filtered);
+
+  // prepare printable table area also
+  preparePrintableActivityTable(filtered);
+}
+
+/* Clear filters */
+function clearActivityFilters() {
+  const ids = ["filterField","filterRole","filterUser","filterType","filterStartDate","filterEndDate"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === "SELECT") el.value = "all";
+    else el.value = "";
+  });
+  applyActivityFilters();
+}
+
+/* Preset date helpers */
+function applyPreset(preset) {
+  const start = document.getElementById("filterStartDate");
+  const end = document.getElementById("filterEndDate");
+  const now = new Date();
+  if (!start || !end) return;
+
+  if (preset === "today") {
+    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const e = new Date(s); e.setHours(23,59,59,999);
+    start.value = s.toISOString().slice(0,10);
+    end.value = e.toISOString().slice(0,10);
+  } else if (preset === "thisWeek") {
+    const day = now.getDay();
+    const diffStart = now.getDate() - day + (day === 0 ? -6 : 1);
+    const s = new Date(now.getFullYear(), now.getMonth(), diffStart);
+    const e = new Date(s); e.setDate(s.getDate() + 6);
+    start.value = s.toISOString().slice(0,10);
+    end.value = e.toISOString().slice(0,10);
+  } else if (preset === "thisMonth") {
+    const s = new Date(now.getFullYear(), now.getMonth(), 1);
+    const e = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    start.value = s.toISOString().slice(0,10);
+    end.value = e.toISOString().slice(0,10);
+  }
+  applyActivityFilters();
+}
+
+/* Prepare printable table in #activityLogsPrintArea */
+function preparePrintableActivityTable(logs = []) {
+  const printArea = document.getElementById("activityLogsPrintArea") || (function(){
+    const div = document.createElement('div');
+    div.id = 'activityLogsPrintArea';
+    div.style.display = 'none';
+    document.body.appendChild(div);
+    return div;
+  })();
+  if (!logs.length) {
+    printArea.innerHTML = "<div>No activity logs</div>";
+    return;
+  }
+
+  // create a simple table
+  const rows = logs.map(l => {
+    const date = (l.logged_at && l.logged_at.toDate) ? l.logged_at.toDate().toLocaleString() :
+                 (l.logged_at ? new Date(l.logged_at).toLocaleString() : "");
+    return `<tr>
+      <td>${escapeHtml(l.user_name || "")}</td>
+      <td>${escapeHtml(l.type)}</td>
+      <td>${escapeHtml(l.task_name || "")}</td>
+      <td>${escapeHtml(l.field_name || "")}</td>
+      <td>${escapeHtml(date)}</td>
+      <td>${escapeHtml(l.description || "")}</td>
+    </tr>`;
+  }).join("");
+
+  printArea.innerHTML = `
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:12px;">
+      <thead>
+        <tr style="background:#f7fafc;">
+          <th>Farmer Name</th><th>Role</th><th>Task</th><th>Field</th><th>Date</th><th>Description</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+/* Export CSV using printable table data */
+function exportActivityCSV() {
+  const printArea = document.getElementById("activityLogsPrintArea");
+
+  const title = getActivityLogDateLabel();
+
+  let csvRows = [];
+  csvRows.push(`"${title}"`);
+  csvRows.push('"Farmer Name","Role","Task","Field","Date","Description"');
+
+
+  if (printArea && printArea.querySelector("tbody")) {
+    const trs = printArea.querySelectorAll("tbody tr");
+    trs.forEach(tr => {
+      const vals = Array.from(tr.children).map(td => `"${td.textContent.replace(/"/g,'""')}"`);
+      csvRows.push(vals.join(","));
+    });
+  } else {
+    const logs = window.__activityLogsCache || [];
+    logs.forEach(l => {
+      const date = (l.logged_at && l.logged_at.toDate)
+        ? l.logged_at.toDate().toLocaleString()
+        : (l.logged_at ? new Date(l.logged_at).toLocaleString() : "");
+
+      csvRows.push([
+        l.user_name,
+        l.type,
+        l.task_name,
+        l.field_name,
+        date,
+        l.description
+      ].map(s => `"${(s||"").toString().replace(/"/g,'""')}"`).join(","));
+    });
+  }
+
+  const csv = csvRows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+
+  // sanitize title for filename
+  const safeTitle = title.replace(/[^a-zA-Z0-9()\- ]/g, "");
+  a.download = `${safeTitle}.csv`;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+
+function getActivityLogDateLabel() {
+  const start = document.getElementById("filterStartDate")?.value;
+  const end = document.getElementById("filterEndDate")?.value;
+
+  // No date filters → Full log label
+  if (!start && !end) {
+    return "Activity Log (All Records)";
+  }
+
+  function format(d) {
+    const dt = new Date(d);
+    return dt.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  }
+
+  if (start && !end) {
+    return `Activity Log (${format(start)} – Present)`;
+  }
+  if (!start && end) {
+    return `Activity Log (Until ${format(end)})`;
+  }
+
+  // start + end available
+  return `Activity Log (${format(start)} – ${format(end)})`;
+}
+
+/* Print logs (open print dialog for the printable table) */
+function printActivityLogs() {
+  const printArea = document.getElementById("activityLogsPrintArea");
+  if (!printArea) return;
+
+  const title = getActivityLogDateLabel();
+
+  const w = window.open("", "_blank");
+  const html = `
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 12px; color: #222; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          table th, table td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+          table thead { background: #f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h3>${title}</h3>
+        ${printArea.innerHTML}
+      </body>
+    </html>
+  `;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => {
+    w.print();
+    w.close();
+  }, 500);
+}
+
+
+/* Wire up controls (idempotent) */
+function setupActivityLogsControls() {
+  if (window.__activityLogsControlsInited) return;
+  window.__activityLogsControlsInited = true;
+
+  const applyBtn = document.getElementById("applyActivityFilters");
+  const clearBtn = document.getElementById("clearActivityFilters");
+  const exportBtn = document.getElementById("exportActivityCSV");
+  const printBtn = document.getElementById("printActivityLogs");
+  const pToday = document.getElementById("presetToday");
+  const pWeek = document.getElementById("presetThisWeek");
+  const pMonth = document.getElementById("presetThisMonth");
+
+  if (applyBtn) applyBtn.addEventListener("click", applyActivityFilters);
+  if (clearBtn) clearBtn.addEventListener("click", clearActivityFilters);
+  if (exportBtn) exportBtn.addEventListener("click", exportActivityCSV);
+  if (printBtn) printBtn.addEventListener("click", () => {
+    applyActivityFilters();
+    printActivityLogs();
+  });
+  if (pToday) pToday.addEventListener("click", () => applyPreset("today"));
+  if (pWeek) pWeek.addEventListener("click", () => applyPreset("thisWeek"));
+  if (pMonth) pMonth.addEventListener("click", () => applyPreset("thisMonth"));
+
+  // prepare initial printable table for empty/default state
+  applyActivityFilters();
+}
+
+
+const refreshActivityBtn = document.getElementById("refreshActivityLogs");
+if (refreshActivityBtn) {
+    refreshActivityBtn.addEventListener("click", async () => {
+        const user = auth.currentUser;
+        refreshActivityBtn.disabled = true;
+        await loadActivityLogs(user.uid);
+        refreshActivityBtn.disabled = false;
+    });
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const dropdownBtn = document.getElementById("profileDropdownBtn");
   const dropdownMenu = document.getElementById("profileDropdown");
