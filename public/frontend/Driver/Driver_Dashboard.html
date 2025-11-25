@@ -100,34 +100,34 @@
       }
 
       /* Desktop collapsed sidebar */
-      body.sidebar-collapsed #sidebar {
-        width: 5rem;
-      }
-      body.sidebar-collapsed #sidebar .nav-item span {
-        display: none;
-      }
-      body.sidebar-collapsed #sidebar .nav-item {
-        justify-content: center;
-      }
-      body.sidebar-collapsed #sidebar .nav-item i {
-        margin: 0;
-      }
-      body.sidebar-collapsed #sidebar .ml-6 {
-        display: none;
-      }
-      body.sidebar-collapsed #sidebar .text-xs,
-      body.sidebar-collapsed #sidebar .text-gray-400,
-      body.sidebar-collapsed #sidebar .text-white.font-semibold {
-        display: none;
-      }
-      body.sidebar-collapsed #sidebar .space-x-3 {
-        gap: 0;
-      }
-      body.sidebar-collapsed
-        #sidebar
-        .flex.items-center.space-x-3
-        > :not(:first-child) {
-        display: none;
+      @media (min-width: 1024px) {
+        body.sidebar-collapsed #sidebar {
+          width: 5rem;
+        }
+        body.sidebar-collapsed #sidebar .nav-item span {
+          opacity: 0;
+          width: 0;
+          overflow: hidden;
+          display: none;
+        }
+        body.sidebar-collapsed #sidebar .nav-item {
+          justify-content: center;
+          padding-left: 0.75rem;
+          padding-right: 0.75rem;
+        }
+        body.sidebar-collapsed #sidebar .nav-item i {
+          margin: 0;
+        }
+        body.sidebar-collapsed #sidebar #sidebarUserName,
+        body.sidebar-collapsed #sidebar #sidebarUserType {
+          display: none;
+        }
+        body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > div:not(:first-child) {
+          display: none;
+        }
+        body.sidebar-collapsed #sidebar .space-x-3 {
+          gap: 0;
+        }
       }
 
       /* Ensure content/header shift with sidebar state on desktop */
@@ -856,44 +856,90 @@
 </html>
     <script>
       function toggleSidebar(){
-        return toggleSidebarCollapse();
+        const isDesktop = window.innerWidth >= 1024;
+        if (isDesktop) {
+          // On desktop, toggle collapse state (icon-only mode)
+          toggleSidebarCollapse();
+        } else {
+          // On mobile, toggle sidebar visibility
+          const sidebar = document.getElementById('sidebar');
+          const overlay = document.getElementById('sidebarOverlay');
+          if (sidebar && overlay) {
+            const isHidden = sidebar.classList.contains('-translate-x-full');
+            if (isHidden) {
+              sidebar.classList.remove('-translate-x-full');
+              overlay.classList.remove('hidden');
+            } else {
+              sidebar.classList.add('-translate-x-full');
+              overlay.classList.add('hidden');
+            }
+          }
+        }
       }
+      
       function toggleSidebarCollapse(){
         const body = document.body;
         const mainWrapper = document.getElementById('driverMainWrapper');
         const header = document.getElementById('driverHeaderContainer');
         const sidebar = document.getElementById('sidebar');
         if (!mainWrapper || !sidebar) return;
+        
         const isDesktop = window.innerWidth >= 1024;
-        const collapsing = !body.classList.contains('sidebar-collapsed');
+        if (!isDesktop) return; // Only allow collapse on desktop
+        
         body.classList.toggle('sidebar-collapsed');
-        if (!isDesktop){
-          if (collapsing) sidebar.classList.remove('-translate-x-full');
-          else sidebar.classList.add('-translate-x-full');
-        }
-        mainWrapper.style.marginLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
-        if (header) header.style.paddingLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
+        const isCollapsed = body.classList.contains('sidebar-collapsed');
+        
+        // Update margins and padding
+        mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+        if (header) header.style.paddingLeft = isCollapsed ? '5rem' : '16rem';
       }
+      
       (function(){
         const closeBtn = document.getElementById('closeSidebarBtn');
         const overlay = document.getElementById('sidebarOverlay');
+        const collapseBtn = document.getElementById('collapseSidebarBtn');
+        
         if (closeBtn) closeBtn.addEventListener('click', function(){
           const sidebar = document.getElementById('sidebar');
           if (sidebar) sidebar.classList.add('-translate-x-full');
           if (overlay) overlay.classList.add('hidden');
         });
+        
         if (overlay) overlay.addEventListener('click', function(){
           const sidebar = document.getElementById('sidebar');
           if (sidebar) sidebar.classList.add('-translate-x-full');
           overlay.classList.add('hidden');
         });
+        
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleSidebarCollapse();
+          });
+        }
+        
         window.addEventListener('resize', function(){
           const mainWrapper = document.getElementById('driverMainWrapper');
           const header = document.getElementById('driverHeaderContainer');
-          if (mainWrapper){
-            const isDesktop = window.innerWidth >= 1024;
-            mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
-            if (header) header.style.paddingLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
+          const sidebar = document.getElementById('sidebar');
+          const overlay = document.getElementById('sidebarOverlay');
+          const isDesktop = window.innerWidth >= 1024;
+          
+          if (isDesktop) {
+            // On desktop, ensure sidebar is visible and respect collapsed state
+            if (sidebar) sidebar.classList.remove('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+            
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+            if (header) header.style.paddingLeft = isCollapsed ? '5rem' : '16rem';
+          } else {
+            // On mobile, reset to default hidden state
+            if (mainWrapper) mainWrapper.style.marginLeft = '0';
+            if (header) header.style.paddingLeft = '0';
+            // Remove collapsed class on mobile
+            document.body.classList.remove('sidebar-collapsed');
           }
         });
       })();

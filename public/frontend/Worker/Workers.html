@@ -87,30 +87,68 @@
         
         /* Sidebar transitions */
         .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
         }
         
         /* Mobile sidebar overlay */
         .sidebar-overlay {
             transition: opacity 0.3s ease-in-out;
         }
-        /* Desktop collapsed sidebar */
-        body.sidebar-collapsed #sidebar { width: 5rem; }
-        body.sidebar-collapsed #sidebar .nav-item span { display: none; }
-        body.sidebar-collapsed #sidebar .nav-item { justify-content: center; }
-        body.sidebar-collapsed #sidebar .nav-item i { margin: 0; }
-        body.sidebar-collapsed #sidebar .ml-6 { display: none; }
-        body.sidebar-collapsed #sidebar .text-xs, 
-        body.sidebar-collapsed #sidebar .text-gray-400, 
-        body.sidebar-collapsed #sidebar .text-white.font-semibold { display: none; }
-        body.sidebar-collapsed #sidebar .space-x-3 { gap: 0; }
-        body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
+        
+        /* Desktop collapsed sidebar - icon-only mode */
+        @media (min-width: 1024px) {
+            body.sidebar-collapsed #sidebar {
+                width: 5rem;
+            }
+            body.sidebar-collapsed #sidebar .nav-item span {
+                opacity: 0;
+                width: 0;
+                overflow: hidden;
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar .nav-item {
+                justify-content: center;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            body.sidebar-collapsed #sidebar .nav-item i {
+                margin: 0;
+            }
+            body.sidebar-collapsed #sidebar #sidebarUserName,
+            body.sidebar-collapsed #sidebar #sidebarUserType {
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar #profileImageContainer {
+                width: 2.5rem;
+                height: 2.5rem;
+                font-size: 1rem;
+            }
+            body.sidebar-collapsed #sidebar .space-x-3 {
+                gap: 0;
+            }
+            body.sidebar-collapsed #sidebar div[style*="text-transform: uppercase"] {
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar nav {
+                padding-left: 0;
+                padding-right: 0;
+            }
+        }
+        
         /* Ensure content/header shift with sidebar state on desktop */
         @media (min-width: 1024px) {
-            body:not(.sidebar-collapsed) #mainWrapper { margin-left: 16rem !important; }
-            body.sidebar-collapsed #mainWrapper { margin-left: 5rem !important; }
-            body:not(.sidebar-collapsed) #workerHeaderContainer { padding-left: 16rem !important; }
-            body.sidebar-collapsed #workerHeaderContainer { padding-left: 5rem !important; }
+            body:not(.sidebar-collapsed) #mainWrapper {
+                margin-left: 16rem !important;
+            }
+            body.sidebar-collapsed #mainWrapper {
+                margin-left: 5rem !important;
+            }
+            body:not(.sidebar-collapsed) #workerHeaderContainer {
+                padding-left: calc(16rem + 1rem) !important;
+            }
+            body.sidebar-collapsed #workerHeaderContainer {
+                padding-left: calc(5rem + 1rem) !important;
+            }
         }
         
         /* FullCalendar customization */
@@ -278,21 +316,7 @@
                     </div>
                 </div>
                 
-                <!-- Navigation Links - Desktop -->
-                <nav class="hidden lg:flex space-x-6">
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="dashboard">
-                        <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
-                    </a>
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="my-fields">
-                        <i class="fas fa-map-marked-alt mr-2"></i> My Fields
-                    </a>
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="my-tasks">
-                        <i class="fas fa-tasks mr-2"></i> My Tasks
-                    </a>
-                    <a href="#" class="text-sm font-medium text-gray-700 hover:text-[var(--cane-600)] transition-colors flex items-center" data-section="reports">
-                        <i class="fas fa-chart-bar mr-2"></i> Reports
-                    </a>
-                </nav>
+                <!-- Navigation links removed - now only in sidebar -->
                 
                 <!-- Right side with user controls -->
                 <div class="flex items-center space-x-4">
@@ -385,6 +409,7 @@
                             font-weight: 600;
                             font-size: 1.5rem;
                             border: 2px solid rgba(255,255,255,0.3);
+                            transition: all 0.3s ease;
                         " id="userInitials">
                             U
                         </div>
@@ -393,6 +418,11 @@
                             <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
                         </div>
                     </div>
+                    <!-- Desktop collapse button -->
+                    <button id="collapseSidebarBtn" class="hidden lg:inline-flex" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer; padding: 0.5rem;" title="Collapse sidebar">
+                        <i class="fas fa-bars" style="font-size: 1.25rem;"></i>
+                    </button>
+                    <!-- Mobile close button -->
                     <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white">
                         <i class="fas fa-times" style="font-size: 1.25rem; line-height: 1.75rem;"></i>
                     </button>

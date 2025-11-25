@@ -1227,7 +1227,27 @@ async function initNotifications(userId) {
         }
 
         // Sidebar functionality
-        function toggleSidebar() { return toggleSidebarCollapse(); }
+        function toggleSidebar() {
+            const isDesktop = window.innerWidth >= 1024;
+            if (isDesktop) {
+                // On desktop, toggle collapse state (icon-only mode)
+                toggleSidebarCollapse();
+            } else {
+                // On mobile, toggle sidebar visibility
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                if (sidebar && overlay) {
+                    const isHidden = sidebar.classList.contains('-translate-x-full');
+                    if (isHidden) {
+                        sidebar.classList.remove('-translate-x-full');
+                        overlay.classList.remove('hidden');
+                    } else {
+                        sidebar.classList.add('-translate-x-full');
+                        overlay.classList.add('hidden');
+                    }
+                }
+            }
+        }
 
         // Desktop collapse/expand (icon-only) toggle
         function toggleSidebarCollapse() {
@@ -1236,15 +1256,16 @@ async function initNotifications(userId) {
             const header = document.getElementById('sraHeaderContainer');
             const sidebar = document.getElementById('sidebar');
             if (!main || !sidebar) return;
-            const isDesktop = window.innerWidth >= 1024; // lg breakpoint
-            const collapsing = !body.classList.contains('sidebar-collapsed');
+            
+            const isDesktop = window.innerWidth >= 1024;
+            if (!isDesktop) return; // Only allow collapse on desktop
+            
             body.classList.toggle('sidebar-collapsed');
-            if (!isDesktop) {
-                if (collapsing) sidebar.classList.remove('-translate-x-full');
-                else sidebar.classList.add('-translate-x-full');
-            }
-            main.style.marginLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
-            if (header) header.style.paddingLeft = collapsing ? '5rem' : (isDesktop ? '16rem' : '0');
+            const isCollapsed = body.classList.contains('sidebar-collapsed');
+            
+            // Update margins and padding
+            main.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+            if (header) header.style.paddingLeft = isCollapsed ? '5rem' : '16rem';
         }
 
         function closeSidebar() {
@@ -1331,10 +1352,24 @@ async function initNotifications(userId) {
             window.addEventListener('resize', function() {
                 const main = document.getElementById('sraMain');
                 const header = document.getElementById('sraHeaderContainer');
-                if (main) {
-                    const isDesktop = window.innerWidth >= 1024;
-                    main.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
-                    if (header) header.style.paddingLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                const isDesktop = window.innerWidth >= 1024;
+                
+                if (isDesktop) {
+                    // On desktop, ensure sidebar is visible and respect collapsed state
+                    if (sidebar) sidebar.classList.remove('-translate-x-full');
+                    if (overlay) overlay.classList.add('hidden');
+                    
+                    const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+                    if (main) main.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+                    if (header) header.style.paddingLeft = isCollapsed ? '5rem' : '16rem';
+                } else {
+                    // On mobile, reset to default hidden state
+                    if (main) main.style.marginLeft = '0';
+                    if (header) header.style.paddingLeft = '1rem';
+                    // Remove collapsed class on mobile
+                    document.body.classList.remove('sidebar-collapsed');
                 }
             });
 

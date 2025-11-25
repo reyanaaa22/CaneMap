@@ -154,21 +154,57 @@
         .inner-content-box { background: #fbfde9; border: 1px solid var(--cane-200); }
         
         .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
         }
         
         .sidebar-overlay {
             transition: opacity 0.3s ease-in-out;
         }
         
-        /* Desktop collapsed sidebar */
-        body.sidebar-collapsed #sidebar { width: 5rem; }
-        body.sidebar-collapsed #sidebar .nav-item span { display: none; }
-        body.sidebar-collapsed #sidebar .nav-item { justify-content: center; }
-        body.sidebar-collapsed #sidebar .nav-item i { margin: 0; }
-        body.sidebar-collapsed #sidebar .text-sm.mt-2 { display: none; }
-        body.sidebar-collapsed #sidebar .space-x-3 { gap: 0; }
-        body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > :not(:first-child) { display: none; }
+        /* Desktop collapsed sidebar - icon-only mode */
+        @media (min-width: 1024px) {
+            body.sidebar-collapsed #sidebar {
+                width: 5rem;
+            }
+            body.sidebar-collapsed #sidebar .nav-item span {
+                opacity: 0;
+                width: 0;
+                overflow: hidden;
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar .nav-item {
+                justify-content: center;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            body.sidebar-collapsed #sidebar .nav-item i {
+                margin: 0;
+            }
+            body.sidebar-collapsed #sidebar .text-sm.mt-2,
+            body.sidebar-collapsed #sidebar #sidebarUserName,
+            body.sidebar-collapsed #sidebar #sidebarUserType {
+                display: none;
+            }
+            body.sidebar-collapsed #sidebar .space-x-3 {
+                gap: 0;
+            }
+            body.sidebar-collapsed #sidebar .flex.items-center.space-x-3 > div:not(:first-child) {
+                display: none;
+            }
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 1023px) {
+            #sraHeaderContainer {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            #sraMain {
+                margin-left: 0 !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+        }
         
         #recentAppsList > :nth-child(n+4) {
             display: none;
