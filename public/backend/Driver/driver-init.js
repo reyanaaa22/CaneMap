@@ -1102,6 +1102,7 @@ window.markDriverTaskAsDone = async function (taskId) {
     }
 
     const task = taskSnap.data();
+    const handlerId = task.handlerId || task.created_by;
 
     // Update task status
     await updateDoc(taskRef, {
