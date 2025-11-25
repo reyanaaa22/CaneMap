@@ -157,10 +157,27 @@
       ]
     },
     {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fieldId", "order": "ASCENDING" },
+        { "fieldPath": "taskType", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "task_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "field_id", "order": "ASCENDING" },
+        { "fieldPath": "logged_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "task_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fieldId", "order": "ASCENDING" },
         { "fieldPath": "logged_at", "order": "DESCENDING" }
       ]
     },
