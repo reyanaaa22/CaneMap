@@ -50,6 +50,134 @@ let hasDriverBadge = false;
 let currentSection = 'dashboard';
 let currentUserId = null;
 let currentUserEmail = '';
+// -----------------------------
+// Worker camera (driver-style) - global function (paste once)
+// -----------------------------
+function openWorkerCamera() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // overlay with very high z so it always sits above Swal
+      const overlay = document.createElement("div");
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.background = "rgba(0,0,0,0.9)";
+      overlay.style.display = "flex";
+      overlay.style.flexDirection = "column";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.zIndex = "2000000"; // higher than Swal
+      overlay.id = "worker-camera-overlay";
+
+      overlay.innerHTML = `
+        <video id="workerCamVideo" autoplay playsinline class="w-full max-w-[800px]" style="border-radius:10px; background:#000; max-height:70vh;"></video>
+        <div id="workerCamControls" style="margin-top:12px; display:flex; align-items:center; justify-content:center;">
+          <div id="workerCaptureArea">
+            <button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px;">
+              Capture
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      const video = document.getElementById("workerCamVideo");
+      const captureArea = document.getElementById("workerCaptureArea");
+
+      // start camera
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      } catch (err) {
+        overlay.remove();
+        return reject(new Error("Camera access denied or not available"));
+      }
+      video.srcObject = stream;
+
+      const stopCamera = () => {
+        try { stream.getTracks().forEach(t => t.stop()); } catch(_) {}
+        const el = document.getElementById("worker-camera-overlay");
+        if (el) el.remove();
+      };
+
+      // Capture handler
+      function attachCaptureHandler(btnEl) {
+        btnEl.addEventListener("click", () => {
+          // Freeze frame to canvas
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth || 1280;
+          canvas.height = video.videoHeight || 720;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Pause video so it looks frozen
+          video.pause();
+
+          // Replace capture button with bottom ✓ and ✕ (centered)
+          captureArea.innerHTML = `
+            <div style="display:flex; gap:24px; align-items:center; justify-content:center;">
+              <button id="workerRetakeBtn" style="width:64px;height:64px;border-radius:999px;background:#dc2626;color:#fff;border:0;font-size:28px;font-weight:700;">✕</button>
+              <button id="workerConfirmBtn" style="width:64px;height:64px;border-radius:999px;background:#16a34a;color:#fff;border:0;font-size:28px;font-weight:700;">✓</button>
+            </div>
+          `;
+
+          // Retake
+          document.getElementById("workerRetakeBtn").addEventListener("click", () => {
+            // remove confirm/retake and put capture back
+            captureArea.innerHTML = `<button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px;">Capture</button>`;
+            // resume video
+            video.play();
+            // re-attach handler
+            attachCaptureHandler(document.getElementById("workerCaptureBtn"));
+          });
+
+          // Confirm
+          document.getElementById("workerConfirmBtn").addEventListener("click", () => {
+            // convert canvas to blob -> File and expose globally for preConfirm
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                alert("Failed to capture photo. Try again.");
+                video.play();
+                return;
+              }
+              const ts = Date.now();
+              const fileName = `worker_photo_${ts}.jpg`;
+              // Create a File so existing upload logic expecting .name works
+              const file = new File([blob], fileName, { type: "image/jpeg" });
+              // expose globally for preConfirm and preview
+              window._workerCapturedFile = file;
+              // If modal preview exists, set it (if not, other code can read this file)
+              const previewImg = document.getElementById("swal-photoPreview");
+              if (previewImg) {
+                previewImg.src = URL.createObjectURL(blob);
+                const previewContainer = document.getElementById("swal-photoPreviewContainer");
+                if (previewContainer) previewContainer.classList.remove("hidden");
+              }
+              // stop camera and remove overlay
+              stopCamera();
+              return resolve(file);
+            }, "image/jpeg", 0.92);
+          });
+        });
+      }
+
+      // initial attach
+      attachCaptureHandler(document.getElementById("workerCaptureBtn"));
+
+      // allow close by tapping outside overlay (optional)
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          stopCamera();
+          return reject(new Error("User closed camera"));
+        }
+      });
+
+    } catch (err) {
+      return reject(err);
+    }
+  });
+}
+
 let unsubscribeListeners = [];
 let currentTasks = []; // ✅ Store current tasks data for filter re-rendering
 let tasksListenerUnsubscribe = null; // ✅ Track tasks listener separately
@@ -1427,8 +1555,18 @@ async function showWorkLogModal() {
                         <textarea id="swal-notes" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base resize-none" placeholder="Describe what you did..." rows="4"></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Photo (optional)</label>
-                        <input type="file" id="swal-photo" accept="image/*" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-base file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
+
+                        <!-- Live camera capture -->
+                        <button id="swal-openCamera"
+                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
+                            📸 Take a Photo
+                        </button>
+
+                        <!-- After confirming capture -->
+                        <div id="swal-photoPreviewContainer" class="hidden mt-3">
+                            <img id="swal-photoPreview" class="w-full rounded-lg border shadow-sm">
+                        </div>
                     </div>
                     <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
                         <input type="checkbox" id="swal-verification" class="w-5 h-5 mt-0.5 accent-green-600">
@@ -1444,14 +1582,17 @@ async function showWorkLogModal() {
             confirmButtonText: '<i class="fas fa-check mr-2"></i>Log Work',
             cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
             buttonsStyling: false,
-            customClass: {
-                popup: 'rounded-xl shadow-2xl',
-                title: 'text-2xl font-bold text-gray-800 mb-4',
-                htmlContainer: 'text-base',
-                confirmButton: 'px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md mr-2',
-                cancelButton: 'px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors shadow-md',
-                actions: 'gap-3 mt-6'
-            },
+customClass: {
+    popup: 'worker-log-modal rounded-xl shadow-2xl',
+    title: 'text-2xl font-bold text-gray-800 mb-4',
+    htmlContainer: 'text-base',
+    confirmButton: 'px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md mr-2',
+    cancelButton: 'px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors shadow-md',
+    actions: 'gap-3 mt-6'
+},
+heightAuto: false,
+scrollbarPadding: false,
+padding: '1.2rem',
             didOpen: () => {
                 // ✅ Setup field change listener to update task suggestions dynamically
                 const fieldSelect = document.getElementById('swal-fieldId');
@@ -1535,6 +1676,34 @@ async function showWorkLogModal() {
                         suggestionsPanel.style.display = 'none';
                     }
                 });
+
+// ---- LIVE CAMERA SYSTEM for Worker Log ----
+let capturedBlob = null;
+
+// ATTACH the worker camera opener (uses global openWorkerCamera)
+const openCamBtn = document.getElementById("swal-openCamera");
+const previewContainer = document.getElementById("swal-photoPreviewContainer");
+const previewImg = document.getElementById("swal-photoPreview");
+
+if (openCamBtn) {
+  openCamBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      // open the global camera UI (returns a File)
+      await openWorkerCamera();
+      // openWorkerCamera already sets window._workerCapturedFile and sets preview if present
+      // make sure preview is visible if file already set
+      if (window._workerCapturedFile && previewImg) {
+        previewImg.src = URL.createObjectURL(window._workerCapturedFile);
+        if (previewContainer) previewContainer.classList.remove("hidden");
+      }
+    } catch (err) {
+      // user cancelled or permission denied — swallow quietly
+      console.warn("Camera closed or failed:", err && err.message);
+    }
+  });
+}
+
             },
             preConfirm: () => {
                 const fieldId = document.getElementById('swal-fieldId').value;
@@ -1542,8 +1711,17 @@ async function showWorkLogModal() {
                 const completionDate = document.getElementById('swal-completionDate').value;
                 const workerName = document.getElementById('swal-workerName').value;
                 const notes = document.getElementById('swal-notes').value;
-                const photoFile = document.getElementById('swal-photo').files[0];
+                // Use the captured File set by openWorkerCamera()
+                const photoFile = window._workerCapturedFile || null;
+
+                // Validate required photo
+                if (!photoFile) {
+                Swal.showValidationMessage('A live photo is required');
+                return false;
+                }
+
                 const verification = document.getElementById('swal-verification').checked;
+
 
                 if (!fieldId) {
                     Swal.showValidationMessage('Field is required');
@@ -1807,3 +1985,27 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     } catch(_){}
 });
+
+// 🔥 Inject CSS for SweetAlert modal mobile fix (Worker Log)
+(function() {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    .worker-log-modal {
+      max-height: calc(100vh - 60px) !important;
+      margin-top: 30px !important;
+      margin-bottom: 30px !important;
+      border-radius: 16px !important;
+      overflow-y: auto !important;
+    }
+
+    @media (max-width: 480px) {
+      .worker-log-modal {
+        width: 95% !important;
+        max-height: calc(100vh - 40px) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+        padding-top: env(safe-area-inset-top) !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();

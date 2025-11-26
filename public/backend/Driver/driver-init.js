@@ -1303,10 +1303,24 @@ window.openDriverLogWorkModal = async function () {
             <textarea id="swal-notes" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base resize-none" placeholder="Describe what you did..." rows="4"></textarea>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Photo (optional)</label>
-            <input type="file" id="swal-photo" accept="image/*" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-base file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
-            <p class="text-xs text-gray-500 mt-1.5">Upload a photo to verify task completion</p>
-          </div>
+  <label class="block text-sm font-medium text-gray-700 mb-2">Photo (required)</label>
+
+  <!-- Take Photo button -->
+  <div class="flex gap-2">
+    <button id="swal-takePhotoBtn" type="button" class="flex-1 px-4 py-3 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors">
+      <i class="fas fa-camera mr-2"></i>Take a photo
+    </button>
+  </div>
+
+  <!-- Preview area (hidden until a photo is captured) -->
+  <div id="swal-photoPreviewContainer" class="mt-3 hidden">
+    <p class="text-xs text-gray-500 mb-2">Captured photo:</p>
+    <img id="swal-photoPreview" class="w-full max-h-48 object-contain rounded-lg border border-gray-200" alt="Captured photo preview">
+  </div>
+
+  <p id="swal-photoHint" class="text-xs text-gray-500 mt-1.5">Tap "Take a photo" to open the camera. Photo is required to log work.</p>
+</div>
+
           <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
             <input type="checkbox" id="swal-verification" class="w-5 h-5 mt-0.5 accent-green-600">
             <label for="swal-verification" class="text-sm text-gray-700 font-medium">I verify this work was completed as described *</label>
@@ -1346,6 +1360,163 @@ window.openDriverLogWorkModal = async function () {
         const suggestionsChips = document.getElementById(
           "task-suggestions-chips"
         );
+
+  const takePhotoBtn = document.getElementById("swal-takePhotoBtn");
+  const previewContainer = document.getElementById("swal-photoPreviewContainer");
+  const previewImg = document.getElementById("swal-photoPreview");
+  const photoHint = document.getElementById("swal-photoHint");
+
+  // Ensure no stale stored blob
+  window._swalCapturedPhotoBlob = null;
+
+  // Helper: create camera modal
+  function openCameraModal() {
+    // Create overlay
+    const overlay = document.createElement("div");
+    overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4";
+    overlay.id = "swal-cameraOverlay";
+
+    overlay.innerHTML = `
+      <div class="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+          <div class="font-semibold">Camera</div>
+          <div class="flex gap-2">
+            <button id="swal-closeCamBtn" class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Close</button>
+          </div>
+        </div>
+
+        <div class="p-3 flex flex-col gap-3">
+          <video id="swal-cameraVideo" autoplay playsinline class="w-full h-[60vh] bg-black rounded"></video>
+<div class="flex items-center justify-center gap-3">
+  <div id="swal-captureContainer" class="flex items-center justify-center">
+    <button id="swal-captureBtn" class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
+      Capture
+    </button>
+  </div>
+</div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const videoEl = overlay.querySelector("#swal-cameraVideo");
+    const captureBtn = overlay.querySelector("#swal-captureBtn");
+    const closeCamBtn = overlay.querySelector("#swal-closeCamBtn");
+
+    let stream = null;
+
+    // Start camera
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        videoEl.srcObject = stream;
+        await videoEl.play();
+      } catch (err) {
+        console.error("Camera error:", err);
+        alert("Cannot access camera. Please ensure camera permission is allowed.");
+        overlay.remove();
+      }
+    }
+
+    // Stop camera tracks
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+      }
+    }
+
+captureBtn.addEventListener("click", () => {
+  // Freeze frame
+  const canvas = document.createElement("canvas");
+  canvas.width = videoEl.videoWidth || 1280;
+  canvas.height = videoEl.videoHeight || 720;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+
+  videoEl.pause();
+
+  // Hide capture button by clearing container
+  const captureContainer = document.getElementById("swal-captureContainer");
+  captureContainer.innerHTML = "";
+
+  // Add ✓ and ✕ buttons IN PLACE of the capture button
+  captureContainer.innerHTML = `
+    <div class="flex items-center justify-center gap-10">
+      <button id="swal-retakePhoto"
+        class="w-16 h-16 flex items-center justify-center bg-red-600 text-white text-3xl font-bold rounded-full shadow-lg">
+        ✕
+      </button>
+
+      <button id="swal-confirmPhoto"
+        class="w-16 h-16 flex items-center justify-center bg-green-600 text-white text-3xl font-bold rounded-full shadow-lg">
+        ✓
+      </button>
+    </div>
+  `;
+
+  const confirmBtn = document.getElementById("swal-confirmPhoto");
+  const retakeBtn = document.getElementById("swal-retakePhoto");
+
+  // ✓ Confirm photo
+  confirmBtn.addEventListener("click", () => {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+
+      window._swalCapturedPhotoBlob = blob;
+
+      previewImg.src = URL.createObjectURL(blob);
+      previewContainer.classList.remove("hidden");
+
+      stopCamera();
+      overlay.remove();
+    }, "image/jpeg", 0.92);
+  });
+
+  // ✕ Retake photo
+  retakeBtn.addEventListener("click", () => {
+    // Remove ✓ and ✕
+    captureContainer.innerHTML = `
+      <button id="swal-captureBtn"
+        class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
+        Capture
+      </button>
+    `;
+
+    const newCaptureBtn = document.getElementById("swal-captureBtn");
+
+    // Resume camera
+    videoEl.play();
+
+    // Attach capture logic again
+    newCaptureBtn.addEventListener("click", () => {
+      captureBtn.click(); // recursion style
+    });
+  });
+});
+
+    closeCamBtn.addEventListener("click", () => {
+      stopCamera();
+      overlay.remove();
+    });
+
+    // Remove overlay on outside click
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        stopCamera();
+        overlay.remove();
+      }
+    });
+
+    // Start
+    startCamera();
+  }
+
+  // Bind button
+  takePhotoBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openCameraModal();
+  });
 
         fieldSelect.addEventListener("change", async () => {
           const selectedFieldId = fieldSelect.value;
@@ -1467,50 +1638,53 @@ window.openDriverLogWorkModal = async function () {
           }
         });
       },
-      preConfirm: () => {
-        const fieldId = document.getElementById("swal-fieldId").value;
-        const taskType = document.getElementById("swal-taskType").value;
-        const completionDate = document.getElementById(
-          "swal-completionDate"
-        ).value;
-        const driverName = document.getElementById("swal-driverName").value;
-        const notes = document.getElementById("swal-notes").value;
-        const photoFile = document.getElementById("swal-photo").files[0];
-        const verification =
-          document.getElementById("swal-verification").checked;
+preConfirm: () => {
+  const fieldId = document.getElementById("swal-fieldId").value;
+  const taskType = document.getElementById("swal-taskType").value;
+  const completionDate = document.getElementById("swal-completionDate").value;
+  const driverName = document.getElementById("swal-driverName").value;
+  const notes = document.getElementById("swal-notes").value;
+  // Note: previously used input file; now we expect window._swalCapturedPhotoBlob
+  const photoBlob = window._swalCapturedPhotoBlob || null;
+  const verification = document.getElementById("swal-verification").checked;
 
-        if (!fieldId) {
-          Swal.showValidationMessage("Field is required");
-          return false;
-        }
+  if (!fieldId) {
+    Swal.showValidationMessage("Field is required");
+    return false;
+  }
 
-        if (!taskType) {
-          Swal.showValidationMessage("Task type is required");
-          return false;
-        }
+  if (!taskType) {
+    Swal.showValidationMessage("Task type is required");
+    return false;
+  }
 
-        if (!completionDate) {
-          Swal.showValidationMessage("Completion date is required");
-          return false;
-        }
+  if (!completionDate) {
+    Swal.showValidationMessage("Completion date is required");
+    return false;
+  }
 
-        if (!verification) {
-          Swal.showValidationMessage(
-            "You must verify that this work was completed"
-          );
-          return false;
-        }
+  if (!verification) {
+    Swal.showValidationMessage("You must verify that this work was completed");
+    return false;
+  }
 
-        return {
-          fieldId,
-          taskType,
-          completionDate,
-          driverName,
-          notes,
-          photoFile,
-          verification,
-        };
-      },
+  // Photo is required now
+  if (!photoBlob) {
+    Swal.showValidationMessage("Photo is required. Please take a photo using the 'Take a photo' button.");
+    return false;
+  }
+
+  return {
+    fieldId,
+    taskType,
+    completionDate,
+    driverName,
+    notes,
+    // pass the blob (will be uploaded later)
+    photoBlob,
+    verification,
+  };
+},
     });
 
     if (formValues) {
@@ -1570,6 +1744,13 @@ async function createDriverLog(logData) {
           title: "Field Already Harvested",
           text: "This field was already harvested. Transport and delivery tasks are still available.",
           confirmButtonColor: "#166534",
+          customClass: {
+  popup: "mobile-adjust-modal"
+},
+heightAuto: false,
+padding: "1.2rem",
+scrollbarPadding: false,
+
         });
         // Allow to continue - just a warning
       }
@@ -1603,19 +1784,22 @@ async function createDriverLog(logData) {
 
     let photoURL = "";
 
-    // Upload photo if provided
-    if (logData.photoFile) {
-      const { getStorage, ref, uploadBytes, getDownloadURL } = await import(
-        "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js"
-      );
-      const storage = getStorage();
-      const timestamp = Date.now();
-      const fileName = `driver_logs/${currentUserId}_${timestamp}_${logData.photoFile.name}`;
-      const storageRef = ref(storage, fileName);
+// Upload photo if provided (accept blob from camera)
+if (logData.photoBlob) {
+  const { getStorage, ref, uploadBytes, getDownloadURL } = await import(
+    "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js"
+  );
+  const storage = getStorage();
+  const timestamp = Date.now();
+  // Use .jpg filename
+  const fileName = `driver_logs/${currentUserId}_${timestamp}.jpg`;
+  const storageRef = ref(storage, fileName);
 
-      await uploadBytes(storageRef, logData.photoFile);
-      photoURL = await getDownloadURL(storageRef);
-    }
+  // uploadBytes accepts Blob
+  await uploadBytes(storageRef, logData.photoBlob);
+  photoURL = await getDownloadURL(storageRef);
+}
+
 
     // Create work log as a task (same as worker implementation)
     // Convert completion date to Firestore timestamp
@@ -1757,3 +1941,27 @@ document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupProfileDropdown();
 });
+
+// Inject CSS for Log Work Modal Mobile Fix
+(function() {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    .mobile-adjust-modal {
+      max-height: calc(100vh - 60px) !important;
+      margin-top: 30px !important;
+      margin-bottom: 30px !important;
+      border-radius: 16px !important;
+      overflow-y: auto !important;
+    }
+
+    @media (max-width: 480px) {
+      .mobile-adjust-modal {
+        width: 95% !important;
+        max-height: calc(100vh - 40px) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+        padding-top: env(safe-area-inset-top) !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
