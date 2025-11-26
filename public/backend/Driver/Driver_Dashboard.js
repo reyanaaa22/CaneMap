@@ -116,9 +116,10 @@ onAuthStateChanged(auth, async (user) => {
     const sidebarRoleEl = document.getElementById("sidebarUserRole");
     const dropdownTypeEl = document.getElementById("dropdownUserType");
 
+    // Update all name placeholders with just the first name
     if (headerNameEl) headerNameEl.textContent = firstName;
-    if (dropdownNameEl) dropdownNameEl.textContent = fullName;
-    if (sidebarNameEl) sidebarNameEl.textContent = fullName;
+    if (dropdownNameEl) dropdownNameEl.textContent = firstName;
+    if (sidebarNameEl) sidebarNameEl.textContent = firstName;
     if (sidebarRoleEl) sidebarRoleEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
     if (dropdownTypeEl) dropdownTypeEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
 

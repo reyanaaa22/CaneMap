@@ -1813,6 +1813,15 @@ if (logData.photoBlob) {
       driverName = localStorage.getItem("userFullName") || "Unknown Driver";
     }
 
+    // Update all name placeholders with just the first name
+  const firstName = driverName.split(' ')[0];
+
+  // Update header name (only first name)
+  const userNameElements = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
+  userNameElements.forEach(el => {
+    el.textContent = firstName; // Only take first part of the name
+  });
+
     // Get field details including variety for growth tracking
     let fieldName = "Unknown Field";
     let handlerId = null;
