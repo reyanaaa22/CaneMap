@@ -1442,3 +1442,70 @@ async function initNotifications(userId) {
         window.toggleSidebar = toggleSidebar;
         window.closeSidebar = closeSidebar;
         window.toggleSidebarCollapse = toggleSidebarCollapse;
+
+
+// Open modal and populate details from allTasksData
+window.openTaskModal = function(taskId) {
+  const t = (allTasksData || []).find(x => x.id === taskId);
+  if (!t) return alert('Task not found');
+
+  document.getElementById('modalTaskTitle').textContent = t.title || 'Untitled Task';
+  const fld = (allFieldsMap.get(t.fieldId) || {}).name || 'Unknown Field';
+  document.getElementById('modalTaskField').textContent = fld;
+
+  // Deadline & status display
+  const dl = t.deadline ? (t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline)) : null;
+  document.getElementById('modalTaskDeadline').textContent = dl ? dl.toLocaleString() : 'No deadline';
+  document.getElementById('modalTaskStatus').textContent = t.status || 'Pending';
+  document.getElementById('modalTaskNotes').textContent = t.notes || t.description || 'No description';
+
+  // wire up delete button inside modal
+  const modalDeleteBtn = document.getElementById('modalDeleteBtn');
+  if (modalDeleteBtn) {
+    modalDeleteBtn.onclick = function() { deleteTask(taskId, true); };
+  }
+
+  // show
+  const modal = document.getElementById('taskDetailsModal');
+  if (modal) modal.classList.add('active');
+};
+
+// Close modal buttons
+document.addEventListener('click', function(e) {
+  // close when clicking overlay or close buttons
+  if (e.target && (e.target.id === 'taskDetailsOverlay' || e.target.id === 'modalCloseBtn' || e.target.id === 'modalCloseBtn2')) {
+    const modal = document.getElementById('taskDetailsModal');
+    if (modal) modal.classList.remove('active');
+  }
+});
+
+// Delete with safe fallback
+window.deleteTask = async function(taskId, closeModalAfter = false) {
+  if (!confirm('Delete this task?')) return;
+
+  // Prefer an existing deleteTask function if your codebase exposes it
+  if (typeof window._backendDeleteTask === 'function') {
+    try {
+      await window._backendDeleteTask(taskId);
+    } catch (err) {
+      alert('Failed to delete task: ' + (err.message || err));
+      return;
+    }
+  } else if (typeof deleteDoc === 'function' && typeof doc === 'function' && typeof window.db !== 'undefined') {
+    // Try firestore if available in this file
+    try {
+      await deleteDoc(doc(window.db, 'tasks', taskId));
+    } catch (err) {
+      console.warn('Firestore delete failed (continuing with UI-only removal):', err);
+    }
+  }
+
+  // UI-only removal: remove from local allTasksData then re-render
+  allTasksData = (allTasksData || []).filter(t => t.id !== taskId);
+  renderTasksTable(document.getElementById('tasksFilter') ? document.getElementById('tasksFilter').value : 'all');
+
+  if (closeModalAfter) {
+    const modal = document.getElementById('taskDetailsModal');
+    if (modal) modal.classList.remove('active');
+  }
+};

@@ -1549,3 +1549,32 @@ document.addEventListener('click', (e) => {
 }
 
 window.openCreateTaskModal = openCreateTaskModal;
+
+const style = document.createElement("style");
+style.innerHTML = `
+    /* Make Create Task modal not cut off and scrollable */
+
+    #createTaskModal {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 20px !important;
+    }
+
+    #createTaskModal > div {
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        padding-bottom: 25px !important;
+        box-sizing: border-box !important;
+    }
+
+    @media (max-width: 640px) {
+        #createTaskModal > div {
+            max-height: 85vh !important;
+            padding: 20px !important;
+        }
+    }
+`;
+
+// Add CSS inside the document
+document.head.appendChild(style);

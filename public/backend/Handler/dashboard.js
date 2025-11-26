@@ -2560,6 +2560,7 @@ window.viewTaskDetails = function(taskId) {
           <button onclick="document.getElementById('taskDetailsModal').remove()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
             Close
           </button>
+          
         </div>
       </div>
     </div>
