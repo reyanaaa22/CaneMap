@@ -114,7 +114,7 @@
         /* Right-side compact forecast becomes a vertical scroll area when content is large */
         #weatherForecast #wxDaily {
             overflow-y: auto;
-            max-height: 220px;
+            max-height: 340px;
             padding-right: 6px; /* allow space for scrollbar */
         }
         /* Ensure next days list is inside the compact container, not beside */
@@ -152,11 +152,12 @@
         #weatherForecast.expanded #wxCompact { max-height: 320px; }
         #weatherForecast.expanded #wxDaily {
             /* use flex height; allow internal scroll while keeping footer visible */
-            max-height: none !important;
+            max-height: 430px !important;
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
             margin-top: 4px;
+            padding-bottom: 20px;
         }
 
         /* expand button styling */
@@ -1020,23 +1021,11 @@ header nav .flex.items-center.justify-between > div:first-child {
                               </div>
                               <!-- Right: Upcoming compact -->
                               <div id="wxCompact" class="w-48 glass p-3 self-stretch" aria-hidden="true">
-                                  <p class="text-xs text-white/80 mb-2">Next days forecast</p>
-                                  <div id="wxDaily" class="wx-day-list" aria-hidden="true">
-                                      <div class="wx-day">
-                                          <span class="name">Tomorrow</span>
-                                          <span class="wx-pill"><i class="fas fa-cloud-rain"></i></span>
-                                          <span class="temp">--/--°</span>
-                                      </div>
-                                      <div class="wx-day">
-                                          <span class="name">+2 days</span>
-                                          <span class="wx-pill"><i class="fas fa-cloud"></i></span>
-                                          <span class="temp">--/--°</span>
-                                      </div>
-                                      <div class="wx-day">
-                                          <span class="name">+3 days</span>
-                                          <span class="wx-pill"><i class="fas fa-sun"></i></span>
-                                          <span class="temp">--/--°</span>
-                                      </div>
+                                  <p class="text-xs text-white/80 mb-2">Predicted Forecast</p>
+                                  <div id="wxDaily" style="max-height: 540px; overflow-y: auto;" class="wx-day-list" aria-hidden="true">
+                                <!-- JS will fill this automatically -->
+<div id="wxDaily" class="wx-day-list"></div>
+
                                   </div>
                                   <div id="wxCompactFooter" class="mt-2"></div>
                               </div>

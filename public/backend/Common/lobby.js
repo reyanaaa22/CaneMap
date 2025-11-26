@@ -28,6 +28,8 @@ function animateOnScroll() {
     }
   });
 }
+
+
 // run once in case other code errors before listeners are attached
 try {
   animateOnScroll();
@@ -210,6 +212,7 @@ async function getWeather() {
       const uvEl = document.getElementById("wxUv");
       const uvBar = document.getElementById("wxUvBar");
 
+  
       const tempNow =
         typeof cur.main?.temp === "number" ? Math.round(cur.main.temp) : "--";
       const windKmh =
@@ -274,106 +277,318 @@ async function getWeather() {
       console.warn("Failed to update main weather metrics:", err);
     }
 
-    // Build compact multi-day forecast. Prefer OneCall.daily for clean daily summaries if available.
+
+// --- Auto-refresh weather every 10 minutes ---
+setInterval(() => {
+  try { getWeather(); } catch(e) {}
+}, 10 * 60 * 1000);
+
+// ---- NEW: Compact week tabs + modal details (Today + Mon..Sun) ----
+try {
+  const wxDailyEl = document.getElementById("wxDaily");
+  const wxTodayContainer = document.getElementById("wxTodayContainer"); // existing Today UI place
+  const weekRoot = document.createElement("div");
+  weekRoot.className = "wx-week-container space-y-2";
+
+  // Build 'Today' summary (keeps what you already set in Today metrics)
+  // show a small "safe to work?" verdict below
+  (function renderTodaySafety() {
     try {
-      let rows = "";
-      if (onecall && Array.isArray(onecall.daily)) {
-        const days = onecall.daily.slice(0, 4); // today + next 3
-        rows = days
-          .map((d, idx) => {
-            const dayName =
-              idx === 0
-                ? "Today"
-                : idx === 1
-                ? "Tomorrow"
-                : new Date(d.dt * 1000).toLocaleDateString("en-US", {
-                    weekday: "short",
-                  });
-            const tempLo = Math.round(d.temp.min);
-            const tempHi = Math.round(d.temp.max);
-            const icon = d.weather?.[0]?.icon || "";
-            const desc = d.weather?.[0]?.description || "";
-            const iconUrl = icon
-              ? `https://openweathermap.org/img/wn/${icon}.png`
-              : "";
-            return `
-                                <div class="wx-day flex items-center justify-between p-3 rounded-lg bg-white/10 text-white border border-white/20">
-                                    <div class="flex items-center gap-3">
-                                        ${
-                                          iconUrl
-                                            ? `<img src="${iconUrl}" alt="${desc}" class="w-6 h-6"/>`
-                                            : ""
-                                        }
-                                        <span class="font-semibold text-sm">${dayName}</span>
-                                    </div>
-                                    <div class="text-right leading-tight">
-                                        <div class="font-bold text-sm">${tempLo}° / ${tempHi}°</div>
-                                        <div class="text-xs opacity-90">${desc}</div>
-                                    </div>
-                                </div>`;
-          })
-          .join("");
-      } else if (fdata && Array.isArray(fdata.list)) {
-        // Fallback to the forecast grouping by day
-        const grouped = {};
-        fdata.list.forEach((item) => {
-          const date = new Date(item.dt * 1000);
-          const dayStr = date.toLocaleDateString();
-          if (!grouped[dayStr]) grouped[dayStr] = [];
-          grouped[dayStr].push(item);
-        });
-        const dayKeys = Object.keys(grouped).slice(0, 4);
-        rows = dayKeys
-          .map((key, idx) => {
-            const block = grouped[key];
-            const midday =
-              block.find((f) => new Date(f.dt * 1000).getHours() === 12) ||
-              block[Math.floor(block.length / 2)] ||
-              block[0];
-            const tempLo = Math.round(
-              Math.min(...block.map((b) => b.main.temp_min))
-            );
-            const tempHi = Math.round(
-              Math.max(...block.map((b) => b.main.temp_max))
-            );
-            const icon = midday.weather?.[0]?.icon || "";
-            const desc = midday.weather?.[0]?.description || "";
-            const iconUrl = icon
-              ? `https://openweathermap.org/img/wn/${icon}.png`
-              : "";
-            const dayName =
-              idx === 0
-                ? "Today"
-                : idx === 1
-                ? "Tomorrow"
-                : new Date(key).toLocaleDateString("en-US", {
-                    weekday: "short",
-                  });
-            return `
-                                <div class="wx-day flex items-center justify-between p-3 rounded-lg bg-white/10 text-white border border-white/20">
-                                    <div class="flex items-center gap-3">
-                                        ${
-                                          iconUrl
-                                            ? `<img src="${iconUrl}" alt="${desc}" class="w-6 h-6"/>`
-                                            : ""
-                                        }
-                                        <span class="font-semibold text-sm">${dayName}</span>
-                                    </div>
-                                    <div class="text-right leading-tight">
-                                        <div class="font-bold text-sm">${tempLo}° / ${tempHi}°</div>
-                                        <div class="text-xs opacity-90">${desc}</div>
-                                    </div>
-                                </div>`;
-          })
-          .join("");
-      } else {
-        rows = `<div class='p-3 rounded-lg border border-[var(--cane-200)] bg-white/10 text-white/90'>Forecast data unavailable.</div>`;
+      const todayVerdictWrapperId = "wxTodayVerdict";
+      let verdictWrap = document.getElementById(todayVerdictWrapperId);
+      if (!verdictWrap) {
+        verdictWrap = document.createElement("div");
+        verdictWrap.id = todayVerdictWrapperId;
+        verdictWrap.className = "mt-2 text-sm";
+        if (wxTodayContainer) wxTodayContainer.appendChild(verdictWrap);
       }
 
-      if (wxDaily) wxDaily.innerHTML = rows;
-    } catch (err) {
-      console.warn("Failed to build forecast UI:", err);
-    }
+      // Evaluate safety: simple rules
+      const windKmh = typeof cur.wind?.speed === "number" ? cur.wind.speed * 3.6 : 0;
+      const rain = (onecall && onecall.daily && onecall.daily[0] && (onecall.daily[0].pop || 0)) || 0;
+      const uvi = onecall && onecall.current && typeof onecall.current.uvi === "number" ? onecall.current.uvi : null;
+      const hasStorm = (onecall && Array.isArray(onecall.alerts) && onecall.alerts.length > 0) || false;
+
+      let safe = true;
+      let reasons = [];
+
+      if (hasStorm) { safe = false; reasons.push("storm/advisory"); }
+      if (windKmh >= 50) { safe = false; reasons.push("strong winds"); }
+      if (rain >= 0.6) { safe = false; reasons.push("heavy chance of rain"); }
+      if (uvi !== null && uvi >= 8) { reasons.push("very high UV"); }
+
+verdictWrap.innerHTML = `
+  <div 
+    class="rounded-2xl p-4 shadow-sm border backdrop-blur-xl transition-all"
+    style="
+      background: ${safe ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.15)'};
+      border-color: ${safe ? 'rgba(22,163,74,0.35)' : 'rgba(220,38,38,0.35)'};
+    "
+  >
+
+    <!-- Header line -->
+    <div class="flex items-center justify-between mb-3">
+
+      <div class="flex flex-col">
+        <span class="text-sm font-semibold text-white/90">
+          Work Advisory
+          <span class="text-white/60">(Today)</span>
+        </span>
+      </div>
+
+      <!-- Status Pill -->
+      <div 
+        class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm"
+        style="
+          background: ${safe ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'};
+          color: white;
+        "
+      >
+        ${safe ? 'Safe to work' : 'Not recommended'}
+
+        <span 
+          class="flex items-center justify-center rounded-full"
+          style="
+            width: 18px;
+            height: 18px;
+            background: ${safe ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)'};
+          "
+        >
+          ${
+            safe
+              ? `<svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5 text-white' viewBox='0 0 20 20' fill='currentColor'>
+                   <path fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z' clip-rule='evenodd'/>
+                 </svg>`
+              : `<svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5 text-white' viewBox='0 0 20 20' fill='currentColor'>
+                   <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.536-10.95a1 1 0 00-1.414-1.414L10 7.586 7.879 5.464A1 1 0 106.464 6.88L8.586 9l-2.122 2.121a1 1 0 101.415 1.415L10 10.414l2.121 2.122a1 1 0 101.415-1.415L11.414 9l2.122-2.121z' clip-rule='evenodd'/>
+                 </svg>`
+          }
+        </span>
+      </div>
+
+    </div>
+
+    <!-- Reason List -->
+    <div class="mt-2 space-y-1">
+      ${
+        reasons.length === 0
+          ? `
+            <div class="flex items-start gap-2 text-xs text-white/80">
+              <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/70"></span>
+              Conditions acceptable
+            </div>`
+          : reasons
+              .map(
+                (r) => `
+              <div class="flex items-start gap-2 text-xs text-white/85">
+                <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/70"></span>
+                ${r}
+              </div>
+            `
+              )
+              .join("")
+      }
+    </div>
+
+  </div>
+`;
+
+    } catch (e) { console.warn("today safety render err", e); }
+  })();
+
+  // Build week tabs (7 days if available, else fallback)
+  const daysData = (onecall && Array.isArray(onecall.daily))
+    ? onecall.daily.slice(0, 7)
+    : (function fallbackDays() {
+        // fallback: build days from fdata grouped if onecall missing
+        if (!fdata || !Array.isArray(fdata.list)) return [];
+        const grouped = {};
+        fdata.list.forEach(it => {
+          const d = new Date(it.dt * 1000);
+          const key = d.toISOString().split("T")[0];
+          grouped[key] = grouped[key] || [];
+          grouped[key].push(it);
+        });
+        return Object.keys(grouped).slice(0,7).map((k, idx)=> {
+          // create pseudo-day mimicking onecall.daily shape
+          const sample = grouped[k][Math.floor(grouped[k].length/2)];
+          return {
+            dt: Math.floor(new Date(k).getTime()/1000),
+            temp: { min: Math.round(Math.min(...grouped[k].map(x=>x.main.temp_min))), max: Math.round(Math.max(...grouped[k].map(x=>x.main.temp_max))) },
+            pop: (grouped[k].reduce((s,x)=>s + (x.pop||0),0) / grouped[k].length) || 0,
+            weather: sample.weather || [{description: sample.weather?.[0]?.description || "" , icon: sample.weather?.[0]?.icon || "" }],
+            wind_speed: sample.wind?.speed || 0
+          };
+        });
+      })();
+
+// ---------------- WEATHER ALERT NOTIFICATION (HEAVY RAIN) ----------------
+try {
+  // Today's probability of rain (0 = today)
+  const todayPop = onecall?.daily?.[0]?.pop || 0;
+
+  // Threshold for heavy rain
+  const IS_HEAVY_RAIN = todayPop >= 0.60; // 60% chance of rain
+
+  // Prevent spam — notify once per day
+  const lastAlertDate = localStorage.getItem("lastRainAlertDate");
+  const todayKey = new Date().toISOString().split("T")[0];
+
+  if (IS_HEAVY_RAIN && lastAlertDate !== todayKey) {
+    localStorage.setItem("lastRainAlertDate", todayKey);
+
+    // Broadcast to all users (OR filter as needed)
+    sendHeavyRainNotificationToAll();
+  }
+} catch (err) {
+  console.warn("Weather alert failed:", err);
+}
+
+// --- NEW PROFESSIONAL WEEKLY CARDS LAYOUT ---
+const weeklyList = document.createElement("div");
+weeklyList.className = "space-y-3 mt-3";
+
+// Build vertical cards for each day
+daysData.forEach((day, idx) => {
+const date = new Date(day.dt * 1000);
+
+// Add proper weekday label
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const label = DAYS[date.getDay()];
+
+
+  const icon = day.weather?.[0]?.icon
+    ? `https://openweathermap.org/img/wn/${day.weather[0].icon}.png`
+    : "";
+  const desc = day.weather?.[0]?.description || "No details";
+  const lo = Math.round(day.temp.min);
+  const hi = Math.round(day.temp.max);
+  const pop = Math.round((day.pop || 0) * 100);
+  const wind = ((day.wind_speed || 0) * 3.6).toFixed(1);
+  const uv =
+    onecall?.daily?.[idx]?.uvi ??
+    (idx === 0 ? onecall?.current?.uvi : null);
+
+  let safe = true;
+  let reasons = [];
+
+  if (pop >= 60) {
+    safe = false;
+    reasons.push("High rain chance");
+  }
+  if (wind >= 50) {
+    safe = false;
+    reasons.push("Strong winds");
+  }
+  if (uv >= 8) {
+    reasons.push("Very high UV");
+  }
+
+  const card = document.createElement("div");
+  card.className = `
+    p-2 rounded-2xl border shadow-md backdrop-blur-xl transition-all
+    hover:scale-[1.01] hover:shadow-lg
+    cursor-pointer
+  `;
+  card.style.background = safe
+    ? "rgba(34,197,94,0.10)"
+    : "rgba(239,68,68,0.12)";
+  card.style.borderColor = safe
+    ? "rgba(34,197,94,0.35)"
+    : "rgba(239,68,68,0.35)";
+
+  card.innerHTML = `
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm font-semibold text-white">${label}</div>
+        <div class="text-[11px] text-white/60">${date.toDateString()}</div>
+      </div>
+
+      <img src="${icon}" class="w-10 h-10" />
+    </div>
+
+    <div class="mt-2 text-white/90 text-sm capitalize">${desc}</div>
+
+    <div class="flex items-center gap-5 mt-3 text-xs text-white/80">
+      <div>🌡️ ${lo}° / ${hi}°</div>
+      <div>🌧️ ${pop}%</div>
+      <div>💨 ${wind} km/h</div>
+      <div>🔆 ${uv ?? "--"}</div>
+    </div>
+
+    <div class="mt-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
+      style="
+        width: fit-content;
+        color: white;
+        background: ${
+          safe ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"
+        };
+      "
+    >
+      ${
+        safe
+          ? "Safe to work"
+          : "Not recommended"
+      }
+    </div>
+
+    <div class="mt-2 space-y-1">
+      ${
+        reasons.length
+          ? reasons
+              .map(
+                (r) => `
+          <div class="flex items-start gap-2 text-[11px] text-white/75">
+            <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/70"></span> 
+            ${r}
+          </div>
+        `
+              )
+              .join("")
+          : `
+          <div class="flex items-start gap-2 text-[11px] text-white/70">
+            <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/60"></span>
+            Conditions acceptable
+          </div>
+        `
+      }
+    </div>
+  `;
+
+  weeklyList.appendChild(card);
+});
+
+weekRoot.appendChild(weeklyList);
+
+// place weekRoot into wxDaily element (replace content)
+if (wxDailyEl) {
+  wxDailyEl.innerHTML = "";
+  wxDailyEl.appendChild(weekRoot);
+}
+// FIX: Proper scroll + spacing so footer button is visible
+const wxCompact = document.getElementById("wxCompact");
+const wxDailyFixed = document.getElementById("wxDaily");
+
+if (wxCompact && wxDailyFixed) {
+
+    // Outer container should NOT scroll — only the inside
+    wxCompact.style.height = "448px";
+    wxCompact.style.maxHeight = "700px";
+    wxCompact.style.overflow = "hidden";
+
+    // Inner list becomes the scroll area
+    wxDailyFixed.style.maxHeight = "calc(700px - 70px)"; 
+    wxDailyFixed.style.overflowY = "auto";
+
+    // Add bottom spacing for "Show Next Day"
+    wxDailyFixed.style.paddingBottom = "80px";
+}
+
+
+} catch (err) {
+  console.warn("Failed to build week tabs UI:", err);
+}
+
   } catch (error) {
     console.error("Error fetching weather:", error);
     const el = document.getElementById("weatherForecast");
@@ -387,6 +602,63 @@ async function getWeather() {
       errNote.textContent = "Unable to load weather at this time.";
       el.appendChild(errNote);
     }
+  }
+// --- Weather weekly tab responsive CSS ---
+(function(){
+  const s = document.createElement('style');
+  s.textContent = `
+    .wx-week-tabs { 
+      gap: 6px;
+    }
+    .wx-tab {
+      min-height: 64px;
+    }
+
+    @media (max-width: 640px) {
+      .wx-week-tabs { 
+        grid-template-columns: repeat(7, minmax(0,1fr)); 
+        font-size: 11px;
+        gap:4px;
+      }
+      .wx-tab img {
+        width:28px;
+        height:28px;
+      }
+    }
+  `;
+  document.head.appendChild(s);
+})();
+
+}
+
+async function sendHeavyRainNotificationToAll() {
+  try {
+    const { db } = await import("./firebase-config.js");
+    const { collection, getDocs, addDoc, serverTimestamp } = await import(
+      "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js"
+    );
+
+    // Get all users
+    const usersSnap = await getDocs(collection(db, "users"));
+
+    if (usersSnap.empty) return;
+
+    const notifCollection = collection(db, "notifications");
+
+    for (const u of usersSnap.docs) {
+      await addDoc(notifCollection, {
+        userId: u.id,
+        type: "weather_alert",
+        relatedEntityId: null,
+        message: "⚠️ Heavy rain expected today. Please take precautions.",
+        read: false,
+        timestamp: serverTimestamp(),
+      });
+    }
+
+    console.log("🌧️ Heavy rain alerts sent to all users.");
+  } catch (err) {
+    console.error("Failed to send rain notifications:", err);
   }
 }
 
@@ -4572,3 +4844,4 @@ document.addEventListener("DOMContentLoaded", () => {
         if (icon) icon.remove();
     }
 });
+

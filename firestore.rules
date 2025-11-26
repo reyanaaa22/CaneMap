@@ -340,10 +340,16 @@ service cloud.firestore {
     // Task logs access rules
     match /task_logs/{logId} {
       // Field workers can read logs for fields they're approved to work on
-      allow read: if request.auth != null && 
-        (resource.data.user_uid == request.auth.uid || 
-         get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid);
-      
+allow read: if request.auth != null &&
+  (
+    resource.data.user_uid == request.auth.uid ||
+    get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.landowner_id == request.auth.uid ||
+    (
+      exists(/databases/$(database)/documents/fields/$(resource.data.field_id)) &&
+      get(/databases/$(database)/documents/fields/$(resource.data.field_id)).data.userId == request.auth.uid
+    )
+  );
+
       // Approved field workers can create task logs
       allow create: if request.auth != null && 
         request.resource.data.user_uid == request.auth.uid &&
@@ -682,22 +688,24 @@ match /field_workers/{requestId} {
 
     // === Tasks Collection Rules ===
     match /tasks/{taskId} {
-      // Allow handlers to read their own tasks
-      // Allow workers to read tasks they're assigned to
-      // Allow staff to read all tasks
-      allow read: if request.auth != null && (
-        // Handler who created the task (support both handlerId and created_by)
-        ('handlerId' in resource.data && resource.data.handlerId == request.auth.uid) ||
-        ('created_by' in resource.data && resource.data.created_by == request.auth.uid) ||
-        // Worker assigned to this task (support multiple field formats)
-        ('assignedTo' in resource.data && resource.data.assignedTo != null && request.auth.uid in resource.data.assignedTo) ||
-        ('assigned_to' in resource.data && resource.data.assigned_to == request.auth.uid) ||
-        // Staff roles (including workers and drivers)
-        (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sra', 'admin', 'system_admin', 'handler', 'farmer', 'worker', 'driver']
-        )
-      );
+allow read: if request.auth != null && (
+  ('handlerId' in resource.data && resource.data.handlerId == request.auth.uid) ||
+  ('created_by' in resource.data && resource.data.created_by == request.auth.uid) ||
+  ('assignedTo' in resource.data && request.auth.uid in resource.data.assignedTo) ||
+  ('assigned_to' in resource.data && resource.data.assigned_to == request.auth.uid) ||
+  (
+    'fieldId' in resource.data &&
+    exists(/databases/$(database)/documents/fields/$(resource.data.fieldId)) &&
+    get(/databases/$(database)/documents/fields/$(resource.data.fieldId)).data.userId == request.auth.uid
+  ) ||
+  (
+    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+      'sra','admin','system_admin','handler','farmer','worker','driver'
+    ]
+  )
+);
+
 
       // Allow handlers to create tasks (including auto-generated tasks from task-automation.js)
       // Allow workers/drivers to create task logs
