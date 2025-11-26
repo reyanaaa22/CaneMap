@@ -47,7 +47,7 @@
                 <span class="font-semibold"></span>
             </a>
         </div>
-        <div class="w-full mx-auto bg-white/90 backdrop-blur-sm border border-[var(--cane-200)] rounded-2xl shadow-green-md p-6 sm:p-8 md:p-10">
+        <div class="w-full mx-auto bg-white/90 backdrop-blur-sm border border-[var(--cane-200)] rounded-2xl shadow-green-md p-4 sm:p-6 md:p-8">
             <div class="flex items-center justify-between mb-4">
                 <h1 class="text-2xl sm:text-3xl font-bold text-[var(--cane-950)] bg-gradient-to-r from-[var(--cane-50)] to-transparent px-4 py-2 rounded-lg border-l-4 border-[var(--cane-600)]">Profile Information</h1>
                 <div class="flex items-center gap-2">
@@ -444,7 +444,7 @@
               Personal Information
             </h4>
             <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label class="text-xs text-[var(--cane-700)] font-semibold">Full Name</label>
                   <input id="edit_fullname" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
@@ -469,21 +469,10 @@
                   <label class="text-xs text-[var(--cane-700)] font-semibold">Nickname</label>
                   <input id="edit_nickname" type="text" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
                 </div>
-                <div>
-                  <label class="text-xs text-[var(--cane-700)] font-semibold">Gender</label>
-                  <select id="edit_gender" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-xs text-[var(--cane-700)] font-semibold">Birthday</label>
-                  <input id="edit_birthday" type="date" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
-                </div>
-                <div class="sm:col-span-2">
-                  <label class="text-xs text-[var(--cane-700)] font-semibold">Complete Address</label>
+                <div class="relative pb-2">
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Gender</label>
+                  <div class="relative">
+                    <select id="edit_gender" class="w-full px-3 py-2.5 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] appearance-none bg-white pr-8">
                   <textarea id="edit_address" rows="3" class="w-full mt-1 px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"></textarea>
                 </div>
               </div>
