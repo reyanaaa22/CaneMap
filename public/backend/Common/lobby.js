@@ -571,17 +571,29 @@ const wxDailyFixed = document.getElementById("wxDaily");
 
 if (wxCompact && wxDailyFixed) {
 
-    // Outer container should NOT scroll — only the inside
-    wxCompact.style.height = "448px";
-    wxCompact.style.maxHeight = "700px";
+  const isDesktop = window.matchMedia("(min-width: 1025px)").matches;
+
+  if (isDesktop) {
+    // DESKTOP ONLY: fixed height layout
+    wxCompact.style.height = "420px";
+    wxCompact.style.maxHeight = "430px";
     wxCompact.style.overflow = "hidden";
 
-    // Inner list becomes the scroll area
-    wxDailyFixed.style.maxHeight = "calc(700px - 70px)"; 
+    wxDailyFixed.style.maxHeight = "calc(300px - 70px)";
+    wxDailyFixed.style.paddingBottom = "20px";
+
     wxDailyFixed.style.overflowY = "auto";
 
-    // Add bottom spacing for "Show Next Day"
-    wxDailyFixed.style.paddingBottom = "80px";
+  } else {
+    // MOBILE / TABLET: adaptive, fully responsive
+    wxCompact.style.height = "auto";
+    wxCompact.style.maxHeight = "none";
+    wxCompact.style.overflow = "visible";
+
+    wxDailyFixed.style.maxHeight = window.innerHeight * 0.55 + "px";
+    wxDailyFixed.style.paddingBottom = "120px";  // ensure button visible
+    wxDailyFixed.style.overflowY = "auto";
+  }
 }
 
 
@@ -4436,6 +4448,107 @@ function checkJoinFieldButton() {
   }
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+    const heading = document.querySelector("#mainContent h2");
+
+    if (!heading) return;
+
+    if (userRole === "handler") {
+        // Replace ONLY the text
+        heading.childNodes[0].textContent = "Sugarcane Fields in Ormoc City";
+
+        // Remove the icon (hand)
+        const icon = heading.querySelector("i");
+        if (icon) icon.remove();
+    }
+});
+
+/* ============================================================
+   DROPDOWN MENU ROLE CONTROL (Truck / Register / Badge)
+   ============================================================ */
+function updateDropdownByRole() {
+    const role = (localStorage.getItem("userRole") || "").toLowerCase();
+
+    const pendingJoin = localStorage.getItem("pendingWorker") === "true";
+    const pendingDriver = localStorage.getItem("pendingDriverBadge") === "true";
+    const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+
+    const truckRental = document.getElementById("openRentalOption");
+    const menuRegisterField = document.getElementById("menuRegisterField");
+    const menuDriverBadge = document.getElementById("menuDriverBadge");
+
+    const farmerHasPending = pendingJoin || pendingDriver || pendingField;
+
+    // --- Truck Rental (Driver only) ---
+    if (truckRental) {
+        truckRental.classList.toggle("hidden", role !== "driver");
+    }
+
+    // --- Register Field (handler OR farmer w/out pending) ---
+    if (menuRegisterField) {
+        menuRegisterField.classList.toggle(
+            "hidden",
+            !(
+                role === "handler" ||
+                (role === "farmer" && !farmerHasPending)
+            )
+        );
+      }
+
+  // --- Apply Driver Badge (driver OR farmer w/out ANY pending)
+  if (menuDriverBadge) {
+      const pendingJoin  = localStorage.getItem("pendingWorker") === "true";
+      const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+
+      const farmerHasPending = pendingJoin || pendingField;
+
+      menuDriverBadge.classList.toggle(
+          "hidden",
+          !(
+              role === "driver" ||
+              (role === "farmer" && !farmerHasPending)
+          )
+      );
+  }
+}
+
+// Run once on load
+document.addEventListener("DOMContentLoaded", updateDropdownByRole);
+
+// Auto-update every 400ms (same style as your header auto-refresh)
+setInterval(updateDropdownByRole, 400);
+
+
+function updateDriverBadgePromoVisibility() {
+    const role = (localStorage.getItem("userRole") || "").toLowerCase();
+
+    const pendingJoin  = localStorage.getItem("pendingWorker") === "true";
+    const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+
+    const promoSection = document.getElementById("driver-badge");
+    if (!promoSection) return;
+
+    // Farmer has any pending?
+    const farmerHasPending = pendingJoin || pendingField;
+
+    // SHOW only when:
+    // 1. driver
+    // 2. farmer with NO pendings
+    const shouldShow =
+        role === "driver" ||
+        (role === "farmer" && !farmerHasPending);
+
+    promoSection.classList.toggle("hidden", !shouldShow);
+}
+
+// Run once on load
+document.addEventListener("DOMContentLoaded", updateDriverBadgePromoVisibility);
+
+// Auto-refresh every 400ms (real-time, no refresh needed)
+setInterval(updateDriverBadgePromoVisibility, 400);
+
+
 /* ---------- Mobile header button adaption: icon + driver badge icon ---------- */
 (function () {
   // path to driver badge page relative to lobby.html (lobby.html is in .../Common/)
@@ -4662,6 +4775,32 @@ setInterval(() => {
     lastPendingJoinField = newPendingJoinField;
 }, 400);
 
+// =======================
+// SHOW/HIDE HEADER DRIVER BADGE LINK
+// =======================
+(function () {
+    const headerDriverBadgeLink = document.querySelector('a[href="#driver-badge"]');
+
+    function updateHeaderDriverLink() {
+        if (!headerDriverBadgeLink) return;
+
+        const role = (localStorage.getItem("userRole") || "").toLowerCase();
+        const pendingJoin  = localStorage.getItem("pendingWorker") === "true";
+        const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+
+        const farmerHasPending = pendingJoin || pendingField;
+
+        const shouldShow =
+            role === "driver" ||
+            (role === "farmer" && !farmerHasPending);
+
+        headerDriverBadgeLink.classList.toggle("hidden", !shouldShow);
+    }
+
+    // run every 400 ms (real-time, same as header updates)
+    setInterval(updateHeaderDriverLink, 400);
+    document.addEventListener("DOMContentLoaded", updateHeaderDriverLink);
+})();
 
 /* === Notification Bell Only (header + dropdown) === */
 (function () {
@@ -4842,6 +4981,56 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remove the icon (hand)
         const icon = heading.querySelector("i");
         if (icon) icon.remove();
+    }
+});
+
+// ------------------------------
+// OPEN DRIVER RENTAL MODAL
+// ------------------------------
+const openRentalOption = document.getElementById("openRentalOption");
+const driverRentalModal = document.getElementById("driverRentalModal");
+const driverRentalFrame = document.getElementById("driverRentalFrame");
+const closeDriverRental = document.getElementById("closeDriverRental");
+
+document.addEventListener("DOMContentLoaded", () => {
+    const openRentalOption = document.getElementById("openRentalOption");
+    const driverRentalModal = document.getElementById("driverRentalModal");
+    const driverRentalFrame = document.getElementById("driverRentalFrame");
+    const closeDriverRental = document.getElementById("closeDriverRental");
+
+    if (openRentalOption) {
+        openRentalOption.addEventListener("click", () => {
+            driverRentalFrame.src = "../../frontend/Driver/Driver_Rental.html";
+            driverRentalModal.classList.remove("opacity-0", "pointer-events-none");
+        });
+    }
+
+    if (closeDriverRental) {
+        closeDriverRental.addEventListener("click", () => {
+            driverRentalModal.classList.add("opacity-0", "pointer-events-none");
+            driverRentalFrame.src = "";
+        });
+    }
+});
+
+closeDriverRental.addEventListener("click", () => {
+    // HIDE MODAL
+    driverRentalModal.classList.add("opacity-0", "pointer-events-none");
+
+    // CLEAR FRAME (para mag reset ang form)
+    driverRentalFrame.src = "";
+});
+
+// Receive close commands from inside iframe (Driver_Rental.html)
+window.addEventListener("message", (ev) => {
+    if (!ev || !ev.data) return;
+
+    if (ev.data.type === "driver_rental_cancel"
+        || ev.data.type === "driver_rental_published_close"
+        || ev.data.type === "driver_rental_stopped") {
+
+        driverRentalModal.classList.add("opacity-0", "pointer-events-none");
+        driverRentalFrame.src = "";
     }
 });
 

@@ -21,102 +21,124 @@
 </head>
 <body class="p-6 bg-[var(--cane-50)]">
   <main class="max-w-3xl mx-auto">
-    <div class="bg-white rounded-2xl p-6 card-shadow">
-      <header class="flex items-start justify-between gap-4">
+<div class="flex flex-col max-h-[90vh]">
+
+    <!-- ⭐ NOT SCROLLING: HEADER -->
+    <header class="flex items-start justify-between gap-4 pb-4 border-b">
         <div>
           <h1 class="text-xl font-bold text-[var(--cane-800)]">Open Your Truck(s) for Rental</h1>
-          <p class="text-sm text-[var(--cane-700)] mt-1">Fill and confirm the details below to list your vehicle as available for rental.</p>
+          <p class="text-sm text-[var(--cane-700)] mt-1">
+            Fill and confirm the details below to list your vehicle as available for rental.
+          </p>
         </div>
+
         <div class="text-sm">
-          <button id="closeBtn" class="px-3 py-1 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Close</button>
+          <button id="closeBtn"
+            class="px-3 py-1 rounded-md bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">
+            Close
+          </button>
         </div>
-      </header>
+    </header>
 
-      <section class="mt-5 grid grid-cols-1 gap-5">
-        <div class="bg-[var(--cane-50)] border border-[var(--cane-200)] rounded-lg p-4">
-          <p class="font-semibold text-[var(--cane-800)]">Quick question</p>
-          <p class="text-sm text-[var(--cane-700)] mt-1">Do you want to make your truck(s) available for rental? If yes, confirm the details below and tap <strong>OK, Open for Rental</strong>.</p>
-        </div>
+    <!-- ⭐ NOT SCROLLING: QUICK QUESTION -->
+    <div class="mt-5 bg-[var(--cane-50)] border border-[var(--cane-200)] rounded-lg p-4">
+        <p class="font-semibold text-[var(--cane-800)]">Quick question</p>
+        <p class="text-sm text-[var(--cane-700)] mt-1">
+            Do you want to make your truck(s) available for rental? If yes, confirm the details
+            below and tap <strong>OK, Open for Rental</strong>.
+        </p>
+    </div>
 
-        <form id="rentalForm" class="space-y-4">
-        <div>
-            <label>Contact Number</label>
-            <input id="contactNumber" 
-                class="mt-2 block w-full rounded-lg border border-[var(--cane-200)] p-3 bg-white" />
+    <!-- ⭐ SCROLLABLE ONLY THIS PART -->
+    <div class="mt-5 flex-1 overflow-y-auto pr-2">
 
-            <p class="text-xs text-gray-500 mt-1">
-                This number will be used by renters to contact you.
-            </p>
-        </div>
-        <div class="mt-4">
-            <label>Address</label>
-            <input id="address" 
-                disabled
-                class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
-        </div>
+        <form id="rentalForm" class="space-y-4 pb-5">
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- ALL YOUR INPUT FIELDS GO HERE -->
             <div>
-              <label>Birth date</label>
-              <input id="birthDate" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
-            <div>
-              <label>Vehicle type</label>
-              <input id="vehicleType" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label>Model</label>
-              <input id="vehicleModel" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
-            </div>
-            <div>
-              <label>Color</label>
-              <input id="vehicleColor" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
-            </div>
-            <div>
-              <label>Year</label>
-              <input id="vehicleYear" disabled class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
-            </div>
-          </div>
-
-            <div class="pt-2">
-                <label class="text-sm font-semibold">Notes</label>
-
-                <p class="field-note mt-1">
-                    All fields above are pulled from your Driver Badge.
-                    <button id="editBadgeBtn"
-                            class="underline text-[var(--cane-800)] hover:text-[var(--cane-700)] ml-1">
-                        Click here to edit your profile.
-                    </button>
+                <label>Contact Number</label>
+                <input id="contactNumber"
+                    class="mt-2 block w-full rounded-lg border border-[var(--cane-200)] p-3 bg-white" />
+                <p class="text-xs text-gray-500 mt-1">
+                    This number will be used by renters to contact you.
                 </p>
             </div>
 
-            <div class="flex justify-end space-x-3 mt-6">
-
-                <!-- OPEN BUTTON -->
-                <button id="btnOpenRental" type="button"
-                    class="px-4 py-2 rounded-lg bg-[var(--cane-700)]
-                    text-white font-semibold hover:bg-[var(--cane-800)] shadow">
-                    OK, Open for Rental
-                </button>
-
-                <!-- STOP BUTTON (hidden by default) -->
-                <button id="btnStopRental" type="button"
-                    class="hidden px-4 py-2 rounded-lg bg-red-600
-                    text-white font-semibold hover:bg-red-700 shadow">
-                    Stop Driver Rental
-                </button>
-
-                <button id="btnCancel" type="button"
-                    class="px-4 py-2 rounded-lg border border-[var(--cane-300)]
-                    text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
-                    Cancel
-                </button>
+            <div>
+                <label>Address</label>
+                <input id="address" disabled
+                    class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label>Birth date</label>
+                    <input id="birthDate" disabled
+                        class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+                </div>
+
+                <div>
+                    <label>Vehicle type</label>
+                    <input id="vehicleType" disabled
+                        class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label>Model</label>
+                    <input id="vehicleModel" disabled
+                        class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+                </div>
+                <div>
+                    <label>Color</label>
+                    <input id="vehicleColor" disabled
+                        class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+                </div>
+                <div>
+                    <label>Year</label>
+                    <input id="vehicleYear" disabled
+                        class="mt-2 block w-full rounded-lg border border-gray-300 p-3 bg-gray-100" />
+                </div>
+            </div>
+
+            <!-- ⭐ NOT SCROLLING: NOTES + BUTTONS (FIXED BELOW) -->
         </form>
-      </section>
     </div>
+
+    <!-- ⭐ FIXED BOTTOM (ALWAYS VISIBLE) -->
+    <div class="pt-4 border-t bg-white">
+        <div class="pt-2">
+            <label class="text-sm font-semibold">Notes</label>
+            <p class="field-note mt-1">
+                All fields above are pulled from your Driver Badge.
+                <button id="editBadgeBtn"
+                    class="underline text-[var(--cane-800)] hover:text-[var(--cane-700)] ml-1">
+                    Click here to edit your profile.
+                </button>
+            </p>
+        </div>
+
+        <div class="flex justify-end space-x-3 mt-6">
+            <button id="btnOpenRental" type="button"
+                class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)] shadow">
+                OK, Open for Rental
+            </button>
+
+            <button id="btnStopRental" type="button"
+                class="hidden px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 shadow">
+                Stop Driver Rental
+            </button>
+
+            <button id="btnCancel" type="button"
+                class="px-4 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-800)] hover:bg-[var(--cane-50)]">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+</div>
+
 
     <!-- Terms Modal (hidden by default) -->
     <div id="termsModal" class="fixed inset-0 z-[12000] flex items-center justify-center bg-black/50 opacity-0 pointer-events-none transition-opacity">
