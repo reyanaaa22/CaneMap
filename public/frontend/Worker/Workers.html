@@ -24,6 +24,72 @@
 
     
     <style>
+        /* Force white background on active nav items with highest specificity */
+        #sidebar .nav-item.active,
+        #sidebar .nav-item.active:hover,
+        #sidebar .nav-item[data-section].active,
+        #sidebar .nav-item[data-section].active:hover {
+            background-color: #FFFFFF !important;
+            color: var(--cane-600) !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+        }
+
+        /* Force icon colors for active items */
+        #sidebar .nav-item.active i,
+        #sidebar .nav-item[data-section].active i,
+        #sidebar .nav-item.active:hover i,
+        #sidebar .nav-item[data-section].active:hover i,
+        #sidebar .nav-item.active i.fas,
+        #sidebar .nav-item[data-section].active i.fas,
+        #sidebar .nav-item.active:hover i.fas,
+        #sidebar .nav-item[data-section].active:hover i.fas {
+            color: var(--cane-600) !important;
+        }
+
+        /* Override any background image or gradient */
+        #sidebar .nav-item.active,
+        #sidebar .nav-item[data-section].active,
+        #sidebar .nav-item.active:hover,
+        #sidebar .nav-item[data-section].active:hover {
+            background-image: none !important;
+            --tw-bg-opacity: 1 !important;
+            background-color: #FFFFFF !important;
+        }
+
+        /* Ensure text color stays dark green when active */
+        #sidebar .nav-item.active,
+        #sidebar .nav-item[data-section].active,
+        #sidebar .nav-item.active span,
+        #sidebar .nav-item[data-section].active span,
+        #sidebar .nav-item.active:hover span,
+        #sidebar .nav-item[data-section].active:hover span {
+            color: var(--cane-600) !important;
+        }
+
+        /* Reset hover state for active items */
+        #sidebar .nav-item.active:hover,
+        #sidebar .nav-item[data-section].active:hover {
+            background-color: #FFFFFF !important;
+            color: var(--cane-600) !important;
+        }
+        
+        /* Ensure active icons are properly colored */
+        .nav-item.active i,
+        .nav-item[data-section].active i,
+        .nav-item.active i.fas,
+        .nav-item[data-section].active i.fas {
+            color: var(--cane-600) !important;
+        }
+        
+        /* Make sure the active state overrides any other styles */
+        #sidebar .nav-item.active,
+        #sidebar .nav-item[data-section].active,
+        #sidebar .nav-item.active *,
+        #sidebar .nav-item[data-section].active * {
+            color: var(--cane-600) !important;
+        }
+        
         :root {
             --cane-50: #f7fee7;
             --cane-100: #ecfcca;
@@ -302,7 +368,6 @@
                 </button>
                 
                 <!-- Logo/Title -->
-                <h1 class="text-lg font-semibold text-gray-800">CaneMap</h1>
             </div>
                 
                 <!-- Navigation links removed - now only in sidebar -->
@@ -370,15 +435,13 @@
     <!-- Main Content with Sidebar -->
     <div id="mainWrapper" class="flex relative">
         <!-- Mobile Sidebar Overlay -->
-        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden" aria-hidden="true" role="presentation"></div>
         
         <!-- Left Sidebar -->
-        <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col" style="
-            background: linear-gradient(180deg, #1e3e08 0%, #2c5a0b 100%);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-            height: 100vh;
-            padding-top: 1rem;
-        ">
+        <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col" 
+            style="background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);" 
+            aria-label="Main navigation" 
+            role="navigation">
             
             <div style="padding: 1.25rem 1rem; flex-grow: 1; overflow-y: auto;">
                 <!-- Sidebar Header with close button -->
@@ -407,88 +470,49 @@
                         </div>
                     </div>
                     <!-- Mobile close button only -->
-                    <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white">
+                    <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white" aria-label="Close sidebar">
                         <i class="fas fa-times" style="font-size: 1.25rem; line-height: 1.75rem;"></i>
                     </button>
                 </div>
                 
                 <!-- Navigation Menu -->
-                <nav style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.5rem 0.75rem;">
+                <nav class="flex flex-col gap-1 p-4">
                     <!-- Dashboard -->
-                    <a href="#" class="nav-item" data-section="dashboard" style="
-                        display: flex;
-                        align-items: center;
-                        gap: 0.75rem;
-                        padding: 0.75rem 1rem;
-                        color: white;
-                        background-color: rgba(255,255,255,0.2);
-                        border-radius: 8px;
-                        font-weight: 500;
-                        font-size: 1.05rem;
-                        text-decoration: none;
-                        transition: all 0.2s;
-                        border-left: 3px solid white;
-                    ">
-                        <i class="fas fa-gauge-high" style="width: 1.25rem; color: white; text-align: center; font-size: 1.1rem;"></i>
-                        <span>Dashboard</span>
+                    <a href="#" class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base" data-section="dashboard">
+                        <i class="fas fa-gauge-high w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
+                        <span class="font-medium">Dashboard</span>
                     </a>
 
                     <!-- Overview Text Label -->
-                    <div style="
-                        color: rgba(255,255,255,0.7); 
-                        font-size: 0.85rem; 
-                        font-weight: 600; 
-                        text-transform: uppercase; 
-                        margin: 0.75rem 0 0.5rem 0.75rem; 
-                        letter-spacing: 0.05em;
-                    ">
+                    <div class="text-white/80 text-sm font-semibold uppercase mt-4 mb-2 ml-4 tracking-wider">
                         Overview
                     </div>
 
                     <!-- My Fields -->
-                    <a href="#" class="nav-item" data-section="my-fields" style="
-                        display: flex;
-                        align-items: center;
-                        gap: 0.75rem;
-                        padding: 0.75rem 1rem;
-                        color: rgba(255,255,255,0.9);
-                        border-radius: 8px;
-                        font-weight: 400;
-                        font-size: 1.05rem;
-                        text-decoration: none;
-                        transition: all 0.2s;
-                    ">
-                        <i class="fas fa-map-marked-alt" style="width: 1.25rem; color: rgba(255,255,255,0.9); text-align: center; font-size: 1.1rem;"></i>
-                        <span>My Fields</span>
+                    <a href="#" class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base" data-section="my-fields">
+                        <i class="fas fa-map-marked-alt w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
+                        <span class="font-medium">My Fields</span>
                     </a>
 
                     <!-- My Tasks -->
-                    <a href="#" class="nav-item" data-section="my-tasks" style="
-                        display: flex;
-                        align-items: center;
-                        gap: 0.75rem;
-                        padding: 0.75rem 1rem;
-                        color: rgba(255,255,255,0.9);
-                        border-radius: 8px;
-                        font-weight: 400;
-                        font-size: 1.05rem;
-                        text-decoration: none;
-                        transition: all 0.2s;
-                    ">
-                        <i class="fas fa-clipboard-check" style="width: 1.25rem; color: rgba(255,255,255,0.9); text-align: center; font-size: 1.1rem;"></i>
-                        <span>My Tasks</span>
+                    <a href="#" class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base" data-section="my-tasks">
+                        <i class="fas fa-tasks w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
+                        <span class="font-medium">My Tasks</span>
                     </a>
                 </nav>
             </div>
         </div>
 
         <!-- Main Content Area -->
-        <main id="mainContent" class="w-full px-4 py-6 lg:px-8">
+        <main id="mainContent" class="w-full px-4 -mt-4 pb-6 lg:pl-72 transition-all duration-300">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-[var(--cane-950)]">Worker Dashboard</h2>
-                        <p class="text-[var(--cane-700)] text-sm mt-1">Overview of your tasks and assigned fields</p>
+                    <div class="-mt-2">
+                        <h2 class="text-3xl font-bold text-[var(--cane-950)] -mb-1">Worker Dashboard</h2>
+                        <div>
+                            <p class="text-[var(--cane-700)] text-sm -mt-1">Overview of your tasks and assigned fields</p>
+                            <div style="height: 1px; background: var(--cane-400); margin: 0.25rem 0 2rem 0; opacity: 0.7;"></div>
+                        </div>
                     </div>
 
                 <!-- Dashboard Stats -->
@@ -688,28 +712,9 @@
           dropdown.classList.add('hidden');
         }
         
-        // Find and click the corresponding nav item
-        const navItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
-        if (navItem) {
-          // Remove active styles from all nav items
-          document.querySelectorAll('.nav-item').forEach(item => {
-            item.style.backgroundColor = '';
-            item.style.borderLeft = '';
-            item.style.color = 'rgba(255,255,255,0.9)';
-            const icon = item.querySelector('i');
-            if (icon) icon.style.color = 'rgba(255,255,255,0.9)';
-          });
-          
-          // Apply active styles to the target nav item
-          navItem.style.backgroundColor = 'rgba(255,255,255,0.2)';
-          navItem.style.borderLeft = '3px solid white';
-          navItem.style.color = 'white';
-          const icon = navItem.querySelector('i');
-          if (icon) icon.style.color = 'white';
-          
-          // Navigate to the section
-          navigateToSection(sectionId);
-        }
+        // Update the active navigation item and navigate to the section
+        updateActiveNavItem(sectionId);
+        navigateToSection(sectionId);
       }
       
       // Add click handler for notification items
@@ -742,8 +747,60 @@
     </div>
 
     <script>
+      // Function to update active navigation item styling
+      function updateActiveNavItem(sectionId) {
+        // Reset all nav items
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+          // Reset inline styles but keep layout and transition properties
+          item.style.backgroundColor = '';
+          item.style.color = '';
+          item.style.fontWeight = '';
+          
+          // Reset icon color
+          const icon = item.querySelector('i');
+          if (icon) {
+            icon.style.color = 'rgba(255,255,255,0.9)';
+          }
+          
+          // Reset text color and weight
+          const text = item.querySelector('span');
+          if (text) {
+            text.style.color = '';
+            text.style.fontWeight = '';
+          }
+        });
+        
+        // Set active state for the selected item
+        const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
+        activeItems.forEach(item => {
+          item.classList.add('active');
+          
+          // Apply styles directly to the nav item
+          item.style.backgroundColor = '#FFFFFF';
+          item.style.color = 'var(--cane-600)';
+          item.style.fontWeight = '600';
+          item.style.borderRadius = '8px';
+          
+          // Update icon color
+          const icon = item.querySelector('i');
+          if (icon) {
+            icon.style.color = 'var(--cane-600)';
+          }
+          
+          // Ensure text is dark green and bold
+          const text = item.querySelector('span');
+          if (text) {
+            text.style.color = 'var(--cane-600)';
+            text.style.fontWeight = '600';
+          }
+        });
+      }
+      
       // Navigation function to handle section changes
       function navigateToSection(sectionId) {
+        if (!sectionId) return;
+
         // Hide all content sections
         document.querySelectorAll('.content-section').forEach(section => {
           section.classList.add('hidden');
@@ -753,44 +810,63 @@
         const sectionToShow = document.getElementById(sectionId);
         if (sectionToShow) {
           sectionToShow.classList.remove('hidden');
+        } else {
+          console.warn('Section not found:', sectionId);
+          return;
         }
-        
-        // Reset all nav items to inactive state
+
+        // Update active state in navigation
         document.querySelectorAll('.nav-item').forEach(item => {
-          item.style.backgroundColor = '';
-          item.style.borderLeft = '';
-          item.style.color = 'rgba(255,255,255,0.9)';
+          // Reset all items to default state
+          item.classList.remove('bg-white', 'text-cane-600', 'font-semibold', 'active');
+          item.classList.add('text-white/90', 'hover:bg-white/10');
           
+          // Reset all inline styles
+          item.style.backgroundColor = '';
+          item.style.color = '';
+          
+          // Reset icon color
           const icon = item.querySelector('i');
           if (icon) {
-            icon.style.color = 'rgba(255,255,255,0.9)';
+            icon.classList.remove('text-cane-600');
+            icon.classList.add('text-white/90');
+            icon.style.color = '';
           }
         });
-        
-        // Set active state only for the selected section in sidebar
-        const activeNavItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
-        if (activeNavItem) {
-          activeNavItem.style.backgroundColor = 'rgba(255,255,255,0.2)';
-          activeNavItem.style.borderLeft = '3px solid white';
-          activeNavItem.style.color = 'white';
+
+        // Set active state for the selected navigation item
+        const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
+        activeItems.forEach(item => {
+          // Set active state with white background
+          item.classList.remove('text-white/90', 'hover:bg-white/10');
+          item.classList.add('bg-white', 'text-cane-600', 'font-semibold', 'active');
           
-          const activeIcon = activeNavItem.querySelector('i');
-          if (activeIcon) {
-            activeIcon.style.color = 'white';
+          // Force white background and dark text with !important
+          item.style.cssText += 'background-color: #FFFFFF !important; color: var(--cane-600) !important;';
+          
+          // Update icon color
+          const icon = item.querySelector('i');
+          if (icon) {
+            icon.classList.remove('text-white/90');
+            icon.classList.add('text-cane-600');
+            icon.style.cssText += 'color: var(--cane-600) !important;';
           }
-        }
-        
-        // Close mobile sidebar if open
-        const sidebar = document.getElementById('sidebar');
-        if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
-          const overlay = document.getElementById('sidebarOverlay');
-          sidebar.classList.add('-translate-x-full');
-          if (overlay) overlay.classList.add('hidden');
-        }
-        
-        // Store the active section in localStorage
+          
+          // Ensure text is dark green and bold
+          const text = item.querySelector('span');
+          if (text) {
+            text.style.color = 'var(--cane-600)';
+            text.style.fontWeight = '600';
+          }
+        });
+
+        // Store the active section
         localStorage.setItem('activeSection', sectionId);
+        
+        // Update URL
+        history.pushState({}, '', `#${sectionId}`);
       }
+      
       
       // Initialize navigation when DOM is loaded
       document.addEventListener('DOMContentLoaded', function() {
@@ -812,41 +888,25 @@
               e.preventDefault();
               const section = this.getAttribute('data-section');
               if (section) {
-                // Find the corresponding nav item and update its styles
-                const navItems = document.querySelectorAll(`.nav-item[data-section="${section}"]`);
-                
-                // Remove active styles from all nav items
-                document.querySelectorAll('.nav-item').forEach(navItem => {
-                  navItem.style.backgroundColor = '';
-                  navItem.style.borderLeft = '';
-                  navItem.style.color = 'rgba(255,255,255,0.9)';
-                  const icon = navItem.querySelector('i');
-                  if (icon) icon.style.color = 'rgba(255,255,255,0.9)';
-                });
-                
-                // Apply active styles to the target nav item
-                navItems.forEach(navItem => {
-                  navItem.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                  navItem.style.borderLeft = '3px solid white';
-                  navItem.style.color = 'white';
-                  const icon = navItem.querySelector('i');
-                  if (icon) icon.style.color = 'white';
-                });
-                
-                // Navigate to the section
                 navigateToSection(section);
               }
             });
           }
         });
         
-        // Initialize with stored section or dashboard as default
-        const activeSection = localStorage.getItem('activeSection') || 'dashboard';
-        navigateToSection(activeSection);
+        // Initialize the active section from URL or localStorage
+        const initialSection = window.location.hash.replace('#', '') || localStorage.getItem('activeSection') || 'dashboard';
+        navigateToSection(initialSection);
+        
+        // Set up popstate handler for browser back/forward buttons
+        window.addEventListener('popstate', function() {
+          const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+          navigateToSection(sectionId);
+        });
       });
 
       // Initialize FullCalendar instances
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function() {
         if (window.FullCalendar) {
           const today = new Date();
           const defaultEvents = [
@@ -919,37 +979,8 @@
 
       // SPA-style section switcher
       function showSection(sectionId) {
-        // Hide all sections
-        document.querySelectorAll('.content-section').forEach(s => {
-          s.classList.add('hidden');
-        });
-        
-        // Show the selected section
-        const el = document.getElementById(sectionId);
-        if (el) {
-          el.classList.remove('hidden');
-        }
-        
-        // Update active nav styling in both sidebars
-        document.querySelectorAll('.nav-item').forEach(a => {
-          if (a.getAttribute('data-section') === sectionId) {
-            a.classList.remove('text-gray-300');
-            a.classList.add('text-white', 'bg-gray-800');
-          } else {
-            a.classList.remove('text-white', 'bg-gray-800');
-            a.classList.add('text-gray-300');
-          }
-        });
-        
-        // Update desktop nav links
-        document.querySelectorAll('[data-section]').forEach(link => {
-          if (link.getAttribute('data-section') === sectionId) {
-            link.classList.add('text-[var(--cane-600)]', 'font-semibold');
-          } else {
-            link.classList.remove('text-[var(--cane-600)]', 'font-semibold');
-            link.classList.add('text-gray-700');
-          }
-        });
+        // Use the navigateToSection function to handle section changes
+        navigateToSection(sectionId);
 
         // Load section content if needed
         if (sectionId === 'my-fields') {
@@ -1004,6 +1035,30 @@
       document.addEventListener('DOMContentLoaded', function() {
         const sectionId = window.location.hash.replace('#', '') || 'dashboard';
         showSection(sectionId);
+        
+        // Close sidebar on navigation for mobile
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', function() {
+            if (window.innerWidth < 1024) {
+              closeSidebar();
+            }
+          });
+        });
+        
+        // Handle window resize
+        function handleResize() {
+          if (window.innerWidth >= 1024) {
+            // On desktop, ensure sidebar is visible
+            document.getElementById('sidebar').classList.remove('-translate-x-full');
+            document.body.style.overflow = '';
+          } else {
+            // On mobile, ensure overlay is hidden when resizing to mobile
+            document.getElementById('sidebarOverlay').classList.add('hidden');
+          }
+        }
+        
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Initial check
       });
 
       // Leaflet map for Available Fields (initialized lazily)
