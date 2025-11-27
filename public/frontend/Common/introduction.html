@@ -317,27 +317,12 @@
                             <a href="./farmers_login.html" class="w-full btn-secondary font-semibold block text-center">Sign In</a>
                         </div>
                                 <!-- Download App Button (bottom option) -->
-        <div>
-            <div class="text-xs text-[rgba(53,83,14,0.85)] mb-1">Or download the mobile app.</div>
-            <button onclick="openApkModal()" 
-                class="w-full font-semibold"
-                style="
-                    background: linear-gradient(135deg, var(--cane-600), var(--cane-800));
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.18);
-                    transition: all .3s ease;
-                "
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 14px rgba(60,99,0,0.45)'"
-                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.18)'"
-            >
-                📥 Download CaneMap App
-            </button>
-        </div>
+
+
                     </div>
                 </div>
                 
+
                 <!-- Navigation Dots -->
                 <div class="flex justify-center space-x-2 mt-6">
                     <div class="nav-dot active"></div>
@@ -583,6 +568,96 @@
             </div>
         </div>
     </div>
+
+<!-- Transparent Glass Footer Download Banner -->
+<div id="downloadFooter"
+     style="
+        position:fixed;
+        bottom:0;
+        right:0;
+        width:100%;
+        backdrop-filter:blur(14px);
+        background:rgba(255,255,255,0.55);
+        border-top-left-radius:18px;
+        border-top-right-radius:18px;
+        padding:14px 16px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        box-shadow:0 -6px 20px rgba(0,0,0,0.28);
+        z-index:9999;
+        animation:slideUp .4s ease-out;
+     "
+>
+    <!-- LEFT: Icon + text -->
+    <div style="display:flex; align-items:center; gap:10px; white-space:nowrap;">
+        <svg width="20" height="20" viewBox="0 0 24 24" 
+            fill="var(--cane-600)"
+            style="filter:drop-shadow(0 1px 2px rgba(0,0,0,0.28));">
+            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" 
+                stroke="var(--cane-700)" 
+                stroke-width="2" 
+                stroke-linecap="round" 
+                stroke-linejoin="round"/>
+        </svg>
+
+        <span style="font-size:15px; font-weight:700; color:var(--cane-900);">
+            Download CaneMap App
+        </span>
+    </div>
+
+    <!-- RIGHT: Buttons -->
+    <div style="display:flex; gap:10px; align-items:center;">
+        <a href="/downloads/CaneMap.apk" download
+            style="
+                background:linear-gradient(135deg, var(--cane-600), var(--cane-800));
+                color:white;
+                padding:8px 16px;
+                border-radius:10px;
+                text-decoration:none;
+                font-size:14px;
+                font-weight:600;
+                white-space:nowrap;
+                box-shadow:0 4px 10px rgba(0,0,0,0.25);
+                transition:.25s;
+            "
+            onmouseover="this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.transform='translateY(0)'"
+        >
+            Download
+        </a>
+
+        <button onclick="hideFooter()" 
+            style="
+                background:rgba(255,255,255,0.6);
+                backdrop-filter:blur(8px);
+                padding:8px 14px;
+                border-radius:10px;
+                border:1px solid rgba(0,0,0,0.1);
+                font-size:14px;
+                font-weight:600;
+                white-space:nowrap;
+                cursor:pointer;
+            "
+        >
+            Not now
+        </button>
+    </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { transform:translateY(70px); opacity:0; }
+    to   { transform:translateY(0); opacity:1; }
+}
+</style>
+
+<script>
+function hideFooter(){
+    document.getElementById('downloadFooter').style.display = 'none';
+}
+</script>
+
 <!-- APK Download Confirmation Modal -->
 <div id="apkModal" 
      style="
