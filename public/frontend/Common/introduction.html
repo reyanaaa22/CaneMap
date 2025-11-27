@@ -316,6 +316,25 @@
                             <div class="text-xs text-[rgba(53,83,14,0.85)] mb-1">Already have an account? Go to Sign In.</div>
                             <a href="./farmers_login.html" class="w-full btn-secondary font-semibold block text-center">Sign In</a>
                         </div>
+                                <!-- Download App Button (bottom option) -->
+        <div>
+            <div class="text-xs text-[rgba(53,83,14,0.85)] mb-1">Or download the mobile app.</div>
+            <button onclick="openApkModal()" 
+                class="w-full font-semibold"
+                style="
+                    background: linear-gradient(135deg, var(--cane-600), var(--cane-800));
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.18);
+                    transition: all .3s ease;
+                "
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 14px rgba(60,99,0,0.45)'"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.18)'"
+            >
+                📥 Download CaneMap App
+            </button>
+        </div>
                     </div>
                 </div>
                 
@@ -564,6 +583,56 @@
             </div>
         </div>
     </div>
+<!-- APK Download Confirmation Modal -->
+<div id="apkModal" 
+     style="
+        display:none; position:fixed; inset:0; 
+        background:rgba(0,0,0,0.45);
+        backdrop-filter:blur(4px);
+        justify-content:center; align-items:center; z-index:9999;
+     ">
+    <div style="
+        background:white; padding:22px; 
+        border-radius:14px; width:90%; max-width:340px;
+        text-align:center; box-shadow:0 10px 20px rgba(0,0,0,0.25);
+    ">
+        <h3 style="font-size:20px; font-weight:700; margin-bottom:8px; color:var(--cane-900);">
+            Download CaneMap App?
+        </h3>
+        <p style="font-size:14px; color:#444; margin-bottom:20px;">
+            Are you sure you want to download the latest APK?
+        </p>
+
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="closeApkModal()" 
+                style="
+                    padding:8px 18px; border-radius:8px;
+                    background:#aaa; color:white; border:none;
+                    font-weight:600; width:45%;
+                ">
+                Cancel
+            </button>
+
+            <a href="/downloads/CaneMap.apk" download
+                style="
+                    padding:8px 18px; border-radius:8px;
+                    background:linear-gradient(135deg, var(--cane-700), var(--cane-900));
+                    color:white; border:none; font-weight:600; width:45%; display:block;
+                ">
+                Yes, Download
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function openApkModal() {
+    document.getElementById('apkModal').style.display = 'flex';
+}
+function closeApkModal() {
+    document.getElementById('apkModal').style.display = 'none';
+}
+</script>
 
 <script>
 let currentScreen = 1;

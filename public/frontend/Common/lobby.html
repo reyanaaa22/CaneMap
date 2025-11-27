@@ -1258,6 +1258,47 @@ header nav .flex.items-center.justify-between > div:first-child {
                             Whether you're in the office or in the field, CaneMap keeps you connected and productive.
                         </p>
                     </div>
+<!-- Download App Feature (Inside Accessible Anytime Section) -->
+<div style="
+    background:#fff;
+    padding:15px;
+    border-radius:12px;
+    margin-top:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+    transition:all .3s ease;
+"
+onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.18)'"
+onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.08)'">
+
+    <div style="font-weight:700; font-size:16px; color:var(--cane-900);">
+        📥 Download CaneMap App
+    </div>
+
+    <p style="font-size:13px; color:#555; margin-top:4px;">
+        Install the mobile version for faster access and seamless field management.
+    </p>
+
+    <button onclick="openApkModal()" 
+        style="
+            margin-top:10px;
+            width:100%;
+            padding:10px 16px;
+            background:linear-gradient(135deg, var(--cane-600), var(--cane-800));
+            border:none;
+            color:white;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            box-shadow:0 4px 6px rgba(0,0,0,0.15);
+            transition:all .3s ease;
+        "
+        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 10px rgba(60,99,0,0.45)'"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.15)'"
+    >
+        Download Now
+    </button>
+</div>
+
                 </div>
 
                 <!-- Right: Mockup image -->
@@ -1737,6 +1778,97 @@ header nav .flex.items-center.justify-between > div:first-child {
         mo.observe(container, { childList: true, subtree: true });
       })();
     </script>
+
+<!-- APK Download Confirmation Modal -->
+<div id="apkModal" 
+     style="
+        display:none; position:fixed; inset:0; 
+        background:rgba(0,0,0,0.45);
+        backdrop-filter:blur(4px);
+        justify-content:center; align-items:center; z-index:9999;
+     ">
+    <div style="
+        background:white; padding:22px; 
+        border-radius:14px; width:90%; max-width:340px;
+        text-align:center; box-shadow:0 10px 20px rgba(0,0,0,0.25);
+    ">
+        <h3 style="font-size:20px; font-weight:700; margin-bottom:8px; color:var(--cane-900);">
+            Download CaneMap App?
+        </h3>
+        <p style="font-size:14px; color:#444; margin-bottom:20px;">
+            Are you sure you want to download the latest APK?
+        </p>
+
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="closeApkModal()" 
+                style="
+                    padding:10px 18px; border-radius:8px;
+                    background:#aaa; color:white; border:none;
+                    font-weight:600; width:45%;
+                ">
+                Cancel
+            </button>
+
+            <button onclick="confirmDownload()" 
+                style="
+                    padding:10px 18px; border-radius:8px;
+                    background:linear-gradient(135deg, var(--cane-700), var(--cane-900));
+                    color:white; border:none;
+                    font-weight:600; width:45%;
+                ">
+                Yes, Download
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SUCCESS TOAST -->
+<div id="toastSuccess" 
+     style="
+        position:fixed; top:18px; left:50%; transform:translateX(-50%);
+        background:var(--cane-700); color:white;
+        padding:12px 20px; border-radius:8px; font-size:14px;
+        box-shadow:0 4px 12px rgba(0,0,0,0.25);
+        display:none; z-index:99999; opacity:0;
+        transition:opacity .4s ease;
+     ">
+    ✔ Download started successfully!
+</div>
+
+<script>
+function openApkModal() {
+    document.getElementById('apkModal').style.display = 'flex';
+}
+
+function closeApkModal() {
+    document.getElementById('apkModal').style.display = 'none';
+}
+
+function confirmDownload() {
+    // Trigger download
+    const link = document.createElement("a");
+    link.href = "/downloads/CaneMap.apk";
+    link.download = "CaneMap.apk";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Close modal
+    closeApkModal();
+
+    // Show success toast
+    const toast = document.getElementById('toastSuccess');
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.opacity = 1, 10);
+
+    // Hide after 2.5 seconds
+    setTimeout(() => {
+        toast.style.opacity = 0;
+        setTimeout(() => toast.style.display = "none", 400);
+    }, 2500);
+}
+</script>
+
 
 
 </body>
