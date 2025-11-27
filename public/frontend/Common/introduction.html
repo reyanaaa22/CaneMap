@@ -280,6 +280,29 @@
             font-size: clamp(14px, 1.6vw, 18px);
             line-height: 1.55;
         }
+
+/* MOBILE ONLY – Make buttons smaller */
+@media (max-width: 480px) {
+    #downloadFooter a,
+    #downloadFooter button {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        border-radius: 8px !important;
+    }
+
+    #downloadFooter svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    #downloadFooter span {
+        font-size: 13px !important;
+    }
+
+    #downloadFooter {
+        padding: 10px 12px !important;
+    }
+}
     </style>
 </head>
 <body class="main-background">
