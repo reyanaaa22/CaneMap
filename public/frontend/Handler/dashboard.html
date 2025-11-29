@@ -40,12 +40,21 @@
   })();
 </script>
         <script>
-            // Header hamburger for Handler: reuse desktop collapse button when possible,
-            // and provide mobile open/close overlay behavior.
-            document.addEventListener('DOMContentLoaded', function(){
-                const btn = document.getElementById('handlerHamburgerBtn');
-                const sidebar = document.getElementById('sidebar');
-                if (!btn || !sidebar) return;
+        // Set initial mobile state before DOM is fully loaded
+        document.documentElement.classList.add('mobile-sidebar-init');
+        
+        // Header hamburger for Handler: reuse desktop collapse button when possible,
+        // and provide mobile open/close overlay behavior.
+        document.addEventListener('DOMContentLoaded', function(){
+            const btn = document.getElementById('handlerHamburgerBtn');
+            const sidebar = document.getElementById('sidebar');
+            if (!btn || !sidebar) return;
+            
+            // Ensure sidebar is initially closed on mobile
+            if (window.innerWidth < 1024) {
+                sidebar.classList.add('closed');
+                document.body.classList.add('mobile-sidebar-closed');
+            }
 
                 function ensureOverlay(){
                     let ov = document.getElementById('handlerSidebarOverlay');
@@ -85,16 +94,28 @@ if (sidebar.classList.contains('closed')){
 
 });
 
-                // Start mobile with sidebar closed
-                if (window.innerWidth < 1024) sidebar.classList.add('closed');
+                // Close sidebar when clicking on a nav item on mobile
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        if (window.innerWidth < 1024) {
+                            sidebar.classList.add('closed');
+                            document.body.classList.add('mobile-sidebar-closed');
+                            const ov = document.getElementById('handlerSidebarOverlay');
+                            if (ov) ov.style.display = 'none';
+                        }
+                    });
+                });
 
                 window.addEventListener('resize', function(){
                     const ov = document.getElementById('handlerSidebarOverlay');
                     if (window.innerWidth >= 1024){
                         if (ov) ov.style.display = 'none';
                         sidebar.classList.remove('closed');
+                        document.body.classList.remove('mobile-sidebar-closed');
                     } else {
                         sidebar.classList.add('closed');
+                        document.body.classList.add('mobile-sidebar-closed');
                     }
                 });
             });
@@ -161,11 +182,54 @@ if (sidebar.classList.contains('closed')){
     const logoutBtn = document.getElementById('handlerLogout');
     const menuEl = document.getElementById('handlerHeaderMenu');
     if (menuEl) menuEl.addEventListener('click', function(e){ e.stopPropagation(); });
-    if (menuBtn) menuBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openMenu(!isMenuOpen()); });
-    if (goProfileBtn) goProfileBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../Common/profile-settings.html'; });
-    if (logoutBtn) logoutBtn.addEventListener('click', function(e){ e.preventDefault(); doLogout(); });
-    // Close on outside click
-    document.addEventListener('click', function(){ openMenu(false); });
+    
+    // Enhanced dropdown menu functionality
+    if (menuBtn) {
+        const chevron = menuBtn.querySelector('.fa-chevron-down');
+        
+        menuBtn.addEventListener('click', function(e){ 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            const isOpen = isMenuOpen();
+            openMenu(!isOpen);
+            
+            // Toggle chevron rotation
+            if (chevron) {
+                if (!isOpen) {
+                    chevron.classList.add('transform', 'rotate-180');
+                } else {
+                    chevron.classList.remove('transform', 'rotate-180');
+                }
+            }
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!menuBtn.contains(e.target) && !menuEl.contains(e.target)) {
+                openMenu(false);
+                if (chevron) chevron.classList.remove('transform', 'rotate-180');
+            }
+        });
+        
+        // Close menu when clicking on menu items
+        const menuItems = menuEl.querySelectorAll('button, a');
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                openMenu(false);
+                if (chevron) chevron.classList.remove('transform', 'rotate-180');
+            });
+        });
+    }
+    
+    if (goProfileBtn) goProfileBtn.addEventListener('click', function(e){ 
+        e.preventDefault(); 
+        window.location.href = '../Common/profile-settings.html'; 
+    });
+    
+    if (logoutBtn) logoutBtn.addEventListener('click', function(e){ 
+        e.preventDefault(); 
+        doLogout(); 
+    });
 
     
   });
@@ -246,11 +310,24 @@ if (sidebar.classList.contains('closed')){
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* Mobile sidebar initialization */
+        .mobile-sidebar-init #handlerMain {
+            transition: none !important;
+        }
+        .mobile-sidebar-closed #handlerMain {
+            margin-left: 0 !important;
+        }
+        
         :root {
             /* Two-tone Green Palette */
             --primary-dark: #1B5E20;      /* Dark Green for sidebar */
             --primary-medium: #2E7D32;    /* Medium Dark Green */
             --primary-light: #A5D6A7;     /* Light Green for highlights/buttons */
+            
+            /* Mobile breakpoints */
+            --mobile: 640px;
+            --tablet: 768px;
+            --desktop: 1024px;
             --primary-lighter: #81C784;   /* Lighter Green alternative */
             
             /* Accent Colors */
@@ -340,7 +417,6 @@ if (sidebar.classList.contains('closed')){
         .metric-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-            background: linear-gradient(135deg, #ffffff, #f5f9f2);
         }
         /* Status color coding */
         .status-completed {
@@ -460,12 +536,14 @@ if (sidebar.classList.contains('closed')){
         #workers .summary-card::before {
             content: "";
             position: absolute;
-            inset: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
             background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.55), transparent 55%);
             opacity: 0;
             transition: opacity 0.25s ease;
         }
-
         #workers .summary-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 18px 32px rgba(73, 125, 0, 0.18);
@@ -965,9 +1043,9 @@ if (sidebar.classList.contains('closed')){
 <body class="min-h-screen bg-gray-100">
 
     <header class="shadow-lg bg-white py-1">
-        <div id="handlerHeaderContainer" class="container mx-auto px-4 py-1 lg:pl-64">
+        <div id="handlerHeaderContainer" class="container mx-auto px-2 sm:px-4 py-1 lg:pl-64">
             <div class="flex items-center justify-between h-12">
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-4">
                     <!-- Header hamburger for mobile/desktop: reuse collapse button on desktop -->
                     <button id="handlerHamburgerBtn" class="lg:hidden bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors hamburger-icon" title="Menu">
                         <i class="fas fa-bars text-gray-900"></i>
@@ -975,11 +1053,6 @@ if (sidebar.classList.contains('closed')){
                 </div>
                 <div class="text-center"></div>
                 <div class="flex items-center space-x-4">
-                    <!-- Back to Lobby Button -->
-                    <a href="../Common/lobby.html" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2 rounded-lg hover:bg-gray-100" title="Back to Lobby">
-                        <i class="fas fa-home text-base text-gray-800"></i>
-                        <span class="hidden md:inline text-xs font-medium text-gray-800">Lobby</span>
-                    </a>
 
                     <!-- Notification Bell with Dropdown -->
                     <div class="relative">
@@ -1013,11 +1086,23 @@ if (sidebar.classList.contains('closed')){
                                 <i class="fas fa-user text-gray-700 text-sm"></i>
                             </div>
                             <span class="font-medium text-gray-800" id="topUserNameHeader">Handler</span>
-                            <i class="fas fa-chevron-down text-xs text-gray-800"></i>
+                            <i class="fas fa-chevron-down text-xs text-gray-800 transition-transform duration-200"></i>
                         </button>
-                        <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right z-50">
-                            <button id="handlerGoProfile" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile Information</button>
-                            <button id="handlerLogout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+                        <div id="handlerHeaderMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible transition-all duration-200 transform scale-95 origin-top-right z-50">
+                            <button id="handlerGoProfile" class="flex items-center space-x-2 w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user w-4 text-center"></i>
+                                <span>Profile Information</span>
+                            </button>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <a href="../Common/lobby.html" class="flex items-center space-x-2 w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-home w-4 text-center"></i>
+                                <span>Lobby</span>
+                            </a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <button id="handlerLogout" class="flex items-center space-x-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <i class="fas fa-sign-out-alt w-4 text-center"></i>
+                                <span>Logout</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1030,7 +1115,7 @@ if (sidebar.classList.contains('closed')){
   <aside id="sidebar" class="fixed left-0 top-0 w-64 h-screen shadow-lg" style="background: linear-gradient(180deg, #2c5a0b 0%, #3a7a0f 100%);">
             <!-- Profile Section -->
             <div class="p-6 border-b border-white/10">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-3">
                     <!-- Desktop collapse button -->
                     <button id="handlerCollapseSidebarBtn" class="hidden lg:inline-flex items-center justify-center text-white/80 hover:text-white p-2 rounded" title="Collapse sidebar">
                         <i class="fas fa-bars"></i>
@@ -1105,9 +1190,9 @@ if (sidebar.classList.contains('closed')){
                     <!-- Dashboard -->
                     <div class="mb-4">
                         <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 text-white rounded-lg font-medium bg-gray-800" data-section="dashboard">
-                        <i class="fas fa-tachometer-alt w-5 h-5"></i>
-                        <span>Dashboard</span>
-                    </a>
+                            <i class="fas fa-tachometer-alt w-5 h-5"></i>
+                            <span>Dashboard</span>
+                        </a>
                     </div>
 
                     <p class="px-4 text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Overview</p>
@@ -1176,7 +1261,7 @@ if (sidebar.classList.contains('closed')){
             </div>
         </aside>
 
-  <main id="handlerMain" class="flex-1 px-0 lg:px-4 lg:ml-64">
+  <main id="handlerMain" class="flex-1 px-3 sm:px-4 lg:ml-64 transition-transform duration-300">
         <div id="dashboard" class="content-section">
         <!-- Page Title (simple, since global header exists) -->
         <div class="px-4 lg:px-0 py-4 mb-2">
@@ -1242,7 +1327,7 @@ if (sidebar.classList.contains('closed')){
         <!-- Task Warnings Panel (Critical & Overdue Tasks) -->
         <div id="taskWarningsPanel" class="hidden mb-6">
             <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-5 shadow-lg">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-bold flex items-center text-red-800">
                         <i class="fas fa-exclamation-triangle mr-3 text-red-600"></i>
                         Task Warnings
@@ -1255,9 +1340,9 @@ if (sidebar.classList.contains('closed')){
             </div>
         </div>
 
-        <div id="dashboard-panels" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+        <div id="dashboard-panels" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6 px-0">
                       <!-- Join Request panel -->
-                      <div class="section-card rounded-xl p-6">
+                      <div class="section-card rounded-xl p-4 sm:p-6">
                           <div class="mb-4 p-3 rounded-lg flex items-center justify-between bg-[var(--cane-50)]">
                               <h3 class="text-lg font-bold flex items-center text-[var(--cane-900)]">
                                 <i class="fas fa-user-plus mr-3" style="color: var(--primary-medium);"></i>
@@ -1274,7 +1359,7 @@ if (sidebar.classList.contains('closed')){
             </div>
 
             <!-- Recent Task Activity panel -->
-            <div class="section-card rounded-xl p-6">
+            <div class="section-card rounded-xl p-4 sm:p-6">
                 <div class="mb-4 p-3 rounded-lg flex items-center justify-between bg-[var(--cane-50)]">
                     <h3 class="text-lg font-bold flex items-center text-[var(--cane-900)]">
                         <i class="fas fa-history mr-3" style="color: var(--primary-medium);"></i>
