@@ -104,7 +104,7 @@
         body.sidebar-collapsed #sidebar {
           width: 5rem;
         }
-        body.sidebar-collapsed #sidebar .nav-item span {
+        body.sidebar-collapsed #sidebar .nav-item span:not(.section-header) {
           opacity: 0;
           width: 0;
           overflow: hidden;
@@ -127,6 +127,20 @@
         }
         body.sidebar-collapsed #sidebar .space-x-3 {
           gap: 0;
+        }
+      }
+
+      /* Keep section headers visible when sidebar is collapsed */
+      @media (min-width: 1024px) {
+        body.sidebar-collapsed #sidebar .section-header {
+          display: block !important;
+          width: 100%;
+          text-align: center;
+          padding: 0.25rem 0;
+          margin: 0.5rem 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
 
@@ -244,24 +258,6 @@
             </div>
           </div>
           <div class="flex items-center space-x-4">
-            <!-- (hamburger moved to header left) -->
-
-            <!-- Back to Lobby Button -->
-            <a
-              href="../Common/lobby.html"
-              class="flex items-center space-x-2 text-gray-700 hover:text-cane-600 transition-colors px-3 py-2 rounded-lg hover:bg-cane-50"
-              title="Back to Lobby"
-            >
-              <i class="fas fa-home text-lg"></i>
-              <span class="hidden md:inline text-sm font-medium">Lobby</span>
-            </a>
-
-            <!-- Open a Rental (Driver) -->
-            <button id="btnDriverRental" class="hidden flex items-center space-x-2 text-gray-700 hover:text-cane-600 transition-colors px-3 py-2 rounded-lg hover:bg-cane-50" title="Open a Rental">
-              <i class="fas fa-truck-moving"></i>
-              <span class="hidden sm:inline text-sm font-medium">Open a Rental</span>
-            </button>
-
             <!-- Notification Bell -->
             <div class="relative">
               <button
@@ -279,7 +275,8 @@
               <!-- Notification Dropdown -->
               <div
                 id="notificationDropdown"
-                class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-96 overflow-y-auto"
+                class="hidden fixed lg:absolute right-0 lg:right-auto lg:left-0 lg:mt-2 w-72 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-[70vh] overflow-y-auto"
+                style="top: 4.5rem; right: 1rem; left: auto; max-width: calc(100% - 2rem);"
               >
                 <div
                   class="p-3 border-b border-gray-200 flex items-center justify-between"
@@ -341,6 +338,21 @@
                     <i class="fas fa-user-edit mr-3 text-[var(--cane-500)]"></i>
                     Profile Information
                   </a>
+                  <a
+                    href="../Common/lobby.html"
+                    class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors"
+                    id="lobbyBtn"
+                  >
+                    <i class="fas fa-home mr-3 text-[var(--cane-500)]"></i>
+                    Lobby
+                  </a>
+                  <button
+                    class="w-full text-left flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors"
+                    id="openRentalBtn"
+                  >
+                    <i class="fas fa-truck-moving mr-3 text-[var(--cane-500)]"></i>
+                    Open a Rental
+                  </button>
                   <div class="border-t border-[var(--cane-100)] mt-2">
                     <button
                       id="driverLogoutBtn"
@@ -416,7 +428,7 @@
               <i class="fas fa-gauge-high w-5 h-5"></i>
               <span>Dashboard</span>
             </a>
-            <p class="text-xs font-medium text-white/70 uppercase tracking-wider px-4 pt-1 pb-2">Overview</p>
+            <p class="section-header text-xs font-medium text-white/70 uppercase tracking-wider px-4 pt-1 pb-2">Overview</p>
 
             <!-- My Fields -->
             <a
@@ -679,6 +691,76 @@
           active.classList.remove("text-gray-300");
           active.classList.add("text-white", "bg-gray-800");
         }
+
+        // Initialize sidebar state
+        function initSidebar() {
+          const sidebar = document.getElementById('sidebar');
+          const overlay = document.getElementById('sidebarOverlay');
+          
+          // Ensure sidebar is closed by default on mobile
+          if (window.innerWidth < 1024) {
+            if (sidebar) sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+          } else {
+            if (sidebar) sidebar.classList.remove('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+          }
+          
+          // Set up event listeners
+          const sidebarToggleBtns = document.querySelectorAll('#hamburgerBtn, #closeSidebarBtn');
+          sidebarToggleBtns.forEach(btn => {
+            if (btn) {
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isMobile = window.innerWidth < 1024;
+                
+                if (isMobile) {
+                  if (sidebar) sidebar.classList.toggle('-translate-x-full');
+                  if (overlay) overlay.classList.toggle('hidden');
+                } else {
+                  toggleSidebarCollapse();
+                }
+              });
+            }
+          });
+          
+          // Close sidebar when clicking on nav items on mobile
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              if (window.innerWidth < 1024) {
+                if (sidebar) sidebar.classList.add('-translate-x-full');
+                if (overlay) overlay.classList.add('hidden');
+              }
+            });
+          });
+          
+          // Close sidebar when clicking outside on mobile
+          if (overlay) {
+            overlay.addEventListener('click', function() {
+              if (window.innerWidth < 1024) {
+                if (sidebar) sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+              }
+            });
+          }
+          
+          // Handle window resize
+          window.addEventListener('resize', handleResize);
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+          initSidebar();
+          handleResize();
+        });
+
+        // Close mobile sidebar if open
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        if (sidebar && overlay) {
+          sidebar.classList.add("-translate-x-full");
+          overlay.classList.add("hidden");
+        }
       }
 
       // Handle main nav items
@@ -688,13 +770,6 @@
           if (section) {
             e.preventDefault();
             showSection(section);
-          }
-          // Close mobile sidebar if open
-          const sidebar = document.getElementById("sidebar");
-          const overlay = document.getElementById("sidebarOverlay");
-          if (sidebar && overlay) {
-            sidebar.classList.add("-translate-x-full");
-            overlay.classList.add("hidden");
           }
         });
       });
@@ -775,14 +850,40 @@
             wrapper.style.display = 'flex';
             wrapper.style.alignItems = 'center';
             wrapper.style.justifyContent = 'center';
+            wrapper.style.padding = '0 1rem'; // Add horizontal padding on mobile
+            
+            // Add responsive class for mobile
+            wrapper.classList.add('driver-rental-wrapper');
+            
+            // Add responsive styles
+            const style = document.createElement('style');
+            style.textContent = `
+              @media (max-width: 640px) {
+                .driver-rental-wrapper {
+                  padding: 0 1rem;
+                  align-items: flex-start;
+                  padding-top: 2rem;
+                }
+                #driverRentalFrame {
+                  width: 100% !important;
+                  max-width: 100%;
+                  height: 90vh !important;
+                  border-radius: 8px;
+                }
+              }
+            `;
+            document.head.appendChild(style);
+            
             const frame = document.createElement('iframe');
             frame.id = 'driverRentalFrame';
             frame.src = '../Driver/Driver_Rental.html';
             frame.style.width = '980px';
+            frame.style.maxWidth = '100%';
             frame.style.height = '640px';
             frame.style.border = '0';
             frame.style.borderRadius = '8px';
             frame.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)';
+            frame.style.backgroundColor = 'white';
             wrapper.appendChild(frame);
             wrapper.addEventListener('click', function(e){ if (e.target === wrapper) wrapper.remove(); });
             document.body.appendChild(wrapper);
@@ -794,24 +895,49 @@
         function closeFallback(){ const w = document.getElementById('driverRentalModalWrapper'); if (w) w.remove(); }
 
         document.addEventListener('DOMContentLoaded', function(){
-          const btn = document.getElementById('btnDriverRental');
-          if (!btn) return;
+          // Handle both the original button and the dropdown button
+          const rentalBtns = [
+            document.getElementById('btnDriverRental'),
+            document.getElementById('openRentalBtn')
+          ].filter(btn => btn);
+
+          if (rentalBtns.length === 0) return;
 
           // Show button for drivers (best-effort). If you want it always visible, remove condition.
-          try { if (localStorage.getItem('userRole') === 'driver') btn.classList.remove('hidden'); } catch(_) { btn.classList.remove('hidden'); }
+          try { 
+            if (localStorage.getItem('userRole') === 'driver') {
+              rentalBtns.forEach(btn => btn.classList.remove('hidden'));
+            } 
+          } catch(_) { 
+            rentalBtns.forEach(btn => btn.classList.remove('hidden'));
+          }
 
-          btn.addEventListener('click', function(e){
+          function handleRentalClick(e) {
             e.preventDefault();
+            // Close the dropdown if it's open
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) {
+              dropdown.classList.remove('opacity-100', 'visible', 'scale-100');
+              dropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+            }
             // Prefer shared helper if present
             if (window.openDriverRentalIframe && typeof window.openDriverRentalIframe === 'function'){
               try { window.openDriverRentalIframe(); return; } catch(_){}
             }
             // Fallback overlay
             openFallback();
+          }
+
+          // Add click handlers to all rental buttons
+          rentalBtns.forEach(btn => {
+            btn.addEventListener('click', handleRentalClick);
           });
 
           // Also expose open/close for other scripts
-          window.openDriverRentalModal = function(){ if (window.openDriverRentalIframe) return window.openDriverRentalIframe(); return openFallback(); };
+          window.openDriverRentalModal = function(){ 
+            if (window.openDriverRentalIframe) return window.openDriverRentalIframe(); 
+            return openFallback(); 
+          };
           window.closeDriverRentalModal = closeFallback;
         });
       })();
@@ -882,6 +1008,51 @@
             toggleSidebarCollapse();
           });
         }
+        
+        // Toggle notification dropdown
+        document.addEventListener('click', function(e) {
+          const notificationBtn = document.getElementById('notificationBtn');
+          const notificationDropdown = document.getElementById('notificationDropdown');
+          const isMobile = window.innerWidth < 1024;
+          
+          if (e.target === notificationBtn || notificationBtn.contains(e.target)) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Toggle dropdown
+            const isHidden = notificationDropdown.classList.toggle('hidden');
+            
+            if (!isHidden && isMobile) {
+              // Position dropdown below the header on mobile
+              const header = document.querySelector('header');
+              const headerRect = header.getBoundingClientRect();
+              notificationDropdown.style.top = `${headerRect.bottom + window.scrollY + 5}px`;
+              notificationDropdown.style.left = '1rem';
+              notificationDropdown.style.right = '1rem';
+              notificationDropdown.style.maxWidth = 'none';
+              notificationDropdown.style.width = 'auto';
+            }
+            
+            // Close other dropdowns
+            document.querySelectorAll('[id$="Dropdown"]').forEach(dropdown => {
+              if (dropdown !== notificationDropdown && !dropdown.classList.contains('hidden')) {
+                dropdown.classList.add('hidden');
+              }
+            });
+          } else if (!notificationDropdown.contains(e.target)) {
+            notificationDropdown.classList.add('hidden');
+          }
+        });
+        
+        // Close dropdown when scrolling on mobile
+        window.addEventListener('scroll', function() {
+          if (window.innerWidth < 1024) {
+            const notificationDropdown = document.getElementById('notificationDropdown');
+            if (!notificationDropdown.classList.contains('hidden')) {
+              notificationDropdown.classList.add('hidden');
+            }
+          }
+        }, { passive: true });
         
         window.addEventListener('resize', function(){
           const mainWrapper = document.getElementById('driverMainWrapper');

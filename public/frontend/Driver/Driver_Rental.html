@@ -270,7 +270,7 @@
 
     const successOverlay = document.getElementById('successOverlay');
     const successOk = document.getElementById('successOk');
-    const editBadgeBtn = document.getElementById("editBadgeBtn");
+    let editBadgeBtn = document.getElementById("editBadgeBtn");
 
     const stopToast = document.getElementById('stopToast');
 
@@ -389,25 +389,59 @@ if (isOpen) {
       }
     }
 
-    // click behavior for edit badge nav (unchanged)
-    editBadgeBtn.addEventListener("click", () => {
-        try {
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ type: "open_driver_badge" }, "*");
-            } else {
-                window.location.href = '/public/frontend/Driver/Driver_Badge.html';
+    // Handle edit profile button click
+    if (editBadgeBtn) {
+        editBadgeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                // Close the current modal first if in parent
+                if (window.parent && window.parent.closeDriverRentalModal) {
+                    window.parent.closeDriverRentalModal();
+                }
+                // Navigate to profile settings
+                window.location.href = '../Common/profile-settings.html';
+            } catch (err) {
+                console.error("Navigation failed", err);
             }
-        } catch (err) {
-            console.error("Navigation failed", err);
-        }
-    });
+        });
+        
+        // Make sure the button is clickable
+        editBadgeBtn.style.cursor = 'pointer';
+        editBadgeBtn.style.pointerEvents = 'auto';
+    }
 
-    // Terms modal controls
-    btnCancel.addEventListener('click', function(){
-      try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'driver_rental_cancel' }, '*'); } catch(_){}
-      window.close && window.close();
-    });
-    closeBtn.addEventListener('click', () => { try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'driver_rental_cancel' }, '*'); } catch(_){}; window.close && window.close(); });
+    // Make close and cancel buttons clickable
+    function handleClose() {
+        try { 
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'driver_rental_cancel' }, '*');
+                if (window.parent.closeDriverRentalModal) {
+                    window.parent.closeDriverRentalModal();
+                }
+            } else {
+                window.close && window.close();
+            }
+        } catch(err) {
+            console.error('Error closing modal:', err);
+            window.close && window.close();
+        }
+    }
+
+    // Add click handlers for both close and cancel buttons
+    if (btnCancel) {
+        btnCancel.addEventListener('click', handleClose);
+        // Ensure button is clickable
+        btnCancel.style.cursor = 'pointer';
+        btnCancel.style.pointerEvents = 'auto';
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', handleClose);
+        // Ensure button is clickable
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.pointerEvents = 'auto';
+    }
 
     termsCancel.addEventListener('click', hideTerms);
 
