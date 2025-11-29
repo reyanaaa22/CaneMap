@@ -449,8 +449,8 @@ async function initNotifications(userId) {
                         } catch(_) {}
 
                         // --- START: SRA map block (replace existing block) ---
-                        try {
-                            const mapContainer = document.getElementById('sraFieldsMap');
+                                try {
+                            const mapContainer = document.getElementById('sraFieldsMap') || document.getElementById('sraFieldsMapMap');
                             if (mapContainer) {
 
                                 // ---------- Utility: safely pick first existing key ----------
@@ -528,7 +528,7 @@ async function initNotifications(userId) {
                                 }
 
                                 // ---------- Show reviewed fields on map with REAL-TIME updates ----------
-                                let currentMarkerGroup = null; // Store marker group to clear on updates
+                                const markerGroups = new WeakMap();
 
                                 async function renderFieldsOnMap(map, fields) {
                                     try {
@@ -540,12 +540,12 @@ async function initNotifications(userId) {
                                         });
 
                                         // Clear existing markers
-                                        if (currentMarkerGroup) {
-                                            map.removeLayer(currentMarkerGroup);
-                                        }
+                                        const prevGroup = markerGroups.get(map);
+                                        if (prevGroup) map.removeLayer(prevGroup);
 
                                         // Create new marker group
-                                        currentMarkerGroup = L.layerGroup().addTo(map);
+                                        const group = L.layerGroup().addTo(map);
+                                        markerGroups.set(map, group);
 
                                         if (!Array.isArray(fields) || fields.length === 0) {
                                             console.warn('⚠️ No reviewed fields to display.');
@@ -558,7 +558,7 @@ async function initNotifications(userId) {
                                         fields.forEach(f => {
                                             if (!f.lat || !f.lng) return;
 
-                                            const marker = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(currentMarkerGroup);
+                                            const marker = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(group);
 
                                             const tooltipHtml = `
                                             <div style="font-size:12px; line-height:1.4; max-width:250px; color:#14532d;">
@@ -799,8 +799,8 @@ async function initNotifications(userId) {
                                     setupRealtimeFieldsListener(map);
 
                                     // unified search (uses same input/button IDs used in other pages)
-                                    const input = document.getElementById('mapSearchInput');
-                                    const btn = document.getElementById('mapSearchBtn');
+                                    const input = document.getElementById('mapSearchInput') || document.getElementById('mapSearchInputMap');
+                                    const btn = document.getElementById('mapSearchBtn') || document.getElementById('mapSearchBtnMap');
 
                                     function showToast(msg, color = 'green') {
                                         let container = document.getElementById('toastContainer');
@@ -899,8 +899,78 @@ async function initNotifications(userId) {
                                         input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); searchHandler(); }});
                                     }
 
-                                    window.map = map;
+                                    try { mapContainer.dataset.initialized = 'true'; } catch(_) {}
+                                    window.sraDashboardMap = map;
                                 })();
+                            }
+                            // Initialize Map Section container separately if present
+                            const mapContainer2 = document.getElementById('sraFieldsMapMap');
+                            function initSraMapSection() {
+                                (async () => {
+                                    await ensureLeaflet();
+                                    const map2 = L.map(mapContainer2, { zoomControl: true, scrollWheelZoom: false }).setView([11.0064, 124.6075], 12);
+                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map2);
+                                    const bounds2 = L.latLngBounds(L.latLng(10.85, 124.45), L.latLng(11.20, 124.80));
+                                    map2.setMaxBounds(bounds2);
+                                    map2.on('drag', () => map2.panInsideBounds(bounds2, { animate: true }));
+                                    setupRealtimeFieldsListener(map2);
+                                    setTimeout(() => { try { map2.invalidateSize(); } catch(_) {} }, 200);
+                                    const input2 = document.getElementById('mapSearchInputMap');
+                                    const btn2 = document.getElementById('mapSearchBtnMap');
+                                    const showToast2 = (msg, color = 'green') => {
+                                        let container = document.getElementById('toastContainer');
+                                        if (!container) {
+                                            container = document.createElement('div');
+                                            container.id = 'toastContainer';
+                                            Object.assign(container.style, { position: 'fixed', top: '20px', right: '20px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 99999 });
+                                            document.body.appendChild(container);
+                                        }
+                                        const toast = document.createElement('div');
+                                        toast.innerHTML = msg;
+                                        Object.assign(toast.style, { background: color === 'green' ? '#166534' : (color === 'gray' ? '#6b7280' : '#b91c1c'), color: 'white', padding: '12px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', opacity: '0', transform: 'translateY(-10px)', transition: 'opacity 0.3s ease, transform 0.3s ease' });
+                                        container.appendChild(toast);
+                                        setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 50);
+                                        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+                                    };
+                                    const searchHandler2 = () => {
+                                        const val = (input2 && input2.value ? input2.value.trim().toLowerCase() : '');
+                                        if (!val) {
+                                            map2.setView([11.0064, 124.6075], 12);
+                                            if (window.__caneMarkers && window.__caneMarkers.length) window.__caneMarkers.forEach(({ marker }) => marker.addTo(map2));
+                                            showToast2('🔄 Map reset to default view.', 'gray');
+                                            return;
+                                        }
+                                        const matchedFields = (window.__caneMarkers || []).filter(m => {
+                                            const d = m.data;
+                                            return ((d.fieldName && d.fieldName.toLowerCase().includes(val)) || (d.barangay && d.barangay.toLowerCase().includes(val)) || (d.street && d.street.toLowerCase().includes(val)) || (String(d.lat).toLowerCase().includes(val)) || (String(d.lng).toLowerCase().includes(val)));
+                                        });
+                                        if (matchedFields.length > 0) {
+                                            const { marker, data } = matchedFields[0];
+                                            map2.setView([data.lat, data.lng], 15);
+                                            try { marker._icon && marker._icon.classList.add('leaflet-marker-bounce'); setTimeout(() => marker._icon.classList.remove('leaflet-marker-bounce'), 1200); } catch(_) {}
+                                            showToast2(`📍 Found: ${data.fieldName} (${data.barangay})`, 'green');
+                                            return;
+                                        }
+                                        const brgyMatch = barangays.find(b => b.name.toLowerCase().includes(val));
+                                        if (brgyMatch && brgyMatch.coords[0] && brgyMatch.coords[1]) {
+                                            const caneIcon = L.icon({ iconUrl: '../../frontend/img/PIN.png', iconSize: [36, 36], iconAnchor: [18, 34], popupAnchor: [0, -28] });
+                                            map2.setView(brgyMatch.coords, 14);
+                                            L.marker(brgyMatch.coords, { icon: caneIcon }).addTo(map2).bindPopup(`<b>${brgyMatch.name}</b>`).openPopup();
+                                            showToast2(`📍 Barangay: ${brgyMatch.name}`, 'green');
+                                            return;
+                                        }
+                                        showToast2('❌ No matching field or barangay found.', 'gray');
+                                    };
+                                    if (btn2) btn2.addEventListener('click', (e) => { e.preventDefault(); searchHandler2(); });
+                                    if (input2) input2.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); searchHandler2(); }});
+                                    try { mapContainer2.dataset.initialized = 'true'; } catch(_) {}
+                                    window.sraSectionMap = map2;
+                                })();
+                            }
+                            try { window.initSraMapSection = initSraMapSection; } catch(_) {}
+                            const sectionEl = document.getElementById('map');
+                            if (mapContainer2 && !mapContainer2.dataset.initialized && sectionEl && !sectionEl.classList.contains('hidden')) {
+                                initSraMapSection();
                             }
                         } catch (err) {
                             console.error('SRA Field Map initialization failed:', err);
@@ -1195,6 +1265,22 @@ async function initNotifications(userId) {
                     reportsTableContainer.dataset.initialized = 'true';
                     renderReportsTable('sraReportsTableContainer');
                 }
+            }
+
+            // Ensure map sizes are correct when switching to Map section
+            if (sectionId === 'map') {
+                try {
+                    const mapContainer2 = document.getElementById('sraFieldsMapMap');
+                    if (mapContainer2 && !mapContainer2.dataset.initialized && typeof initSraMapSection === 'function') {
+                        initSraMapSection();
+                    }
+                } catch(_) {}
+                setTimeout(() => {
+                    try {
+                        if (window.sraDashboardMap && typeof window.sraDashboardMap.invalidateSize === 'function') window.sraDashboardMap.invalidateSize();
+                        if (window.sraSectionMap && typeof window.sraSectionMap.invalidateSize === 'function') window.sraSectionMap.invalidateSize();
+                    } catch(_) {}
+                }, 200);
             }
 
             currentSection = sectionId;
