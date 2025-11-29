@@ -278,8 +278,19 @@ async function loadUserData(user) {
                 sidebarUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
             }
 
-            // Update UI with user data
+        // Update UI with user data
             updateUserInterface();
+            
+            // Load and display profile photo
+            if (data.photoURL) {
+                const profilePhoto = document.getElementById('profilePhoto');
+                const profileIconDefault = document.getElementById('profileIconDefault');
+                if (profilePhoto) {
+                    profilePhoto.src = data.photoURL;
+                    profilePhoto.classList.remove('hidden');
+                    if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                }
+            }
         };
 
         // Try updating UI immediately, and retry after a short delay if elements aren't found
@@ -305,6 +316,38 @@ function setDisplayNameFromStorage() {
     const nameEls = document.querySelectorAll('#userName, #dropdownUserName');
     nameEls.forEach(el => { if (el) el.textContent = display; });
 }
+
+// Expose sync function for profile-settings to call
+window.__syncDashboardProfile = async function() {
+    try {
+        // Update display name from localStorage
+        setDisplayNameFromStorage();
+        
+        // Try to fetch latest profile photo from Firestore if available
+        if (typeof auth !== 'undefined' && auth.currentUser) {
+            const uid = auth.currentUser.uid;
+            try {
+                const userRef = doc(db, 'users', uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists() && userSnap.data().photoURL) {
+                    const photoUrl = userSnap.data().photoURL;
+                    // Update profile icon
+                    const profilePhoto = document.getElementById('profilePhoto');
+                    const profileIconDefault = document.getElementById('profileIconDefault');
+                    if (profilePhoto) {
+                        profilePhoto.src = photoUrl;
+                        profilePhoto.classList.remove('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    }
+                }
+            } catch(e) {
+                console.error('Error syncing profile photo:', e);
+            }
+        }
+    } catch(e) {
+        console.error('Profile sync error:', e);
+    }
+};
 
 // Initialize dashboard based on user type
 function initializeDashboard() {

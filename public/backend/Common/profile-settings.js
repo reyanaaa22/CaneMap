@@ -602,7 +602,9 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
     setUpdateButtonHidden(true);
     setEditEnabled(true);
     
+    // Sync updates to dashboard and lobby
     try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
+    try { window.__syncDashboardProfile && window.__syncDashboardProfile(); } catch(e) {}
     
     showNotification('Profile updated successfully!', 'success');
   } catch (error) {
@@ -664,7 +666,9 @@ ui.editModalSaveBtn?.addEventListener('click', async () => {
       setUpdateButtonHidden(false);
     }
     
+    // Sync updates to dashboard and lobby
     try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
+    try { window.__syncDashboardProfile && window.__syncDashboardProfile(); } catch(e) {}
     
     showNotification('Profile changes saved successfully!', 'success');
     

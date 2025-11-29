@@ -126,6 +126,17 @@ onAuthStateChanged(auth, async (user) => {
     localStorage.setItem("userFullName", fullName);
     localStorage.setItem("userRole", role);
     localStorage.setItem("userId", user.uid);
+    
+    // Load and display profile photo
+    if (data.photoURL) {
+      const profilePhoto = document.getElementById('profilePhoto');
+      const profileIconDefault = document.getElementById('profileIconDefault');
+      if (profilePhoto) {
+        profilePhoto.src = data.photoURL;
+        profilePhoto.classList.remove('hidden');
+        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+      }
+    }
 
     console.info("✅ Driver_Dashboard: loaded user name for", user.uid);
 

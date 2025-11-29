@@ -2577,4 +2577,40 @@ async function handleChangePin(form){
     }
 }
 
+window.__syncDashboardProfile = async function() {
+    try {
+        const nickname = localStorage.getItem('farmerNickname');
+        const name = localStorage.getItem('farmerName') || 'System Admin';
+        const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
+        
+        const userNameElements = document.querySelectorAll('#adminName');
+        userNameElements.forEach(el => { 
+            if (el) el.textContent = display; 
+        });
+        
+        if (typeof auth !== 'undefined' && auth.currentUser) {
+            const uid = auth.currentUser.uid;
+            try {
+                const userRef = doc(db, 'users', uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists() && userSnap.data().photoURL) {
+                    const photoUrl = userSnap.data().photoURL;
+                    const profilePhoto = document.getElementById('profilePhoto');
+                    const profileIconDefault = document.getElementById('profileIconDefault');
+                    
+                    if (profilePhoto) {
+                        profilePhoto.src = photoUrl;
+                        profilePhoto.classList.remove('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    }
+                }
+            } catch(e) {
+                console.error('Error syncing profile photo:', e);
+            }
+        }
+    } catch(e) {
+        console.error('Profile sync error:', e);
+    }
+};
+
 document.addEventListener("DOMContentLoaded", fetchAndRenderSRA);

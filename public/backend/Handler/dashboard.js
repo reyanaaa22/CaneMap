@@ -1035,7 +1035,12 @@ onAuthStateChanged(auth, async (user) => {
     // Only handlers can access this dashboard
     if (userRole !== 'handler') {
       console.warn(`⚠️ Access denied: User role is "${userRole}", not "handler"`);
-      alert(`Access Denied\n\nThis dashboard is only for Handlers.\nYour current role: ${userRole}\n\nPlease register a field and wait for SRA approval to become a Handler.`);
+      alert(`Access Denied
+
+This dashboard is only for Handlers.
+Your current role: ${userRole}
+
+Please register a field and wait for SRA approval to become a Handler.`);
       window.location.href = "../../frontend/Common/lobby.html";
       return;
     }
@@ -2976,4 +2981,51 @@ function setupRecentTaskActivityListener(handlerId) {
     loadRecentTaskActivity(handlerId);
   });
 }
+
+// Expose sync function for profile-settings to call
+window.__syncDashboardProfile = async function() {
+    try {
+        // Update display name from localStorage
+        const nickname = localStorage.getItem('farmerNickname');
+        const name = localStorage.getItem('farmerName') || 'Handler';
+        const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
+        
+        const userNameElements = document.querySelectorAll('#topUserNameHeader, #sidebarUserName');
+        userNameElements.forEach(el => { 
+            if (el) el.textContent = display; 
+        });
+        
+        // Try to fetch latest profile photo from Firestore if available
+        if (typeof auth !== 'undefined' && auth.currentUser) {
+            const uid = auth.currentUser.uid;
+            try {
+                const userRef = doc(db, 'users', uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists() && userSnap.data().photoURL) {
+                    const photoUrl = userSnap.data().photoURL;
+                    // Update profile icons (header and sidebar)
+                    const profilePhoto = document.getElementById('profilePhoto');
+                    const profileIconDefault = document.getElementById('profileIconDefault');
+                    const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+                    const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+                    
+                    if (profilePhoto) {
+                        profilePhoto.src = photoUrl;
+                        profilePhoto.classList.remove('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    }
+                    if (sidebarProfilePhoto) {
+                        sidebarProfilePhoto.src = photoUrl;
+                        sidebarProfilePhoto.classList.remove('hidden');
+                        if (sidebarProfileIconDefault) sidebarProfileIconDefault.classList.add('hidden');
+                    }
+                }
+            } catch(e) {
+                console.error('Error syncing profile photo:', e);
+            }
+        }
+    } catch(e) {
+        console.error('Profile sync error:', e);
+    }
+};
 

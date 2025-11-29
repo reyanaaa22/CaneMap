@@ -492,8 +492,9 @@
                     </div>
                     <div class="relative">
                         <button id="profileDropdownBtn" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-all duration-300 focus:outline-none">
-                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
-                                <i class="fas fa-user text-white text-sm"></i>
+                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30 overflow-hidden" id="profileIconContainer">
+                                <i class="fas fa-user text-white text-sm" id="profileIconDefault"></i>
+                                <img id="profilePhoto" class="w-full h-full object-cover hidden" alt="Profile" />
                             </div>
                             <span class="font-medium max-w-[120px] sm:max-w-[180px] truncate" id="userName" title="Worker Name">Worker Name</span>
                             <i id="profileDropdownIcon" class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-200 transform"></i>

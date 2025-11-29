@@ -1595,3 +1595,54 @@ window.deleteTask = async function(taskId, closeModalAfter = false) {
     if (modal) modal.classList.remove('active');
   }
 };
+
+// Expose sync function for profile-settings to call
+window.__syncDashboardProfile = async function() {
+    try {
+        // Update display name from localStorage
+        const nickname = localStorage.getItem('farmerNickname');
+        const name = localStorage.getItem('farmerName') || 'SRA Officer';
+        const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
+        
+        const userNameElements = document.querySelectorAll('#headerUserName, #sidebarUserName');
+        userNameElements.forEach(el => { 
+            if (el) el.textContent = display.toUpperCase(); 
+        });
+        
+        // Try to fetch latest profile photo from Firestore if available
+        const { auth } = await import('../Common/firebase-config.js');
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+        const { db } = await import('../Common/firebase-config.js');
+        
+        if (auth.currentUser) {
+            const uid = auth.currentUser.uid;
+            try {
+                const userRef = doc(db, 'users', uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists() && userSnap.data().photoURL) {
+                    const photoUrl = userSnap.data().photoURL;
+                    // Update profile icons (header and sidebar)
+                    const profilePhoto = document.getElementById('profilePhoto');
+                    const profileIconDefault = document.getElementById('profileIconDefault');
+                    const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+                    const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+                    
+                    if (profilePhoto) {
+                        profilePhoto.src = photoUrl;
+                        profilePhoto.classList.remove('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    }
+                    if (sidebarProfilePhoto) {
+                        sidebarProfilePhoto.src = photoUrl;
+                        sidebarProfilePhoto.classList.remove('hidden');
+                        if (sidebarProfileIconDefault) sidebarProfileIconDefault.classList.add('hidden');
+                    }
+                }
+            } catch(e) {
+                console.error('Error syncing profile photo:', e);
+            }
+        }
+    } catch(e) {
+        console.error('Profile sync error:', e);
+    }
+};

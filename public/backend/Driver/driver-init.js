@@ -786,6 +786,49 @@ function setupProfileDropdown() {
   });
 }
 
+// Expose sync function for profile-settings to call
+window.__syncDashboardProfile = async function() {
+    try {
+        // Update display name from localStorage
+        const nickname = localStorage.getItem('farmerNickname');
+        const name = localStorage.getItem('userFullName') || 'Driver';
+        const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
+        
+        const userNameElements = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
+        userNameElements.forEach(el => { 
+            if (el) el.textContent = display; 
+        });
+        
+        // Try to fetch latest profile photo from Firestore if available
+        if (typeof auth !== 'undefined' && auth.currentUser) {
+            const uid = auth.currentUser.uid;
+            try {
+                const { doc, getDoc } = await import(
+                    'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js'
+                );
+                const { db } = await import('../Common/firebase-config.js');
+                const userRef = doc(db, 'users', uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists() && userSnap.data().photoURL) {
+                    const photoUrl = userSnap.data().photoURL;
+                    // Update profile icon
+                    const profilePhoto = document.getElementById('profilePhoto');
+                    const profileIconDefault = document.getElementById('profileIconDefault');
+                    if (profilePhoto) {
+                        profilePhoto.src = photoUrl;
+                        profilePhoto.classList.remove('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    }
+                }
+            } catch(e) {
+                console.error('Error syncing profile photo:', e);
+            }
+        }
+    } catch(e) {
+        console.error('Profile sync error:', e);
+    }
+};
+
 // ============================================================
 // SUBMENU TOGGLES
 // ============================================================

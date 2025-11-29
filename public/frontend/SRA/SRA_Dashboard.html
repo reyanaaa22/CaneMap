@@ -302,8 +302,9 @@
                     <!-- Profile -->
                     <div class="relative">
                         <button id="profileBtn" class="flex items-center space-x-2 hover:opacity-90 transition-opacity">
-                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center shadow-inner">
-                                <i class="fas fa-user text-gray-800 text-sm"></i>
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center shadow-inner overflow-hidden" id="profileIconContainer">
+                                <i class="fas fa-user text-gray-800 text-sm" id="profileIconDefault"></i>
+                                <img id="profilePhoto" class="w-full h-full object-cover hidden" alt="Profile" />
                             </div>
                             <span id="headerUserName" class="font-medium text-gray-800 uppercase">SRA Officer</span>
                             <i class="fas fa-chevron-down text-gray-600 text-xs"></i>
@@ -343,8 +344,9 @@
                 </div>
                 <!-- Sidebar Profile Block -->
                 <div class="flex items-center space-x-3 mb-2">
-                    <div class="w-10 h-10 bg-[var(--cane-500)] rounded-full flex items-center justify-center text-white shadow">
-                        <i class="fas fa-user"></i>
+                    <div class="w-10 h-10 bg-[var(--cane-500)] rounded-full flex items-center justify-center text-white shadow overflow-hidden" id="sidebarProfileIconContainer">
+                        <i class="fas fa-user" id="sidebarProfileIconDefault"></i>
+                        <img id="sidebarProfilePhoto" class="w-full h-full object-cover hidden" alt="Profile" />
                     </div>
                     <div>
                         <div id="sidebarUserName" class="text-white font-semibold leading-tight uppercase">SRA Officer</div>
