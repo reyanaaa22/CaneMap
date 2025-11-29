@@ -24,6 +24,91 @@
 
     
     <style>
+        /* Main content adjustments */
+        #mainContent {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 100%;
+        }
+
+        /* Dashboard grid adjustments */
+        .dashboard-grid {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            width: 100% !important;
+        }
+
+        /* Section card adjustments */
+        .section-card {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            width: 100% !important;
+        }
+
+        /* Page title adjustments */
+        .page-title {
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+        }
+
+        /* Stats grid adjustments */
+        .stats-grid {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            gap: 1rem !important;
+            padding: 0 !important;
+        }
+
+        /* Activity section adjustments */
+        .activity-section {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Mobile-first styles */
+        @media (max-width: 1023px) {
+            body {
+                padding-top: 3.5rem !important; /* Adjust for fixed header */
+            }
+            
+            #sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 40;
+            }
+            
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            #sidebarOverlay {
+                display: none;
+                opacity: 0;
+                transition: opacity 0.3s ease-in-out;
+            }
+            
+            #sidebarOverlay.visible {
+                display: block;
+                opacity: 1;
+            }
+            
+            #mainContent {
+                width: 100%;
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            
+            .section-card {
+                margin-bottom: 1rem;
+            }
+        }
+        
         /* Force white background on active nav items with highest specificity */
         #sidebar .nav-item.active,
         #sidebar .nav-item.active:hover,
@@ -159,6 +244,18 @@
         /* Mobile sidebar overlay */
         .sidebar-overlay {
             transition: opacity 0.3s ease-in-out;
+        }
+        
+        /* Responsive improvements for medium screens */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+            
+            #mainContent {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
         }
         
         /* Desktop collapsed sidebar - icon-only mode */
@@ -358,7 +455,7 @@
     <!-- This empty div creates space for the fixed header -->
     <div class="h-12"></div>
     <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-30 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
+    <header class="fixed top-0 left-0 right-0 z-40 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
         <div id="workerHeaderContainer" class="w-full flex items-center justify-between px-4">
             <!-- Left side: Hamburger and Logo (always at far left) -->
             <div class="flex items-center space-x-3">
@@ -374,12 +471,6 @@
                 
                 <!-- Right side with user controls -->
                 <div class="flex items-center space-x-4">
-                    <!-- Back to Lobby Button -->
-                    <a href="../Common/lobby.html" class="flex items-center space-x-1 text-gray-700 hover:text-[var(--cane-600)] transition-colors px-2 py-1 rounded-lg" title="Back to Lobby">
-                        <i class="fas fa-home text-base"></i>
-                        <span class="text-sm font-medium hidden sm:inline">Lobby</span>
-                    </a>
-                    
                     <div class="relative">
                         <button id="notificationBtn" class="text-gray-800 hover:text-gray-600 transition-colors relative" onclick="toggleNotifications()">
                             <i class="fas fa-bell text-lg"></i>
@@ -400,12 +491,12 @@
                         </div>
                     </div>
                     <div class="relative">
-                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-all duration-300">
+                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-all duration-300 focus:outline-none">
                             <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30">
                                 <i class="fas fa-user text-white text-sm"></i>
                             </div>
                             <span class="font-medium max-w-[120px] sm:max-w-[180px] truncate" id="userName" title="Worker Name">Worker Name</span>
-                            <i class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-300"></i>
+                            <i id="profileDropdownIcon" class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-200 transform"></i>
                         </button>
                         
                         <!-- Profile Dropdown -->
@@ -420,6 +511,10 @@
                                     Profile Information
                                 </a>
                                 <div class="border-t border-[var(--cane-100)] mt-2">
+                                    <a href="../Common/lobby.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
+                                        <i class="fas fa-home mr-3 text-[var(--cane-500)]"></i>
+                                        Back to Lobby
+                                    </a>
                                     <button id="workerLogoutBtn" class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                         <i class="fas fa-sign-out-alt mr-3"></i>
                                         Logout
@@ -435,7 +530,7 @@
     <!-- Main Content with Sidebar -->
     <div id="mainWrapper" class="flex relative">
         <!-- Mobile Sidebar Overlay -->
-        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden" aria-hidden="true" role="presentation"></div>
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden" aria-hidden="true" role="presentation" onclick="toggleSidebar()"></div>
         
         <!-- Left Sidebar -->
         <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col" 
@@ -504,11 +599,11 @@
         </div>
 
         <!-- Main Content Area -->
-        <main id="mainContent" class="w-full px-4 -mt-4 pb-6 lg:pl-72 transition-all duration-300">
+        <main id="mainContent" class="w-full px-4 -mt-4 pb-6 transition-all duration-300">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
                     <div class="-mt-2">
-                        <h2 class="text-3xl font-bold text-[var(--cane-950)] -mb-1">Worker Dashboard</h2>
+                        <h2 class="text-2xl font-bold text-[var(--cane-950)] -mb-1 lg:text-3xl">Worker Dashboard</h2>
                         <div>
                             <p class="text-[var(--cane-700)] text-sm -mt-1">Overview of your tasks and assigned fields</p>
                             <div style="height: 1px; background: var(--cane-400); margin: 0.25rem 0 2rem 0; opacity: 0.7;"></div>
@@ -994,9 +1089,315 @@
               });
           }
         }
+            
+            // Show the selected section
+            const sectionToShow = document.getElementById(sectionId);
+            if (sectionToShow) {
+              sectionToShow.classList.remove('hidden');
+            } else {
+              console.warn('Section not found:', sectionId);
+              return;
+            }
+
+            // Update active state in navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+              // Reset all items to default state
+              item.classList.remove('bg-white', 'text-cane-600', 'font-semibold', 'active');
+              item.classList.add('text-white/90', 'hover:bg-white/10');
+              
+              // Reset all inline styles
+              item.style.backgroundColor = '';
+              item.style.color = '';
+              
+              // Reset icon color
+              const icon = item.querySelector('i');
+              if (icon) {
+                icon.classList.remove('text-cane-600');
+                icon.classList.add('text-white/90');
+                icon.style.color = '';
+              }
+            });
+
+            // Set active state for the selected navigation item
+            const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
+            activeItems.forEach(item => {
+              // Set active state with white background
+              item.classList.remove('text-white/90', 'hover:bg-white/10');
+              item.classList.add('bg-white', 'text-cane-600', 'font-semibold', 'active');
+              
+              // Force white background and dark text with !important
+              item.style.cssText += 'background-color: #FFFFFF !important; color: var(--cane-600) !important;';
+              
+              // Update icon color
+              const icon = item.querySelector('i');
+              if (icon) {
+                icon.classList.remove('text-white/90');
+                icon.classList.add('text-cane-600');
+                icon.style.cssText += 'color: var(--cane-600) !important;';
+              }
+              
+              // Ensure text is dark green and bold
+              const text = item.querySelector('span');
+              if (text) {
+                text.style.color = 'var(--cane-600)';
+                text.style.fontWeight = '600';
+              }
+            });
+
+            // Store the active section
+            localStorage.setItem('activeSection', sectionId);
+            
+            // Update URL
+            history.pushState({}, '', `#${sectionId}`);
+          }
+          
+          
+          // Initialize navigation when DOM is loaded
+          document.addEventListener('DOMContentLoaded', function() {
+            // Set up navigation for sidebar items
+            document.querySelectorAll('.nav-item').forEach(item => {
+              item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const section = this.getAttribute('data-section');
+                if (section) {
+                  navigateToSection(section);
+                }
+              });
+            });
+            
+            // Set up navigation for card items
+            document.querySelectorAll('a[data-section]').forEach(item => {
+              if (!item.classList.contains('nav-item')) {
+                item.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  const section = this.getAttribute('data-section');
+                  if (section) {
+                    navigateToSection(section);
+                  }
+                });
+              }
+            });
+            
+            // Initialize the active section from URL or localStorage
+            const initialSection = window.location.hash.replace('#', '') || localStorage.getItem('activeSection') || 'dashboard';
+            navigateToSection(initialSection);
+            
+            // Set up popstate handler for browser back/forward buttons
+            window.addEventListener('popstate', function() {
+              const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+              navigateToSection(sectionId);
+            });
+          });
+
+          // Initialize FullCalendar instances
+          document.addEventListener('DOMContentLoaded', function() {
+            if (window.FullCalendar) {
+              const today = new Date();
+              const defaultEvents = [
+                { title: 'Morning Task', start: today },
+              ];
+
+              const calendarEl = document.getElementById('calendar');
+              if (calendarEl) {
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                  initialView: 'dayGridMonth',
+                  height: 'auto',
+                  contentHeight: 'auto',
+                  expandRows: true,
+                  headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,dayGridWeek,dayGridDay'
+                  },
+                  events: defaultEvents,
+                });
+                calendar.render();
+              }
+
+              const scheduleEl = document.getElementById('scheduleCalendar');
+              if (scheduleEl) {
+                const scheduleCal = new FullCalendar.Calendar(scheduleEl, {
+                  initialView: 'dayGridMonth',
+                  height: 'auto',
+                  contentHeight: 'auto',
+                  expandRows: true,
+                  headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                  },
+                  events: defaultEvents,
+                });
+                scheduleCal.render();
+              }
+            }
+          });
+
+          // Submenu toggle functionality
+          function toggleSubmenu(menuId) {
+            const submenu = document.getElementById(menuId + '-submenu');
+            const arrow = document.getElementById(menuId + '-arrow');
+            if (!submenu || !arrow) return;
+            const isHidden = submenu.classList.contains('hidden');
+            // Close all other submenus
+            document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
+              if (menu.id !== menuId + '-submenu') {
+                menu.classList.add('hidden');
+              }
+            });
+            // Reset other arrows
+            document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
+              if (arr.id !== menuId + '-arrow') {
+                arr.style.transform = 'rotate(0deg)';
+              }
+            });
+            // Toggle current submenu
+            if (isHidden) {
+              submenu.classList.remove('hidden');
+              arrow.style.transform = 'rotate(180deg)';
+            } else {
+              submenu.classList.add('hidden');
+              arrow.style.transform = 'rotate(0deg)';
+            }
+          }
+
+          // SPA-style section switcher
+          function showSection(sectionId) {
+            // Use the navigateToSection function to handle section changes
+            navigateToSection(sectionId);
+
+            // Load section content if needed
+            if (sectionId === 'my-fields') {
+              const container = document.getElementById('my-fields');
+              if (container && !container.dataset.loaded) {
+                fetch('../Worker/submenu/my_fields.html')
+                  .then(r => r.text())
+                  .then(html => {
+                    container.innerHTML = html;
+                    container.dataset.loaded = 'true';
+                  });
+              }
+            }
+            
+            // Update URL without page reload
+            history.pushState({}, '', `#${sectionId}`);
+            
+            // Toggle sidebar on mobile
+            // Toggle profile dropdown
+          const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+          const profileDropdown = document.getElementById('profileDropdown');
+          const profileDropdownIcon = document.getElementById('profileDropdownIcon');
+
+          // Initialize dropdown functionality when DOM is fully loaded
+          document.addEventListener('DOMContentLoaded', function() {
+              const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+              const profileDropdown = document.getElementById('profileDropdown');
+              const profileDropdownIcon = document.getElementById('profileDropdownIcon');
+              let isDropdownOpen = false;
+
+              // Toggle dropdown function
+              const toggleDropdown = (e) => {
+                  if (e) e.stopPropagation();
+                  isDropdownOpen = !isDropdownOpen;
+                  
+                  // Toggle dropdown visibility
+                  if (isDropdownOpen) {
+                      profileDropdown.classList.remove('opacity-0', 'invisible', 'scale-95');
+                      profileDropdown.classList.add('opacity-100');
+                      profileDropdownIcon.style.transform = 'rotate(180deg)';
+                  } else {
+                      profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+                      profileDropdownIcon.style.transform = 'rotate(0deg)';
+                  }
+              };
+
+              // Add click event to dropdown button
+              if (profileDropdownBtn && profileDropdown) {
+                  // Initialize dropdown as closed
+                  profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+                  profileDropdownIcon.style.transform = 'rotate(0deg)';
+                  
+                  // Toggle dropdown on button click
+                  profileDropdownBtn.addEventListener('click', toggleDropdown);
+
+                  // Close dropdown when clicking outside
+                  document.addEventListener('click', (e) => {
+                      if (isDropdownOpen && !profileDropdown.contains(e.target) && !profileDropdownBtn.contains(e.target)) {
+                          toggleDropdown();
+                      }
+                  });
+
+                  // Close dropdown when pressing Escape key
+                  document.addEventListener('keydown', (e) => {
+                      if (e.key === 'Escape' && isDropdownOpen) {
+                          toggleDropdown();
+                      }
+                  });
+              }
+          });
+            // Open sidebar
+            const overlay = document.getElementById('sidebarOverlay');
+            const sidebar = document.getElementById('sidebar');
+            const icon = document.getElementById('hamburgerIcon');
+            const body = document.body;
+            
+            if (sidebar.classList.contains('mobile-open')) {
+              // Close sidebar
+              sidebar.classList.remove('mobile-open');
+              overlay.classList.remove('visible');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+              body.style.overflow = ''; // Re-enable scrolling
+              
+              // Close after transition ends
+              setTimeout(() => {
+                if (!sidebar.classList.contains('mobile-open')) {
+                  overlay.style.display = 'none';
+                }
+              }, 300);
+            } else {
+              // Open sidebar
+              overlay.style.display = 'block';
+              setTimeout(() => {
+                overlay.classList.add('visible');
+                sidebar.classList.add('mobile-open');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+                body.style.overflow = 'hidden';
+              }, 10);
+            }
         
-        // Update URL without page reload
-        history.pushState({}, '', `#${sectionId}`);
+        // Close sidebar when clicking on nav items on mobile
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', function() {
+            if (window.innerWidth < 1024) {
+              toggleSidebar();
+            }
+          });
+        });
+        
+        // Handle window resize
+        function handleResize() {
+          const sidebar = document.getElementById('sidebar');
+          const overlay = document.getElementById('sidebarOverlay');
+          const icon = document.getElementById('hamburgerIcon');
+          
+          if (window.innerWidth >= 1024) {
+            // Desktop view
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('visible');
+            overlay.style.display = 'none';
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+            document.body.style.overflow = '';
+          }
+        }
+        
+        // Add resize event listener
+        window.addEventListener('resize', handleResize);
+        
+        // Initial check
+        handleResize();
         
         // Close mobile sidebar if open
         if (window.innerWidth < 1024) {
