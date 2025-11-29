@@ -444,6 +444,30 @@ try {
   console.warn("Weather alert failed:", err);
 }
 
+// Sync profile photo in lobby header (optional, if elements exist)
+try {
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const { auth, db } = await import('../../backend/Common/firebase-config.js');
+      const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+      if (auth && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const snap = await getDoc(doc(db, 'users', uid));
+        const url = (snap.exists() && snap.data().photoURL) || auth.currentUser.photoURL || '';
+        const img = document.getElementById('profilePhoto');
+        const icon = document.getElementById('profileIconDefault');
+        if (img && url) {
+          img.src = url;
+          img.classList.remove('hidden');
+          if (icon) icon.classList.add('hidden');
+        }
+      }
+    } catch (e) {
+      try { console.warn('Lobby profile photo sync skipped:', e && e.message ? e.message : e); } catch(_) {}
+    }
+  });
+} catch(_) {}
+
 // --- NEW PROFESSIONAL WEEKLY CARDS LAYOUT ---
 const weeklyList = document.createElement("div");
 weeklyList.className = "space-y-3 mt-3";
@@ -5033,4 +5057,3 @@ window.addEventListener("message", (ev) => {
         driverRentalFrame.src = "";
     }
 });
-

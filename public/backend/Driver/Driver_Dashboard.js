@@ -308,8 +308,30 @@ document.addEventListener("DOMContentLoaded", () => {
       }))
     );
 
-    console.log("✅ All notifications marked as read.");
+  console.log("✅ All notifications marked as read.");
   });
 });
 
 window.toggleNotifications = toggleNotifications;
+
+// ============================================================
+// 🔄 PROFILE PHOTO SYNC (called by profile-settings.js)
+// ============================================================
+window.__syncDashboardProfile = async function() {
+  try {
+    if (!auth || !auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    const photoUrl = (userSnap.exists() && userSnap.data().photoURL) || auth.currentUser.photoURL || '';
+    const img = document.getElementById('profilePhoto');
+    const icon = document.getElementById('profileIconDefault');
+    if (img && photoUrl) {
+      img.src = photoUrl;
+      img.classList.remove('hidden');
+      if (icon) icon.classList.add('hidden');
+    }
+  } catch (e) {
+    try { console.error('Error syncing driver profile photo:', e); } catch(_) {}
+  }
+};

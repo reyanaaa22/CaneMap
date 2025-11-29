@@ -224,6 +224,25 @@ try {
                 if (adminNameEl) adminNameEl.textContent = currentUser.name;
                 if (dropdownAdminNameEl) dropdownAdminNameEl.textContent = currentUser.name;
                 if (sidebarAdminNameEl) sidebarAdminNameEl.textContent = currentUser.name;
+                
+                // Load profile photo from Firestore if available
+                try {
+                    if (auth && auth.currentUser) {
+                        const userRef = doc(db, 'users', auth.currentUser.uid);
+                        const userSnap = await getDoc(userRef);
+                        if (userSnap.exists() && userSnap.data().photoURL) {
+                            const profilePhoto = document.getElementById('profilePhoto');
+                            const profileIconDefault = document.getElementById('profileIconDefault');
+                            if (profilePhoto) {
+                                profilePhoto.src = userSnap.data().photoURL;
+                                profilePhoto.classList.remove('hidden');
+                                if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                            }
+                        }
+                    }
+                } catch (photoErr) {
+                    console.warn('Could not load profile photo:', photoErr);
+                }
             } catch (e) {
                 console.error('❌ Error parsing admin_user from sessionStorage:', e);
             }

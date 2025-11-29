@@ -316,6 +316,17 @@ async function loadUserProfile(user) {
       userId: user.uid
     });
 
+    // Load and display profile photo
+    if (userData.photoURL) {
+      const profilePhoto = document.getElementById('profilePhoto');
+      const profileIconDefault = document.getElementById('profileIconDefault');
+      if (profilePhoto) {
+        profilePhoto.src = userData.photoURL;
+        profilePhoto.classList.remove('hidden');
+        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+      }
+    }
+
     loadReviewedOwnedFields(user.uid);
     // Don't call renderHandlerFields here - let fields.html script handle it when section loads
   } catch (err) {

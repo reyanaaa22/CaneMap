@@ -238,6 +238,9 @@ async function initNotifications(userId) {
                         if (headerName) headerName.textContent = display;
                         if (sideName) sideName.textContent = display;
                         
+                        // Load profile photo
+                        await loadUserProfile(user.uid);
+                        
                     //Recent Field Applications loader with REAL-TIME updates
                         try {
                         const list = document.getElementById("recentAppsList");
@@ -1595,6 +1598,29 @@ window.deleteTask = async function(taskId, closeModalAfter = false) {
     if (modal) modal.classList.remove('active');
   }
 };
+
+// Load user profile and photo on dashboard init
+async function loadUserProfile(userId) {
+    try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            // Load and display profile photo
+            if (userData.photoURL) {
+                const profilePhoto = document.getElementById('profilePhoto');
+                const profileIconDefault = document.getElementById('profileIconDefault');
+                if (profilePhoto) {
+                    profilePhoto.src = userData.photoURL;
+                    profilePhoto.classList.remove('hidden');
+                    if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error loading user profile photo:', err);
+    }
+}
 
 // Expose sync function for profile-settings to call
 window.__syncDashboardProfile = async function() {
