@@ -8,9 +8,11 @@
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
     "watch:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "npm run build:css",
+    "clean:android": "cd android && ./gradlew clean",
     "build:android": "cd android && chmod +x gradlew && ./gradlew assembleDebug && cd .. && npm run copy:apk",
     "copy:apk": "node scripts/copy-apk.js",
     "build:full": "npm run build && npm run build:android && npm run copy:apk",
+    "rebuild:android": "npm run clean:android && npm run build:android",
     "sync:android": "npm run build && npx cap sync android && npm run copy:apk",
     "setup:android": "bash setup-android-sdk.sh",
     "setup:android:manual": "echo 'To set up Android SDK manually, run: bash setup-android-sdk.sh'"

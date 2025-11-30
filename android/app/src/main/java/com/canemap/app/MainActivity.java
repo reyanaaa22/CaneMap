@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.webkit.WebView;
+import android.webkit.WebSettings;
 import android.webkit.DownloadListener;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -31,6 +32,11 @@ public class MainActivity extends BridgeActivity {
         // Configure WebView after it's fully initialized
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
+            // Ensure JavaScript is enabled for interfaces
+            WebSettings settings = webView.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            
             // Handle downloads from WebView
             webView.setDownloadListener(new DownloadListener() {
                 @Override

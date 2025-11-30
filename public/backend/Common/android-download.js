@@ -29,7 +29,20 @@ export async function downloadFile(blob, filename) {
     console.log('📱 Detected Android app environment');
     try {
       // Method 1: Use Android JavaScript interface (most reliable)
-      if (window.AndroidDownload && typeof window.AndroidDownload.downloadFile === 'function') {
+      // Wait a bit for interface to be available if not immediately present
+      let interfaceAvailable = window.AndroidDownload && typeof window.AndroidDownload.downloadFile === 'function';
+      if (!interfaceAvailable) {
+        // Wait up to 500ms for interface to become available
+        for (let i = 0; i < 10; i++) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          if (window.AndroidDownload && typeof window.AndroidDownload.downloadFile === 'function') {
+            interfaceAvailable = true;
+            break;
+          }
+        }
+      }
+      
+      if (interfaceAvailable) {
         console.log('📥 Using AndroidDownload interface');
         const base64 = await blobToBase64(blob);
         try {
@@ -40,7 +53,7 @@ export async function downloadFile(blob, filename) {
           console.warn('❌ AndroidDownload interface failed:', error);
         }
       } else {
-        console.log('⚠️ AndroidDownload interface not available');
+        console.log('⚠️ AndroidDownload interface not available after waiting');
       }
       
       // Method 2: Try Capacitor Filesystem API
