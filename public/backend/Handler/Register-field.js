@@ -74,8 +74,15 @@ function setupCameraAndUpload(config) {
     cameraDiv.appendChild(video);
 
     const controls = document.createElement("div");
-    controls.className = "absolute bottom-10 flex gap-4";
+    controls.className = "absolute bottom-10 flex gap-4 items-center justify-center flex-wrap";
     cameraDiv.appendChild(controls);
+
+    const switchCamBtn = document.createElement("button");
+    switchCamBtn.innerHTML = '<i class="fas fa-camera-rotate"></i> Switch Camera';
+    switchCamBtn.className =
+      "px-4 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition text-sm";
+    switchCamBtn.style.display = 'none';
+    controls.appendChild(switchCamBtn);
 
     const captureBtn = document.createElement("button");
     captureBtn.textContent = "Capture";
@@ -89,14 +96,72 @@ function setupCameraAndUpload(config) {
       "px-6 py-3 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition";
     controls.appendChild(cancelBtn);
 
-    // Start camera
+    // Start camera with specific facing mode
     let stream = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
-      video.srcObject = stream;
-    } catch (err) {
-      showPopupMessage('Camera not accessible. Please allow camera permission or upload a file instead.', 'error');
-      cameraDiv.remove();
+    let currentFacingMode = facingMode;
+
+    async function startCamera(facingModeParam) {
+      try {
+        // Stop existing stream if any
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+        }
+
+        // Mobile-optimized constraints
+        const constraints = {
+          video: {
+            facingMode: { ideal: facingModeParam },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          // Fallback: try without ideal facingMode for better mobile compatibility
+          console.warn(`Failed with facingMode ${facingModeParam}, trying fallback...`);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: facingModeParam,
+              width: { max: 1280 },
+              height: { max: 720 }
+            },
+            audio: false
+          });
+        }
+
+        video.srcObject = stream;
+        currentFacingMode = facingModeParam;
+
+        // Show switch button if multiple cameras available (especially on mobile)
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoCameras = devices.filter(d => d.kind === 'videoinput');
+        if (videoCameras.length > 1) {
+          switchCamBtn.style.display = 'block';
+          switchCamBtn.innerHTML = facingModeParam === 'user' 
+            ? '<i class="fas fa-camera-rotate"></i> Switch to Back Camera'
+            : '<i class="fas fa-camera-rotate"></i> Switch to Front Camera';
+        }
+      } catch (err) {
+        showPopupMessage('Camera not accessible. Please allow camera permission or upload a file instead.', 'error');
+        cameraDiv.remove();
+        return false;
+      }
+      return true;
+    }
+
+    // Switch camera handler
+    switchCamBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
+      await startCamera(newFacingMode);
+    });
+
+    // Start camera with default facingMode
+    const cameraStarted = await startCamera(facingMode);
+    if (!cameraStarted) {
       return;
     }
 

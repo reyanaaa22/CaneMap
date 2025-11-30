@@ -1431,6 +1431,9 @@ window.openDriverLogWorkModal = async function () {
         <div class="p-3 flex flex-col gap-3">
           <video id="swal-cameraVideo" autoplay playsinline class="w-full h-[60vh] bg-black rounded"></video>
 <div class="flex items-center justify-center gap-3">
+  <button id="swal-switchCamBtn" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm" style="display:none;">
+    <i class="fas fa-camera-rotate"></i> Switch Camera
+  </button>
   <div id="swal-captureContainer" class="flex items-center justify-center">
     <button id="swal-captureBtn" class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
       Capture
@@ -1445,21 +1448,70 @@ window.openDriverLogWorkModal = async function () {
     const videoEl = overlay.querySelector("#swal-cameraVideo");
     const captureBtn = overlay.querySelector("#swal-captureBtn");
     const closeCamBtn = overlay.querySelector("#swal-closeCamBtn");
+    const switchCamBtn = overlay.querySelector("#swal-switchCamBtn");
 
     let stream = null;
+    let currentFacingMode = "environment"; // Start with back camera
 
-    // Start camera
-    async function startCamera() {
+    // Start camera with specific facing mode
+    async function startCamera(facingMode) {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        // Stop existing stream if any
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+        }
+
+        // Mobile-optimized constraints
+        const constraints = {
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          // Fallback: try without ideal facingMode for better mobile compatibility
+          console.warn(`Failed with facingMode ${facingMode}, trying fallback...`);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: facingMode,
+              width: { max: 1280 },
+              height: { max: 720 }
+            },
+            audio: false
+          });
+        }
+
         videoEl.srcObject = stream;
         await videoEl.play();
+        currentFacingMode = facingMode;
+
+        // Show switch button if multiple cameras available (especially on mobile)
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoCameras = devices.filter(d => d.kind === 'videoinput');
+        if (videoCameras.length > 1) {
+          switchCamBtn.style.display = 'block';
+          switchCamBtn.innerHTML = facingMode === 'user' 
+            ? '<i class="fas fa-camera-rotate"></i> Switch to Back Camera'
+            : '<i class="fas fa-camera-rotate"></i> Switch to Front Camera';
+        }
       } catch (err) {
         console.error("Camera error:", err);
         alert("Cannot access camera. Please ensure camera permission is allowed.");
         overlay.remove();
       }
     }
+
+    // Switch camera handler
+    switchCamBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
+      await startCamera(newFacingMode);
+    });
 
     // Stop camera tracks
     function stopCamera() {
@@ -1551,8 +1603,8 @@ captureBtn.addEventListener("click", () => {
       }
     });
 
-    // Start
-    startCamera();
+    // Start with back camera (environment)
+    startCamera("environment");
   }
 
   // Bind button
