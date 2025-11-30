@@ -201,6 +201,25 @@
                 margin-left: 0 !important;
                 z-index: 45;
             }
+            /* Fix notification dropdown on mobile */
+            #notificationDropdown {
+                right: 0 !important;
+                left: auto !important;
+                max-width: calc(100vw - 2rem) !important;
+                width: calc(100vw - 2rem) !important;
+            }
+            /* Fix filter element width in Task/Field Documents section on mobile */
+            #fieldDocsStatus {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            /* Fix any filter select in filter bars on mobile */
+            .bg-white.rounded-xl.p-4.shadow-sm select,
+            .bg-gray-50.rounded-lg select {
+                max-width: 100% !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
             #sraMain {
                 margin-left: 0 !important;
                 padding-left: 1rem !important;
@@ -335,7 +354,7 @@
                         </button>
 
                         <!-- Notification Dropdown -->
-                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
                             <!-- Dropdown Header -->
                             <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                                 <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
