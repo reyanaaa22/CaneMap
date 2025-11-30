@@ -1519,54 +1519,69 @@ function preparePrintableActivityTable(logs = []) {
 }
 
 /* Export CSV using printable table data */
-function exportActivityCSV() {
-  const printArea = document.getElementById("activityLogsPrintArea");
-
-  const title = getActivityLogDateLabel();
-
-  let csvRows = [];
-  csvRows.push(`"${title}"`);
-  csvRows.push('"Farmer Name","Role","Task","Field","Date","Description"');
-
-
-  if (printArea && printArea.querySelector("tbody")) {
-    const trs = printArea.querySelectorAll("tbody tr");
-    trs.forEach(tr => {
-      const vals = Array.from(tr.children).map(td => `"${td.textContent.replace(/"/g,'""')}"`);
-      csvRows.push(vals.join(","));
-    });
-  } else {
-    const logs = window.__activityLogsCache || [];
-    logs.forEach(l => {
-      const date = (l.logged_at && l.logged_at.toDate)
-        ? l.logged_at.toDate().toLocaleString()
-        : (l.logged_at ? new Date(l.logged_at).toLocaleString() : "");
-
-      csvRows.push([
-        l.user_name,
-        l.type,
-        l.task_name,
-        l.field_name,
-        date,
-        l.description
-      ].map(s => `"${(s||"").toString().replace(/"/g,'""')}"`).join(","));
-    });
+async function exportActivityCSV() {
+  // Show loading animation
+  const exportBtn = document.getElementById("exportActivityCSV");
+  const originalContent = exportBtn ? exportBtn.innerHTML : '';
+  if (exportBtn) {
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
   }
 
-  const csv = csvRows.join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
+  try {
+    const printArea = document.getElementById("activityLogsPrintArea");
 
-  // sanitize title for filename
-  const safeTitle = title.replace(/[^a-zA-Z0-9()\- ]/g, "");
-  a.download = `${safeTitle}.csv`;
+    const title = getActivityLogDateLabel();
 
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+    let csvRows = [];
+    csvRows.push(`"${title}"`);
+    csvRows.push('"Farmer Name","Role","Task","Field","Date","Description"');
+
+
+    if (printArea && printArea.querySelector("tbody")) {
+      const trs = printArea.querySelectorAll("tbody tr");
+      trs.forEach(tr => {
+        const vals = Array.from(tr.children).map(td => `"${td.textContent.replace(/"/g,'""')}"`);
+        csvRows.push(vals.join(","));
+      });
+    } else {
+      const logs = window.__activityLogsCache || [];
+      logs.forEach(l => {
+        const date = (l.logged_at && l.logged_at.toDate)
+          ? l.logged_at.toDate().toLocaleString()
+          : (l.logged_at ? new Date(l.logged_at).toLocaleString() : "");
+
+        csvRows.push([
+          l.user_name,
+          l.type,
+          l.task_name,
+          l.field_name,
+          date,
+          l.description
+        ].map(s => `"${(s||"").toString().replace(/"/g,'""')}"`).join(","));
+      });
+    }
+
+    const csv = csvRows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    
+    // sanitize title for filename
+    const safeTitle = title.replace(/[^a-zA-Z0-9()\- ]/g, "");
+    const filename = `${safeTitle}.csv`;
+
+    // Use Android-compatible download
+    const { downloadFile } = await import('../Common/android-download.js');
+    await downloadFile(blob, filename);
+  } catch (error) {
+    console.error('Error exporting CSV:', error);
+    alert('Failed to export CSV. Please try again.');
+  } finally {
+    // Hide loading animation
+    if (exportBtn) {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalContent;
+    }
+  }
 }
 
 
@@ -1649,7 +1664,7 @@ function setupActivityLogsControls() {
 
   if (applyBtn) applyBtn.addEventListener("click", applyActivityFilters);
   if (clearBtn) clearBtn.addEventListener("click", clearActivityFilters);
-  if (exportBtn) exportBtn.addEventListener("click", exportActivityCSV);
+  if (exportBtn) exportBtn.addEventListener("click", () => exportActivityCSV());
   if (printBtn) printBtn.addEventListener("click", () => {
     applyActivityFilters();
     printActivityLogs();

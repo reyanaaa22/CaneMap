@@ -689,19 +689,45 @@
     });
 
     // PDF BUTTON (captures the whole UI)
-    document.getElementById("btnDownloadPDF").addEventListener("click", () => {
-        document.getElementById("generatedStamp").textContent = new Date().toLocaleString();
+    document.getElementById("btnDownloadPDF").addEventListener("click", async () => {
+        const btn = document.getElementById("btnDownloadPDF");
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
-        const content = document.getElementById("captureArea");
+        try {
+            document.getElementById("generatedStamp").textContent = new Date().toLocaleString();
 
-        const opt = {
-            margin: 10,
-            filename: `CaneMap_Growth_Report_${Date.now()}.pdf`,
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
+            const content = document.getElementById("captureArea");
 
-        html2pdf().set(opt).from(content).save();
+            const filename = `CaneMap_Growth_Report_${Date.now()}.pdf`;
+            const opt = {
+                margin: 10,
+                filename: filename,
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Generate PDF - use Android-compatible method if in app, otherwise use standard
+            const { isAndroidApp, downloadFile } = await import('../../backend/Common/android-download.js');
+            
+            if (isAndroidApp()) {
+                // For Android: Generate blob and use download utility
+                const pdfBlob = await new Promise((resolve, reject) => {
+                    html2pdf().set(opt).from(content).outputPdf('blob').then(resolve).catch(reject);
+                });
+                await downloadFile(pdfBlob, filename);
+            } else {
+                // For browser: Use standard save method
+                await html2pdf().set(opt).from(content).save();
+            }
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
     });
 </script>
 

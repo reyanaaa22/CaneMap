@@ -406,7 +406,7 @@
 
               <!-- Export Actions -->
               <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-200 print:hidden">
-                <button onclick="window.downloadReportPDF('${reportId}', '${reportTypeLabel}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2">
+                <button onclick="window.downloadReportPDF('${reportId}', '${reportTypeLabel}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2" id="downloadReportBtn_${reportId}">
                   <i class="fas fa-download"></i> Download PDF
                 </button>
                 <button onclick="window.printReport()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg font-medium transition flex items-center gap-2">
@@ -465,6 +465,16 @@
 
     // Download report as PDF
     window.downloadReportPDF = async function(reportId, reportTypeLabel) {
+      // Find and show loading on download button
+      const downloadBtn = document.getElementById(`downloadReportBtn_${reportId}`) || 
+                         document.querySelector(`button[onclick*="downloadReportPDF('${reportId}'"]`) ||
+                         event?.target?.closest('button');
+      const originalContent = downloadBtn ? downloadBtn.innerHTML : '';
+      if (downloadBtn) {
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+      }
+
       try {
         const element = document.getElementById('reportDetailContent');
         if (!element) {
@@ -512,9 +522,10 @@
         await Promise.all(imageConversionPromises);
 
         // Configure PDF options
+        const filename = `${reportTypeLabel.replace(/\s+/g, '_')}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
         const opt = {
           margin: 10,
-          filename: `${reportTypeLabel.replace(/\s+/g, '_')}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`,
+          filename: filename,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: {
             scale: 2,
@@ -525,12 +536,29 @@
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        // Generate PDF using window.html2pdf
-        await window.html2pdf().set(opt).from(clone).save();
+        // Generate PDF - use Android-compatible method if in app, otherwise use standard
+        const { isAndroidApp, downloadFile } = await import('../../../backend/Common/android-download.js');
+        
+        if (isAndroidApp()) {
+          // For Android: Generate blob and use download utility
+          const pdfBlob = await new Promise((resolve, reject) => {
+            window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
+          });
+          await downloadFile(pdfBlob, filename);
+        } else {
+          // For browser: Use standard save method
+          await window.html2pdf().set(opt).from(clone).save();
+        }
         console.log('✅ PDF generated successfully');
       } catch (error) {
         console.error('Error generating PDF:', error);
         alert('Failed to generate PDF. Please try again.');
+      } finally {
+        // Hide loading animation
+        if (downloadBtn) {
+          downloadBtn.disabled = false;
+          downloadBtn.innerHTML = originalContent;
+        }
       }
     };
 
