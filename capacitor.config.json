@@ -1,5 +1,16 @@
 {
   "appId": "com.canemap.app",
   "appName": "CaneMap",
-  "webDir": "public"
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "Filesystem": {
+      "android": {
+        "path": "files"
+      }
+    }
+  }
 }

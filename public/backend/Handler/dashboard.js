@@ -1572,6 +1572,9 @@ async function exportActivityCSV() {
     // Use Android-compatible download
     const { downloadFile } = await import('../Common/android-download.js');
     await downloadFile(blob, filename);
+    
+    // Small delay to ensure download starts before hiding animation
+    await new Promise(resolve => setTimeout(resolve, 500));
   } catch (error) {
     console.error('Error exporting CSV:', error);
     alert('Failed to export CSV. Please try again.');

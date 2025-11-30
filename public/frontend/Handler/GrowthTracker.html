@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>CaneMap - Tasks & Growth Tracker</title>
 <link rel="stylesheet" href="../../css/output.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -717,9 +720,13 @@
                     html2pdf().set(opt).from(content).outputPdf('blob').then(resolve).catch(reject);
                 });
                 await downloadFile(pdfBlob, filename);
+                // Small delay to ensure download starts before hiding animation
+                await new Promise(resolve => setTimeout(resolve, 500));
             } else {
                 // For browser: Use standard save method
                 await html2pdf().set(opt).from(content).save();
+                // Small delay to ensure download starts before hiding animation
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
         } catch (error) {
             console.error('Error generating PDF:', error);

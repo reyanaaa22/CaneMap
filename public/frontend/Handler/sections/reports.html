@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>CaneMap - Reports</title>
 <link rel="stylesheet" href="/css/output.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -28,9 +31,17 @@
   #reportModal .modal-content{background:linear-gradient(135deg,#ecfcca,#f7fee7);border-radius:1rem;max-width:1100px;width:95%;max-height:90vh;overflow-y:auto;}
   /* Mobile responsiveness: Prevent reports section from causing horizontal scroll */
   @media (max-width: 768px) {
-    body { overflow-x: hidden; }
-    main { overflow-x: hidden; max-width: 100%; }
-    .section-card { overflow-x: hidden; max-width: 100%; }
+    body { overflow-x: hidden; max-width: 100vw; }
+    main { overflow-x: hidden; max-width: 100%; width: 100%; }
+    .section-card { overflow-x: hidden; max-width: 100%; width: 100%; box-sizing: border-box; }
+    /* Ensure table container doesn't overflow */
+    .section-card > div:last-of-type { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  }
+  
+  /* Android WebView specific fixes */
+  @supports (-webkit-appearance: none) {
+    .section-card { max-width: 100vw; box-sizing: border-box; }
+    .section-card > div:last-of-type { max-width: 100%; }
   }
 </style>
 </head>
@@ -66,8 +77,8 @@
       </div>
 
       <!-- Reports Table -->
-      <div class="rounded-xl border border-gray-200" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table style="min-width: 100%;">
+      <div class="rounded-xl border border-gray-200" style="width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box;">
+        <table style="min-width: 100%; width: auto; table-layout: auto;">
           <thead>
             <tr>
               <th class="text-left">Date Submitted</th>
@@ -545,9 +556,13 @@
             window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
           });
           await downloadFile(pdfBlob, filename);
+          // Small delay to ensure download starts before hiding animation
+          await new Promise(resolve => setTimeout(resolve, 500));
         } else {
           // For browser: Use standard save method
           await window.html2pdf().set(opt).from(clone).save();
+          // Small delay to ensure download starts before hiding animation
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
         console.log('✅ PDF generated successfully');
       } catch (error) {

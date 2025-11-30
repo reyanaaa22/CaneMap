@@ -29,14 +29,34 @@ export async function downloadFile(blob, filename) {
       if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
         const { Filesystem } = window.Capacitor.Plugins;
         const base64 = await blobToBase64(blob);
-        const result = await Filesystem.writeFile({
-          path: filename,
-          data: base64,
-          directory: Filesystem.Directory.Documents,
-          recursive: true
-        });
-        console.log('✅ File saved via Capacitor:', result.uri);
-        return;
+        
+        // Use Downloads directory for Android
+        try {
+          const result = await Filesystem.writeFile({
+            path: filename,
+            data: base64,
+            directory: Filesystem.Directory.Documents,
+            recursive: true
+          });
+          console.log('✅ File saved via Capacitor:', result.uri);
+          
+          // Try to share/open the file
+          if (window.Capacitor.Plugins.Share) {
+            try {
+              await window.Capacitor.Plugins.Share.share({
+                title: 'Downloaded File',
+                text: filename,
+                url: result.uri,
+                dialogTitle: 'File saved successfully'
+              });
+            } catch (shareError) {
+              console.log('Share not available, file saved to:', result.uri);
+            }
+          }
+          return;
+        } catch (fsError) {
+          console.warn('Filesystem write failed, trying alternative:', fsError);
+        }
       }
 
       // Method 2: Try Cordova File plugin
