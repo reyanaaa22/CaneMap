@@ -51,11 +51,16 @@ let currentSection = 'dashboard';
 let currentUserId = null;
 let currentUserEmail = '';
 // -----------------------------
-// Worker camera (driver-style) - global function (paste once)
-// -----------------------------
+// Worker camera (driver-style) - global function with mobile support
+// Mobile: Uses front camera by default, can switch to back
+// Desktop: Uses front camera by default, can switch to back
+// -------------------------------------------------------
 function openWorkerCamera() {
   return new Promise(async (resolve, reject) => {
     try {
+      // Detect if mobile device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
       // overlay with very high z so it always sits above Swal
       const overlay = document.createElement("div");
       overlay.style.position = "fixed";
@@ -69,12 +74,17 @@ function openWorkerCamera() {
       overlay.id = "worker-camera-overlay";
 
       overlay.innerHTML = `
-        <video id="workerCamVideo" autoplay playsinline class="w-full max-w-[800px]" style="border-radius:10px; background:#000; max-height:70vh;"></video>
-        <div id="workerCamControls" style="margin-top:12px; display:flex; align-items:center; justify-content:center;">
-          <div id="workerCaptureArea">
-            <button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px;">
-              Capture
+        <div style="position:relative; width:100%; max-width:90vw; height:auto; display:flex; flex-direction:column; align-items:center; padding: 1rem; margin: 0 auto;">
+          <video id="workerCamVideo" autoplay playsinline class="w-full" style="border-radius:10px; background:#000; max-height:75vh; height:auto; aspect-ratio:4/3; object-fit:cover; -webkit-transform: scaleX(-1); transform: scaleX(-1);"></video>
+          <div id="workerCamControls" style="margin-top:16px; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; width:100%;">
+            <button id="workerSwitchCamBtn" style="padding:10px 18px; border-radius:999px; background:#3b82f6; color:#fff; font-weight:600; border:0; font-size:13px; display:none; cursor:pointer; transition: all 0.2s;">
+              <i class="fas fa-camera-rotate"></i> Switch Camera
             </button>
+            <div id="workerCaptureArea" style="width:100%; display:flex; justify-content:center;">
+              <button id="workerCaptureBtn" style="padding:14px 28px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px; cursor:pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
+                Capture
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -83,16 +93,81 @@ function openWorkerCamera() {
 
       const video = document.getElementById("workerCamVideo");
       const captureArea = document.getElementById("workerCaptureArea");
+      const switchCamBtn = document.getElementById("workerSwitchCamBtn");
+      
+      let currentFacingMode = "user"; // Start with front camera
+      let stream = null;
 
-      // start camera
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-      } catch (err) {
-        overlay.remove();
-        return reject(new Error("Camera access denied or not available"));
+      // Function to start camera with specific facing mode
+      const startCamera = async (facingMode) => {
+        try {
+          // Stop existing stream if any
+          if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+          }
+          
+          // Mobile-optimized constraints
+          const constraints = {
+            video: {
+              facingMode: { ideal: facingMode },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          };
+          
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          } catch (err) {
+            // Fallback: try without ideal facingMode for better mobile compatibility
+            console.warn(`Failed with facingMode ${facingMode}, trying fallback...`);
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: facingMode,
+                width: { max: 1280 },
+                height: { max: 720 }
+              },
+              audio: false
+            });
+          }
+          
+          video.srcObject = stream;
+          currentFacingMode = facingMode;
+          
+          // Show switch button if multiple cameras available (especially on mobile)
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoCameras = devices.filter(d => d.kind === 'videoinput');
+          if (videoCameras.length > 1) {
+            switchCamBtn.style.display = 'block';
+            switchCamBtn.textContent = facingMode === 'user' ? '🔄 Switch to Back Camera' : '🔄 Switch to Front Camera';
+          }
+          
+          return true;
+        } catch (err) {
+          console.error(`Failed to start camera with ${facingMode}:`, err);
+          return false;
+        }
+      };
+
+      // Start with front camera
+      const cameraStarted = await startCamera("user");
+      if (!cameraStarted) {
+        // Fallback to any available camera
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { width: { max: 1280 }, height: { max: 720 } }, audio: false });
+          video.srcObject = stream;
+        } catch (err) {
+          overlay.remove();
+          return reject(new Error("Camera access denied or not available. Please check permissions."));
+        }
       }
-      video.srcObject = stream;
+      
+      // Switch camera handler
+      switchCamBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
+        await startCamera(newFacingMode);
+      });
 
       const stopCamera = () => {
         try { stream.getTracks().forEach(t => t.stop()); } catch(_) {}
@@ -108,23 +183,30 @@ function openWorkerCamera() {
           canvas.width = video.videoWidth || 1280;
           canvas.height = video.videoHeight || 720;
           const ctx = canvas.getContext("2d");
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Mirror the image for front camera (undo the CSS transform)
+          if (currentFacingMode === "user") {
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+          } else {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          }
 
           // Pause video so it looks frozen
           video.pause();
 
           // Replace capture button with bottom ✓ and ✕ (centered)
           captureArea.innerHTML = `
-            <div style="display:flex; gap:24px; align-items:center; justify-content:center;">
-              <button id="workerRetakeBtn" style="width:64px;height:64px;border-radius:999px;background:#dc2626;color:#fff;border:0;font-size:28px;font-weight:700;">✕</button>
-              <button id="workerConfirmBtn" style="width:64px;height:64px;border-radius:999px;background:#16a34a;color:#fff;border:0;font-size:28px;font-weight:700;">✓</button>
+            <div style="display:flex; gap:24px; align-items:center; justify-content:center; width:100%;">
+              <button id="workerRetakeBtn" style="width:64px;height:64px;border-radius:999px;background:#dc2626;color:#fff;border:0;font-size:28px;font-weight:700;cursor:pointer;">✕</button>
+              <button id="workerConfirmBtn" style="width:64px;height:64px;border-radius:999px;background:#16a34a;color:#fff;border:0;font-size:28px;font-weight:700;cursor:pointer;">✓</button>
             </div>
           `;
 
           // Retake
           document.getElementById("workerRetakeBtn").addEventListener("click", () => {
             // remove confirm/retake and put capture back
-            captureArea.innerHTML = `<button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px;">Capture</button>`;
+            captureArea.innerHTML = `<button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px; cursor:pointer;">Capture</button>`;
             // resume video
             video.play();
             // re-attach handler
@@ -510,6 +592,40 @@ function toggleSidebar() {
     }
 }
 
+// Mobile-specific sidebar toggle
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (!sidebar) return;
+    
+    const isOpen = sidebar.classList.contains('mobile-open');
+    if (isOpen) {
+        sidebar.classList.remove('mobile-open');
+        if (overlay) overlay.classList.remove('visible');
+    } else {
+        sidebar.classList.add('mobile-open');
+        if (overlay) overlay.classList.add('visible');
+    }
+}
+
+// Desktop-specific sidebar toggle
+function toggleDesktopSidebar() {
+    const isDesktop = window.innerWidth >= 1024;
+    if (!isDesktop) return;
+    
+    const body = document.body;
+    const mainWrapper = document.getElementById('mainWrapper');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (!mainWrapper || !sidebar) return;
+    
+    body.classList.toggle('sidebar-collapsed');
+    const isCollapsed = body.classList.contains('sidebar-collapsed');
+    
+    mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
+}
+
 // Desktop collapse/expand (icon-only) toggle - same as toggleSidebar on desktop
 function toggleSidebarCollapse() {
     const isDesktop = window.innerWidth >= 1024;
@@ -530,8 +646,8 @@ function toggleSidebarCollapse() {
 function closeSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.add('-translate-x-full');
-    if (overlay) overlay.classList.add('hidden');
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('visible');
 }
 
 // Navigation functionality
@@ -558,19 +674,24 @@ function showSection(sectionId) {
         selectedSection.classList.remove('hidden');
     }
     
-    // Update active nav item
+    // Update active nav item - highlight the corresponding sidebar menu with dark blue
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('bg-[var(--cane-600)]', 'bg-gray-800', 'text-white');
-        item.classList.add('text-gray-300');
+        item.classList.remove('active', 'bg-gray-800', 'text-white');
     });
 
+    // Find and highlight the nav item that matches the current section
     const activeNavItem = document.querySelector(`[data-section="${targetId}"]`);
     if (activeNavItem) {
-        activeNavItem.classList.remove('text-gray-300');
-        activeNavItem.classList.add('bg-gray-800', 'text-white');
+        activeNavItem.classList.add('active');
     }
     
     currentSection = targetId;
+    
+    // Close mobile sidebar after navigation
+    if (window.innerWidth < 1024) {
+        closeSidebar();
+    }
+    
     // Ensure layout aligns with sidebar state on desktop after section switch
     try {
         const isDesktop = window.innerWidth >= 1024;
@@ -586,6 +707,7 @@ function showSection(sectionId) {
 // Profile dropdown functionality
 function toggleProfileDropdown() {
     const dropdown = document.getElementById('profileDropdown');
+    const chevronIcon = document.getElementById('profileDropdownIcon');
     if (!dropdown) return;
     
     const isVisible = dropdown.classList.contains('opacity-100');
@@ -593,9 +715,19 @@ function toggleProfileDropdown() {
     if (isVisible) {
         dropdown.classList.remove('opacity-100', 'visible', 'scale-100');
         dropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+        // Rotate chevron back to down (0deg)
+        if (chevronIcon) {
+            chevronIcon.style.transform = 'rotate(0deg)';
+            chevronIcon.style.transition = 'transform 0.3s ease-in-out';
+        }
     } else {
         dropdown.classList.remove('opacity-0', 'invisible', 'scale-95');
         dropdown.classList.add('opacity-100', 'visible', 'scale-100');
+        // Rotate chevron to up (180deg)
+        if (chevronIcon) {
+            chevronIcon.style.transform = 'rotate(180deg)';
+            chevronIcon.style.transition = 'transform 0.3s ease-in-out';
+        }
     }
 }
 
@@ -1068,7 +1200,8 @@ function renderWorkerNotifications(notifications) {
         return `
             <div class="notification-item w-full text-left px-4 py-3 hover:bg-green-50 transition-colors duration-200 cursor-pointer border-b border-gray-100 ${statusClass}" 
                   data-section="${section}" 
-                  data-notification-id="${notification.id}">
+                  data-notification-id="${notification.id}"
+                  onclick="markWorkerNotificationRead('${notification.id}', '${section}')">
                 <div class="flex items-start gap-3">
                     <div class="mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${isRead ? 'bg-gray-300' : 'bg-green-500'}"></div>
                     <div class="flex-1">
@@ -1081,8 +1214,8 @@ function renderWorkerNotifications(notifications) {
     }).join('');
 }
 
-// Mark notification as read and navigate to My Tasks
-async function markWorkerNotificationRead(notificationId) {
+// Mark notification as read and navigate to section
+async function markWorkerNotificationRead(notificationId, section = 'my-tasks') {
     try {
         // Mark notification as read
         await updateDoc(doc(db, 'notifications', notificationId), {
@@ -1090,16 +1223,8 @@ async function markWorkerNotificationRead(notificationId) {
             readAt: serverTimestamp()
         });
         
-        // Navigate to My Tasks section
-        showSection('my-tasks');
-        
-        // Update active tab in the sidebar
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('text-white', 'bg-gray-800');
-            if (item.getAttribute('data-section') === 'my-tasks') {
-                item.classList.add('text-white', 'bg-gray-800');
-            }
-        });
+        // Navigate to the appropriate section
+        showSection(section);
         
         // Close the notifications dropdown if open
         const dropdown = document.getElementById('notificationDropdown');
@@ -1970,6 +2095,8 @@ window.navigateToSection = navigateToSection;
 window.toggleNotifications = toggleNotifications;
 window.logout = logout;
 window.toggleSidebar = toggleSidebar;
+window.toggleMobileSidebar = toggleMobileSidebar;
+window.toggleDesktopSidebar = toggleDesktopSidebar;
 window.closeSidebar = closeSidebar;
 window.showSection = showSection;
 window.toggleProfileDropdown = toggleProfileDropdown;
