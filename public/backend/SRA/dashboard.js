@@ -41,12 +41,108 @@ async function initNotifications(userId) {
 
   bellBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    const isOpen = !dropdown.classList.contains("hidden");
     dropdown.classList.toggle("hidden");
+    
+    if (!dropdown.classList.contains("hidden")) {
+      // Center dropdown on mobile view
+      if (window.innerWidth < 640) {
+        // Center the dropdown on mobile - ensure it's within viewport
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const dropdownWidth = Math.min(320, viewportWidth - 32); // 16px margin on each side
+        
+        // Remove all conflicting styles first
+        dropdown.removeAttribute('style');
+        
+        // Set all styles explicitly for mobile - positioned higher (40% from top)
+        dropdown.style.cssText = `
+          position: fixed !important;
+          left: 50% !important;
+          top: 40% !important;
+          right: auto !important;
+          transform: translate(-50%, -50%) !important;
+          width: ${dropdownWidth}px !important;
+          max-width: ${dropdownWidth}px !important;
+          margin: 0 !important;
+          max-height: ${viewportHeight - 40}px !important;
+          z-index: 50 !important;
+          box-sizing: border-box !important;
+        `;
+      } else {
+        // Desktop: reset to original positioning
+        dropdown.removeAttribute('style');
+        dropdown.style.cssText = `
+          position: absolute !important;
+          right: 0 !important;
+          top: 100% !important;
+          left: auto !important;
+          transform: none !important;
+          width: 20rem !important;
+          max-width: none !important;
+          margin-top: 0.5rem !important;
+          max-height: calc(100vh - 4rem) !important;
+          z-index: 50 !important;
+        `;
+      }
+    }
   });
+
+  // Close button handler
+  const closeBtn = document.getElementById('notificationCloseBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      dropdown.classList.add('hidden');
+    });
+  }
+
+  // Mark all as read button handler
+  const markAllReadBtn = document.getElementById('notificationMarkAllReadBtn');
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', async () => {
+      try {
+        const { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+        const { db } = await import('../Common/firebase-config.js');
+        
+        // Get all unread notifications for this user
+        const notificationsRef = collection(db, "notifications");
+        const personalQuery = query(notificationsRef, where("userId", "==", userId));
+        const broadcastQuery = query(notificationsRef, where("role", "==", "sra"));
+        
+        const [personalSnap, broadcastSnap] = await Promise.all([
+          getDocs(personalQuery),
+          getDocs(broadcastQuery)
+        ]);
+        
+        const allNotifications = [
+          ...personalSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })),
+          ...broadcastSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        ];
+        
+        // Filter unread notifications
+        const unreadNotifications = allNotifications.filter(notif => !notif.read);
+        
+        // Mark all as read
+        const updatePromises = unreadNotifications.map(notif =>
+          updateDoc(doc(db, "notifications", notif.id), {
+            read: true,
+            readAt: serverTimestamp()
+          })
+        );
+        
+        await Promise.all(updatePromises);
+        console.log(`✅ Marked ${unreadNotifications.length} notifications as read`);
+      } catch (err) {
+        console.error('Failed to mark all notifications as read:', err);
+      }
+    });
+  }
 
   document.addEventListener("click", closeDropdown);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") dropdown.classList.add("hidden");
+    if (event.key === "Escape") {
+      dropdown.classList.add("hidden");
+    }
   });
 
   // Helper function to format notification titles
