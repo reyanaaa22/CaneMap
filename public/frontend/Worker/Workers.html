@@ -70,12 +70,13 @@
         @media (max-width: 1023px) {
             body {
                 padding-top: 3.5rem !important; /* Adjust for fixed header */
+                padding-left: 0 !important;
             }
             
             #sidebar {
                 transform: translateX(-100%);
                 transition: transform 0.3s ease-in-out;
-                z-index: 50; /* Higher than header */
+                z-index: 40; /* Below overlay but above content */
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -83,6 +84,7 @@
                 width: 16rem;
                 background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);
                 overflow-y: auto;
+                padding-top: 0;
             }
             
             #sidebar.mobile-open {
@@ -93,6 +95,10 @@
                 display: none;
                 opacity: 0;
                 transition: opacity 0.3s ease-in-out;
+                z-index: 39; /* Below sidebar */
+                position: fixed;
+                inset: 0;
+                background-color: rgba(0, 0, 0, 0.5);
             }
             
             #sidebarOverlay.visible {
@@ -100,10 +106,26 @@
                 opacity: 1;
             }
             
+            /* Mobile notification dropdown */
+            #notificationDropdown {
+                max-width: calc(100vw - 2rem) !important;
+                width: 60vw !important;
+                right: auto !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                max-height: 70vh !important;
+            }
+            
+            #mainWrapper {
+                margin-left: 0 !important;
+                width: 100%;
+            }
+            
             #mainContent {
                 width: 100%;
                 padding-left: 1rem;
                 padding-right: 1rem;
+                margin-left: 0 !important;
             }
             
             .dashboard-grid {
@@ -116,70 +138,39 @@
             }
         }
         
-        /* Force white background on active nav items with highest specificity */
+        /* Unified active nav item styling - Dark Blue (#1f2937) */
+        .nav-item.active,
         #sidebar .nav-item.active,
-        #sidebar .nav-item.active:hover,
-        #sidebar .nav-item[data-section].active,
-        #sidebar .nav-item[data-section].active:hover {
-            background-color: #FFFFFF !important;
-            color: var(--cane-600) !important;
+        #sidebar .nav-item[data-section].active {
+            background-color: #1f2937 !important;
+            color: #FFFFFF !important;
             font-weight: 600 !important;
             border-radius: 8px !important;
-        }
-
-        /* Force icon colors for active items */
-        #sidebar .nav-item.active i,
-        #sidebar .nav-item[data-section].active i,
-        #sidebar .nav-item.active:hover i,
-        #sidebar .nav-item[data-section].active:hover i,
-        #sidebar .nav-item.active i.fas,
-        #sidebar .nav-item[data-section].active i.fas,
-        #sidebar .nav-item.active:hover i.fas,
-        #sidebar .nav-item[data-section].active:hover i.fas {
-            color: var(--cane-600) !important;
-        }
-
-        /* Override any background image or gradient */
-        #sidebar .nav-item.active,
-        #sidebar .nav-item[data-section].active,
-        #sidebar .nav-item.active:hover,
-        #sidebar .nav-item[data-section].active:hover {
             background-image: none !important;
-            --tw-bg-opacity: 1 !important;
-            background-color: #FFFFFF !important;
         }
 
-        /* Ensure text color stays dark green when active */
-        #sidebar .nav-item.active,
-        #sidebar .nav-item[data-section].active,
-        #sidebar .nav-item.active span,
-        #sidebar .nav-item[data-section].active span,
-        #sidebar .nav-item.active:hover span,
-        #sidebar .nav-item[data-section].active:hover span {
-            color: var(--cane-600) !important;
-        }
-
-        /* Reset hover state for active items */
+        /* Active item hover state - same dark blue */
+        .nav-item.active:hover,
         #sidebar .nav-item.active:hover,
         #sidebar .nav-item[data-section].active:hover {
-            background-color: #FFFFFF !important;
-            color: var(--cane-600) !important;
+            background-color: #1f2937 !important;
+            color: #FFFFFF !important;
         }
-        
-        /* Ensure active icons are properly colored */
+
+        /* Active item text and icons - white */
+        .nav-item.active,
+        .nav-item.active span,
         .nav-item.active i,
-        .nav-item[data-section].active i,
         .nav-item.active i.fas,
-        .nav-item[data-section].active i.fas {
-            color: var(--cane-600) !important;
-        }
-        
-        /* Make sure the active state overrides any other styles */
         #sidebar .nav-item.active,
+        #sidebar .nav-item.active span,
+        #sidebar .nav-item.active i,
+        #sidebar .nav-item.active i.fas,
         #sidebar .nav-item[data-section].active,
-        #sidebar .nav-item.active *,
-        #sidebar .nav-item[data-section].active * {
-            color: var(--cane-600) !important;
+        #sidebar .nav-item[data-section].active span,
+        #sidebar .nav-item[data-section].active i,
+        #sidebar .nav-item[data-section].active i.fas {
+            color: #FFFFFF !important;
         }
         
         :root {
@@ -654,7 +645,7 @@
                         </button>
 
                         <!-- Notification Dropdown -->
-                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-96 overflow-y-auto">
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 md:w-80 lg:w-80 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-96 overflow-y-auto" style="max-width: calc(100vw - 2rem); width: 60vw; right: auto; left: 50%; transform: translateX(-50%);">
                             <div class="p-3 border-b border-gray-200 flex items-center justify-between">
                                 <h3 class="font-semibold text-gray-900">Notifications</h3>
                                 <button id="refreshNotifications" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
@@ -750,10 +741,6 @@
                             <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
                         </div>
                     </div>
-                    <!-- Close button for mobile -->
-                    <button id="closeSidebarBtn" class="lg:hidden text-white hover:text-cane-200 p-2 -mr-2" aria-label="Close menu" onclick="toggleSidebar()">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
                 </div>
                 
                 <!-- Navigation Menu -->
@@ -799,7 +786,7 @@
                 <!-- Dashboard Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <!-- Active Fields Card -->
-                    <a href="#" class="block group" data-section="my-fields">
+                    <a href="#" class="block group" data-section="my-fields" onclick="event.preventDefault(); showSection('my-fields');">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
                             <div class="h-2 bg-[var(--cane-600)]"></div>
                             <div class="p-6">
@@ -812,19 +799,13 @@
                                         <p class="text-5xl font-bold text-gray-900" id="activeFieldsCount">0</p>
                                         <p class="text-base text-gray-600 mt-2"><span id="activeFieldsText">Currently active fields</span></p>
                                     </div>
-                                    <div class="text-right">
-                                        <span class="text-sm text-gray-600 block">This week</span>
-                                        <span class="text-base font-semibold text-green-600 flex items-center">
-                                            <i class="fas fa-arrow-up mr-1"></i> 5%
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     </a>
 
                     <!-- Assigned Tasks Card -->
-                    <a href="#" class="block group" data-section="my-tasks">
+                    <a href="#" class="block group" data-section="my-tasks" onclick="event.preventDefault(); showSection('my-tasks');">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
                             <div class="h-2 bg-[var(--cane-600)]"></div>
                             <div class="p-6">
@@ -837,19 +818,13 @@
                                         <p class="text-5xl font-bold text-gray-900" id="assignedTasksCount">0</p>
                                         <p class="text-base text-gray-600 mt-2">Tasks assigned to you</p>
                                     </div>
-                                    <div class="text-right">
-                                        <span class="text-sm text-gray-600 block">From yesterday</span>
-                                        <span class="text-base font-semibold text-red-600 flex items-center">
-                                            <i class="fas fa-arrow-down mr-1"></i> 2%
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     </a>
 
                     <!-- Upcoming Tasks Card -->
-                    <a href="#" class="block group" data-section="my-tasks">
+                    <a href="#" class="block group" data-section="my-tasks" onclick="event.preventDefault(); showSection('my-tasks');">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
                             <div class="h-2 bg-[var(--cane-600)]"></div>
                             <div class="p-6">
@@ -861,12 +836,6 @@
                                     <div>
                                         <p class="text-5xl font-bold text-gray-900" id="upcomingTasksCount">0</p>
                                         <p class="text-base text-gray-600 mt-2">Due within 7 days</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="text-xs text-gray-500 block">This week</span>
-                                        <span class="text-sm font-medium text-[var(--cane-500)] flex items-center">
-                                            <i class="fas fa-arrow-up mr-1"></i> 10%
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -1099,7 +1068,7 @@
         // Update active state in navigation
         document.querySelectorAll('.nav-item').forEach(item => {
           // Reset all items to default state
-          item.classList.remove('bg-white', 'text-cane-600', 'font-semibold', 'active');
+          item.classList.remove('bg-gray-800', 'text-white', 'font-semibold', 'active');
           item.classList.add('text-white/90', 'hover:bg-white/10');
           
           // Reset all inline styles
@@ -1109,7 +1078,7 @@
           // Reset icon color
           const icon = item.querySelector('i');
           if (icon) {
-            icon.classList.remove('text-cane-600');
+            icon.classList.remove('text-white');
             icon.classList.add('text-white/90');
             icon.style.color = '';
           }
@@ -1118,25 +1087,28 @@
         // Set active state for the selected navigation item
         const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
         activeItems.forEach(item => {
-          // Set active state with white background
+          // Set active state with dark background
           item.classList.remove('text-white/90', 'hover:bg-white/10');
-          item.classList.add('bg-white', 'text-cane-600', 'font-semibold', 'active');
+          item.classList.add('bg-gray-800', 'text-white', 'font-semibold', 'active');
           
-          // Force white background and dark text with !important
-          item.style.cssText += 'background-color: #FFFFFF !important; color: var(--cane-600) !important;';
+          // Force dark background and white text
+          item.style.backgroundColor = '#1f2937';
+          item.style.color = '#FFFFFF';
+          item.style.fontWeight = '600';
+          item.style.borderRadius = '8px';
           
           // Update icon color
           const icon = item.querySelector('i');
           if (icon) {
             icon.classList.remove('text-white/90');
-            icon.classList.add('text-cane-600');
-            icon.style.cssText += 'color: var(--cane-600) !important;';
+            icon.classList.add('text-white');
+            icon.style.color = '#FFFFFF';
           }
           
-          // Ensure text is dark green and bold
+          // Ensure text is white and bold
           const text = item.querySelector('span');
           if (text) {
-            text.style.color = 'var(--cane-600)';
+            text.style.color = '#FFFFFF';
             text.style.fontWeight = '600';
           }
         });
@@ -1627,6 +1599,16 @@
         document.querySelectorAll('.nav-item').forEach(item => {
           item.addEventListener('click', closeSidebar);
         });
+        
+        // Close sidebar when clicking on overlay (outside screen)
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        if (sidebarOverlay) {
+          sidebarOverlay.addEventListener('click', function(e) {
+            if (e.target === sidebarOverlay) {
+              closeSidebar();
+            }
+          });
+        }
         
         // Handle window resize
         function handleResize() {
