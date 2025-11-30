@@ -383,6 +383,14 @@ export async function renderReportsTable(containerId, filters = {}) {
   });
 
   document.getElementById('exportCSVBtn').addEventListener('click', async () => {
+    const exportBtn = document.getElementById('exportCSVBtn');
+    const originalHTML = exportBtn.innerHTML;
+    
+    // Add loading animation
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Exporting...';
+    exportBtn.classList.add('opacity-75', 'cursor-not-allowed');
+    
     const filters = {
       status: document.getElementById('filterStatus').value,
       reportType: document.getElementById('filterReportType').value,
@@ -390,7 +398,8 @@ export async function renderReportsTable(containerId, filters = {}) {
       startDate: document.getElementById('filterStartDate').value,
       endDate: document.getElementById('filterEndDate').value
     };
-    await exportReportsToCSV(filters);
+    
+    await exportReportsToCSV(filters, exportBtn, originalHTML);
   });
 
   // Show loading state
@@ -1074,13 +1083,21 @@ window.exportReportCSV = async function(reportId) {
 /**
  * Export reports to CSV file (Mobile-friendly)
  * @param {Object} filters - Filter options to apply
+ * @param {HTMLElement} exportBtn - Export button element (optional, for animation)
+ * @param {string} originalHTML - Original button HTML (optional, for animation)
  */
-export async function exportReportsToCSV(filters = {}) {
+export async function exportReportsToCSV(filters = {}, exportBtn = null, originalHTML = null) {
   try {
     const reports = await getAllReports(filters);
 
     if (reports.length === 0) {
       alert('No reports to export');
+      // Reset button if provided
+      if (exportBtn && originalHTML) {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = originalHTML;
+        exportBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+      }
       return;
     }
 
@@ -1118,6 +1135,13 @@ export async function exportReportsToCSV(filters = {}) {
     // Mobile-friendly download approach
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
+    // Remove animation when download is triggered (save dialog appears)
+    if (exportBtn && originalHTML) {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalHTML;
+      exportBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+    }
+    
     if (isMobile) {
       // For mobile: Use data URL approach
       const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
@@ -1132,6 +1156,15 @@ export async function exportReportsToCSV(filters = {}) {
         link.click();
         document.body.removeChild(link);
       }, 100);
+      
+      // Show success message after delay (mobile might save directly or show dialog)
+      setTimeout(() => {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+        successDiv.innerHTML = `<i class="fas fa-check-circle"></i> Exported ${reports.length} reports to CSV`;
+        document.body.appendChild(successDiv);
+        setTimeout(() => successDiv.remove(), 3000);
+      }, 1500); // Delay for mobile to account for save dialog or direct save
     } else {
       // For desktop: Use Blob approach (more efficient)
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1147,21 +1180,29 @@ export async function exportReportsToCSV(filters = {}) {
       
       // Clean up the object URL
       setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      // Show success message after delay (desktop shows save dialog, wait for user to save)
+      setTimeout(() => {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+        successDiv.innerHTML = `<i class="fas fa-check-circle"></i> Exported ${reports.length} reports to CSV`;
+        document.body.appendChild(successDiv);
+        setTimeout(() => successDiv.remove(), 3000);
+      }, 2000); // Longer delay for desktop to account for save dialog
     }
 
     console.log(`✅ Exported ${reports.length} reports to ${filename}`);
 
-    // Show success message
-    const successDiv = document.createElement('div');
-    successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
-    successDiv.innerHTML = `<i class="fas fa-check-circle"></i> Exported ${reports.length} reports to CSV`;
-    document.body.appendChild(successDiv);
-
-    setTimeout(() => successDiv.remove(), 3000);
-
   } catch (error) {
     console.error('Error exporting reports to CSV:', error);
     alert('Failed to export reports: ' + error.message);
+    
+    // Reset button on error
+    if (exportBtn && originalHTML) {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = originalHTML;
+      exportBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+    }
   }
 }
 
