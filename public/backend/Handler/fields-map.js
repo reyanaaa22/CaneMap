@@ -238,6 +238,11 @@ document.addEventListener('click', (e) => {
       // Create markers layer
       markersLayer = L.layerGroup().addTo(fieldsMap);
 
+      // New Field button - redirect to registration form
+      document.getElementById('addNewField')?.addEventListener('click', () => {
+        window.location.href = '../Handler/Register-field.html';
+      });
+
       // Custom zoom controls
       document.getElementById('mapZoomIn')?.addEventListener('click', () => fieldsMap.zoomIn());
       document.getElementById('mapZoomOut')?.addEventListener('click', () => fieldsMap.zoomOut());
