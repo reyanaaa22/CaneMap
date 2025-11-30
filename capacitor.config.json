@@ -2,6 +2,7 @@
   "appId": "com.canemap.app",
   "appName": "CaneMap",
   "webDir": "public",
+  "bundledWebRuntime": false,
   "plugins": {
     "Filesystem": {
       "android": {
