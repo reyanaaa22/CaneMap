@@ -847,6 +847,95 @@ window.toggleSubmenu = function (submenuId) {
 // LOGOUT FUNCTIONALITY
 // ============================================================
 
+// Logout confirmation modal setup
+document.addEventListener("DOMContentLoaded", function () {
+  try {
+    const logoutBtn = document.getElementById("driverLogoutBtn");
+    const modal = document.getElementById("logoutModal");
+    const dialog = document.getElementById("logoutDialog");
+    const btnYes = document.getElementById("logoutConfirm");
+    const btnNo = document.getElementById("logoutCancel");
+
+    function openLogout() {
+      if (!modal || !dialog) return;
+      modal.classList.remove("opacity-0", "invisible");
+      modal.classList.add("opacity-100", "visible");
+      dialog.classList.remove(
+        "translate-y-2",
+        "scale-95",
+        "opacity-0",
+        "pointer-events-none"
+      );
+      dialog.classList.add("translate-y-0", "scale-100", "opacity-100");
+    }
+
+    function closeLogout() {
+      if (!modal || !dialog) return;
+      modal.classList.add("opacity-0", "invisible");
+      modal.classList.remove("opacity-100", "visible");
+      dialog.classList.add(
+        "translate-y-2",
+        "scale-95",
+        "opacity-0",
+        "pointer-events-none"
+      );
+      dialog.classList.remove("translate-y-0", "scale-100", "opacity-100");
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        openLogout();
+      });
+    }
+
+    if (modal) {
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeLogout();
+      });
+    }
+
+    if (btnNo) {
+      btnNo.addEventListener("click", function () {
+        closeLogout();
+      });
+    }
+
+    if (btnYes) {
+      btnYes.addEventListener("click", async function () {
+        console.info("Logout confirm clicked");
+        try {
+          await signOut(auth);
+          console.log("✅ Firebase signOut success");
+        } catch (err) {
+          console.error("Error during Firebase sign out:", err);
+        } finally {
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch (_) {}
+
+          // Small fade animation before redirect
+          if (modal && dialog) {
+            modal.classList.add("opacity-0");
+            dialog.classList.add("opacity-0", "scale-95");
+          }
+          setTimeout(() => {
+            window.location.href = "../Common/farmers_login.html";
+          }, 300);
+        }
+      });
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeLogout();
+    });
+  } catch (err) {
+    console.error("Logout modal init failed:", err);
+  }
+});
+
+// Keep the old logout function for backward compatibility (if needed elsewhere)
 window.logout = async function () {
   try {
     await signOut(auth);
