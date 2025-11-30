@@ -346,6 +346,14 @@ export function initializeHandlerWorkersSection() {
 
     refs.workersTbody.innerHTML = rows;
 
+    // See Details button click
+    refs.workersTbody.querySelectorAll('.see-details-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const uid = e.currentTarget.dataset.id;
+        showUserDetailsModal(uid);
+      });
+    });
+
     // Kick user button click
     refs.workersTbody.querySelectorAll('.kick-user-btn').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -602,6 +610,8 @@ export function initializeHandlerWorkersSection() {
   }
 
   async function fetchAllData(){
+    // Cache field names to avoid redundant fetches
+    const fieldNameCache = new Map();
     const uid = getUserId();
     if (!uid) {
       state.farmers = [];
@@ -609,6 +619,12 @@ export function initializeHandlerWorkersSection() {
       state.requests = [];
       return;
     }
+    
+    // Show loading state
+    if (refs.workersTbody) {
+      refs.workersTbody.innerHTML = '<tr><td colspan="3" class="py-8 text-center"><i class="fas fa-spinner fa-spin text-[var(--cane-600)] text-xl"></i><p class="text-sm text-[var(--cane-700)] mt-2">Loading team members...</p></td></tr>';
+    }
+    
     try {
       // Get all fields owned by this handler
       const handlerFieldIds = await getHandlerFieldIds(uid);
@@ -642,31 +658,48 @@ export function initializeHandlerWorkersSection() {
         allApprovedRequests.map(req => req.userId).filter(Boolean)
       ));
 
-      // Fetch user details from users collection
+      // Fetch user details from users collection - batch fetch for better performance
       const workers = [];
       const drivers = [];
+      
+      // Batch fetch all user documents
+      const userPromises = approvedUserIds.map(userId => getDoc(doc(db, "users", userId)));
+      const userSnaps = await Promise.all(userPromises);
+      
+      // Batch fetch all driver badge documents for drivers
+      const driverUserIds = [];
+      const userDataMap = new Map();
+      
+      userSnaps.forEach((userSnap, index) => {
+        if (!userSnap.exists()) return;
+        const userId = approvedUserIds[index];
+        const userData = userSnap.data();
+        userDataMap.set(userId, userData);
+        const userRole = (userData.role || "").toLowerCase();
+        if (userRole === "driver") {
+          driverUserIds.push(userId);
+        }
+      });
+      
+      // Batch fetch driver badges
+      const badgePromises = driverUserIds.map(userId => getDoc(doc(db, "Drivers_Badge", userId)));
+      const badgeSnaps = await Promise.all(badgePromises);
+      const badgeDataMap = new Map();
+      badgeSnaps.forEach((badgeSnap, index) => {
+        if (badgeSnap.exists()) {
+          badgeDataMap.set(driverUserIds[index], badgeSnap.data());
+        }
+      });
 
+      // Process each user
       await Promise.all(
         approvedUserIds.map(async (userId) => {
           try {
-            const userSnap = await getDoc(doc(db, "users", userId));
-            if (!userSnap.exists()) return;
+            const userData = userDataMap.get(userId);
+            if (!userData) return;
 
-            const userData = userSnap.data();
             const userRole = (userData.role || "").toLowerCase();
-
-            // fetch contact number from Drivers_Badge if driver
-            let badgeData = {};
-            if (userRole === "driver") {
-              try {
-                const badgeSnap = await getDoc(doc(db, "Drivers_Badge", userId));
-                if (badgeSnap.exists()) {
-                  badgeData = badgeSnap.data();
-                }
-              } catch (err) {
-                console.warn(`⚠️ Failed to fetch Drivers_Badge for ${userId}:`, err);
-              }
-            }
+            const badgeData = badgeDataMap.get(userId) || {};
 
 
             // REMOVED filter - now allows farmers to be shown as workers/drivers based on field_joins role
@@ -695,16 +728,22 @@ const address =
 
             // Process each field this user works on
             for (const req of userApprovedRequests) {
-              // Fetch field name
+              // Fetch field name - use cached field names if available
               let fieldName = 'Unknown Field';
-              try {
-                const fieldRef = doc(db, 'fields', req.fieldId);
-                const fieldSnap = await getDoc(fieldRef);
-                if (fieldSnap.exists()) {
-                  fieldName = fieldSnap.data().fieldName || fieldSnap.data().name || 'Unknown Field';
+              const cachedFieldName = fieldNameCache.get(req.fieldId);
+              if (cachedFieldName) {
+                fieldName = cachedFieldName;
+              } else {
+                try {
+                  const fieldRef = doc(db, 'fields', req.fieldId);
+                  const fieldSnap = await getDoc(fieldRef);
+                  if (fieldSnap.exists()) {
+                    fieldName = fieldSnap.data().fieldName || fieldSnap.data().name || 'Unknown Field';
+                    fieldNameCache.set(req.fieldId, fieldName);
+                  }
+                } catch (err) {
+                  console.warn(`Could not fetch field ${req.fieldId}:`, err);
                 }
-              } catch (err) {
-                console.warn(`Could not fetch field ${req.fieldId}:`, err);
               }
 
               const userInfo = {
@@ -1191,6 +1230,214 @@ async function showDetailsModal(uid) {
     alert("Failed to load user details.");
   }
 }
+
+  // Show user details modal
+  async function showUserDetailsModal(userId) {
+    const existing = document.getElementById('userDetailsModal');
+    if (existing) existing.remove();
+
+    // Create loading modal
+    const loadingModal = document.createElement('div');
+    loadingModal.id = 'userDetailsModal';
+    loadingModal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]';
+    loadingModal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl p-8 max-w-md w-[90%]">
+        <div class="text-center">
+          <i class="fas fa-spinner fa-spin text-3xl text-[var(--cane-600)] mb-4"></i>
+          <p class="text-[var(--cane-700)]">Loading user details...</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(loadingModal);
+
+    try {
+      // Fetch user profile data
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        loadingModal.remove();
+        alert('User not found');
+        return;
+      }
+
+      const userData = userSnap.data();
+      const userRole = (userData.role || '').toLowerCase();
+      
+      // Fetch driver badge data if driver
+      let badgeData = null;
+      if (userRole === 'driver') {
+        try {
+          const badgeRef = doc(db, 'Drivers_Badge', userId);
+          const badgeSnap = await getDoc(badgeRef);
+          if (badgeSnap.exists()) {
+            badgeData = badgeSnap.data();
+          }
+        } catch (err) {
+          console.warn('Failed to fetch driver badge data:', err);
+        }
+      }
+
+      // Build personal information HTML
+      const photoURL = userData.photoURL || userData.photo_url || '';
+      const defaultPhoto = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><rect width='100%' height='100%' fill='%23ecfcca'/><g fill='%235ea500'><circle cx='64' cy='48' r='22'/><rect x='28' y='80' width='72' height='28' rx='14'/></g></svg>`)}`;
+      
+      const fullname = userData.fullname || userData.name || userData.fullName || userData.displayName || 'N/A';
+      const email = userData.email || 'N/A';
+      const contact = userData.contact || userData.phone || userData.phoneNumber || userData.mobile || 'N/A';
+      const nickname = userData.nickname || 'N/A';
+      const gender = userData.gender || 'N/A';
+      const birthday = userData.birthday || 'N/A';
+      const age = birthday !== 'N/A' ? computeAge(birthday) : 'N/A';
+      const barangay = userData.barangay || 'N/A';
+      const municipality = userData.municipality || 'N/A';
+      const address = userData.address || (barangay !== 'N/A' && municipality !== 'N/A' ? `${barangay}, ${municipality}` : 'N/A');
+
+      let personalInfoHTML = `
+        <div class="mb-6">
+          <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center gap-2">
+            <i class="fas fa-user text-[var(--cane-600)]"></i>
+            Personal Information
+          </h3>
+          <div class="flex flex-col sm:flex-row gap-6 mb-6">
+            <div class="flex-shrink-0 mx-auto sm:mx-0">
+              <img src="${photoURL || defaultPhoto}" alt="Profile" 
+                   class="w-32 h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md"
+                   onerror="this.src='${defaultPhoto}'">
+            </div>
+            <div class="flex-1 space-y-3">
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Full Name</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(fullname)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Email</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(email)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Contact Number</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(contact)}</p>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Nickname</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(nickname)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Gender</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(gender)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Birthday</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(birthday)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Age</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${age}</p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Address</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(address)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Build driver badge information HTML if driver
+      let driverInfoHTML = '';
+      if (userRole === 'driver' && badgeData) {
+        const licenseNumber = badgeData.license_number || badgeData.licenseNumber || 'N/A';
+        const vehicleType = badgeData.other_vehicle_type || badgeData.vehicleType || badgeData.vehicle_type || 'N/A';
+        const vehicleModel = badgeData.vehicle_model || badgeData.vehicleModel || 'N/A';
+        const plateNumber = badgeData.plate_number || badgeData.plateNumber || badgeData.plate || 'N/A';
+        const badgeContact = badgeData.contact_number || badgeData.contactNumber || 'N/A';
+        const badgeStatus = badgeData.status || 'N/A';
+
+        driverInfoHTML = `
+          <div class="mt-6 pt-6 border-t border-[var(--cane-200)]">
+            <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center gap-2">
+              <i class="fas fa-id-card text-[var(--cane-600)]"></i>
+              Additional Documents Information
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">License Number</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(licenseNumber)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Vehicle Type</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(vehicleType)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Vehicle Model</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(vehicleModel)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Plate Number</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(plateNumber)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Contact Number</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(badgeContact)}</p>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-[var(--cane-700)]">Badge Status</label>
+                <p class="text-base text-[var(--cane-900)] mt-1">
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                    badgeStatus === 'approved' ? 'bg-green-100 text-green-800' :
+                    badgeStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    badgeStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }">${escapeHtml(badgeStatus.charAt(0).toUpperCase() + badgeStatus.slice(1))}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Create modal
+      const modal = document.createElement('div');
+      modal.id = 'userDetailsModal';
+      modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[10000]';
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[var(--cane-200)]">
+          <div class="sticky top-0 bg-white border-b border-[var(--cane-200)] px-6 py-4 flex items-center justify-between z-10">
+            <h2 class="text-xl font-bold text-[var(--cane-900)]">User Details</h2>
+            <button id="closeUserDetailsModal" class="text-[var(--cane-700)] hover:text-[var(--cane-900)] text-2xl font-bold transition-colors">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="p-6">
+            ${personalInfoHTML}
+            ${driverInfoHTML}
+          </div>
+        </div>
+      `;
+
+      // Close handlers
+      const closeBtn = modal.querySelector('#closeUserDetailsModal');
+      closeBtn.addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape' && document.getElementById('userDetailsModal')) {
+          modal.remove();
+          document.removeEventListener('keydown', escapeHandler);
+        }
+      });
+
+      loadingModal.remove();
+      document.body.appendChild(modal);
+    } catch (err) {
+      console.error('Error loading user details:', err);
+      loadingModal.remove();
+      alert('Failed to load user details. Please try again.');
+    }
+  }
 
   // Compute age from birthday (accepts YYYY-MM-DD string or Date)
   function computeAge(birth) {
