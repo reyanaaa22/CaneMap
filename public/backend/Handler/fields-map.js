@@ -1099,18 +1099,19 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
     // Custom confirmation modal function
     function showConfirmModal(title, message, onConfirm) {
       const modalOverlay = document.createElement('div');
-      modalOverlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[10000]';
+      modalOverlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center p-4';
       modalOverlay.id = 'confirmModalOverlay';
+      modalOverlay.style.zIndex = '50000'; // Higher than fieldDetailsModal (20000)
       
       modalOverlay.innerHTML = `
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-[var(--cane-200)] transform transition-all duration-200">
-          <div class="px-6 pt-6 pb-4">
-            <h3 class="text-lg font-bold text-[var(--cane-900)] mb-3">${title}</h3>
-            <div class="text-sm text-[var(--cane-700)] whitespace-pre-line">${message}</div>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-[var(--cane-200)] transform transition-all duration-200" style="max-height: 90vh; overflow-y: auto;">
+          <div class="px-4 sm:px-6 pt-6 pb-4">
+            <h3 class="text-xl sm:text-2xl font-bold text-[var(--cane-900)] mb-4">${title}</h3>
+            <div class="text-base sm:text-lg text-[var(--cane-700)] whitespace-pre-line leading-relaxed">${message}</div>
           </div>
-          <div class="px-6 pb-6 flex justify-end gap-3">
-            <button id="confirmCancelBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-900)] bg-white hover:bg-[var(--cane-50)] transition">Cancel</button>
-            <button id="confirmOkBtn" class="px-4 py-2 rounded-lg bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)] transition">Continue</button>
+          <div class="px-4 sm:px-6 pb-6 flex flex-col sm:flex-row justify-end gap-3">
+            <button id="confirmCancelBtn" class="w-full sm:w-auto px-5 py-3 text-base rounded-lg border border-[var(--cane-300)] text-[var(--cane-900)] bg-white hover:bg-[var(--cane-50)] transition">Cancel</button>
+            <button id="confirmOkBtn" class="w-full sm:w-auto px-5 py-3 text-base rounded-lg bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)] transition">Continue</button>
           </div>
         </div>
       `;

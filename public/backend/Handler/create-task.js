@@ -717,8 +717,9 @@ export async function openCreateTaskModal(fieldId) {
   const modal = document.createElement('div');
   modal.id = 'createTaskModal';
   modal.className = 'fixed inset-0 z-[22000] flex items-center justify-center p-4';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 22000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
   modal.innerHTML = `
-    <div id="ct_backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+    <div id="ct_backdrop" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"></div>
     <div class="relative w-full max-w-[520px] rounded-xl bg-white border border-[var(--cane-200)] shadow p-5">
       <header class="flex items-center justify-start mb-3 pb-2 border-b border-gray-200">
         <h3 class="text-xl font-semibold text-[var(--cane-900)]">Create Task</h3>
