@@ -547,23 +547,17 @@
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        // Generate PDF - use Android-compatible method if in app, otherwise use standard
-        const { isAndroidApp, downloadFile } = await import('../../../backend/Common/android-download.js');
+        // Generate PDF - use downloadFile for both browser and Android (faster)
+        const { downloadFile } = await import('../../../backend/Common/android-download.js');
         
-        if (isAndroidApp()) {
-          // For Android: Generate blob and use download utility
-          const pdfBlob = await new Promise((resolve, reject) => {
-            window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
-          });
-          await downloadFile(pdfBlob, filename);
-          // Small delay to ensure download starts before hiding animation
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } else {
-          // For browser: Use standard save method
-          await window.html2pdf().set(opt).from(clone).save();
-          // Small delay to ensure download starts before hiding animation
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
+        // Generate blob and use download utility (works for both browser and Android)
+        const pdfBlob = await new Promise((resolve, reject) => {
+          window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
+        });
+        await downloadFile(pdfBlob, filename);
+        
+        // Small delay to ensure download starts before hiding animation
+        await new Promise(resolve => setTimeout(resolve, 500));
         console.log('✅ PDF generated successfully');
       } catch (error) {
         console.error('Error generating PDF:', error);

@@ -1096,47 +1096,90 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       }
     });
 
+    // Custom confirmation modal function
+    function showConfirmModal(title, message, onConfirm) {
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[10000]';
+      modalOverlay.id = 'confirmModalOverlay';
+      
+      modalOverlay.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-[var(--cane-200)] transform transition-all duration-200">
+          <div class="px-6 pt-6 pb-4">
+            <h3 class="text-lg font-bold text-[var(--cane-900)] mb-3">${title}</h3>
+            <div class="text-sm text-[var(--cane-700)] whitespace-pre-line">${message}</div>
+          </div>
+          <div class="px-6 pb-6 flex justify-end gap-3">
+            <button id="confirmCancelBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] text-[var(--cane-900)] bg-white hover:bg-[var(--cane-50)] transition">Cancel</button>
+            <button id="confirmOkBtn" class="px-4 py-2 rounded-lg bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)] transition">Continue</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modalOverlay);
+      
+      const cancelBtn = modalOverlay.querySelector('#confirmCancelBtn');
+      const okBtn = modalOverlay.querySelector('#confirmOkBtn');
+      
+      const closeModal = () => {
+        modalOverlay.remove();
+      };
+      
+      cancelBtn.addEventListener('click', closeModal);
+      okBtn.addEventListener('click', () => {
+        closeModal();
+        onConfirm();
+      });
+      
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
+      });
+      
+      document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape') {
+          closeModal();
+          document.removeEventListener('keydown', escapeHandler);
+        }
+      });
+    }
+
     // --- Ratooning button handler ---
     modal.querySelector('#fd_ratoon_btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       if (btn.disabled) return;
 
-      const confirmed = confirm(
-        `Start Ratooning Cycle?\n\n` +
-        `This will:\n` +
-        `• Reset the field to "Active" status\n` +
-        `• Start a new ratoon cycle (regrowth from existing roots)\n` +
-        `• Archive the previous harvest data\n` +
-        `• Reset growth tracking\n\n` +
-        `Ratoon start date will be set to the last harvest date.\n` +
-        `Expected harvest will be calculated based on your cane variety.\n\n` +
-        `Continue?`
+      showConfirmModal(
+        'Start Ratooning Cycle?',
+        `This will:\n• Reset the field to "Active" status\n• Start a new ratoon cycle (regrowth from existing roots)\n• Archive the previous harvest data\n• Reset growth tracking\n\nRatoon start date will be set to the last harvest date.\nExpected harvest will be calculated based on your cane variety.`,
+        async () => {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+          try {
+            const result = await handleRatooning(currentUserId, fieldId);
+            const ratoonDateStr = result.ratoonDate ? new Date(result.ratoonDate).toLocaleDateString() : 'N/A';
+            const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
+            
+            // Show success message
+            showConfirmModal(
+              '✅ Ratooning Started Successfully!',
+              `Ratoon Cycle: #${result.ratoonNumber}\nRatoon Start Date: ${ratoonDateStr}\nExpected Harvest: ${expectedHarvestStr}`,
+              () => {
+                modal.remove();
+                window.location.reload();
+              }
+            );
+          } catch (err) {
+            console.error('Ratooning failed:', err);
+            showConfirmModal(
+              '❌ Ratooning Failed',
+              err.message,
+              () => {}
+            );
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-seedling"></i> Ratoon';
+          }
+        }
       );
-
-      if (!confirmed) return;
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-
-      try {
-        const result = await handleRatooning(currentUserId, fieldId);
-        const ratoonDateStr = result.ratoonDate ? new Date(result.ratoonDate).toLocaleDateString() : 'N/A';
-        const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
-        alert(
-          `✅ Ratooning started successfully!\n\n` +
-          `Ratoon Cycle: #${result.ratoonNumber}\n` +
-          `Ratoon Start Date: ${ratoonDateStr}\n` +
-          `Expected Harvest: ${expectedHarvestStr}`
-        );
-        modal.remove(); // Close modal
-        // Refresh the fields list
-        window.location.reload();
-      } catch (err) {
-        console.error('Ratooning failed:', err);
-        alert(`❌ Ratooning failed:\n\n${err.message}`);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-seedling"></i> Ratoon';
-      }
     });
 
     // --- Replanting button handler ---
@@ -1144,43 +1187,39 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       const btn = e.currentTarget;
       if (btn.disabled) return;
 
-      const confirmed = confirm(
-        `Start Replanting Cycle?\n\n` +
-        `This will:\n` +
-        `• Reset the field to "Active" status\n` +
-        `• Start a completely new planting cycle\n` +
-        `• Archive ALL previous data (including all ratoons)\n` +
-        `• Clear all growth tracking data\n` +
-        `• Reset fertilization dates\n\n` +
-        `Planting date will be set to the last harvest date.\n` +
-        `Expected harvest will be calculated based on your cane variety.\n\n` +
-        `Continue?`
+      showConfirmModal(
+        'Start Replanting Cycle?',
+        `This will:\n• Reset the field to "Active" status\n• Start a completely new planting cycle\n• Archive ALL previous data (including all ratoons)\n• Clear all growth tracking data\n• Reset fertilization dates\n\nPlanting date will be set to the last harvest date.\nExpected harvest will be calculated based on your cane variety.`,
+        async () => {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+          try {
+            const result = await handleReplanting(currentUserId, fieldId);
+            const plantingDateStr = result.plantingDate ? new Date(result.plantingDate).toLocaleDateString() : 'N/A';
+            const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
+            
+            // Show success message
+            showConfirmModal(
+              '✅ Replanting Started Successfully!',
+              `Planting Cycle: #${result.plantingCycleNumber}\nPlanting Date: ${plantingDateStr}\nExpected Harvest: ${expectedHarvestStr}`,
+              () => {
+                modal.remove();
+                window.location.reload();
+              }
+            );
+          } catch (err) {
+            console.error('Replanting failed:', err);
+            showConfirmModal(
+              '❌ Replanting Failed',
+              err.message,
+              () => {}
+            );
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-redo"></i> Replant';
+          }
+        }
       );
-
-      if (!confirmed) return;
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-
-      try {
-        const result = await handleReplanting(currentUserId, fieldId);
-        const plantingDateStr = result.plantingDate ? new Date(result.plantingDate).toLocaleDateString() : 'N/A';
-        const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
-        alert(
-          `✅ Replanting started successfully!\n\n` +
-          `Planting Cycle: #${result.plantingCycleNumber}\n` +
-          `Planting Date: ${plantingDateStr}\n` +
-          `Expected Harvest: ${expectedHarvestStr}`
-        );
-        modal.remove(); // Close modal
-        // Refresh the fields list
-        window.location.reload();
-      } catch (err) {
-        console.error('Replanting failed:', err);
-        alert(`❌ Replanting failed:\n\n${err.message}`);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-redo"></i> Replant';
-      }
     });
 
     modal.querySelector('#fieldDetailsBackdrop')?.addEventListener('click', (e) => {
