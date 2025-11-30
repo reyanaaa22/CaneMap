@@ -74,13 +74,13 @@ function openWorkerCamera() {
       overlay.id = "worker-camera-overlay";
 
       overlay.innerHTML = `
-        <div style="position:relative; width:100%; max-width:90vw; height:auto; display:flex; flex-direction:column; align-items:center; padding: 1rem; margin: 0 auto;">
-          <video id="workerCamVideo" autoplay playsinline class="w-full" style="border-radius:10px; background:#000; max-height:75vh; height:auto; aspect-ratio:4/3; object-fit:cover; -webkit-transform: scaleX(-1); transform: scaleX(-1);"></video>
-          <div id="workerCamControls" style="margin-top:16px; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; width:100%;">
+        <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <video id="workerCamVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000; -webkit-transform: scaleX(-1); transform: scaleX(-1);"></video>
+          <div id="workerCamControls" style="position:absolute; bottom:20px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; width:100%; padding:0 1rem;">
             <button id="workerSwitchCamBtn" style="padding:10px 18px; border-radius:999px; background:#3b82f6; color:#fff; font-weight:600; border:0; font-size:13px; display:none; cursor:pointer; transition: all 0.2s;">
               <i class="fas fa-camera-rotate"></i> Switch Camera
             </button>
-            <div id="workerCaptureArea" style="width:100%; display:flex; justify-content:center;">
+            <div id="workerCaptureArea" style="display:flex; justify-content:center;">
               <button id="workerCaptureBtn" style="padding:14px 28px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px; cursor:pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
                 Capture
               </button>
@@ -195,6 +195,9 @@ function openWorkerCamera() {
           // Pause video so it looks frozen
           video.pause();
 
+          // Hide switch button during preview
+          switchCamBtn.style.display = 'none';
+
           // Replace capture button with bottom ✓ and ✕ (centered)
           captureArea.innerHTML = `
             <div style="display:flex; gap:24px; align-items:center; justify-content:center; width:100%;">
@@ -204,7 +207,13 @@ function openWorkerCamera() {
           `;
 
           // Retake
-          document.getElementById("workerRetakeBtn").addEventListener("click", () => {
+          document.getElementById("workerRetakeBtn").addEventListener("click", async () => {
+            // Show switch button again if multiple cameras available
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoCameras = devices.filter(d => d.kind === 'videoinput');
+            if (videoCameras.length > 1) {
+              switchCamBtn.style.display = 'block';
+            }
             // remove confirm/retake and put capture back
             captureArea.innerHTML = `<button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px; cursor:pointer;">Capture</button>`;
             // resume video
