@@ -99,6 +99,7 @@ function setupCameraAndUpload(config) {
     // Start camera with specific facing mode
     let stream = null;
     let currentFacingMode = facingMode;
+    let hasMultipleCameras = false;
 
     async function startCamera(facingModeParam) {
       try {
@@ -138,7 +139,8 @@ function setupCameraAndUpload(config) {
         // Show switch button if multiple cameras available (especially on mobile)
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoCameras = devices.filter(d => d.kind === 'videoinput');
-        if (videoCameras.length > 1) {
+        hasMultipleCameras = videoCameras.length > 1;
+        if (hasMultipleCameras) {
           switchCamBtn.style.display = 'block';
           switchCamBtn.innerHTML = facingModeParam === 'user' 
             ? '<i class="fas fa-camera-rotate"></i> Switch to Back Camera'
@@ -165,7 +167,7 @@ function setupCameraAndUpload(config) {
       return;
     }
 
-    // Capture image
+    // Capture image with preview
     captureBtn.onclick = () => {
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth;
@@ -174,19 +176,52 @@ function setupCameraAndUpload(config) {
       ctx.drawImage(video, 0, 0);
       const dataUrl = canvas.toDataURL("image/png");
 
-      // Save dataURL
-      base64Holder.value = dataUrl;
+      // Pause video to freeze frame
+      video.pause();
 
-      // Display filename only
-      const fileName = `${takeBtnId}_${Date.now()}.png`;
-      if (nameDisplay) nameDisplay.textContent = fileName;
+      // Hide switch button and capture button, show preview with Retake/Use Photo
+      switchCamBtn.style.display = 'none';
+      controls.innerHTML = `
+        <div class="flex items-center justify-center gap-10">
+          <button id="retakePhotoBtn" class="w-16 h-16 flex items-center justify-center bg-red-600 text-white text-3xl font-bold rounded-full shadow-lg">
+            ✕
+          </button>
+          <button id="usePhotoBtn" class="w-16 h-16 flex items-center justify-center bg-green-600 text-white text-3xl font-bold rounded-full shadow-lg">
+            ✓
+          </button>
+        </div>
+      `;
 
-      // Stop camera and close
-      stream.getTracks().forEach((t) => t.stop());
-      cameraDiv.remove();
+      // Retake button handler
+      document.getElementById("retakePhotoBtn").onclick = () => {
+        // Restore controls
+        controls.innerHTML = '';
+        if (hasMultipleCameras) {
+          controls.appendChild(switchCamBtn);
+          switchCamBtn.style.display = 'block';
+        }
+        controls.appendChild(captureBtn);
+        controls.appendChild(cancelBtn);
+        // Resume video
+        video.play();
+      };
 
-      // Reset file input (so the camera photo is the one that counts)
-      fileInput.value = "";
+      // Use Photo button handler
+      document.getElementById("usePhotoBtn").onclick = () => {
+        // Save dataURL
+        base64Holder.value = dataUrl;
+
+        // Display filename only
+        const fileName = `${takeBtnId}_${Date.now()}.png`;
+        if (nameDisplay) nameDisplay.textContent = fileName;
+
+        // Stop camera and close
+        stream.getTracks().forEach((t) => t.stop());
+        cameraDiv.remove();
+
+        // Reset file input (so the camera photo is the one that counts)
+        fileInput.value = "";
+      };
     };
 
     // Cancel camera

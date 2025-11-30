@@ -1420,26 +1420,19 @@ window.openDriverLogWorkModal = async function () {
     overlay.id = "swal-cameraOverlay";
 
     overlay.innerHTML = `
-      <div class="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b">
-          <div class="font-semibold">Camera</div>
-          <div class="flex gap-2">
-            <button id="swal-closeCamBtn" class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Close</button>
+      <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <button id="swal-closeCamBtn" style="position:absolute; top:20px; right:20px; z-index:10; padding:10px 16px; border-radius:8px; background:rgba(0,0,0,0.6); color:#fff; border:0; font-weight:600; cursor:pointer;">Close</button>
+        <video id="swal-cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+        <div style="position:absolute; bottom:20px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; width:100%; padding:0 1rem;">
+          <button id="swal-switchCamBtn" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm" style="display:none;">
+            <i class="fas fa-camera-rotate"></i> Switch Camera
+          </button>
+          <div id="swal-captureContainer" class="flex items-center justify-center">
+            <button id="swal-captureBtn" class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
+              Capture
+            </button>
           </div>
         </div>
-
-        <div class="p-3 flex flex-col gap-3">
-          <video id="swal-cameraVideo" autoplay playsinline class="w-full h-[60vh] bg-black rounded"></video>
-<div class="flex items-center justify-center gap-3">
-  <button id="swal-switchCamBtn" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm" style="display:none;">
-    <i class="fas fa-camera-rotate"></i> Switch Camera
-  </button>
-  <div id="swal-captureContainer" class="flex items-center justify-center">
-    <button id="swal-captureBtn" class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
-      Capture
-    </button>
-  </div>
-</div>
       </div>
     `;
 
@@ -1531,6 +1524,9 @@ captureBtn.addEventListener("click", () => {
 
   videoEl.pause();
 
+  // Hide switch button during preview
+  switchCamBtn.style.display = 'none';
+
   // Hide capture button by clearing container
   const captureContainer = document.getElementById("swal-captureContainer");
   captureContainer.innerHTML = "";
@@ -1569,7 +1565,14 @@ captureBtn.addEventListener("click", () => {
   });
 
   // ✕ Retake photo
-  retakeBtn.addEventListener("click", () => {
+  retakeBtn.addEventListener("click", async () => {
+    // Show switch button again if multiple cameras available
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoCameras = devices.filter(d => d.kind === 'videoinput');
+    if (videoCameras.length > 1) {
+      switchCamBtn.style.display = 'block';
+    }
+
     // Remove ✓ and ✕
     captureContainer.innerHTML = `
       <button id="swal-captureBtn"
