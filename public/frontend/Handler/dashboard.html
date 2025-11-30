@@ -1082,9 +1082,9 @@ if (sidebar.classList.contains('closed')){
                         </button>
 
                         <!-- Notification Dropdown -->
-                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] sm:max-w-none bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] sm:max-w-none bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden" style="max-height: calc(100vh - 5rem); top: 100%;">
                             <!-- Dropdown Header -->
-                            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
                                 <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
                                 <button id="notificationRefreshBtn" class="text-[var(--cane-700)] hover:text-[var(--cane-800)] text-xs">
                                     <i class="fas fa-sync-alt"></i>
@@ -1092,7 +1092,7 @@ if (sidebar.classList.contains('closed')){
                             </div>
 
                             <!-- Notifications List -->
-                            <div id="notificationList" class="overflow-y-auto max-h-80">
+                            <div id="notificationList" class="overflow-y-auto" style="max-height: calc(100vh - 10rem);">
                                 <div class="p-4 text-sm text-gray-500 text-center">Loading notifications...</div>
                             </div>
                         </div>

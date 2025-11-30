@@ -75,6 +75,24 @@ async function initNotifications(userId) {
     dropdown.classList.toggle("hidden");
     if (!dropdown.classList.contains("hidden")) {
       bellBtn.classList.add("text-white");
+      // Ensure dropdown fits within viewport on mobile
+      if (window.innerWidth < 640) {
+        const rect = bellBtn.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        
+        // Adjust if dropdown would overflow bottom
+        if (rect.bottom + dropdownRect.height > viewportHeight) {
+          dropdown.style.maxHeight = `${viewportHeight - rect.bottom - 20}px`;
+        }
+        
+        // Ensure it doesn't overflow right edge
+        if (rect.right > viewportWidth - 20) {
+          dropdown.style.right = '0.5rem';
+          dropdown.style.left = 'auto';
+        }
+      }
     }
   });
 
