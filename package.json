@@ -8,7 +8,7 @@
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
     "watch:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "npm run build:css",
-    "build:android": "cd android && chmod +x gradlew && ./gradlew assembleDebug",
+    "build:android": "cd android && chmod +x gradlew && ./gradlew assembleDebug && cd .. && npm run copy:apk",
     "copy:apk": "node scripts/copy-apk.js",
     "build:full": "npm run build && npm run build:android && npm run copy:apk",
     "sync:android": "npm run build && npx cap sync android && npm run copy:apk",
