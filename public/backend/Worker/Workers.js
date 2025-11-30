@@ -1096,36 +1096,37 @@ function displayWorkerTasks(tasks) {
         const deadlineStr = deadline ? deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline';
         const isPending = task.status === 'pending' || task.status === 'in_progress';
         const isDone = task.status === 'done' || task.status === 'completed';
-        const statusColor = isDone ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
 
         // Get task title - try multiple fields
         const taskTitle = task.title || task.taskType || task.name || 'Task';
         const taskDescription = task.description || task.notes || task.details || 'No description provided';
 
         return `
-            <div class="p-4 border border-gray-300 rounded-lg ${isDone ? 'bg-gray-50' : 'bg-white'} transition-colors">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-gray-900 text-lg">${escapeHtml(taskTitle)}</h4>
-                        <p class="text-sm text-gray-600 mt-1">${escapeHtml(taskDescription)}</p>
+            <div class="task-card">
+                <div class="task-card-header">
+                    <div class="flex-1 min-w-0">
+                        <h4 class="task-card-title">${escapeHtml(taskTitle)}</h4>
+                        ${task.fieldName ? `<p class="task-card-field"><i class="fas fa-map-marker-alt mr-1"></i>${escapeHtml(task.fieldName)}</p>` : ''}
                     </div>
-                    <span class="px-3 py-1 text-xs font-semibold rounded-full ${statusColor} ml-3">
+                    <span class="task-card-status ${isDone ? 'completed' : ''} flex-shrink-0 ml-4">
+                        <i class="fas ${isDone ? 'fa-check-circle' : 'fa-clock'}"></i>
                         ${isDone ? 'Completed' : 'Pending'}
                     </span>
                 </div>
-                <div class="flex items-center justify-between text-sm text-gray-600 mb-3">
-                    <span><i class="fas fa-calendar mr-2"></i>${deadlineStr}</span>
-                    ${task.fieldName ? '<span><i class="fas fa-map-marker-alt mr-2"></i>'+escapeHtml(task.fieldName)+'</span>' : ''}
+                <p class="task-card-subtitle line-clamp-2">${escapeHtml(taskDescription)}</p>
+                <div class="task-card-meta">
+                    <div class="task-card-meta-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>${deadlineStr}</span>
+                    </div>
                 </div>
                 ${isPending ? `
-                    <button onclick="markTaskAsDone('${task.id}')" class="w-full bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                        <i class="fas fa-check-circle mr-2"></i>Mark as Done
-                    </button>
-                ` : `
-                    <div class="text-center py-2 text-green-600 font-medium">
-                        <i class="fas fa-check-circle mr-2"></i>Task Completed
+                    <div class="task-card-footer">
+                        <button onclick="markTaskAsDone('${task.id}')" class="flex items-center gap-2 text-[var(--cane-600)] hover:text-[var(--cane-700)] font-semibold transition-colors">
+                            <i class="fas fa-check-circle"></i>Mark as Done
+                        </button>
                     </div>
-                `}
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -1611,6 +1612,14 @@ function setupEventListeners() {
     const createWorkLogBtn = document.getElementById('createWorkLogBtn');
     if (createWorkLogBtn) {
         createWorkLogBtn.addEventListener('click', function() {
+            showWorkLogModal();
+        });
+    }
+
+    // Mobile work log button listener
+    const createWorkLogBtnMobile = document.getElementById('createWorkLogBtnMobile');
+    if (createWorkLogBtnMobile) {
+        createWorkLogBtnMobile.addEventListener('click', function() {
             showWorkLogModal();
         });
     }
