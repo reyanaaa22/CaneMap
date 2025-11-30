@@ -680,26 +680,26 @@ window.viewFieldDetails = async function(fieldId) {
 </div>
 
 
-        <footer class="flex items-center justify-between gap-3 p-6 border-t">
+        <footer class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 sm:p-6 border-t">
           <!-- Left side: Ratooning/Replanting buttons (only for harvested fields) -->
-          <div class="flex items-center gap-2 ${field.status !== 'harvested' ? 'invisible' : ''}" id="fd_harvest_actions">
-            <button id="fd_ratoon_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-purple-300 bg-purple-50 text-sm text-purple-700 hover:bg-purple-100 transition">
+          <div class="flex items-center gap-2 flex-wrap ${field.status !== 'harvested' ? 'invisible' : ''}" id="fd_harvest_actions">
+            <button id="fd_ratoon_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-purple-300 bg-purple-50 text-sm text-purple-700 hover:bg-purple-100 transition flex-1 sm:flex-none min-w-0">
               <i class="fas fa-seedling"></i>
-              Ratoon
+              <span class="whitespace-nowrap">Ratoon</span>
             </button>
-            <button id="fd_replant_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-green-300 bg-green-50 text-sm text-green-700 hover:bg-green-100 transition">
+            <button id="fd_replant_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-green-300 bg-green-50 text-sm text-green-700 hover:bg-green-100 transition flex-1 sm:flex-none min-w-0">
               <i class="fas fa-redo"></i>
-              Replant
+              <span class="whitespace-nowrap">Replant</span>
             </button>
           </div>
 
           <!-- Right side: Create Task & Close -->
-          <div class="flex items-center gap-2">
-            <button id="fd_create_task_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-sm text-[var(--cane-800)] hover:bg-gray-50 transition">
+          <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <button id="fd_create_task_btn" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-sm text-[var(--cane-800)] hover:bg-gray-50 transition flex-1 sm:flex-none min-w-0">
               <i class="fas fa-plus"></i>
-              Create Task
+              <span class="whitespace-nowrap">Create Task</span>
             </button>
-            <button id="fd_close_btn" class="px-4 py-2 rounded-lg font-semibold bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white shadow-lg">
+            <button id="fd_close_btn" class="px-4 py-2 rounded-lg font-semibold bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white shadow-lg flex-1 sm:flex-none min-w-0">
               Close
             </button>
           </div>
@@ -774,6 +774,15 @@ modalStyle.textContent = `
     #fieldDetailsModal #fd_tasks_container {
       overflow: visible;
       max-height: none;
+    }
+    #fieldDetailsModal footer {
+      padding: 12px 16px;
+      gap: 8px;
+    }
+    #fieldDetailsModal footer button {
+      font-size: 0.875rem;
+      padding: 8px 12px;
+      white-space: nowrap;
     }
   }
 

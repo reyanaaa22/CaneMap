@@ -716,11 +716,10 @@ export async function openCreateTaskModal(fieldId) {
 
   const modal = document.createElement('div');
   modal.id = 'createTaskModal';
-  modal.className = 'fixed inset-0 z-[22000] flex items-center justify-center p-4';
-  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 22000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; z-index: 22000; display: flex; align-items: center; justify-content: center; padding: 1rem; overflow: hidden;';
   modal.innerHTML = `
-    <div id="ct_backdrop" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"></div>
-    <div class="relative w-full max-w-[520px] rounded-xl bg-white border border-[var(--cane-200)] shadow p-5">
+    <div id="ct_backdrop" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; min-height: 100vh; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 22001;"></div>
+    <div class="relative w-full max-w-[520px] rounded-xl bg-white border border-[var(--cane-200)] shadow p-5" style="z-index: 22002; position: relative;">
       <header class="flex items-center justify-start mb-3 pb-2 border-b border-gray-200">
         <h3 class="text-xl font-semibold text-[var(--cane-900)]">Create Task</h3>
       </header>
@@ -1560,9 +1559,18 @@ style.innerHTML = `
         align-items: center !important;
         justify-content: center !important;
         padding: 20px !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
     }
 
-    #createTaskModal > div {
+    #createTaskModal #ct_backdrop {
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+    }
+
+    #createTaskModal > div:not(#ct_backdrop) {
         max-height: 90vh !important;
         overflow-y: auto !important;
         padding-bottom: 25px !important;
@@ -1570,7 +1578,7 @@ style.innerHTML = `
     }
 
     @media (max-width: 640px) {
-        #createTaskModal > div {
+        #createTaskModal > div:not(#ct_backdrop) {
             max-height: 85vh !important;
             padding: 20px !important;
         }
