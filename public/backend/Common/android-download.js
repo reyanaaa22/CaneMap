@@ -22,44 +22,61 @@ export function isAndroidApp() {
  * @returns {Promise<void>}
  */
 export async function downloadFile(blob, filename) {
+  console.log('📥 Starting download:', filename, 'Size:', blob.size, 'bytes');
+  
   // Check if running in Android app
   if (isAndroidApp()) {
+    console.log('📱 Detected Android app environment');
     try {
-      // Method 1: Try Capacitor Filesystem API
+      // Method 1: Use Android JavaScript interface (most reliable)
+      if (window.AndroidDownload && typeof window.AndroidDownload.downloadFile === 'function') {
+        console.log('📥 Using AndroidDownload interface');
+        const base64 = await blobToBase64(blob);
+        try {
+          window.AndroidDownload.downloadFile(base64, filename, blob.type || 'application/octet-stream');
+          console.log('✅ File download triggered via AndroidDownload interface');
+          return;
+        } catch (error) {
+          console.warn('❌ AndroidDownload interface failed:', error);
+        }
+      } else {
+        console.log('⚠️ AndroidDownload interface not available');
+      }
+      
+      // Method 2: Try Capacitor Filesystem API
       if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
         const { Filesystem } = window.Capacitor.Plugins;
         const base64 = await blobToBase64(blob);
         
-        // Use Downloads directory for Android
+        // Try External Storage (Downloads) first, fallback to Documents
         try {
+          // For Android, try to write to external storage Downloads
           const result = await Filesystem.writeFile({
             path: filename,
             data: base64,
-            directory: Filesystem.Directory.Documents,
+            directory: Filesystem.Directory.ExternalStorage,
             recursive: true
           });
-          console.log('✅ File saved via Capacitor:', result.uri);
-          
-          // Try to share/open the file
-          if (window.Capacitor.Plugins.Share) {
-            try {
-              await window.Capacitor.Plugins.Share.share({
-                title: 'Downloaded File',
-                text: filename,
-                url: result.uri,
-                dialogTitle: 'File saved successfully'
-              });
-            } catch (shareError) {
-              console.log('Share not available, file saved to:', result.uri);
-            }
-          }
+          console.log('✅ File saved via Capacitor (ExternalStorage):', result.uri);
           return;
-        } catch (fsError) {
-          console.warn('Filesystem write failed, trying alternative:', fsError);
+        } catch (externalError) {
+          try {
+            // Fallback to Documents
+            const result = await Filesystem.writeFile({
+              path: filename,
+              data: base64,
+              directory: Filesystem.Directory.Documents,
+              recursive: true
+            });
+            console.log('✅ File saved via Capacitor (Documents):', result.uri);
+            return;
+          } catch (fsError) {
+            console.warn('Filesystem write failed, trying alternative:', fsError);
+          }
         }
       }
 
-      // Method 2: Try Cordova File plugin
+      // Method 3: Try Cordova File plugin
       if (window.cordova && window.cordova.file) {
         const base64 = await blobToBase64(blob);
         window.resolveLocalFileSystemURL(
@@ -77,33 +94,40 @@ export async function downloadFile(blob, filename) {
         );
         return;
       }
-
-      // Method 3: Use Android WebView download handler
+      
+      // Method 4: Try Android interface (legacy)
       if (window.Android && window.Android.downloadFile) {
         const base64 = await blobToBase64(blob);
         window.Android.downloadFile(base64, filename, blob.type);
-        console.log('✅ File download triggered via Android interface');
+        console.log('✅ File download triggered via Android interface (legacy)');
         return;
       }
     } catch (error) {
-      console.warn('Android-specific download failed, falling back to standard method:', error);
+      console.warn('❌ Android-specific download failed, falling back to standard method:', error);
     }
   }
 
   // Fallback: Standard browser download
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  
-  // Cleanup
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
+  console.log('🌐 Using browser fallback download method');
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+    console.log('✅ Browser download triggered');
+  } catch (error) {
+    console.error('❌ Browser download failed:', error);
+    throw error;
+  }
 }
 
 /**
