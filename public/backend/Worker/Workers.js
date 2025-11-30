@@ -1717,9 +1717,22 @@ async function showWorkLogModal() {
                         
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Field *</label>
-                            <select id="swal-fieldId" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s;">
-                                ${fieldsOptions}
-                            </select>
+                            <div id="swal-fieldId-container" style="position: relative; width: 100%;">
+                                <div id="swal-fieldId-display" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                                    <span id="swal-fieldId-text">Select field...</span>
+                                    <i class="fas fa-chevron-down" style="color: #5ea500;"></i>
+                                </div>
+                                <div id="swal-fieldId-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #5ea500; border-top: none; border-radius: 0 0 0.5rem 0.5rem; max-height: 300px; overflow-y: auto; display: none; z-index: 10000; margin-top: 0;">
+                                    ${fieldsOptions.split('<option').slice(1).map(opt => {
+                                        const match = opt.match(/value="([^"]*)"[^>]*>([^<]*)/);
+                                        if (match) {
+                                            return `<div class="swal-field-option" data-value="${match[1]}">${match[2]}</div>`;
+                                        }
+                                        return '';
+                                    }).join('')}
+                                </div>
+                            </div>
+                            <input type="hidden" id="swal-fieldId" value="">
                             <p style="font-size: 0.75rem; color: #5ea500; margin-top: 0.5rem; font-weight: 500;">Select the field where this work was done</p>
                         </div>
 
@@ -1736,21 +1749,28 @@ async function showWorkLogModal() {
 
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Task Type *</label>
-                            <select id="swal-taskType" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s;">
-                                <option value="">Select task...</option>
-                                <option value="plowing">Plowing</option>
-                                <option value="harrowing">Harrowing</option>
-                                <option value="furrowing">Furrowing</option>
-                                <option value="planting">Planting (0 DAP)</option>
-                                <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
-                                <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
-                                <option value="spraying">Spraying</option>
-                                <option value="weeding">Weeding</option>
-                                <option value="irrigation">Irrigation</option>
-                                <option value="pest_control">Pest Control</option>
-                                <option value="harvesting">Harvesting</option>
-                                <option value="others">Others</option>
-                            </select>
+                            <div id="swal-taskType-container" style="position: relative; width: 100%;">
+                                <div id="swal-taskType-display" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                                    <span id="swal-taskType-text">Select task...</span>
+                                    <i class="fas fa-chevron-down" style="color: #5ea500;"></i>
+                                </div>
+                                <div id="swal-taskType-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #5ea500; border-top: none; border-radius: 0 0 0.5rem 0.5rem; max-height: 300px; overflow-y: auto; display: none; z-index: 10000; margin-top: 0;">
+                                    <div class="swal-task-option" data-value="">Select task...</div>
+                                    <div class="swal-task-option" data-value="plowing">Plowing</div>
+                                    <div class="swal-task-option" data-value="harrowing">Harrowing</div>
+                                    <div class="swal-task-option" data-value="furrowing">Furrowing</div>
+                                    <div class="swal-task-option" data-value="planting">Planting (0 DAP)</div>
+                                    <div class="swal-task-option" data-value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</div>
+                                    <div class="swal-task-option" data-value="main_fertilization">Main Fertilization (45–60 DAP)</div>
+                                    <div class="swal-task-option" data-value="spraying">Spraying</div>
+                                    <div class="swal-task-option" data-value="weeding">Weeding</div>
+                                    <div class="swal-task-option" data-value="irrigation">Irrigation</div>
+                                    <div class="swal-task-option" data-value="pest_control">Pest Control</div>
+                                    <div class="swal-task-option" data-value="harvesting">Harvesting</div>
+                                    <div class="swal-task-option" data-value="others">Others</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="swal-taskType" value="">
                         </div>
                     </div>
 
@@ -1795,9 +1815,9 @@ async function showWorkLogModal() {
                     </div>
                 </div>
             `,
-            width: '95%',
-            maxWidth: '650px',
-            padding: '2rem',
+            width: '80%',
+            maxWidth: '420px',
+            padding: '1.5rem',
             focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: '<i class="fas fa-check mr-2"></i>Log Work',
@@ -1815,6 +1835,16 @@ async function showWorkLogModal() {
                 const confirmBtn = document.querySelector('.swal-confirm-btn');
                 const cancelBtn = document.querySelector('.swal-cancel-btn');
                 const cameraBtn = document.getElementById('swal-openCamera');
+                const modal = document.querySelector('.swal2-modal');
+                const htmlContainer = document.querySelector('.swal2-html-container');
+                
+                // Fix dropdown overflow
+                if (modal) {
+                    modal.style.overflow = 'visible !important';
+                }
+                if (htmlContainer) {
+                    htmlContainer.style.overflow = 'visible !important';
+                }
                 
                 if (confirmBtn) {
                     confirmBtn.style.cssText = 'background-color: #5ea500 !important; color: white !important; padding: 12px 24px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; cursor: pointer !important; transition: all 0.3s ease !important; box-shadow: 0 2px 8px rgba(94, 165, 0, 0.3) !important;';
@@ -1836,9 +1866,95 @@ async function showWorkLogModal() {
             scrollbarPadding: false,
             padding: '1.2rem',
             didOpen: () => {
-                // Setup field change listener to update task suggestions dynamically
+                // Fix dropdown positioning to open downward
                 const fieldSelect = document.getElementById('swal-fieldId');
                 const taskTypeSelect = document.getElementById('swal-taskType');
+                const modal = document.querySelector('.swal2-modal');
+                
+                // Ensure modal and containers allow overflow
+                if (modal) {
+                    modal.style.overflow = 'visible';
+                    modal.style.zIndex = '9998';
+                }
+                
+                // Add event listeners to prevent upward dropdown
+                if (fieldSelect) {
+                    fieldSelect.addEventListener('focus', () => {
+                        if (modal) modal.style.overflow = 'visible';
+                    });
+                }
+                
+                if (taskTypeSelect) {
+                    taskTypeSelect.addEventListener('focus', () => {
+                        if (modal) modal.style.overflow = 'visible';
+                    });
+                }
+                
+                // Setup custom field dropdown
+                const fieldDisplay = document.getElementById('swal-fieldId-display');
+                const fieldDropdown = document.getElementById('swal-fieldId-dropdown');
+                const fieldText = document.getElementById('swal-fieldId-text');
+                const fieldInput = document.getElementById('swal-fieldId');
+                const fieldOptions = document.querySelectorAll('.swal-field-option');
+
+                if (fieldDisplay && fieldDropdown) {
+                    fieldDisplay.addEventListener('click', () => {
+                        fieldDropdown.style.display = fieldDropdown.style.display === 'none' ? 'block' : 'none';
+                    });
+
+                    fieldOptions.forEach(option => {
+                        option.addEventListener('click', () => {
+                            const value = option.getAttribute('data-value');
+                            const text = option.textContent;
+                            fieldInput.value = value;
+                            fieldText.textContent = text;
+                            fieldDropdown.style.display = 'none';
+                            
+                            // Update selected state
+                            fieldOptions.forEach(opt => opt.classList.remove('selected'));
+                            option.classList.add('selected');
+                        });
+                    });
+                }
+
+                // Setup custom task type dropdown
+                const taskTypeDisplay = document.getElementById('swal-taskType-display');
+                const taskTypeDropdown = document.getElementById('swal-taskType-dropdown');
+                const taskTypeText = document.getElementById('swal-taskType-text');
+                const taskTypeInput = document.getElementById('swal-taskType');
+                const taskOptions = document.querySelectorAll('.swal-task-option');
+
+                if (taskTypeDisplay && taskTypeDropdown) {
+                    taskTypeDisplay.addEventListener('click', () => {
+                        taskTypeDropdown.style.display = taskTypeDropdown.style.display === 'none' ? 'block' : 'none';
+                    });
+
+                    taskOptions.forEach(option => {
+                        option.addEventListener('click', () => {
+                            const value = option.getAttribute('data-value');
+                            const text = option.textContent;
+                            taskTypeInput.value = value;
+                            taskTypeText.textContent = text;
+                            taskTypeDropdown.style.display = 'none';
+                            
+                            // Update selected state
+                            taskOptions.forEach(opt => opt.classList.remove('selected'));
+                            option.classList.add('selected');
+                        });
+                    });
+                }
+
+                // Close dropdowns when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (fieldDisplay && fieldDropdown && !fieldDisplay.contains(e.target) && !fieldDropdown.contains(e.target)) {
+                        fieldDropdown.style.display = 'none';
+                    }
+                    if (taskTypeDisplay && taskTypeDropdown && !taskTypeDisplay.contains(e.target) && !taskTypeDropdown.contains(e.target)) {
+                        taskTypeDropdown.style.display = 'none';
+                    }
+                });
+
+                // Setup field change listener to update task suggestions dynamically
                 const suggestionsPanel = document.getElementById('task-suggestions-panel');
                 const suggestionsChips = document.getElementById('task-suggestions-chips');
 

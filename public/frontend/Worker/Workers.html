@@ -820,6 +820,62 @@
                 padding-left: 5rem !important;
             }
         }
+
+        /* SweetAlert2 Modal - Fix dropdown direction */
+        .swal2-modal {
+            overflow: visible !important;
+        }
+
+        .swal2-html-container {
+            overflow: visible !important;
+        }
+
+        .swal2-popup {
+            overflow: visible !important;
+        }
+
+        /* Force dropdown to open downward */
+        #swal-taskType,
+        #swal-fieldId {
+            position: relative !important;
+            z-index: 9999 !important;
+        }
+
+        /* Ensure select dropdowns don't get cut off */
+        select {
+            overflow: visible !important;
+        }
+
+        /* Force dropdown menu to appear below */
+        select option {
+            padding: 0.5rem !important;
+        }
+
+        /* Custom dropdown styling */
+        .swal-task-option,
+        .swal-field-option {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+
+        .swal-task-option:hover,
+        .swal-field-option:hover {
+            background-color: #f7fee7;
+        }
+
+        .swal-task-option:last-child,
+        .swal-field-option:last-child {
+            border-bottom: none;
+        }
+
+        .swal-task-option.selected,
+        .swal-field-option.selected {
+            background-color: #bbf451;
+            color: #3c6300;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen pt-16 lg:pl-64">
