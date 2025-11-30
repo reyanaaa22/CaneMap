@@ -302,15 +302,15 @@ export async function renderReportsTable(containerId, filters = {}) {
   if (!filterContainer) {
     filterContainer = document.createElement('div');
     filterContainer.id = 'reportsFilterContainer';
-    filterContainer.className = 'mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200';
+    filterContainer.className = 'mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-x-auto';
     container.parentElement.insertBefore(filterContainer, container);
   }
 
   // Render filter controls
   const handlers = await getAllHandlers();
   filterContainer.innerHTML = `
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 min-w-0">
+      <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
         <select id="filterStatus" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
           <option value="">All Status</option>
@@ -319,7 +319,7 @@ export async function renderReportsTable(containerId, filters = {}) {
           <option value="rejected">Rejected</option>
         </select>
       </div>
-      <div>
+      <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">Report Type</label>
         <select id="filterReportType" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
           <option value="">All Types</option>
@@ -332,18 +332,18 @@ export async function renderReportsTable(containerId, filters = {}) {
           <option value="production_costs">Production Costs</option>
         </select>
       </div>
-      <div>
+      <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">Handler</label>
         <select id="filterHandler" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
           <option value="">All Handlers</option>
           ${handlers.map(h => `<option value="${h.id}">${escapeHtml(h.name)}</option>`).join('')}
         </select>
       </div>
-      <div>
+      <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
         <input type="date" id="filterStartDate" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
       </div>
-      <div>
+      <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">End Date</label>
         <input type="date" id="filterEndDate" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
       </div>
@@ -414,8 +414,9 @@ export async function renderReportsTable(containerId, filters = {}) {
     }
 
     const tableHTML = `
-      <div class="overflow-x-auto">
-        <table class="w-full">
+      <div class="overflow-x-auto -mx-4 sm:mx-0">
+        <div class="min-w-full inline-block">
+          <table class="w-full min-w-[640px]">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Date Submitted</th>
@@ -429,6 +430,7 @@ export async function renderReportsTable(containerId, filters = {}) {
             ${reports.map(report => renderReportRow(report)).join('')}
           </tbody>
         </table>
+        </div>
         <div class="mt-3 text-sm text-gray-600 px-4">
           Showing ${reports.length} report${reports.length !== 1 ? 's' : ''}
         </div>

@@ -1,12 +1,12 @@
 <!-- Field Applications Review partial: include inside SRA dashboard main area -->
 <div class="section-card rounded-xl p-6">
-  <div class="flex items-center justify-between mb-4">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
     <div>
       <h2 class="text-2xl font-bold text-[var(--cane-900)]">Field Applications Review</h2>
       <p class="text-sm text-[var(--cane-600)]">Review and add comments to registered field documents</p>
     </div>
-    <div>
-      <select id="fieldDocsStatus" class="px-3 py-2 border border-[var(--cane-200)] rounded-lg text-sm">
+    <div class="w-full sm:w-auto">
+      <select id="fieldDocsStatus" class="w-full sm:w-auto px-3 py-2 border border-[var(--cane-200)] rounded-lg text-sm">
         <option value="needs_review" selected>Needs Review</option>
         <option value="pending">Pending Only</option>
         <option value="to edit">To Edit Only</option>
