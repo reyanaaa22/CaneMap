@@ -26,6 +26,12 @@
   #reportModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:50;align-items:center;justify-content:center;}
   #reportModal.active{display:flex;}
   #reportModal .modal-content{background:linear-gradient(135deg,#ecfcca,#f7fee7);border-radius:1rem;max-width:1100px;width:95%;max-height:90vh;overflow-y:auto;}
+  /* Mobile responsiveness: Prevent reports section from causing horizontal scroll */
+  @media (max-width: 768px) {
+    body { overflow-x: hidden; }
+    main { overflow-x: hidden; max-width: 100%; }
+    .section-card { overflow-x: hidden; max-width: 100%; }
+  }
 </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
@@ -60,8 +66,8 @@
       </div>
 
       <!-- Reports Table -->
-      <div class="overflow-hidden rounded-xl border border-gray-200">
-        <table class="min-w-full">
+      <div class="rounded-xl border border-gray-200" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table style="min-width: 100%;">
           <thead>
             <tr>
               <th class="text-left">Date Submitted</th>
