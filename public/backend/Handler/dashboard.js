@@ -64,41 +64,72 @@ async function initNotifications(userId) {
 
   if (!bellBtn || !dropdown || !badge || !list) return;
 
+  const removeBackdrop = () => {
+    const backdrop = document.getElementById('notificationBackdrop');
+    if (backdrop) backdrop.remove();
+  };
+
   const closeDropdown = (event) => {
     if (!dropdown.contains(event.target) && !bellBtn.contains(event.target)) {
       dropdown.classList.add("hidden");
+      removeBackdrop();
     }
   };
 
   bellBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    const isOpen = !dropdown.classList.contains("hidden");
     dropdown.classList.toggle("hidden");
+    
     if (!dropdown.classList.contains("hidden")) {
       bellBtn.classList.add("text-white");
-      // Ensure dropdown fits within viewport on mobile
+      // Center dropdown on mobile view
       if (window.innerWidth < 640) {
-        const rect = bellBtn.getBoundingClientRect();
-        const dropdownRect = dropdown.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
-        
-        // Adjust if dropdown would overflow bottom
-        if (rect.bottom + dropdownRect.height > viewportHeight) {
-          dropdown.style.maxHeight = `${viewportHeight - rect.bottom - 20}px`;
+        // Create backdrop overlay for mobile
+        let backdrop = document.getElementById('notificationBackdrop');
+        if (!backdrop) {
+          backdrop = document.createElement('div');
+          backdrop.id = 'notificationBackdrop';
+          backdrop.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 49;';
+          backdrop.addEventListener('click', () => {
+            dropdown.classList.add('hidden');
+            removeBackdrop();
+          });
+          document.body.appendChild(backdrop);
         }
         
-        // Ensure it doesn't overflow right edge
-        if (rect.right > viewportWidth - 20) {
-          dropdown.style.right = '0.5rem';
-          dropdown.style.left = 'auto';
-        }
+        // Center the dropdown on mobile
+        dropdown.style.position = 'fixed';
+        dropdown.style.left = '50%';
+        dropdown.style.top = '50%';
+        dropdown.style.right = 'auto';
+        dropdown.style.transform = 'translate(-50%, -50%)';
+        dropdown.style.width = 'calc(100vw - 2rem)';
+        dropdown.style.maxWidth = '20rem';
+        dropdown.style.marginTop = '0';
+      } else {
+        // Desktop: reset to original positioning
+        dropdown.style.position = 'absolute';
+        dropdown.style.left = 'auto';
+        dropdown.style.right = '0';
+        dropdown.style.top = '100%';
+        dropdown.style.transform = 'none';
+        dropdown.style.width = '20rem';
+        dropdown.style.maxWidth = 'none';
+        dropdown.style.marginTop = '0.5rem';
+        removeBackdrop();
       }
+    } else {
+      removeBackdrop();
     }
   });
 
   document.addEventListener("click", closeDropdown);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") dropdown.classList.add("hidden");
+    if (event.key === "Escape") {
+      dropdown.classList.add("hidden");
+      removeBackdrop();
+    }
   });
 
   // Helper function to format notification titles
