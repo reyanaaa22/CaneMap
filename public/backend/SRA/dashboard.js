@@ -452,6 +452,15 @@ async function initNotifications(userId) {
                                     console.log(`📊 Active Fields: ${snap.size} (reviewed, active, and harvested)`);
                                 }
                             });
+
+                            // ✅ Pending Reviews Count: count fields with status 'pending'
+                            const elPendingReviewsCount = document.getElementById('pendingReviewsCount');
+                            onSnapshot(query(collection(db, 'fields'), where('status', '==', 'pending')), (snap) => {
+                                if (elPendingReviewsCount) {
+                                    elPendingReviewsCount.textContent = String(snap.size);
+                                    console.log(`📊 Pending Reviews: ${snap.size} applications awaiting review`);
+                                }
+                            });
                         } catch(_) {}
 
                         // --- START: SRA map block (replace existing block) ---
