@@ -18,10 +18,20 @@ public class MainActivity extends BridgeActivity {
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
+            // Clear cache on app start to ensure fresh content
+            webView.clearCache(true);
+            webView.clearHistory();
+            
             // Enable cache but with proper control
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            settings.setAppCacheEnabled(false); // Disable deprecated app cache
+            // Note: setAppCacheEnabled() is deprecated and removed in newer Android versions
             settings.setDomStorageEnabled(true);
+            settings.setDatabaseEnabled(true);
+            
+            // Force reload on navigation to prevent stale content
+            settings.setJavaScriptEnabled(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setUseWideViewPort(true);
             
             // Set WebChromeClient for permissions and downloads
             webView.setWebChromeClient(new WebChromeClient() {
@@ -30,6 +40,17 @@ public class MainActivity extends BridgeActivity {
                     runOnUiThread(() -> request.grant(request.getResources()));
                 }
             });
+            
+            // Add JavaScript interface to clear cache from web
+            webView.addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void clearCache() {
+                    runOnUiThread(() -> {
+                        webView.clearCache(true);
+                        webView.reload();
+                    });
+                }
+            }, "AndroidCache");
         }
     }
     

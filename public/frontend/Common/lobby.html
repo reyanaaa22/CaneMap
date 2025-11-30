@@ -1853,7 +1853,7 @@ function closeApkModal() {
 function confirmDownload() {
     // Trigger download
     const link = document.createElement("a");
-    link.href = "/downloads/CaneMap.apk";
+    link.href = "/downloads/CaneMap.apk?v=" + Date.now();
     link.download = "CaneMap.apk";
     document.body.appendChild(link);
     link.click();

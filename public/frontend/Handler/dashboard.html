@@ -1626,6 +1626,20 @@ if (sidebar.classList.contains('closed')){
 <script type="module" src="../../backend/Common/activity-logger.js"></script>
 <script type="module" src="../../backend/Handler/dashboard.js?v=1763446084"></script>
 <script>
+// Clear WebView cache on app load (Android only)
+if (window.AndroidCache && typeof window.AndroidCache.clearCache === 'function') {
+  // Only clear cache on first load, not on every navigation
+  if (!sessionStorage.getItem('cacheCleared')) {
+    try {
+      window.AndroidCache.clearCache();
+      sessionStorage.setItem('cacheCleared', 'true');
+    } catch(e) {
+      console.log('Cache clearing not available');
+    }
+  }
+}
+</script>
+<script>
     // Handle active menu item styling
     document.addEventListener('DOMContentLoaded', function() {
         const navItems = document.querySelectorAll('.nav-item');
