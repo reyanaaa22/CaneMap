@@ -76,13 +76,23 @@ function openWorkerCamera() {
       overlay.innerHTML = `
         <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <video id="workerCamVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000; -webkit-transform: scaleX(-1); transform: scaleX(-1);"></video>
-          <div id="workerCamControls" style="position:absolute; bottom:20px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; width:100%; padding:0 1rem;">
-            <button id="workerSwitchCamBtn" style="padding:10px 18px; border-radius:999px; background:#3b82f6; color:#fff; font-weight:600; border:0; font-size:13px; display:none; cursor:pointer; transition: all 0.2s;">
+          
+          <!-- Top Header -->
+          <div style="position:absolute; top:0; left:0; right:0; background:linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%); padding:1.5rem 1rem; display:flex; align-items:center; justify-content:center; z-index:10;">
+            <button id="workerBackBtn" style="position:absolute; left:1rem; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.2); color:#fff; border:2px solid rgba(255,255,255,0.4); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all 0.3s ease;">
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <h3 style="color:#fff; font-size:1.25rem; font-weight:700; margin:0; text-shadow:0 2px 4px rgba(0,0,0,0.3);">Take a Photo</h3>
+          </div>
+          
+          <!-- Bottom Controls -->
+          <div id="workerCamControls" style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 100%); display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; width:100%; padding:2rem 1rem 1.5rem 1rem; z-index:10;">
+            <button id="workerSwitchCamBtn" style="padding:12px 20px; border-radius:999px; background:rgba(255,255,255,0.2); color:#fff; font-weight:600; border:2px solid rgba(255,255,255,0.3); font-size:14px; display:none; cursor:pointer; transition: all 0.3s; backdrop-filter:blur(10px);">
               <i class="fas fa-camera-rotate"></i> Switch Camera
             </button>
-            <div id="workerCaptureArea" style="display:flex; justify-content:center;">
-              <button id="workerCaptureBtn" style="padding:14px 28px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px; cursor:pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
-                Capture
+            <div id="workerCaptureArea" style="display:flex; justify-content:center; gap:16px;">
+              <button id="workerCaptureBtn" style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #5ea500, #7ccf00); color:#fff; font-weight:700; border:4px solid rgba(255,255,255,0.3); font-size:18px; cursor:pointer; transition: all 0.3s; box-shadow: 0 8px 24px rgba(94, 165, 0, 0.4); display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-circle" style="font-size:24px;"></i>
               </button>
             </div>
           </div>
@@ -169,6 +179,16 @@ function openWorkerCamera() {
         await startCamera(newFacingMode);
       });
 
+      // Back button handler
+      const backBtn = document.getElementById("workerBackBtn");
+      if (backBtn) {
+        backBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          stopCamera();
+          reject(new Error("User cancelled camera"));
+        });
+      }
+
       const stopCamera = () => {
         try { stream.getTracks().forEach(t => t.stop()); } catch(_) {}
         const el = document.getElementById("worker-camera-overlay");
@@ -201,8 +221,8 @@ function openWorkerCamera() {
           // Replace capture button with bottom ✓ and ✕ (centered)
           captureArea.innerHTML = `
             <div style="display:flex; gap:24px; align-items:center; justify-content:center; width:100%;">
-              <button id="workerRetakeBtn" style="width:64px;height:64px;border-radius:999px;background:#dc2626;color:#fff;border:0;font-size:28px;font-weight:700;cursor:pointer;">✕</button>
-              <button id="workerConfirmBtn" style="width:64px;height:64px;border-radius:999px;background:#16a34a;color:#fff;border:0;font-size:28px;font-weight:700;cursor:pointer;">✓</button>
+              <button id="workerRetakeBtn" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg, #ef4444, #dc2626);color:#fff;border:4px solid rgba(255,255,255,0.3);font-size:28px;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 8px 24px rgba(239, 68, 68, 0.4);display:flex;align-items:center;justify-content:center;">✕</button>
+              <button id="workerConfirmBtn" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg, #5ea500, #7ccf00);color:#fff;border:4px solid rgba(255,255,255,0.3);font-size:28px;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 8px 24px rgba(94, 165, 0, 0.4);display:flex;align-items:center;justify-content:center;">✓</button>
             </div>
           `;
 
@@ -215,7 +235,7 @@ function openWorkerCamera() {
               switchCamBtn.style.display = 'block';
             }
             // remove confirm/retake and put capture back
-            captureArea.innerHTML = `<button id="workerCaptureBtn" style="padding:12px 24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:600; border:0; font-size:16px; cursor:pointer;">Capture</button>`;
+            captureArea.innerHTML = `<button id="workerCaptureBtn" style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #5ea500, #7ccf00); color:#fff; font-weight:700; border:4px solid rgba(255,255,255,0.3); font-size:18px; cursor:pointer; transition: all 0.3s; box-shadow: 0 8px 24px rgba(94, 165, 0, 0.4); display:flex; align-items:center; justify-content:center;"><i class="fas fa-circle" style="font-size:24px;"></i></button>`;
             // resume video
             video.play();
             // re-attach handler
@@ -1690,73 +1710,88 @@ async function showWorkLogModal() {
         const { value: formValues } = await Swal.fire({
             title: 'Log Work Activity',
             html: `
-                <div class="text-left space-y-4 max-h-[70vh] overflow-y-auto px-2">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Field *</label>
-                        <select id="swal-fieldId" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
-                            ${fieldsOptions}
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1.5">Select the field where this work was done</p>
-                    </div>
-
-                    <!-- ✅ Task suggestions panel (dynamically populated) -->
-                    <div id="task-suggestions-panel" style="display: none;" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div class="flex items-center gap-2 mb-2">
-                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span class="text-xs font-semibold text-blue-900">Common Tasks for This Field:</span>
+                <div class="text-left space-y-5 max-h-[70vh] overflow-y-auto px-2">
+                    <!-- Primary Section: Field & Task Selection -->
+                    <div style="background: linear-gradient(to bottom right, #f7fee7, white); padding: 1.25rem; border-radius: 0.75rem; border: 2px solid #5ea500; display: flex; flex-direction: column; gap: 1rem;">
+                        <h3 style="font-size: 0.875rem; font-weight: 700; color: #497d00; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Work Details</h3>
+                        
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Field *</label>
+                            <select id="swal-fieldId" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s;">
+                                ${fieldsOptions}
+                            </select>
+                            <p style="font-size: 0.75rem; color: #5ea500; margin-top: 0.5rem; font-weight: 500;">Select the field where this work was done</p>
                         </div>
-                        <div id="task-suggestions-chips" class="flex flex-wrap gap-2"></div>
+
+                        <!-- ✅ Task suggestions panel (dynamically populated) -->
+                        <div id="task-suggestions-panel" style="display: none; padding: 1rem; background: linear-gradient(to right, rgba(187, 244, 81, 0.1), rgba(154, 230, 0, 0.1)); border: 2px solid #5ea500; border-radius: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <svg style="width: 1.25rem; height: 1.25rem; color: #5ea500;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span style="font-size: 0.75rem; font-weight: 700; color: #497d00;">SUGGESTED TASKS FOR THIS FIELD</span>
+                            </div>
+                            <div id="task-suggestions-chips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Task Type *</label>
+                            <select id="swal-taskType" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s;">
+                                <option value="">Select task...</option>
+                                <option value="plowing">Plowing</option>
+                                <option value="harrowing">Harrowing</option>
+                                <option value="furrowing">Furrowing</option>
+                                <option value="planting">Planting (0 DAP)</option>
+                                <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
+                                <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
+                                <option value="spraying">Spraying</option>
+                                <option value="weeding">Weeding</option>
+                                <option value="irrigation">Irrigation</option>
+                                <option value="pest_control">Pest Control</option>
+                                <option value="harvesting">Harvesting</option>
+                                <option value="others">Others</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Task Type *</label>
-                        <select id="swal-taskType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
-                            <option value="">Select task...</option>
-                            <option value="plowing">Plowing</option>
-                            <option value="harrowing">Harrowing</option>
-                            <option value="furrowing">Furrowing</option>
-                            <option value="planting">Planting (0 DAP)</option>
-                            <option value="basal_fertilizer">Basal Fertilizer (0–30 DAP)</option>
-                            <option value="main_fertilization">Main Fertilization (45–60 DAP)</option>
-                            <option value="spraying">Spraying</option>
-                            <option value="weeding">Weeding</option>
-                            <option value="irrigation">Irrigation</option>
-                            <option value="pest_control">Pest Control</option>
-                            <option value="harvesting">Harvesting</option>
-                            <option value="others">Others</option>
-                        </select>
+                    <!-- Secondary Section: Date & Worker Info -->
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Completion Date *</label>
+                                <input type="date" id="swal-completionDate" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s;" max="${new Date().toISOString().split('T')[0]}">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Worker Name</label>
+                                <input id="swal-workerName" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s;" placeholder="Optional">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #3c6300; margin-bottom: 0.625rem;">Notes</label>
+                            <textarea id="swal-notes" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #5ea500; border-radius: 0.5rem; font-size: 1rem; background-color: white; transition: all 0.2s; resize: none;" placeholder="Describe what you did..." rows="3"></textarea>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
-                        <input type="date" id="swal-completionDate" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" max="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Worker Name</label>
-                        <input id="swal-workerName" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" placeholder="If logging from another device...">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                        <textarea id="swal-notes" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base resize-none" placeholder="Describe what you did..." rows="4"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
+
+                    <!-- Photo Section -->
+                    <div style="background: linear-gradient(to bottom right, #f7fee7, white); padding: 1.25rem; border-radius: 0.75rem; border: 2px solid #5ea500; display: flex; flex-direction: column; gap: 0.75rem;">
+                        <label style="display: block; font-size: 0.875rem; font-weight: 700; color: #497d00; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Photo Evidence *</label>
 
                         <!-- Live camera capture -->
-                        <button id="swal-openCamera"
-                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
-                            📸 Take a Photo
+                        <button id="swal-openCamera" style="width: 100%; padding: 0.875rem 1rem; background: linear-gradient(135deg, #5ea500, #7ccf00); color: white; border-radius: 0.5rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(94, 165, 0, 0.3);">
+                            <i class="fas fa-camera" style="margin-right: 0.5rem;"></i>Take a Photo
                         </button>
 
                         <!-- After confirming capture -->
-                        <div id="swal-photoPreviewContainer" class="hidden mt-3">
-                            <img id="swal-photoPreview" class="w-full rounded-lg border shadow-sm">
+                        <div id="swal-photoPreviewContainer" style="display: none; margin-top: 0.75rem; width: 100%;">
+                            <img id="swal-photoPreview" style="width: 100%; height: auto; max-height: 300px; object-fit: contain; border-radius: 0.5rem; border: 2px solid #5ea500; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); background-color: #f5f5f5;">
                         </div>
                     </div>
-                    <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                        <input type="checkbox" id="swal-verification" class="w-5 h-5 mt-0.5 accent-green-600">
-                        <label for="swal-verification" class="text-sm text-gray-700 font-medium">I verify this work was completed as described *</label>
+
+                    <!-- Verification Checkbox -->
+                    <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem; background: linear-gradient(to right, #f7fee7, #ecfcca); border-radius: 0.5rem; border: 2px solid #5ea500;">
+                        <input type="checkbox" id="swal-verification" style="width: 1.25rem; height: 1.25rem; margin-top: 0.125rem; accent-color: #5ea500; cursor: pointer;">
+                        <label for="swal-verification" style="font-size: 0.875rem; color: #3c6300; font-weight: 600; cursor: pointer;">I verify this work was completed as described *</label>
                     </div>
                 </div>
             `,
@@ -1767,20 +1802,41 @@ async function showWorkLogModal() {
             showCancelButton: true,
             confirmButtonText: '<i class="fas fa-check mr-2"></i>Log Work',
             cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
-            buttonsStyling: false,
-customClass: {
-    popup: 'worker-log-modal rounded-xl shadow-2xl',
-    title: 'text-2xl font-bold text-gray-800 mb-4',
-    htmlContainer: 'text-base',
-    confirmButton: 'px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md mr-2',
-    cancelButton: 'px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors shadow-md',
-    actions: 'gap-3 mt-6'
-},
-heightAuto: false,
-scrollbarPadding: false,
-padding: '1.2rem',
+            buttonsStyling: true,
+            customClass: {
+                popup: 'worker-log-modal rounded-xl shadow-2xl',
+                title: 'text-2xl font-bold text-gray-800 mb-4',
+                htmlContainer: 'text-base',
+                confirmButton: 'swal-confirm-btn',
+                cancelButton: 'swal-cancel-btn',
+                actions: 'gap-3 mt-6'
+            },
+            didRender: () => {
+                const confirmBtn = document.querySelector('.swal-confirm-btn');
+                const cancelBtn = document.querySelector('.swal-cancel-btn');
+                const cameraBtn = document.getElementById('swal-openCamera');
+                
+                if (confirmBtn) {
+                    confirmBtn.style.cssText = 'background-color: #5ea500 !important; color: white !important; padding: 12px 24px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; cursor: pointer !important; transition: all 0.3s ease !important; box-shadow: 0 2px 8px rgba(94, 165, 0, 0.3) !important;';
+                    confirmBtn.onmouseover = () => confirmBtn.style.backgroundColor = '#497d00 !important';
+                    confirmBtn.onmouseout = () => confirmBtn.style.backgroundColor = '#5ea500 !important';
+                }
+                if (cancelBtn) {
+                    cancelBtn.style.cssText = 'background-color: #6b7280 !important; color: white !important; padding: 12px 24px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; cursor: pointer !important; transition: all 0.3s ease !important;';
+                    cancelBtn.onmouseover = () => cancelBtn.style.backgroundColor = '#4b5563 !important';
+                    cancelBtn.onmouseout = () => cancelBtn.style.backgroundColor = '#6b7280 !important';
+                }
+                if (cameraBtn) {
+                    cameraBtn.style.cssText = 'background-color: #5ea500 !important; color: white !important; padding: 12px 16px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; cursor: pointer !important; transition: all 0.3s ease !important; width: 100% !important; display: block !important; font-size: 1rem !important;';
+                    cameraBtn.onmouseover = () => cameraBtn.style.backgroundColor = '#497d00 !important';
+                    cameraBtn.onmouseout = () => cameraBtn.style.backgroundColor = '#5ea500 !important';
+                }
+            },
+            heightAuto: false,
+            scrollbarPadding: false,
+            padding: '1.2rem',
             didOpen: () => {
-                // ✅ Setup field change listener to update task suggestions dynamically
+                // Setup field change listener to update task suggestions dynamically
                 const fieldSelect = document.getElementById('swal-fieldId');
                 const taskTypeSelect = document.getElementById('swal-taskType');
                 const suggestionsPanel = document.getElementById('task-suggestions-panel');
@@ -1881,7 +1937,9 @@ if (openCamBtn) {
       // make sure preview is visible if file already set
       if (window._workerCapturedFile && previewImg) {
         previewImg.src = URL.createObjectURL(window._workerCapturedFile);
-        if (previewContainer) previewContainer.classList.remove("hidden");
+        if (previewContainer) {
+          previewContainer.style.display = "block";
+        }
       }
     } catch (err) {
       // user cancelled or permission denied — swallow quietly
