@@ -198,11 +198,63 @@
             #sraHeaderContainer {
                 padding-left: 1rem !important;
                 padding-right: 1rem !important;
+                margin-left: 0 !important;
+                z-index: 45;
             }
             #sraMain {
                 margin-left: 0 !important;
                 padding-left: 1rem !important;
                 padding-right: 1rem !important;
+                width: 100% !important;
+                z-index: 1;
+            }
+            #sidebar {
+                z-index: 50 !important;
+            }
+            #sidebarOverlay {
+                z-index: 49 !important;
+            }
+            /* Fix map height on mobile */
+            #sraFieldsMap, #sraFieldsMapMap {
+                height: 300px !important;
+            }
+            /* Adjust grid for mobile */
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* Mobile card adjustments */
+            .min-w-\[280px\] {
+                min-width: 100% !important;
+            }
+            /* Reduce padding on mobile */
+            .p-6 {
+                padding: 1rem !important;
+            }
+            /* Fix metric cards gap */
+            .gap-8 {
+                gap: 1rem !important;
+            }
+            /* Ensure main content takes full width */
+            .flex-1 {
+                width: 100% !important;
+            }
+            /* Adjust welcome header */
+            h1 {
+                font-size: 1.5rem !important;
+            }
+            /* Keep search bar on same line on mobile */
+            .mb-3.flex.flex-col.sm\:flex-row {
+                flex-direction: row !important;
+                gap: 0.5rem !important;
+            }
+            #mapSearchBtn, #mapSearchBtnMap {
+                width: auto !important;
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+            #mapSearchInput, #mapSearchInputMap {
+                flex: 1;
+                min-width: 0;
             }
         }
         
@@ -395,7 +447,7 @@
 
                 <!-- Key Metrics/Statistics -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-                    <a href="#" class="block group" data-section="field-documents">
+                    <button class="block group w-full text-left" data-card="total-submissions">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
                             <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
                             <div class="p-6 relative">
@@ -413,9 +465,9 @@
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    </button>
 
-                    <a href="#" class="block group" data-section="field-documents">
+                    <button class="block group w-full text-left" data-card="pending-review">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
                             <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
                             <div class="p-6 relative">
@@ -433,9 +485,9 @@
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    </button>
 
-                    <a href="#" class="block group" data-section="field-documents">
+                    <button class="block group w-full text-left" data-card="reviewed-today">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
                             <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
                             <div class="p-6 relative">
@@ -453,9 +505,9 @@
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    </button>
 
-                    <a href="#" class="block group" data-section="field-documents">
+                    <button class="block group w-full text-left" data-card="active-fields">
                         <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100 min-w-[280px]" style="cursor: pointer;">
                             <div class="h-2 bg-gradient-to-r from-[var(--cane-500)] to-[var(--cane-600)]"></div>
                             <div class="p-6 relative">
@@ -473,7 +525,7 @@
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    </button>
                 </div>
 
                 <!-- Main Dashboard Content -->

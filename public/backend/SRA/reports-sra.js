@@ -1070,7 +1070,7 @@ window.exportReportCSV = async function(reportId) {
 };
 
 /**
- * Export reports to CSV file
+ * Export reports to CSV file (Mobile-friendly)
  * @param {Object} filters - Filter options to apply
  */
 export async function exportReportsToCSV(filters = {}) {
@@ -1109,21 +1109,43 @@ export async function exportReportsToCSV(filters = {}) {
     // Combine headers and rows
     const csvContent = [headers.join(','), ...rows].join('\n');
 
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `sra_reports_${timestamp}.csv`;
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Mobile-friendly download approach
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // For mobile: Use data URL approach
+      const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', dataUrl);
+      link.setAttribute('download', filename);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // Trigger download
+      setTimeout(() => {
+        link.click();
+        document.body.removeChild(link);
+      }, 100);
+    } else {
+      // For desktop: Use Blob approach (more efficient)
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the object URL
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
 
     console.log(`✅ Exported ${reports.length} reports to ${filename}`);
 

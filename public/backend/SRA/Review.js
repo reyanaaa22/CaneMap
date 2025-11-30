@@ -257,19 +257,19 @@ async function openModal(app) {
   }
   modal.innerHTML = '';
 
-  const card = h('div', 'bg-white rounded-xl w-[92%] max-w-3xl p-0 shadow-2xl relative');
-  const header = h('div', 'px-6 pt-5 pb-3 border-b flex items-center justify-between');
-  const close = h('button', 'absolute top-3 right-4 text-xl', '×');
+  const card = h('div', 'bg-white rounded-2xl w-[92%] max-w-4xl p-0 shadow-2xl relative overflow-hidden');
+  const header = h('div', 'px-8 pt-6 pb-4 border-b border-[var(--cane-200)] flex items-center justify-between bg-gradient-to-r from-[var(--cane-50)] to-white');
+  const close = h('button', 'absolute top-4 right-5 text-2xl text-gray-400 hover:text-gray-600 transition', '×');
   close.addEventListener('click', () => modal.classList.add('hidden'));
-  header.appendChild(h('h3', 'text-lg font-semibold', 'Field Application'));
+  header.appendChild(h('h3', 'text-2xl font-bold text-[var(--cane-900)]', 'Field Application'));
   card.appendChild(header);
   card.appendChild(close);
 
-  const content = h('div', 'max-h-[70vh] overflow-y-auto p-6 space-y-6');
+  const content = h('div', 'max-h-[70vh] overflow-y-auto p-8 space-y-8');
 
   // Field Info
-  const infoWrap = h('div', 'space-y-3');
-  const grid = h('div', 'grid grid-cols-1 md:grid-cols-2 gap-3');
+  const infoWrap = h('div', 'space-y-4');
+  const grid = h('div', 'grid grid-cols-1 md:grid-cols-2 gap-6');
   const info = [
     ['Applicant', app.applicantName || '—'],
     ['Field Name', app.fieldName || '—'],
@@ -287,26 +287,23 @@ async function openModal(app) {
   ];
   for (const [k, v] of info)
     grid.appendChild(
-      h('div', 'text-sm', [h('div', 'text-gray-500', k), h('div', 'font-medium', v)])
+      h('div', 'space-y-1.5', [h('div', 'text-xs font-semibold text-[var(--cane-600)] uppercase tracking-wide', k), h('div', 'text-base font-semibold text-[var(--cane-900)]', v)])
     );
-  infoWrap.appendChild(h('div', 'font-semibold', 'Field Information'));
+  infoWrap.appendChild(h('div', 'text-lg font-bold text-[var(--cane-900)] flex items-center gap-2', [h('i', 'fas fa-info-circle text-[var(--cane-700)]'), 'Field Information']));
   infoWrap.appendChild(grid);
   content.appendChild(infoWrap);
 
   // Map
-  const mapWrap = h('div', 'space-y-2');
-  mapWrap.appendChild(h('div', 'font-semibold', 'Location Mapping'));
-  const mapBox = h('div', 'w-full h-52 rounded-lg border');
+  const mapWrap = h('div', 'space-y-3 pb-2');
+  mapWrap.appendChild(h('div', 'text-lg font-bold text-[var(--cane-900)] flex items-center gap-2', [h('i', 'fas fa-map-location-dot text-[var(--cane-700)]'), 'Location Mapping']));
+  const mapBox = h('div', 'w-full h-64 rounded-lg border border-[var(--cane-200)] shadow-sm overflow-hidden');
   mapWrap.appendChild(mapBox);
   content.appendChild(mapWrap);
 
-  // Documents
-  const docsWrap = h('div', 'space-y-3');
-  docsWrap.appendChild(h('div', 'font-semibold', 'Required Documents'));
-  const docsGrid = h('div', 'grid grid-cols-1 md:grid-cols-2 gap-3');
-  const imgStyle = 'w-full max-h-40 object-contain rounded border bg-white';
+  // Helper for document display
+  const imgStyle = 'w-full max-h-48 object-contain rounded-lg border border-[var(--cane-200)] bg-white shadow-sm hover:shadow-md transition cursor-pointer';
   const makeImg = (src) => {
-    if (!src) return h('div', 'text-xs text-gray-600', 'No file');
+    if (!src) return h('div', 'text-xs text-[var(--cane-500)] bg-[var(--cane-50)] p-4 rounded-lg border border-dashed border-[var(--cane-200)] flex items-center justify-center h-48', 'No file uploaded');
 
     const img = document.createElement('img');
     img.src = src;
@@ -318,88 +315,107 @@ async function openModal(app) {
 
     return img;
   };
-  const addDocRow = (label, src) => {
-    const wrap = h('div', 'space-y-1');
-    wrap.appendChild(h('div', 'text-sm font-medium', label));
-    wrap.appendChild(makeImg(src));
-    docsGrid.appendChild(wrap);
-  };
-  addDocRow('Barangay Certificate', app.images.brgyCert);
-  addDocRow('Land Title', app.images.landTitle);
-  addDocRow('Valid ID - Front', app.images.validFront);
-  addDocRow('Valid ID - Back', app.images.validBack);
-  addDocRow('Selfie with ID', app.images.selfie);
-  docsWrap.appendChild(docsGrid);
-  content.appendChild(docsWrap);
+
+  // Barangay Certificate
+  const brgyCertWrap = h('div', 'space-y-2 pb-4');
+  brgyCertWrap.appendChild(h('div', 'text-sm font-semibold text-[var(--cane-700)]', 'Barangay Certificate'));
+  brgyCertWrap.appendChild(makeImg(app.images.brgyCert));
+  content.appendChild(brgyCertWrap);
+
+  // Land Title
+  const landTitleWrap = h('div', 'space-y-2 pb-4');
+  landTitleWrap.appendChild(h('div', 'text-sm font-semibold text-[var(--cane-700)]', 'Land Title'));
+  landTitleWrap.appendChild(makeImg(app.images.landTitle));
+  content.appendChild(landTitleWrap);
+
+  // ID Documents (2 columns)
+  const idWrap = h('div', 'space-y-2 pb-4');
+  idWrap.appendChild(h('div', 'text-sm font-semibold text-[var(--cane-700)]', 'Valid ID'));
+  const idGrid = h('div', 'grid grid-cols-2 gap-4');
+  const idFrontWrap = h('div', 'space-y-2');
+  idFrontWrap.appendChild(h('div', 'text-xs text-[var(--cane-600)]', 'Front'));
+  idFrontWrap.appendChild(makeImg(app.images.validFront));
+  idGrid.appendChild(idFrontWrap);
+  const idBackWrap = h('div', 'space-y-2');
+  idBackWrap.appendChild(h('div', 'text-xs text-[var(--cane-600)]', 'Back'));
+  idBackWrap.appendChild(makeImg(app.images.validBack));
+  idGrid.appendChild(idBackWrap);
+  idWrap.appendChild(idGrid);
+  content.appendChild(idWrap);
+
+  // Selfie with ID
+  const selfieWrap = h('div', 'space-y-2 pb-4');
+  selfieWrap.appendChild(h('div', 'text-sm font-semibold text-[var(--cane-700)]', 'Selfie with ID'));
+  selfieWrap.appendChild(makeImg(app.images.selfie));
+  content.appendChild(selfieWrap);
 
   // === Actions ===
-  const actions = h('div', 'pt-2 space-y-4');
+  const actions = h('div', 'pt-4 space-y-4 border-t border-[var(--cane-200)]');
 
   // Remarks box
-  const remarksBox = h('textarea', 'w-full border rounded-lg p-2 text-sm', []);
+  const remarksBox = h('textarea', 'w-full h-24 border border-[var(--cane-200)] rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent resize-none', []);
   remarksBox.placeholder = 'Add remarks for the applicant (optional)';
 
-  // 🟢 Load last remark if it exists
+  // Load last remark if it exists
   remarksBox.value = app.status === 'reviewed' ? '' : (app.raw.latestRemark || '');
 
   const sendRemarksBtn = h(
     'button',
-    'px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 text-white text-sm',
+    'px-5 py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium transition shadow-sm hover:shadow-md',
     'Send Remarks'
   );
 
-sendRemarksBtn.addEventListener('click', async () => {
-  const text = (remarksBox.value || '').trim();
-  if (!text) return showErrorPopup('Please enter remarks before sending.');
+  sendRemarksBtn.addEventListener('click', async () => {
+    const text = (remarksBox.value || '').trim();
+    if (!text) return showErrorPopup('Please enter remarks before sending.');
 
-  const confirm = makeConfirmModal(
-    'Send Remarks?',
-    'The remarks will be submitted, and this field will be updated as "To Edit".',
-    async () => {
-      try {
-        // ✅ FIXED: Correct path for subcollection
-        await addDoc(collection(app.docRef, 'remarks'), {
-          message: text,
-          createdAt: serverTimestamp()
-        });
+    const confirm = makeConfirmModal(
+      'Send Remarks?',
+      'The remarks will be submitted, and this field will be updated as "To Edit".',
+      async () => {
+        try {
+          // FIXED: Correct path for subcollection
+          await addDoc(collection(app.docRef, 'remarks'), {
+            message: text,
+            createdAt: serverTimestamp()
+          });
 
-      await updateDoc(app.docRef, {
-        latestRemark: text,
-        latestRemarkAt: serverTimestamp(),
-        status: 'to edit',
-        updatedAt: serverTimestamp()
-      });
+          await updateDoc(app.docRef, {
+            latestRemark: text,
+            latestRemarkAt: serverTimestamp(),
+            status: 'to edit',
+            updatedAt: serverTimestamp()
+          });
 
+          await addDoc(collection(db, 'notifications'), {
+            userId: app.raw.requestedBy || app.raw.userId || app.applicantName,
+            title: 'Remarks from Ormoc Mill District SRA Officer',
+            message: 'Change the document. <a href="../../frontend/Handler/field_form.html" target="_blank" class="notif-link">Open Form</a>',
+            status: 'unread',
+            timestamp: serverTimestamp()
+          });
 
-      await addDoc(collection(db, 'notifications'), {
-        userId: app.raw.requestedBy || app.raw.userId || app.applicantName,
-        title: 'Remarks from Ormoc Mill District SRA Officer',
-        message: 'Change the document. <a href="../../frontend/Handler/field_form.html" target="_blank" class="notif-link">Open Form</a>',
-        status: 'unread',
-        timestamp: serverTimestamp()
-      });
-
-        confirm.remove();
-        showSuccessPopup('Remarks Sent', 'Status updated to "To Edit".');
-        // ✅ Don't manually re-render - the onSnapshot listener will handle it automatically
-      } catch (err) {
-        console.error('Send remark failed:', err);
-        showErrorPopup('Failed to send remarks. Please check your connection or permissions.');
+          confirm.remove();
+          showSuccessPopup('Remarks Sent', 'Status updated to "To Edit".');
+          // Don't manually re-render - the onSnapshot listener will handle it automatically
+        } catch (err) {
+          console.error('Send remark failed:', err);
+          showErrorPopup('Failed to send remarks. Please check your connection or permissions.');
+        }
       }
-    }
-  );
-  document.body.appendChild(confirm);
-});
-
+    );
+    document.body.appendChild(confirm);
+  });
 
   // Buttons section
-  const buttonsRow = h('div', 'flex justify-end gap-2 pt-1');
+  const buttonsRow = h('div', 'flex justify-between items-end gap-3 pt-4');
+  
   const markReviewedBtn = h(
     'button',
-    `px-4 py-2 rounded text-sm ${
+    `px-5 py-2.5 rounded-lg text-sm font-medium transition ${
       app.status === 'reviewed'
-        ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-        : 'bg-green-600 hover:bg-green-700 text-white'
+        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+        : 'bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md'
     }`,
     'Mark as Reviewed'
   );
@@ -426,8 +442,8 @@ sendRemarksBtn.addEventListener('click', async () => {
     document.body.appendChild(confirm);
   });
 
-  actions.append(remarksBox, sendRemarksBtn, buttonsRow);
-  buttonsRow.append(markReviewedBtn);
+  actions.append(remarksBox, buttonsRow);
+  buttonsRow.append(sendRemarksBtn, markReviewedBtn);
   content.appendChild(actions);
 
   card.appendChild(content);
@@ -607,10 +623,10 @@ function buildItem(app) {
   // --- Badge color ---
   const statusColor =
     app.status === 'reviewed'
-      ? 'bg-green-100 text-green-700'
+      ? 'bg-green-100 text-green-700 border border-green-300'
       : app.status === 'to edit'
-      ? 'bg-yellow-100 text-yellow-700'
-      : 'bg-gray-100 text-gray-700';
+      ? 'bg-amber-100 text-amber-700 border border-amber-300'
+      : 'bg-blue-100 text-blue-700 border border-blue-300';
 
   const statusText =
     app.status === 'reviewed'
@@ -619,17 +635,17 @@ function buildItem(app) {
       ? 'To Edit'
       : 'Pending Review';
 
-  const statusBadge = h('span', `text-xs px-2 py-1 rounded ${statusColor}`, statusText);
+  const statusBadge = h('span', `text-xs font-medium px-3 py-1.5 rounded-full ${statusColor}`, statusText);
 
   // --- Left section (main display) ---
-  const left = h('div', 'flex items-start space-x-3', [
+  const left = h('div', 'flex items-start space-x-4', [
     // Avatar circle
     h(
       'div',
-      `w-9 h-9 ${
-        isNew ? 'bg-green-600' : 'bg-gradient-to-br from-green-600 to-green-700'
-      } rounded-full flex items-center justify-center text-white`,
-      [h('i', 'fas fa-user')]
+      `w-10 h-10 ${
+        isNew ? 'bg-green-600 shadow-md' : 'bg-gradient-to-br from-green-600 to-green-700 shadow'
+      } rounded-full flex items-center justify-center text-white flex-shrink-0`,
+      [h('i', 'fas fa-user text-sm')]
     ),
 
     // Applicant info and address block
@@ -663,9 +679,9 @@ function buildItem(app) {
   // --- Card wrapper ---
   const row = h(
     'div',
-    `flex items-start justify-between px-4 py-3 cursor-pointer border-b border-[var(--cane-100)] ${
+    `flex items-center justify-between px-6 py-4 cursor-pointer ${
       isNew ? 'bg-green-50' : 'bg-white'
-    } hover:bg-[var(--cane-50)] transition`
+    } hover:bg-[var(--cane-50)] transition duration-150 ease-in-out`
   );
   row.append(left, right);
 
@@ -927,9 +943,9 @@ function updateSubtitle(filterValue) {
   if (!subtitle) return;
 
   const subtitleMap = {
-    'needs_review': '⚠️ Applications Needing Review (Pending + To Edit)',
-    'pending': 'Pending Applications Only',
-    'to edit': 'Applications To Edit Only',
+    'needs_review': 'Applications Needing Review',
+    'pending': 'Pending Applications',
+    'to edit': 'Applications To Edit',
     'reviewed': 'Reviewed Applications',
     'all': 'All Applications'
   };

@@ -920,15 +920,215 @@ async function initNotifications(userId) {
                             }
                             // Initialize Map Section container separately if present
                             const mapContainer2 = document.getElementById('sraFieldsMapMap');
+                            
+                            // Ensure Leaflet is loaded (define at higher scope)
+                            async function ensureLeafletGlobal() {
+                                if (window.L) return;
+                                const css = document.createElement('link');
+                                css.rel = 'stylesheet';
+                                css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                                document.head.appendChild(css);
+                                await new Promise((res, rej) => {
+                                    const s = document.createElement('script');
+                                    s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                                    s.onload = res;
+                                    s.onerror = rej;
+                                    document.body.appendChild(s);
+                                });
+                            }
+
+                            // Marker groups for map management
+                            const markerGroupsGlobal = new WeakMap();
+
+                            // Helper to safely pick first existing key
+                            function pickFirstGlobal(obj, keys = []) {
+                                for (const k of keys) {
+                                    if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] != null && obj[k] !== '') {
+                                        return obj[k];
+                                    }
+                                }
+                                return null;
+                            }
+
+                            // Process fields snapshot into field objects
+                            async function processFieldsSnapshotGlobal(snap, db) {
+                                if (snap.empty) {
+                                    console.warn('⚠️ No reviewed fields found.');
+                                    return [];
+                                }
+
+                                const fields = snap.docs.map(d => {
+                                    const data = d.data();
+                                    const lat = pickFirstGlobal(data, ['lat', 'latitude']);
+                                    const lng = pickFirstGlobal(data, ['lng', 'longitude']);
+                                    return {
+                                        id: d.id,
+                                        path: d.ref.path,
+                                        raw: data,
+                                        lat: typeof lat === 'string' ? parseFloat(lat) : lat,
+                                        lng: typeof lng === 'string' ? parseFloat(lng) : lng,
+                                        barangay: pickFirstGlobal(data, ['barangay', 'location']) || '—',
+                                        fieldName: pickFirstGlobal(data, ['field_name', 'fieldName']) || '—',
+                                        street: pickFirstGlobal(data, ['street', 'sitio']) || '—',
+                                        size: pickFirstGlobal(data, ['field_size', 'size', 'fieldSize']) || '—',
+                                        terrain: pickFirstGlobal(data, ['terrain_type', 'terrain']) || '—',
+                                        applicantName: pickFirstGlobal(data, ['applicantName', 'requestedBy', 'userId', 'requester']) || '—',
+                                        status: pickFirstGlobal(data, ['status']) || 'pending'
+                                    };
+                                });
+
+                                console.info(`✅ Processed ${fields.length} reviewed fields`);
+                                return fields;
+                            }
+
+                            // Render fields on map
+                            async function renderFieldsOnMapGlobal(map, fields) {
+                                try {
+                                    const caneIcon = L.icon({
+                                        iconUrl: '../../frontend/img/PIN.png',
+                                        iconSize: [32, 32],
+                                        iconAnchor: [16, 30],
+                                        popupAnchor: [0, -28]
+                                    });
+
+                                    // Clear existing markers
+                                    const prevGroup = markerGroupsGlobal.get(map);
+                                    if (prevGroup) map.removeLayer(prevGroup);
+
+                                    // Create new marker group
+                                    const group = L.layerGroup().addTo(map);
+                                    markerGroupsGlobal.set(map, group);
+
+                                    if (!Array.isArray(fields) || fields.length === 0) {
+                                        console.warn('⚠️ No reviewed fields to display.');
+                                        window.__caneMarkers = [];
+                                        return;
+                                    }
+
+                                    window.__caneMarkers = [];
+
+                                    fields.forEach(f => {
+                                        if (!f.lat || !f.lng) return;
+
+                                        const marker = L.marker([f.lat, f.lng], { icon: caneIcon }).addTo(group);
+
+                                        const tooltipHtml = `
+                                        <div style="font-size:12px; line-height:1.4; max-width:250px; color:#14532d;">
+                                            <b style="font-size:14px; color:#166534;">${f.fieldName}</b>
+                                            <br><span style="font-size:10px; color:#15803d;">🏠︎ <i>${f.street}, Brgy. ${f.barangay},<br>Ormoc City, Leyte</i></span>
+                                            <br><a href="#" class="seeFieldDetails" style="font-size:10px; color:gray; display:inline-block; margin-top:3px;">Click to see more details.</a>
+                                        </div>
+                                        `;
+
+                                        marker.bindTooltip(tooltipHtml, {
+                                            permanent: false,
+                                            direction: 'top',
+                                            offset: [0, -25],
+                                            opacity: 0.9
+                                        });
+
+                                        marker.on('mouseover', () => marker.openTooltip());
+                                        marker.on('mouseout', () => marker.closeTooltip());
+                                        marker.on('click', () => openFieldDetailsModalGlobal(f));
+
+                                        window.__caneMarkers.push({ marker, data: f });
+                                    });
+
+                                    console.info(`✅ Displayed ${fields.length} reviewed field markers on map.`);
+                                } catch (err) {
+                                    console.error('renderFieldsOnMapGlobal() failed:', err);
+                                }
+                            }
+
+                            // Setup real-time listener for fields
+                            async function setupRealtimeFieldsListenerGlobal(map, db) {
+                                try {
+                                    const { collection, onSnapshot, query, where } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+
+                                    const q = query(collection(db, 'fields'), where('status', 'in', ['reviewed', 'active', 'harvested']));
+
+                                    onSnapshot(q, async (snap) => {
+                                        console.log('🗺️ Map: Real-time update triggered, processing fields...');
+                                        const fields = await processFieldsSnapshotGlobal(snap, db);
+                                        await renderFieldsOnMapGlobal(map, fields);
+                                    }, (error) => {
+                                        console.error('❌ Map real-time listener failed:', error);
+                                    });
+
+                                    console.info('✅ Real-time map listener initialized');
+                                } catch (err) {
+                                    console.error('setupRealtimeFieldsListenerGlobal() failed:', err);
+                                }
+                            }
+
+                            // Open field details modal
+                            function openFieldDetailsModalGlobal(field) {
+                                const old = document.getElementById('fieldDetailsModal');
+                                if (old) old.remove();
+
+                                const modal = document.createElement('div');
+                                modal.id = 'fieldDetailsModal';
+                                modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]';
+
+                                modal.innerHTML = `
+                                    <div class="bg-white rounded-xl p-5 w-[90%] max-w-sm relative text-[var(--cane-900)] border border-[var(--cane-200)] shadow-md">
+                                        <button id="closeFieldModal" class="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-xl font-bold transition">&times;</button>
+
+                                        <div class="flex items-center justify-center mb-3">
+                                            <div class="w-11 h-11 bg-[var(--cane-100)] text-[var(--cane-700)] rounded-full flex items-center justify-center border border-[var(--cane-200)]">
+                                                <i class="fas fa-map-marker-alt text-lg"></i>
+                                            </div>
+                                        </div>
+
+                                        <h2 class="text-lg font-bold text-center text-[var(--cane-900)] mb-2">${field.fieldName}</h2>
+
+                                        <p class="text-sm text-center mb-3 text-[var(--cane-700)]">
+                                            <span class="font-semibold">Owner:</span> ${field.applicantName}
+                                        </p>
+
+                                        <div class="text-[13px] text-[var(--cane-800)] bg-[var(--cane-50)] p-3 rounded-md border border-[var(--cane-200)] leading-relaxed mb-2 text-center">
+                                            🏠︎ ${field.street}, Brgy. ${field.barangay}, Ormoc City, Leyte
+                                        </div>
+
+                                        <div class="text-[11px] text-[var(--cane-600)] italic text-center mb-4">
+                                            ⟟ Lat: ${Number(field.lat).toFixed(5)} | Lng: ${Number(field.lng).toFixed(5)}
+                                        </div>
+
+                                        <button id="joinBtn" class="w-full py-2.5 rounded-md bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)] transition">
+                                            Join Field
+                                        </button>
+                                    </div>
+                                `;
+                                document.body.appendChild(modal);
+                                document.getElementById('closeFieldModal').onclick = () => modal.remove();
+
+                                const joinBtn = document.getElementById('joinBtn');
+                                const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+
+                                // Hide Join button for SRA
+                                if (userRole === 'sra') {
+                                    if (joinBtn) joinBtn.style.display = 'none';
+                                    return;
+                                }
+
+                                // For other roles, keep lobby behaviour
+                                if (joinBtn) {
+                                    joinBtn.onclick = () => {
+                                        openJoinModal && openJoinModal(field);
+                                    };
+                                }
+                            }
+                            
                             function initSraMapSection() {
                                 (async () => {
-                                    await ensureLeaflet();
+                                    await ensureLeafletGlobal();
+                                    const { db } = await import('../Common/firebase-config.js');
                                     const map2 = L.map(mapContainer2, { zoomControl: true, scrollWheelZoom: false }).setView([11.0064, 124.6075], 12);
                                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map2);
                                     const bounds2 = L.latLngBounds(L.latLng(10.85, 124.45), L.latLng(11.20, 124.80));
                                     map2.setMaxBounds(bounds2);
                                     map2.on('drag', () => map2.panInsideBounds(bounds2, { animate: true }));
-                                    setupRealtimeFieldsListener(map2);
+                                    setupRealtimeFieldsListenerGlobal(map2, db);
                                     setTimeout(() => { try { map2.invalidateSize(); } catch(_) {} }, 200);
                                     const input2 = document.getElementById('mapSearchInputMap');
                                     const btn2 = document.getElementById('mapSearchBtnMap');
@@ -1208,12 +1408,22 @@ async function initNotifications(userId) {
                 const profileBtn = document.getElementById('profileBtn');
                 const profileMenu = document.getElementById('profileMenu');
                 if (profileBtn && profileMenu) {
+                    const chevronIcon = profileBtn.querySelector('i.fa-chevron-down');
                     profileBtn.addEventListener('click', () => {
                         profileMenu.classList.toggle('hidden');
+                        // Rotate chevron icon
+                        if (chevronIcon) {
+                            chevronIcon.style.transform = profileMenu.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+                            chevronIcon.style.transition = 'transform 0.3s ease-in-out';
+                        }
                     });
                     window.addEventListener('click', (e) => {
                         if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
                             profileMenu.classList.add('hidden');
+                            // Reset chevron icon
+                            if (chevronIcon) {
+                                chevronIcon.style.transform = 'rotate(0deg)';
+                            }
                         }
                     });
                 }
@@ -1510,6 +1720,73 @@ async function initNotifications(userId) {
                     } catch(_) {}
                 });
             }
+
+            // Metric cards navigation
+            document.querySelectorAll('[data-card]').forEach(card => {
+                card.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const cardType = this.getAttribute('data-card');
+                    
+                    // Navigate based on card type
+                    switch(cardType) {
+                        case 'total-submissions':
+                        case 'pending-review':
+                        case 'reviewed-today':
+                            // All go to Applications/Field Documents section
+                            showSection('field-documents');
+                            const container = document.getElementById('fieldDocsContainer');
+                            if (container && container.childElementCount === 0) {
+                                const cacheBust = `?v=${Date.now()}`;
+                                try {
+                                    const html = await fetch(`SRA_FieldDocuments.html${cacheBust}`).then(r => r.text());
+                                    container.innerHTML = html;
+                                } catch(err) {
+                                    console.error('Failed to load SRA_FieldDocuments.html:', err);
+                                }
+                            }
+                            // Initialize Review.js
+                            try {
+                                const cacheBust = `?v=${Date.now()}`;
+                                const mod = await import(`./Review.js${cacheBust}`);
+                                if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                                    mod.SRAReview.init();
+                                }
+                            } catch(err) {
+                                console.error('Failed to import Review.js:', err);
+                            }
+                            // Highlight Applications in sidebar
+                            document.querySelectorAll('.nav-item').forEach(item => {
+                                item.classList.remove('bg-slate-800', 'text-white');
+                                item.classList.add('text-slate-300');
+                            });
+                            const appNavItem = document.querySelector('[data-section="field-documents"]');
+                            if (appNavItem) {
+                                appNavItem.classList.add('bg-slate-800', 'text-white');
+                                appNavItem.classList.remove('text-slate-300');
+                            }
+                            break;
+                        case 'active-fields':
+                            // Navigate to Map section
+                            showSection('map');
+                            // Highlight Map in sidebar
+                            document.querySelectorAll('.nav-item').forEach(item => {
+                                item.classList.remove('bg-slate-800', 'text-white');
+                                item.classList.add('text-slate-300');
+                            });
+                            const mapNavItem = document.querySelector('[data-section="map"]');
+                            if (mapNavItem) {
+                                mapNavItem.classList.add('bg-slate-800', 'text-white');
+                                mapNavItem.classList.remove('text-slate-300');
+                            }
+                            break;
+                    }
+                    
+                    // Close sidebar on mobile
+                    if (window.innerWidth < 1024) {
+                        closeSidebar();
+                    }
+                });
+            });
 
             // OLD: Notifications card and bell popup removed (now using bell dropdown from initNotifications)
 

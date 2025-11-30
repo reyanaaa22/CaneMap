@@ -7,7 +7,7 @@
     </div>
     <div>
       <select id="fieldDocsStatus" class="px-3 py-2 border border-[var(--cane-200)] rounded-lg text-sm">
-        <option value="needs_review" selected>⚠️ Needs Review</option>
+        <option value="needs_review" selected>Needs Review</option>
         <option value="pending">Pending Only</option>
         <option value="to edit">To Edit Only</option>
         <option value="reviewed">Reviewed</option>
@@ -16,9 +16,9 @@
     </div>
   </div>
 
-  <div class="inner-content-box rounded-lg">
-    <div id="fieldDocsSubtitle" class="border-b border-[var(--cane-200)] px-4 py-2 text-[var(--cane-800)] font-semibold">⚠️ Applications Needing Review (Pending + To Edit)</div>
-    <div id="fieldDocsDynamic" class="min-h-[120px]"></div>
+  <div class="inner-content-box rounded-lg overflow-hidden">
+    <div id="fieldDocsSubtitle" class="border-b border-[var(--cane-200)] px-6 py-3 text-[var(--cane-800)] font-semibold bg-[var(--cane-50)]">Applications Needing Review</div>
+    <div id="fieldDocsDynamic" class="min-h-[120px] divide-y divide-[var(--cane-100)]"></div>
   </div>
 </div>
 
@@ -39,9 +39,9 @@
       const updateSubtitle = () => {
         const filterValue = filterSelect.value;
         const subtitleMap = {
-          'needs_review': '⚠️ Applications Needing Review (Pending + To Edit)',
-          'pending': 'Pending Applications Only',
-          'to edit': 'Applications To Edit Only',
+          'needs_review': 'Applications Needing Review',
+          'pending': 'Pending Applications',
+          'to edit': 'Applications To Edit',
           'reviewed': 'Reviewed Applications',
           'all': 'All Applications'
         };
