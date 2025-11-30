@@ -233,10 +233,13 @@ async function initNotifications(userId) {
                         }
                         
                         const display = user.displayName || user.email || 'SRA Officer';
+                        const firstName = display.split(' ')[0]; // Extract first name only
                         const headerName = document.getElementById('headerUserName');
                         const sideName = document.getElementById('sidebarUserName');
-                        if (headerName) headerName.textContent = display;
-                        if (sideName) sideName.textContent = display;
+                        const userGreeting = document.getElementById('userGreeting');
+                        if (headerName) headerName.textContent = firstName;
+                        if (sideName) sideName.textContent = firstName;
+                        if (userGreeting) userGreeting.textContent = firstName;
                         
                         // Load profile photo
                         await loadUserProfile(user.uid);
