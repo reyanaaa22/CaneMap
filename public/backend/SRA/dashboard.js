@@ -1902,7 +1902,23 @@ async function loadUserProfile(userId) {
                 if (profilePhoto) {
                     profilePhoto.src = userData.photoURL;
                     profilePhoto.classList.remove('hidden');
-                    if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    profilePhoto.style.display = 'block';
+                    if (profileIconDefault) {
+                        profileIconDefault.classList.add('hidden');
+                        profileIconDefault.style.display = 'none';
+                    }
+                }
+            } else {
+                // No photo URL - ensure icon is visible
+                const profilePhoto = document.getElementById('profilePhoto');
+                const profileIconDefault = document.getElementById('profileIconDefault');
+                if (profilePhoto) {
+                    profilePhoto.classList.add('hidden');
+                    profilePhoto.style.display = 'none';
+                }
+                if (profileIconDefault) {
+                    profileIconDefault.classList.remove('hidden');
+                    profileIconDefault.style.display = 'block';
                 }
             }
         }
@@ -1945,12 +1961,38 @@ window.__syncDashboardProfile = async function() {
                     if (profilePhoto) {
                         profilePhoto.src = photoUrl;
                         profilePhoto.classList.remove('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                        profilePhoto.style.display = 'block';
+                        profilePhoto.onerror = function() {
+                            // If image fails to load, hide it and show icon
+                            this.classList.add('hidden');
+                            this.style.display = 'none';
+                            if (profileIconDefault) {
+                                profileIconDefault.classList.remove('hidden');
+                                profileIconDefault.style.display = 'block';
+                            }
+                        };
+                        if (profileIconDefault) {
+                            profileIconDefault.classList.add('hidden');
+                            profileIconDefault.style.display = 'none';
+                        }
                     }
                     if (sidebarProfilePhoto) {
                         sidebarProfilePhoto.src = photoUrl;
                         sidebarProfilePhoto.classList.remove('hidden');
-                        if (sidebarProfileIconDefault) sidebarProfileIconDefault.classList.add('hidden');
+                        sidebarProfilePhoto.style.display = 'block';
+                        sidebarProfilePhoto.onerror = function() {
+                            // If image fails to load, hide it and show icon
+                            this.classList.add('hidden');
+                            this.style.display = 'none';
+                            if (sidebarProfileIconDefault) {
+                                sidebarProfileIconDefault.classList.remove('hidden');
+                                sidebarProfileIconDefault.style.display = 'block';
+                            }
+                        };
+                        if (sidebarProfileIconDefault) {
+                            sidebarProfileIconDefault.classList.add('hidden');
+                            sidebarProfileIconDefault.style.display = 'none';
+                        }
                     }
                 }
             } catch(e) {
