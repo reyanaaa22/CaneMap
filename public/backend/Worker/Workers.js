@@ -394,12 +394,36 @@ async function loadUserData(user) {
             
             // Load and display profile photo
             if (data.photoURL) {
+                // Update header profile image
                 const profilePhoto = document.getElementById('profilePhoto');
                 const profileIconDefault = document.getElementById('profileIconDefault');
+                const profileIconContainer = document.getElementById('profileIconContainer');
+                
                 if (profilePhoto) {
                     profilePhoto.src = data.photoURL;
-                    profilePhoto.classList.remove('hidden');
-                    if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    profilePhoto.onload = () => {
+                        profilePhoto.classList.remove('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    };
+                    profilePhoto.onerror = () => {
+                        profilePhoto.classList.add('hidden');
+                        if (profileIconDefault) profileIconDefault.classList.remove('hidden');
+                    };
+                }
+                
+                // Also update sidebar profile image
+                const profileImageContainer = document.getElementById('profileImageContainer');
+                if (profileImageContainer) {
+                    // Create or update the image element
+                    let profileImg = profileImageContainer.querySelector('img');
+                    if (!profileImg) {
+                        profileImg = document.createElement('img');
+                        profileImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+                        profileImageContainer.innerHTML = '';
+                        profileImageContainer.appendChild(profileImg);
+                    }
+                    profileImg.src = data.photoURL;
+                    profileImg.alt = 'Profile Photo';
                 }
             }
         };
