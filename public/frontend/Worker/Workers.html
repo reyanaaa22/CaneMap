@@ -137,12 +137,12 @@
                 margin-bottom: 1rem;
             }
 
-            /* Mobile Log Work Button - positioned in top right */
+            /* Mobile Log Work Button - positioned in top right of section */
             #my-tasks #createWorkLogBtn {
-                position: fixed !important;
-                top: 3.2rem !important;
+                position: absolute !important;
+                top: 1.5rem !important;
                 right: 1rem !important;
-                z-index: 30 !important;
+                z-index: 20 !important;
                 margin: 0 !important;
                 border: none !important;
                 outline: none !important;
@@ -159,6 +159,11 @@
             #my-tasks #createWorkLogBtn:focus {
                 outline: none !important;
                 box-shadow: 0 2px 8px rgba(94, 165, 0, 0.3) !important;
+            }
+            
+            /* Ensure the section container has relative positioning for absolute button */
+            #my-tasks .section-card {
+                position: relative !important;
             }
         }
         
