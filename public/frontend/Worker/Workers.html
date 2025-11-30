@@ -75,7 +75,14 @@
             #sidebar {
                 transform: translateX(-100%);
                 transition: transform 0.3s ease-in-out;
-                z-index: 40;
+                z-index: 50; /* Higher than header */
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 16rem;
+                background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);
+                overflow-y: auto;
             }
             
             #sidebar.mobile-open {
@@ -300,13 +307,157 @@
         
         /* Ensure content/header shift with sidebar state on desktop */
         @media (min-width: 1024px) {
-            body:not(.sidebar-collapsed) #mainWrapper {
-                margin-left: 16rem !important;
+            body {
+                transition: padding-left 0.3s ease;
             }
+            
+            #sidebar {
+                transform: translateX(0);
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                width: 16rem;
+                transition: width 0.3s ease, transform 0.3s ease;
+                z-index: 50; /* Higher than header */
+                padding-top: 1rem; /* Add some top padding */
+                overflow: hidden;
+            }
+            
+            body.sidebar-collapsed #sidebar {
+                width: 5rem;
+            }
+            
+            /* Hide text and non-essential elements when collapsed */
+            body.sidebar-collapsed #sidebar .nav-item-text,
+            body.sidebar-collapsed #sidebar .user-name,
+            body.sidebar-collapsed #sidebar .user-email,
+            body.sidebar-collapsed #sidebar .nav-item-description,
+            body.sidebar-collapsed #sidebar .sidebar-header,
+            body.sidebar-collapsed #sidebar .sidebar-footer,
+            body.sidebar-collapsed #sidebar .sidebar-divider,
+            body.sidebar-collapsed #sidebar .sidebar-title,
+            body.sidebar-collapsed #sidebar .sidebar-submenu,
+            body.sidebar-collapsed #sidebar .sidebar-badge {
+                display: none !important;
+            }
+            
+            /* Hide user name and type when collapsed */
+            body.sidebar-collapsed #sidebarUserName,
+            body.sidebar-collapsed #sidebarUserType {
+                display: none !important;
+            }
+            
+            /* Show only icons and profile image when collapsed */
+            body.sidebar-collapsed #sidebar .nav-item i {
+                margin: 0;
+                font-size: 1.25rem;
+            }
+            
+            /* Keep profile image size and position consistent when collapsed */
+            body.sidebar-collapsed #profileImageContainer {
+                width: 3.5rem !important;
+                height: 3.5rem !important;
+                margin: 0.5rem auto !important;
+                position: relative;
+                left: 0;
+                transform: none;
+            }
+            
+            /* Center profile section when collapsed */
+            body.sidebar-collapsed #sidebar > div > div:first-child {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 0.5rem 0.5rem 1.5rem 0.5rem;
+            }
+            
+            /* Center the profile container div */
+            body.sidebar-collapsed #sidebar > div > div:first-child > div:nth-child(2) {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+                margin-top: 0.5rem;
+            }
+            
+            /* Hide overview text label in sidebar when collapsed */
+            body.sidebar-collapsed #sidebar nav > div:nth-child(2) {
+                display: none !important;
+            }
+            
+            
+            /* Main content container */
+            #mainWrapper {
+                transition: all 0.3s ease;
+                margin-left: 16rem;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
             body.sidebar-collapsed #mainWrapper {
-                margin-left: 5rem !important;
+                margin-left: 5rem;
+                width: 100%;
             }
-            /* Header stays full width, no left padding */
+            
+            /* Main content area */
+            #mainContent {
+                transition: all 0.3s ease;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            /* Navigation items - centered icons when collapsed */
+            #sidebar .nav-item {
+                display: flex;
+                align-items: center;
+                padding: 0.75rem 1rem;
+                color: rgba(255, 255, 255, 0.8);
+                transition: all 0.2s;
+                text-decoration: none;
+                border-radius: 0.375rem;
+                margin: 0.25rem 0.5rem;
+            }
+            
+            #sidebar .nav-item i {
+                min-width: 1.5rem;
+                text-align: center;
+                margin-right: 0.75rem;
+                transition: margin 0.2s;
+            }
+            
+            /* Collapsed state */
+            body.sidebar-collapsed #sidebar .nav-item {
+                justify-content: center;
+                padding: 0.75rem 0;
+                margin: 0.5rem auto;
+                width: auto;
+                gap: 0;
+            }
+            
+            body.sidebar-collapsed #sidebar .nav-item i {
+                margin: 0;
+                font-size: 1.25rem;
+                width: auto;
+                text-align: center;
+            }
+            
+            /* Hide nav-item text when collapsed */
+            body.sidebar-collapsed #sidebar .nav-item span {
+                display: none !important;
+            }
+            
+            /* Adjust profile section */
+            body.sidebar-collapsed #sidebar .profile-section {
+                flex-direction: column;
+                align-items: center;
+                padding: 1rem 0.5rem;
+            }
+            
+            body.sidebar-collapsed #profileImageContainer {
+                margin: 0 auto;
+            }
         }
         
         /* FullCalendar customization */
@@ -443,10 +594,35 @@
             max-width: 100%;
             padding-left: 1.5rem;
             padding-right: 1.5rem;
+            transition: padding-left 0.3s ease;
         }
+        
+        /* Header adjustments for sidebar */
+        #workerHeaderContainer {
+            transition: margin-left 0.3s ease;
+            margin-left: 0;
+        }
+        
         @media (min-width: 1024px) {
             .header-container {
                 padding-left: calc(1.5rem + 16rem); /* 16rem is the width of the sidebar */
+            }
+            
+            #workerHeaderContainer {
+                margin-left: 16rem;
+            }
+            
+            body.sidebar-collapsed .header-container {
+                padding-left: calc(1.5rem + 5rem); /* 5rem is the width of the collapsed sidebar */
+            }
+            
+            body.sidebar-collapsed #workerHeaderContainer {
+                margin-left: 5rem;
+            }
+            
+            /* Adjust body padding when sidebar is collapsed */
+            body.sidebar-collapsed {
+                padding-left: 5rem !important;
             }
         }
     </style>
@@ -459,9 +635,9 @@
         <div id="workerHeaderContainer" class="w-full flex items-center justify-between px-4">
             <!-- Left side: Hamburger and Logo (always at far left) -->
             <div class="flex items-center space-x-3">
-                <!-- Hamburger Menu Button (far left) -->
-                <button id="hamburgerBtn" class="hamburger-icon text-gray-800 hover:text-gray-600 transition-colors" onclick="toggleSidebar()">
-                    <i id="hamburgerIcon" class="fas fa-bars text-xl"></i>
+                <!-- Mobile Hamburger Button (hidden on desktop) -->
+                <button id="mobileHamburgerBtn" class="lg:hidden text-gray-800 hover:text-cane-600 transition-colors p-3 -ml-2" onclick="toggleMobileSidebar()" aria-label="Toggle mobile menu">
+                    <i class="fas fa-bars text-xl"></i>
                 </button>
                 
                 <!-- Logo/Title -->
@@ -529,7 +705,7 @@
     </header>
 
     <!-- Main Content with Sidebar -->
-    <div id="mainWrapper" class="flex relative">
+    <div id="mainWrapper" class="relative">
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden" aria-hidden="true" role="presentation" onclick="toggleSidebar()"></div>
         
@@ -540,12 +716,21 @@
             role="navigation">
             
             <div style="padding: 1.25rem 1rem; flex-grow: 1; overflow-y: auto;">
-                <!-- Sidebar Header with close button -->
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <!-- Sidebar Header with close button and desktop hamburger -->
+                <div style="display: flex; flex-direction: column; padding: 0.5rem 1rem 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <!-- Desktop Hamburger (aligned to the right) -->
+                    <div class="flex justify-end w-full">
+                        <button id="desktopHamburgerBtn" class="lg:block text-white hover:text-cane-200 p-2 -mt-2 -mr-2" onclick="toggleDesktopSidebar()" aria-label="Toggle desktop menu">
+                            <i class="fas fa-bars text-lg"></i>
+                        </button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem;">
                         <div id="profileImageContainer" style="
-                            width: 3.5rem;
-                            height: 3.5rem;
+                            width: 3.5rem !important;
+                            height: 3.5rem !important;
+                            min-width: 3.5rem !important;
+                            min-height: 3.5rem !important;
+                            margin: 0 auto !important;
                             background: rgba(255,255,255,0.2);
                             border-radius: 50%;
                             display: flex;
@@ -565,9 +750,9 @@
                             <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
                         </div>
                     </div>
-                    <!-- Mobile close button only -->
-                    <button id="closeSidebarBtn" style="color: rgba(255,255,255,0.8); transition: color 0.2s; background: none; border: none; cursor: pointer;" class="lg:hidden hover:text-white" aria-label="Close sidebar">
-                        <i class="fas fa-times" style="font-size: 1.25rem; line-height: 1.75rem;"></i>
+                    <!-- Close button for mobile -->
+                    <button id="closeSidebarBtn" class="lg:hidden text-white hover:text-cane-200 p-2 -mr-2" aria-label="Close menu" onclick="toggleSidebar()">
+                        <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
                 
@@ -600,7 +785,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <main id="mainContent" class="w-full px-4 -mt-4 pb-6 transition-all duration-300">
+        <main id="mainContent" class="w-full px-4 -mt-4 pb-6 transition-all duration-300" style="transition: all 0.3s ease;">
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section">
                     <div class="-mt-2">
@@ -1440,11 +1625,7 @@
         
         // Close sidebar on navigation for mobile
         document.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', function() {
-            if (window.innerWidth < 1024) {
-              closeSidebar();
-            }
-          });
+          item.addEventListener('click', closeSidebar);
         });
         
         // Handle window resize
@@ -1463,6 +1644,43 @@
         handleResize(); // Initial check
       });
 
+      // Toggle mobile sidebar (for mobile view)
+      function toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const body = document.body;
+        
+        // Toggle mobile sidebar
+        sidebar.classList.toggle('mobile-open');
+        overlay.classList.toggle('hidden');
+        overlay.classList.toggle('visible');
+        
+        // Toggle body scroll
+        body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
+      }
+      
+      // Toggle desktop sidebar (for desktop view)
+      function toggleDesktopSidebar() {
+        // Toggle collapsed class on body
+        document.body.classList.toggle('sidebar-collapsed');
+        
+        // Keep the hamburger icon the same in both states
+        const desktopHamburger = document.getElementById('desktopHamburgerBtn');
+        const icon = desktopHamburger.querySelector('i');
+        icon.className = 'fas fa-bars text-lg'; // Always keep it as bars icon
+      }
+      
+      // Close sidebar function (for mobile)
+      function closeSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.add('hidden');
+        overlay.classList.remove('visible');
+        document.body.style.overflow = '';
+      }
+      
       // Leaflet map for Available Fields (initialized lazily)
       let availableFieldsMap;
       function initAvailableFieldsMap() {
