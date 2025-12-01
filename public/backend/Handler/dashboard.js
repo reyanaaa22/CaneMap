@@ -2730,9 +2730,25 @@ async function initializeTasksSection(handlerId) {
 }
 
 /**
+ * Get status badge class for overall status
+ */
+function getOverallStatusBadgeClass(status) {
+  const statusLower = (status || '').toLowerCase();
+  if (statusLower === 'done' || statusLower === 'completed') {
+    return 'bg-green-100 text-green-800';
+  } else if (statusLower === 'pending' || statusLower === 'todo') {
+    return 'bg-yellow-100 text-yellow-800';
+  } else if (statusLower === 'in_progress' || statusLower === 'in progress') {
+    return 'bg-blue-100 text-blue-800';
+  } else {
+    return 'bg-gray-100 text-gray-800';
+  }
+}
+
+/**
  * View task details in modal
  */
-window.viewTaskDetails = function(taskId) {
+window.viewTaskDetails = async function(taskId) {
   const task = allTasksData.find(t => t.id === taskId);
   if (!task) return;
 
@@ -2741,77 +2757,165 @@ window.viewTaskDetails = function(taskId) {
     (task.deadline.toDate ? task.deadline.toDate() : new Date(task.deadline)) :
     null;
 
+  // Determine assigned user info
+  let assignedUserInfo = null;
+  let assignedRole = null;
+  
+  if (task.metadata && task.metadata.driver) {
+    // Task assigned to driver
+    assignedRole = 'driver';
+    const driverId = task.metadata.driver.id || task.assignedTo?.[0];
+    if (driverId) {
+      try {
+        const driverRef = doc(db, 'users', driverId);
+        const driverSnap = await getDoc(driverRef);
+        if (driverSnap.exists()) {
+          const driverData = driverSnap.data();
+          assignedUserInfo = {
+            id: driverId,
+            name: driverData.fullname || driverData.name || driverData.email || 'Unknown Driver',
+            photoURL: driverData.photoURL || driverData.photo_url || null,
+            role: 'driver'
+          };
+        } else {
+          // Fallback to metadata driver name
+          assignedUserInfo = {
+            id: driverId,
+            name: task.metadata.driver.fullname || task.metadata.driver.name || 'Unknown Driver',
+            photoURL: null,
+            role: 'driver'
+          };
+        }
+      } catch (err) {
+        console.error('Error fetching driver info:', err);
+        assignedUserInfo = {
+          id: driverId,
+          name: task.metadata.driver.fullname || task.metadata.driver.name || 'Unknown Driver',
+          photoURL: null,
+          role: 'driver'
+        };
+      }
+    }
+  } else if (task.assignedTo && task.assignedTo.length > 0) {
+    // Task assigned to worker(s)
+    assignedRole = 'worker';
+    const workerId = task.assignedTo[0];
+    try {
+      const workerRef = doc(db, 'users', workerId);
+      const workerSnap = await getDoc(workerRef);
+      if (workerSnap.exists()) {
+        const workerData = workerSnap.data();
+        assignedUserInfo = {
+          id: workerId,
+          name: workerData.fullname || workerData.name || workerData.email || 'Unknown Worker',
+          photoURL: workerData.photoURL || workerData.photo_url || null,
+          role: 'worker'
+        };
+      }
+    } catch (err) {
+      console.error('Error fetching worker info:', err);
+    }
+  }
+
+  const statusLower = (task.status || 'pending').toLowerCase();
+  const statusDisplay = statusLower.charAt(0).toUpperCase() + statusLower.slice(1);
+
   const modalHTML = `
-    <div id="taskDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-bold text-gray-900">Task Details</h3>
-          <button onclick="document.getElementById('taskDetailsModal').remove()" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
+    <div id="taskDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <h3 class="text-2xl font-bold text-gray-900">Task Details</h3>
+          <button onclick="document.getElementById('taskDetailsModal').remove()" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-times text-2xl"></i>
           </button>
         </div>
 
-        <div class="space-y-3">
+        <div class="p-6 space-y-5">
           <div>
-            <label class="text-sm font-medium text-gray-500">Task</label>
-            <p class="text-gray-900">${escapeHtml(task.title || task.task || task.taskType || 'Untitled')}</p>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Task</label>
+            <p class="text-lg font-semibold text-gray-900">${escapeHtml(task.title || task.task || task.taskType || 'Untitled')}</p>
           </div>
 
           <div>
-            <label class="text-sm font-medium text-gray-500">Field</label>
-            <p class="text-gray-900">${escapeHtml(field.name)}</p>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Field</label>
+            <p class="text-lg text-gray-900">${escapeHtml(field.name)}</p>
           </div>
 
           <div>
-            <label class="text-sm font-medium text-gray-500">Deadline</label>
-            <p class="text-gray-900">${deadline ? deadline.toLocaleString() : 'No deadline'}</p>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Deadline</label>
+            <p class="text-lg text-gray-900">${deadline ? deadline.toLocaleString() : 'No deadline'}</p>
           </div>
 
           <div>
-            <label class="text-sm font-medium text-gray-500">Overall Status</label>
-            <p class="text-gray-900">${(task.status || 'pending').charAt(0).toUpperCase() + (task.status || 'pending').slice(1)}</p>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Overall Status</label>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${getOverallStatusBadgeClass(task.status)}">
+              ${statusDisplay}
+            </span>
           </div>
           ${task.metadata && task.metadata.driver ? `
           <div>
-            <label class="text-sm font-medium text-gray-500">Current Delivery Status</label>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Current Delivery Status</label>
             ${task.driverDeliveryStatus && task.driverDeliveryStatus.status ? `
-              <div class="mt-1">
-                <span class="px-2 py-1 text-xs font-semibold rounded-full ${getDriverStatusBadgeClass(task.driverDeliveryStatus.status)}">
+              <div class="space-y-2">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${getDriverStatusBadgeClass(task.driverDeliveryStatus.status)}">
+                  <i class="fas fa-truck mr-2"></i>
                   ${getDriverStatusLabel(task.driverDeliveryStatus.status)}
                 </span>
                 ${task.driverDeliveryStatus.updatedAt ? `
-                  <p class="text-xs text-gray-500 mt-1">
-                    Updated ${formatTimeAgo(task.driverDeliveryStatus.updatedAt)}
+                  <p class="text-sm text-gray-600 mt-2">
+                    <i class="fas fa-clock mr-1"></i>Updated ${formatTimeAgo(task.driverDeliveryStatus.updatedAt)}
                   </p>
                 ` : ''}
                 ${task.driverDeliveryStatus.notes ? `
-                  <p class="text-xs text-gray-600 mt-1">${(task.driverDeliveryStatus.notes || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                  <div class="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-700">${escapeHtml(task.driverDeliveryStatus.notes)}</p>
+                  </div>
                 ` : ''}
               </div>
-            ` : '<p class="text-gray-500 text-sm">No status update yet</p>'}
+            ` : '<p class="text-gray-500">No status update yet</p>'}
           </div>
           ` : ''}
 
           ${task.notes ? `
           <div>
-            <label class="text-sm font-medium text-gray-500">Notes</label>
-            <p class="text-gray-900">${escapeHtml(task.notes)}</p>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Notes</label>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <p class="text-base text-gray-900">${escapeHtml(task.notes)}</p>
+            </div>
           </div>
           ` : ''}
 
-          ${task.assignedTo && task.assignedTo.length > 0 ? `
+          ${assignedUserInfo ? `
           <div>
-            <label class="text-sm font-medium text-gray-500">Assigned To</label>
-            <p class="text-gray-900">${task.assignedTo.length} worker(s)</p>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Assigned To</label>
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              ${assignedUserInfo.photoURL ? `
+                <img src="${escapeHtml(assignedUserInfo.photoURL)}" alt="${escapeHtml(assignedUserInfo.name)}" 
+                     class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm">
+              ` : `
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] flex items-center justify-center border-2 border-white shadow-sm">
+                  <i class="fas fa-user text-white text-lg"></i>
+                </div>
+              `}
+              <div class="flex-1">
+                <p class="text-base font-semibold text-gray-900">${escapeHtml(assignedUserInfo.name)}</p>
+                <p class="text-sm text-gray-600 capitalize">${assignedUserInfo.role}</p>
+              </div>
+            </div>
+          </div>
+          ` : task.assignedTo && task.assignedTo.length > 0 ? `
+          <div>
+            <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Assigned To</label>
+            <p class="text-lg text-gray-900">${task.assignedTo.length} worker(s)</p>
           </div>
           ` : ''}
         </div>
 
-        <div class="mt-6 flex justify-end">
-          <button onclick="document.getElementById('taskDetailsModal').remove()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+        <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end">
+          <button onclick="document.getElementById('taskDetailsModal').remove()" 
+                  class="px-6 py-2.5 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors font-medium text-base">
             Close
           </button>
-          
         </div>
       </div>
     </div>
