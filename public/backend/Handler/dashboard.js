@@ -1519,8 +1519,13 @@ function renderActivityLogs(logs = []) {
       ? `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">Driver</span>`
       : `<span class="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">Worker</span>`;
 
+    // Store log data in a global map with a unique ID
+    const logId = log.id || (log.user_id + '_' + (log.logged_at?.toMillis ? log.logged_at.toMillis() : Date.now()) + '_' + Math.random());
+    if (!window.activityLogCache) window.activityLogCache = {};
+    window.activityLogCache[logId] = log;
+    
     return `
-      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow mb-3">
+      <div class="bg-white border border-gray-200 rounded-lg p-4 shadow mb-3 cursor-pointer hover:shadow-md transition-shadow" onclick="openActivityLogDetails('${logId}')">
         <div class="flex justify-between items-start">
           <h3 class="font-semibold text-gray-900">${escapeHtml(log.task_name)}</h3>
           <div class="flex items-center gap-2">
