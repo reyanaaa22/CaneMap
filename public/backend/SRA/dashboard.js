@@ -1993,6 +1993,7 @@ async function loadUserProfile(userId) {
             const userData = userSnap.data();
             // Load and display profile photo
             if (userData.photoURL) {
+                // Update header profile photo
                 const profilePhoto = document.getElementById('profilePhoto');
                 const profileIconDefault = document.getElementById('profileIconDefault');
                 if (profilePhoto) {
@@ -2002,6 +2003,19 @@ async function loadUserProfile(userId) {
                     if (profileIconDefault) {
                         profileIconDefault.classList.add('hidden');
                         profileIconDefault.style.display = 'none';
+                    }
+                }
+                
+                // Update sidebar profile photo
+                const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+                const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+                if (sidebarProfilePhoto) {
+                    sidebarProfilePhoto.src = userData.photoURL;
+                    sidebarProfilePhoto.classList.remove('hidden');
+                    sidebarProfilePhoto.style.display = 'block';
+                    if (sidebarProfileIconDefault) {
+                        sidebarProfileIconDefault.classList.add('hidden');
+                        sidebarProfileIconDefault.style.display = 'none';
                     }
                 }
             } else {
@@ -2015,6 +2029,18 @@ async function loadUserProfile(userId) {
                 if (profileIconDefault) {
                     profileIconDefault.classList.remove('hidden');
                     profileIconDefault.style.display = 'block';
+                }
+                
+                // Ensure sidebar icon is visible too
+                const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+                const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+                if (sidebarProfilePhoto) {
+                    sidebarProfilePhoto.classList.add('hidden');
+                    sidebarProfilePhoto.style.display = 'none';
+                }
+                if (sidebarProfileIconDefault) {
+                    sidebarProfileIconDefault.classList.remove('hidden');
+                    sidebarProfileIconDefault.style.display = 'block';
                 }
             }
         }
