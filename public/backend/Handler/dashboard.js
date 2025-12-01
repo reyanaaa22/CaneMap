@@ -2494,8 +2494,22 @@ function renderTasksTable(filter = 'all') {
   let filteredTasks = allTasksData;
   if (filter !== 'all') {
     filteredTasks = allTasksData.filter(task => {
-      const status = (task.status || 'pending').toLowerCase();
-      return status === filter.toLowerCase();
+      if (filter === 'worker') {
+        // Worker tasks: have metadata.workers_count or don't have metadata.driver
+        return task.metadata && (task.metadata.workers_count !== undefined || !task.metadata.driver);
+      } else if (filter === 'driver') {
+        // Driver tasks: have metadata.driver
+        return task.metadata && task.metadata.driver;
+      } else if (filter === 'pending') {
+        // Pending (On going) tasks
+        const status = (task.status || 'pending').toLowerCase();
+        return status === 'pending';
+      } else if (filter === 'done') {
+        // Finished (Done) tasks
+        const status = (task.status || 'pending').toLowerCase();
+        return status === 'done';
+      }
+      return true;
     });
   }
 

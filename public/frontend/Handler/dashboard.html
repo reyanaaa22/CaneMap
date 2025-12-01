@@ -1415,8 +1415,10 @@ if (sidebar.classList.contains('closed')){
                     <label for="tasksFilter" class="text-sm font-medium text-gray-700 whitespace-nowrap flex-shrink-0">Filter:</label>
                     <select id="tasksFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] w-full max-w-[200px] sm:max-w-none" style="min-width: 0; flex: 1;">
                         <option value="all">All Tasks</option>
-                        <option value="pending">Pending</option>
-                        <option value="done">Done</option>
+                        <option value="worker">Worker Tasks Only</option>
+                        <option value="driver">Driver Tasks Only</option>
+                        <option value="pending">Pending (On going)</option>
+                        <option value="done">Finished (Done)</option>
                     </select>
                 </div>
                 <div class="ml-auto flex-shrink-0">
