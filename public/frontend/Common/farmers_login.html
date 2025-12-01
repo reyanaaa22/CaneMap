@@ -196,10 +196,22 @@ input[type="password"]:focus {
 }
 
 .password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 55%;
+  transform: translateY(-50%);
   cursor: pointer;
   color: rgba(26, 46, 9, 0.5);
   font-size: 16px;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.8;
+  line-height: 1;
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   padding: 0;
@@ -209,7 +221,10 @@ input[type="password"]:focus {
 
 .password-toggle:hover {
   color: var(--cane-600);
+  opacity: 1;
 }
+
+
 
 input::placeholder {
   color: rgba(26, 46, 9, 0.5);
@@ -433,12 +448,10 @@ button.loading .button-spinner {
         </div>
         <div class="form-field">
           <label for="password">Password</label>
-          <div style="position: relative;">
-            <input type="password" id="password" placeholder="Enter password" required>
-            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('password')">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
+          <input type="password" id="password" placeholder="Enter password" required style="padding-right: 40px;">
+          <button type="button" class="password-toggle" onclick="togglePasswordVisibility('password')" style="position: absolute; right: 14px; top: 67%; transform: translateY(-50%);">
+            <i class="fas fa-eye"></i>
+          </button>
         </div>
         <p class="forgot-pass">
           <span class="remember-wrapper">
