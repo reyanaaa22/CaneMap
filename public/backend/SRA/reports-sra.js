@@ -738,10 +738,10 @@ export async function showRequestReportModal() {
   ];
 
   modal.innerHTML = `
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-      <div class="p-6">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-4 sm:p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-bold text-gray-900">Request Report</h3>
+          <h3 class="text-lg sm:text-xl font-bold text-gray-900">Request Report</h3>
           <button id="closeRequestModal"
                   class="text-gray-400 hover:text-gray-600">
             <i class="fas fa-times text-xl"></i>
@@ -749,44 +749,81 @@ export async function showRequestReportModal() {
         </div>
 
         <form id="requestReportForm" class="space-y-4">
+          <!-- Custom Handler Dropdown -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
               Select Handler <span class="text-red-500">*</span>
             </label>
-            <select id="handlerSelect" required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
-              <option value="">Choose a handler</option>
-              ${handlers.map(h => `<option value="${h.id}">${escapeHtml(h.name)}${h.email ? ' (' + h.email + ')' : ''}</option>`).join('')}
-            </select>
+            <div class="relative">
+              <button type="button" id="handlerDropdownBtn" 
+                      class="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-[var(--cane-500)] focus:outline-none focus:border-[var(--cane-600)] focus:ring-2 focus:ring-[var(--cane-600)] focus:ring-opacity-20 transition-all">
+                <span id="handlerDropdownLabel" class="text-gray-600">Choose a handler</span>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform" id="handlerDropdownIcon"></i>
+              </button>
+              
+              <!-- Custom Dropdown Menu -->
+              <div id="handlerDropdownMenu" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                <div class="sticky top-0 bg-gray-50 px-4 py-2 border-b border-gray-200">
+                  <input type="text" id="handlerSearchInput" placeholder="Search handlers..." 
+                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+                </div>
+                <div id="handlerOptionsList" class="py-1">
+                  ${handlers.map(h => `
+                    <button type="button" class="handler-option w-full text-left px-4 py-3 hover:bg-[var(--cane-50)] transition-colors border-b border-gray-100 last:border-b-0" data-value="${h.id}">
+                      <div class="font-medium text-gray-900">${escapeHtml(h.name)}</div>
+                      ${h.email ? `<div class="text-xs text-gray-500 mt-0.5">${escapeHtml(h.email)}</div>` : ''}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+              <input type="hidden" id="handlerSelect" required>
+            </div>
           </div>
 
+          <!-- Report Type Dropdown -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
               Report Type <span class="text-red-500">*</span>
             </label>
-            <select id="reportTypeSelect" required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
-              <option value="">Choose report type</option>
-              ${reportTypes.map(rt => `<option value="${rt.value}">${rt.label}</option>`).join('')}
-            </select>
+            <div class="relative">
+              <button type="button" id="reportTypeDropdownBtn" 
+                      class="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-[var(--cane-500)] focus:outline-none focus:border-[var(--cane-600)] focus:ring-2 focus:ring-[var(--cane-600)] focus:ring-opacity-20 transition-all">
+                <span id="reportTypeDropdownLabel" class="text-gray-600">Choose report type</span>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform" id="reportTypeDropdownIcon"></i>
+              </button>
+              
+              <!-- Custom Dropdown Menu -->
+              <div id="reportTypeDropdownMenu" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                <div id="reportTypeOptionsList" class="py-1">
+                  ${reportTypes.map(rt => `
+                    <button type="button" class="report-type-option w-full text-left px-4 py-3 hover:bg-[var(--cane-50)] transition-colors border-b border-gray-100 last:border-b-0" data-value="${rt.value}">
+                      <div class="font-medium text-gray-900">${rt.label}</div>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+              <input type="hidden" id="reportTypeSelect" required>
+            </div>
           </div>
 
+          <!-- Notes -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
               Notes (Optional)
             </label>
             <textarea id="requestNotes" rows="3"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent"
+                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[var(--cane-600)] focus:ring-2 focus:ring-[var(--cane-600)] focus:ring-opacity-20 transition-all resize-none"
                       placeholder="Add any specific instructions or details..."></textarea>
           </div>
 
+          <!-- Buttons -->
           <div class="flex items-center justify-end gap-3 pt-4 border-t">
             <button type="button" id="cancelRequestBtn"
-                    class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium">
+                    class="px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-colors">
               Cancel
             </button>
             <button type="submit" id="submitRequestBtn"
-                    class="px-4 py-2 rounded-lg bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white font-semibold">
+                    class="px-4 py-2 rounded-lg bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold transition-colors">
               Send Request
             </button>
           </div>
@@ -808,12 +845,95 @@ export async function showRequestReportModal() {
   closeBtn.addEventListener('click', closeModal);
   cancelBtn.addEventListener('click', closeModal);
 
+  // Handler Dropdown Setup
+  const handlerDropdownBtn = modal.querySelector('#handlerDropdownBtn');
+  const handlerDropdownMenu = modal.querySelector('#handlerDropdownMenu');
+  const handlerDropdownLabel = modal.querySelector('#handlerDropdownLabel');
+  const handlerDropdownIcon = modal.querySelector('#handlerDropdownIcon');
+  const handlerSearchInput = modal.querySelector('#handlerSearchInput');
+  const handlerOptionsList = modal.querySelector('#handlerOptionsList');
+  const handlerSelect = modal.querySelector('#handlerSelect');
+  const handlerOptions = modal.querySelectorAll('.handler-option');
+
+  // Toggle handler dropdown
+  handlerDropdownBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isHidden = handlerDropdownMenu.classList.contains('hidden');
+    handlerDropdownMenu.classList.toggle('hidden');
+    handlerDropdownIcon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (isHidden) handlerSearchInput.focus();
+  });
+
+  // Handler search functionality
+  handlerSearchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    modal.querySelectorAll('.handler-option').forEach(option => {
+      const text = option.textContent.toLowerCase();
+      option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+    });
+  });
+
+  // Handler option selection
+  handlerOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.preventDefault();
+      const value = option.getAttribute('data-value');
+      const name = option.querySelector('.font-medium').textContent;
+      handlerSelect.value = value;
+      handlerDropdownLabel.textContent = name;
+      handlerDropdownMenu.classList.add('hidden');
+      handlerDropdownIcon.style.transform = 'rotate(0deg)';
+    });
+  });
+
+  // Report Type Dropdown Setup
+  const reportTypeDropdownBtn = modal.querySelector('#reportTypeDropdownBtn');
+  const reportTypeDropdownMenu = modal.querySelector('#reportTypeDropdownMenu');
+  const reportTypeDropdownLabel = modal.querySelector('#reportTypeDropdownLabel');
+  const reportTypeDropdownIcon = modal.querySelector('#reportTypeDropdownIcon');
+  const reportTypeOptionsList = modal.querySelector('#reportTypeOptionsList');
+  const reportTypeSelect = modal.querySelector('#reportTypeSelect');
+  const reportTypeOptions = modal.querySelectorAll('.report-type-option');
+
+  // Toggle report type dropdown
+  reportTypeDropdownBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isHidden = reportTypeDropdownMenu.classList.contains('hidden');
+    reportTypeDropdownMenu.classList.toggle('hidden');
+    reportTypeDropdownIcon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  });
+
+  // Report type option selection
+  reportTypeOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.preventDefault();
+      const value = option.getAttribute('data-value');
+      const label = option.querySelector('.font-medium').textContent;
+      reportTypeSelect.value = value;
+      reportTypeDropdownLabel.textContent = label;
+      reportTypeDropdownMenu.classList.add('hidden');
+      reportTypeDropdownIcon.style.transform = 'rotate(0deg)';
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!handlerDropdownBtn.contains(e.target) && !handlerDropdownMenu.contains(e.target)) {
+      handlerDropdownMenu.classList.add('hidden');
+      handlerDropdownIcon.style.transform = 'rotate(0deg)';
+    }
+    if (!reportTypeDropdownBtn.contains(e.target) && !reportTypeDropdownMenu.contains(e.target)) {
+      reportTypeDropdownMenu.classList.add('hidden');
+      reportTypeDropdownIcon.style.transform = 'rotate(0deg)';
+    }
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const handlerId = document.getElementById('handlerSelect').value;
-    const reportType = document.getElementById('reportTypeSelect').value;
-    const notes = document.getElementById('requestNotes').value;
+    const handlerId = handlerSelect.value;
+    const reportType = reportTypeSelect.value;
+    const notes = modal.querySelector('#requestNotes').value;
 
     if (!handlerId || !reportType) {
       alert('Please select both handler and report type');
