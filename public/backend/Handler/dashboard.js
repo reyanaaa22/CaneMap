@@ -2494,8 +2494,22 @@ function renderTasksTable(filter = 'all') {
   let filteredTasks = allTasksData;
   if (filter !== 'all') {
     filteredTasks = allTasksData.filter(task => {
-      const status = (task.status || 'pending').toLowerCase();
-      return status === filter.toLowerCase();
+      if (filter === 'worker') {
+        // Worker tasks: have metadata.workers_count or don't have metadata.driver
+        return task.metadata && (task.metadata.workers_count !== undefined || !task.metadata.driver);
+      } else if (filter === 'driver') {
+        // Driver tasks: have metadata.driver
+        return task.metadata && task.metadata.driver;
+      } else if (filter === 'pending') {
+        // Pending (On going) tasks
+        const status = (task.status || 'pending').toLowerCase();
+        return status === 'pending';
+      } else if (filter === 'done') {
+        // Finished (Done) tasks
+        const status = (task.status || 'pending').toLowerCase();
+        return status === 'done';
+      }
+      return true;
     });
   }
 
@@ -2508,9 +2522,11 @@ function renderTasksTable(filter = 'all') {
   if (filteredTasks.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-          <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
-          <p>No tasks found</p>
+        <td colspan="5" class="py-10 text-center text-gray-500" style="width: 100%; padding: 2.5rem 1.5rem; text-align: center;">
+          <div class="flex flex-col items-center justify-center mx-auto" style="max-width: 100%;">
+            <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
+            <p class="text-base font-medium">No tasks found</p>
+          </div>
         </td>
       </tr>
     `;
