@@ -424,6 +424,15 @@ async function loadUserData(user) {
                     }
                     profileImg.src = data.photoURL;
                     profileImg.alt = 'Profile Photo';
+                    profileImg.onload = () => {
+                        profileImg.style.display = 'block';
+                    };
+                    profileImg.onerror = () => {
+                        profileImg.style.display = 'none';
+                        // Show initials if image fails to load
+                        const userInitials = document.getElementById('userInitials');
+                        if (userInitials) userInitials.style.display = 'flex';
+                    };
                 }
             }
         };
@@ -471,8 +480,40 @@ window.__syncDashboardProfile = async function() {
                     const profileIconDefault = document.getElementById('profileIconDefault');
                     if (profilePhoto) {
                         profilePhoto.src = photoUrl;
-                        profilePhoto.classList.remove('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                        profilePhoto.onload = () => {
+                            profilePhoto.classList.remove('hidden');
+                            if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                        };
+                        profilePhoto.onerror = () => {
+                            profilePhoto.classList.add('hidden');
+                            if (profileIconDefault) profileIconDefault.classList.remove('hidden');
+                        };
+                    }
+                    
+                    // Also update sidebar profile image
+                    const profileImageContainer = document.getElementById('profileImageContainer');
+                    if (profileImageContainer) {
+                        let profileImg = profileImageContainer.querySelector('img');
+                        if (!profileImg) {
+                            profileImg = document.createElement('img');
+                            profileImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+                            profileImageContainer.innerHTML = '';
+                            profileImageContainer.appendChild(profileImg);
+                        }
+                        profileImg.src = photoUrl;
+                        profileImg.alt = 'Profile Photo';
+                        profileImg.onload = () => {
+                            profileImg.style.display = 'block';
+                            // Hide initials when image loads successfully
+                            const userInitials = document.getElementById('userInitials');
+                            if (userInitials) userInitials.style.display = 'none';
+                        };
+                        profileImg.onerror = () => {
+                            profileImg.style.display = 'none';
+                            // Show initials if image fails to load
+                            const userInitials = document.getElementById('userInitials');
+                            if (userInitials) userInitials.style.display = 'flex';
+                        };
                     }
                 }
             } catch(e) {
