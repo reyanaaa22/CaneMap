@@ -252,6 +252,53 @@ async function initNotifications(userId) {
     });
   };
 
+  // Close button handler
+  const closeBtn = document.getElementById('notificationCloseBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      dropdown.classList.add('hidden');
+      removeBackdrop();
+    });
+  }
+
+  // Mark all as read button handler
+  const markAllReadBtn = document.getElementById('notificationMarkAllReadBtn');
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      try {
+        const { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+        const { db } = await import('../Common/firebase-config.js');
+        
+        // Get all unread notifications for this user
+        const notificationsRef = collection(db, "notifications");
+        const notificationsQuery = query(
+          notificationsRef,
+          where("userId", "==", userId)
+        );
+        
+        const snapshot = await getDocs(notificationsQuery);
+        const unreadNotifications = snapshot.docs
+          .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+          .filter(notif => !notif.read);
+        
+        // Mark all as read
+        const updatePromises = unreadNotifications.map(notif =>
+          updateDoc(doc(db, "notifications", notif.id), {
+            read: true,
+            readAt: serverTimestamp()
+          })
+        );
+        
+        await Promise.all(updatePromises);
+        console.log(`✅ Marked ${unreadNotifications.length} notifications as read`);
+      } catch (err) {
+        console.error('Failed to mark all notifications as read:', err);
+      }
+    });
+  }
+
   if (refreshBtn) {
     refreshBtn.addEventListener("click", (event) => {
       event.stopPropagation();
