@@ -1025,15 +1025,41 @@ async function loadRecentTaskActivity(handlerId) {
 
 // Helper function to get time ago string
 function getTimeAgo(date) {
+  if (!date) return 'Unknown';
+  
+  // Convert to Date if it's a Firestore Timestamp
+  let dateObj;
+  if (date.toDate && typeof date.toDate === 'function') {
+    // Firestore Timestamp
+    dateObj = date.toDate();
+  } else if (date.seconds) {
+    // Firestore Timestamp object with seconds property
+    dateObj = new Date(date.seconds * 1000);
+  } else if (date instanceof Date) {
+    // Already a Date object
+    dateObj = date;
+  } else if (typeof date === 'number') {
+    // Timestamp in milliseconds
+    dateObj = new Date(date);
+  } else {
+    // Try to parse as date string
+    dateObj = new Date(date);
+  }
+  
+  // Validate the date
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid date';
+  }
+  
   const now = new Date();
-  const diffInSeconds = Math.floor((now - date) / 1000);
+  const diffInSeconds = Math.floor((now - dateObj) / 1000);
 
   if (diffInSeconds < 60) return 'Just now';
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
 
-  return date.toLocaleDateString();
+  return dateObj.toLocaleDateString();
 }
 
 function formatTimeAgo(timestamp) {
