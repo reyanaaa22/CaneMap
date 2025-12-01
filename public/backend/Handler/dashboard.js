@@ -2653,14 +2653,20 @@ function renderTasksTable(filter = 'all') {
   // Render table
   if (filteredTasks.length === 0) {
     tbody.innerHTML = `
-      <tr>
-        <td colspan="5" class="py-10 text-center text-gray-500" style="width: 100%; padding: 2.5rem 1.5rem; text-align: center;">
-          <div class="flex flex-col items-center justify-center mx-auto" style="max-width: 100%;">
+      <div class="text-center text-gray-500 py-10">
           <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
-            <p class="text-base font-medium">No tasks found</p>
-          </div>
-        </td>
-      </tr>
+          <p class="text-base font-medium">No tasks found</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (filteredTasks.length === 0) {
+    tbody.innerHTML = `
+      <div class="text-center text-gray-500 py-10">
+          <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
+          <p class="text-base font-medium">No tasks found</p>
+      </div>
     `;
     return;
   }
@@ -2681,33 +2687,31 @@ function renderTasksTable(filter = 'all') {
                        'bg-gray-100 text-gray-800';
 
     return `
-      <tr class="hover:bg-gray-50">
-        <td class="px-6 py-4">
+      <div class="hover:bg-gray-50 flex flex-row justify-between items-center bg-white rounded-xl p-4 shadow-sm transition-all hover:shadow-md w-full">
+        <div class="flex-1.5 min-w-0">
           <div class="text-sm font-medium text-gray-900">${escapeHtml(taskTitle)}</div>
           ${task.notes ? `<div class="text-xs text-gray-500 mt-1">${escapeHtml(task.notes.substring(0, 50))}${task.notes.length > 50 ? '...' : ''}</div>` : ''}
-        </td>
-        <td class="px-6 py-4 text-sm text-gray-700">
+        </div>
+        <div class="flex-1 min-w-0 text-sm text-gray-700 truncate">
           ${escapeHtml(field.name)}
-        </td>
-        <td class="px-6 py-4 text-sm text-gray-600">
+        </div>
+        <div class="hidden text-sm text-gray-600">
           ${deadlineStr}
-        </td>
-        <td class="px-6 py-4">
+        </div>
+        <div class="hidden">
           <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
             ${status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
-        </td>
-        <td class="px-6 py-4 text-sm font-medium">
-          <div class="flex items-center space-x-2">
-            <button onclick="viewTaskDetails('${task.id}')" class="text-blue-600 hover:text-blue-700" title="View Details">
-              <i class="fas fa-eye"></i>
-            </button>
-            <button onclick="confirmDeleteTask('${task.id}')" class="text-red-600 hover:text-red-700" title="Delete Task">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
+        </div>
+        <div class="flex-0-auto flex gap-2 justify-end">
+          <button onclick="viewTaskDetails('${task.id}')" class="text-blue-600 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50" title="View Details">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button onclick="confirmDeleteTask('${task.id}')" class="text-red-600 hover:text-red-700 p-2 rounded-lg hover:bg-red-50" title="Delete Task">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
     `;
   }).join('');
 }
