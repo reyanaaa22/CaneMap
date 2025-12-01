@@ -257,7 +257,7 @@ export function setupDriverTasksListener(callback) {
     // Collect all unique field IDs first
     const fieldIds = new Set();
     for (const [taskId, taskData] of tasksMap) {
-      const fieldId = taskData.fieldId || taskData.field_id;
+        const fieldId = taskData.fieldId || taskData.field_id;
       if (fieldId) fieldIds.add(fieldId);
     }
 
@@ -266,18 +266,18 @@ export function setupDriverTasksListener(callback) {
       if (fieldNameCache.has(fieldId)) {
         return { fieldId, fieldName: fieldNameCache.get(fieldId) };
       }
-      try {
-        const fieldRef = doc(db, 'fields', fieldId);
-        const fieldSnap = await getDoc(fieldRef);
-        if (fieldSnap.exists()) {
-          const fieldData = fieldSnap.data();
+        try {
+          const fieldRef = doc(db, 'fields', fieldId);
+          const fieldSnap = await getDoc(fieldRef);
+          if (fieldSnap.exists()) {
+            const fieldData = fieldSnap.data();
           const fieldName = fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field';
           fieldNameCache.set(fieldId, fieldName);
           return { fieldId, fieldName };
+          }
+        } catch (err) {
+          console.debug('Field name fetch error:', err);
         }
-      } catch (err) {
-        console.debug('Field name fetch error:', err);
-      }
       return { fieldId, fieldName: 'Unknown Field' };
     });
 
@@ -384,7 +384,7 @@ export async function getDriverTasks(statusFilter = null) {
     // Collect all unique field IDs first
     const fieldIds = new Set();
     const tasksData = [];
-    
+
     for (const docSnap of snapshot.docs) {
       const taskData = docSnap.data();
 
@@ -394,7 +394,7 @@ export async function getDriverTasks(statusFilter = null) {
       }
 
       // Collect field IDs for batch fetching
-      const fieldId = taskData.fieldId || taskData.field_id;
+        const fieldId = taskData.fieldId || taskData.field_id;
       if (fieldId) fieldIds.add(fieldId);
       
       tasksData.push({
@@ -406,19 +406,19 @@ export async function getDriverTasks(statusFilter = null) {
 
     // Batch fetch all field names at once
     const fieldPromises = Array.from(fieldIds).map(async (fieldId) => {
-      try {
-        const fieldRef = doc(db, 'fields', fieldId);
-        const fieldSnap = await getDoc(fieldRef);
-        if (fieldSnap.exists()) {
-          const fieldData = fieldSnap.data();
+        try {
+          const fieldRef = doc(db, 'fields', fieldId);
+          const fieldSnap = await getDoc(fieldRef);
+          if (fieldSnap.exists()) {
+            const fieldData = fieldSnap.data();
           return {
             fieldId,
             fieldName: fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field'
           };
+          }
+        } catch (err) {
+          console.debug('Field name fetch error:', err);
         }
-      } catch (err) {
-        console.debug('Field name fetch error:', err);
-      }
       return { fieldId, fieldName: 'Unknown Field' };
     });
 

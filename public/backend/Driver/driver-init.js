@@ -1803,12 +1803,12 @@ window.openDriverLogWorkModal = async function () {
           <button id="swal-switchCamBtn" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm" style="display:none;">
             <i class="fas fa-camera-rotate"></i> Switch Camera
           </button>
-          <div id="swal-captureContainer" class="flex items-center justify-center">
-            <button id="swal-captureBtn" class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
-              Capture
-            </button>
-          </div>
-        </div>
+  <div id="swal-captureContainer" class="flex items-center justify-center">
+    <button id="swal-captureBtn" class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
+      Capture
+    </button>
+  </div>
+</div>
       </div>
     `;
 
@@ -2438,21 +2438,21 @@ export function initializeDriverDashboard() {
 
   // Setup all navigation
   try {
-    setupNavigation();
+  setupNavigation();
   } catch (error) {
     console.error("❌ Error setting up navigation:", error);
   }
 
   // Setup profile dropdown
   try {
-    setupProfileDropdown();
+  setupProfileDropdown();
   } catch (error) {
     console.error("❌ Error setting up profile dropdown:", error);
   }
 
   // Load initial dashboard data
   try {
-    loadDashboardData();
+  loadDashboardData();
   } catch (error) {
     console.error("❌ Error loading dashboard data:", error);
   }

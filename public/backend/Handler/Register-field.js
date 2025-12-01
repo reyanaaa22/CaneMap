@@ -133,7 +133,7 @@ function setupCameraAndUpload(config) {
           });
         }
 
-        video.srcObject = stream;
+      video.srcObject = stream;
         currentFacingMode = facingModeParam;
 
         // Show switch button if multiple cameras available (especially on mobile)
@@ -146,9 +146,9 @@ function setupCameraAndUpload(config) {
             ? '<i class="fas fa-camera-rotate"></i> Switch to Back Camera'
             : '<i class="fas fa-camera-rotate"></i> Switch to Front Camera';
         }
-      } catch (err) {
-        showPopupMessage('Camera not accessible. Please allow camera permission or upload a file instead.', 'error');
-        cameraDiv.remove();
+    } catch (err) {
+      showPopupMessage('Camera not accessible. Please allow camera permission or upload a file instead.', 'error');
+      cameraDiv.remove();
         return false;
       }
       return true;
@@ -208,19 +208,19 @@ function setupCameraAndUpload(config) {
 
       // Use Photo button handler
       document.getElementById("usePhotoBtn").onclick = () => {
-        // Save dataURL
-        base64Holder.value = dataUrl;
+      // Save dataURL
+      base64Holder.value = dataUrl;
 
-        // Display filename only
-        const fileName = `${takeBtnId}_${Date.now()}.png`;
-        if (nameDisplay) nameDisplay.textContent = fileName;
+      // Display filename only
+      const fileName = `${takeBtnId}_${Date.now()}.png`;
+      if (nameDisplay) nameDisplay.textContent = fileName;
 
-        // Stop camera and close
-        stream.getTracks().forEach((t) => t.stop());
-        cameraDiv.remove();
+      // Stop camera and close
+      stream.getTracks().forEach((t) => t.stop());
+      cameraDiv.remove();
 
-        // Reset file input (so the camera photo is the one that counts)
-        fileInput.value = "";
+      // Reset file input (so the camera photo is the one that counts)
+      fileInput.value = "";
       };
     };
 

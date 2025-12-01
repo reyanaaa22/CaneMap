@@ -551,13 +551,13 @@
         const { downloadFile } = await import('../../../backend/Common/android-download.js');
         
         // Generate blob and use download utility (works for both browser and Android)
-        const pdfBlob = await new Promise((resolve, reject) => {
-          window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
-        });
-        await downloadFile(pdfBlob, filename);
+          const pdfBlob = await new Promise((resolve, reject) => {
+            window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
+          });
+          await downloadFile(pdfBlob, filename);
         
-        // Small delay to ensure download starts before hiding animation
-        await new Promise(resolve => setTimeout(resolve, 500));
+          // Small delay to ensure download starts before hiding animation
+          await new Promise(resolve => setTimeout(resolve, 500));
         console.log('✅ PDF generated successfully');
       } catch (error) {
         console.error('Error generating PDF:', error);

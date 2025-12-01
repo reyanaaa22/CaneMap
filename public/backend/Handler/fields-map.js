@@ -1166,13 +1166,13 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         'Start Ratooning Cycle?',
         `This will:\n• Reset the field to "Active" status\n• Start a new ratoon cycle (regrowth from existing roots)\n• Archive the previous harvest data\n• Reset growth tracking\n\nRatoon start date will be set to the last harvest date.\nExpected harvest will be calculated based on your cane variety.`,
         async () => {
-          btn.disabled = true;
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-          try {
-            const result = await handleRatooning(currentUserId, fieldId);
-            const ratoonDateStr = result.ratoonDate ? new Date(result.ratoonDate).toLocaleDateString() : 'N/A';
-            const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
+      try {
+        const result = await handleRatooning(currentUserId, fieldId);
+        const ratoonDateStr = result.ratoonDate ? new Date(result.ratoonDate).toLocaleDateString() : 'N/A';
+        const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
             
             // Show success message
             showConfirmModal(
@@ -1180,19 +1180,19 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
               `Ratoon Cycle: #${result.ratoonNumber}\nRatoon Start Date: ${ratoonDateStr}\nExpected Harvest: ${expectedHarvestStr}`,
               () => {
                 modal.remove();
-                window.location.reload();
+        window.location.reload();
               }
             );
-          } catch (err) {
-            console.error('Ratooning failed:', err);
+      } catch (err) {
+        console.error('Ratooning failed:', err);
             showConfirmModal(
               '❌ Ratooning Failed',
               err.message,
               () => {}
             );
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-seedling"></i> Ratoon';
-          }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-seedling"></i> Ratoon';
+      }
         }
       );
     });
@@ -1206,13 +1206,13 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         'Start Replanting Cycle?',
         `This will:\n• Reset the field to "Active" status\n• Start a completely new planting cycle\n• Archive ALL previous data (including all ratoons)\n• Clear all growth tracking data\n• Reset fertilization dates\n\nPlanting date will be set to the last harvest date.\nExpected harvest will be calculated based on your cane variety.`,
         async () => {
-          btn.disabled = true;
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-          try {
-            const result = await handleReplanting(currentUserId, fieldId);
-            const plantingDateStr = result.plantingDate ? new Date(result.plantingDate).toLocaleDateString() : 'N/A';
-            const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
+      try {
+        const result = await handleReplanting(currentUserId, fieldId);
+        const plantingDateStr = result.plantingDate ? new Date(result.plantingDate).toLocaleDateString() : 'N/A';
+        const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
             
             // Show success message
             showConfirmModal(
@@ -1220,19 +1220,19 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
               `Planting Cycle: #${result.plantingCycleNumber}\nPlanting Date: ${plantingDateStr}\nExpected Harvest: ${expectedHarvestStr}`,
               () => {
                 modal.remove();
-                window.location.reload();
+        window.location.reload();
               }
             );
-          } catch (err) {
-            console.error('Replanting failed:', err);
+      } catch (err) {
+        console.error('Replanting failed:', err);
             showConfirmModal(
               '❌ Replanting Failed',
               err.message,
               () => {}
             );
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-redo"></i> Replant';
-          }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-redo"></i> Replant';
+      }
         }
       );
     });
@@ -1544,7 +1544,7 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
     } else {
       return 'bg-blue-100 text-blue-800';
     }
-  }
+    }
 
   // Shared function to render task list (UPDATED: adds delete button)
   function renderTaskList(tasks) {
@@ -1579,9 +1579,9 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
             <div class="flex items-center gap-2 ml-3 flex-shrink-0 flex-col sm:flex-row">
               <div class="flex flex-col gap-1 items-end">
                 <!-- Overall Status badge -->
-                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor}">
-                  ${status}
-                </span>
+              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor}">
+                ${status}
+              </span>
                 ${t.metadata && t.metadata.driver && t.driverDeliveryStatus && t.driverDeliveryStatus.status ? `
                 <!-- Driver Delivery Status badge -->
                 <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${getDriverStatusBadgeClass(t.driverDeliveryStatus.status)}">

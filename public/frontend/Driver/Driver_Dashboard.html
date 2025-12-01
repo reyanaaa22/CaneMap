@@ -289,13 +289,13 @@
                     >
                       <i class="fas fa-check-double text-sm"></i>
                     </button>
-                    <button
-                      id="refreshNotifications"
+                  <button
+                    id="refreshNotifications"
                       class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors"
                       title="Refresh"
-                    >
-                      <i class="fas fa-sync-alt text-sm"></i>
-                    </button>
+                  >
+                    <i class="fas fa-sync-alt text-sm"></i>
+                  </button>
                     <button
                       id="closeNotificationDropdown"
                       class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -1054,15 +1054,15 @@
             
             if (!isHidden) {
               if (isMobile) {
-                // Position dropdown below the header on mobile
-                const header = document.querySelector('header');
-                const headerRect = header.getBoundingClientRect();
+              // Position dropdown below the header on mobile
+              const header = document.querySelector('header');
+              const headerRect = header.getBoundingClientRect();
                 notificationDropdown.style.position = 'fixed';
-                notificationDropdown.style.top = `${headerRect.bottom + window.scrollY + 5}px`;
-                notificationDropdown.style.left = '1rem';
-                notificationDropdown.style.right = '1rem';
+              notificationDropdown.style.top = `${headerRect.bottom + window.scrollY + 5}px`;
+              notificationDropdown.style.left = '1rem';
+              notificationDropdown.style.right = '1rem';
                 notificationDropdown.style.maxWidth = 'calc(100% - 2rem)';
-                notificationDropdown.style.width = 'auto';
+              notificationDropdown.style.width = 'auto';
               } else {
                 // Desktop: position relative to button
                 const btnRect = notificationBtn.getBoundingClientRect();

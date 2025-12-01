@@ -49,7 +49,7 @@ onAuthStateChanged(auth, async (user) => {
     
     if (isDashboardPopulated) {
       console.log('⏭️ Driver dashboard already initialized and populated, skipping...');
-      return;
+    return;
     }
     // If dashboard is not populated, reset initialization to allow proper setup
     console.log('🔄 Dashboard not populated, re-initializing driver dashboard...');
@@ -353,8 +353,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!userId) return;
 
     try {
-      let q = query(collection(db, "notifications"), where("userId", "==", userId));
-      let snap = await getDocs(q);
+    let q = query(collection(db, "notifications"), where("userId", "==", userId));
+    let snap = await getDocs(q);
 
       const unread = snap.docs.filter((d) => {
         const data = d.data();
@@ -367,13 +367,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // Update both 'read' and 'status' fields for lobby compatibility
-      await Promise.all(
-        unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
-          read: true,
+    await Promise.all(
+      unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
+        read: true,
           status: "read",
-          readAt: serverTimestamp()
-        }))
-      );
+        readAt: serverTimestamp()
+      }))
+    );
 
       console.log(`✅ Marked ${unread.length} notifications as read.`);
       

@@ -661,7 +661,7 @@ export function initializeHandlerWorkersSection() {
       // Fetch user details from users collection - batch fetch for better performance
       const workers = [];
       const drivers = [];
-      
+
       // Batch fetch all user documents
       const userPromises = approvedUserIds.map(userId => getDoc(doc(db, "users", userId)));
       const userSnaps = await Promise.all(userPromises);
@@ -671,12 +671,12 @@ export function initializeHandlerWorkersSection() {
       const userDataMap = new Map();
       
       userSnaps.forEach((userSnap, index) => {
-        if (!userSnap.exists()) return;
+            if (!userSnap.exists()) return;
         const userId = approvedUserIds[index];
-        const userData = userSnap.data();
+            const userData = userSnap.data();
         userDataMap.set(userId, userData);
-        const userRole = (userData.role || "").toLowerCase();
-        if (userRole === "driver") {
+            const userRole = (userData.role || "").toLowerCase();
+            if (userRole === "driver") {
           driverUserIds.push(userId);
         }
       });
@@ -686,9 +686,9 @@ export function initializeHandlerWorkersSection() {
       const badgeSnaps = await Promise.all(badgePromises);
       const badgeDataMap = new Map();
       badgeSnaps.forEach((badgeSnap, index) => {
-        if (badgeSnap.exists()) {
+                if (badgeSnap.exists()) {
           badgeDataMap.set(driverUserIds[index], badgeSnap.data());
-        }
+                }
       });
 
       // Process each user
@@ -734,15 +734,15 @@ const address =
               if (cachedFieldName) {
                 fieldName = cachedFieldName;
               } else {
-                try {
-                  const fieldRef = doc(db, 'fields', req.fieldId);
-                  const fieldSnap = await getDoc(fieldRef);
-                  if (fieldSnap.exists()) {
-                    fieldName = fieldSnap.data().fieldName || fieldSnap.data().name || 'Unknown Field';
+              try {
+                const fieldRef = doc(db, 'fields', req.fieldId);
+                const fieldSnap = await getDoc(fieldRef);
+                if (fieldSnap.exists()) {
+                  fieldName = fieldSnap.data().fieldName || fieldSnap.data().name || 'Unknown Field';
                     fieldNameCache.set(req.fieldId, fieldName);
-                  }
-                } catch (err) {
-                  console.warn(`Could not fetch field ${req.fieldId}:`, err);
+                }
+              } catch (err) {
+                console.warn(`Could not fetch field ${req.fieldId}:`, err);
                 }
               }
 
@@ -1436,8 +1436,8 @@ async function showDetailsModal(uid) {
       console.error('Error loading user details:', err);
       loadingModal.remove();
       alert('Failed to load user details. Please try again.');
-    }
   }
+}
 
   // Compute age from birthday (accepts YYYY-MM-DD string or Date)
   function computeAge(birth) {

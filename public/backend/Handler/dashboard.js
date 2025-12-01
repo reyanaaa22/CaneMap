@@ -2634,7 +2634,7 @@ function renderTasksTable(filter = 'all') {
         return task.metadata && task.metadata.driver;
       } else if (filter === 'pending') {
         // Pending (On going) tasks
-        const status = (task.status || 'pending').toLowerCase();
+      const status = (task.status || 'pending').toLowerCase();
         return status === 'pending';
       } else if (filter === 'done') {
         // Finished (Done) tasks
@@ -2656,7 +2656,7 @@ function renderTasksTable(filter = 'all') {
       <tr>
         <td colspan="5" class="py-10 text-center text-gray-500" style="width: 100%; padding: 2.5rem 1.5rem; text-align: center;">
           <div class="flex flex-col items-center justify-center mx-auto" style="max-width: 100%;">
-            <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
+          <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
             <p class="text-base font-medium">No tasks found</p>
           </div>
         </td>
