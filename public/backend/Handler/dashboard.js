@@ -2685,12 +2685,39 @@ function renderTasksTable(filter = 'all') {
     const statusClass = status === 'done' ? 'bg-green-100 text-green-800' :
                        status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                        'bg-gray-100 text-gray-800';
+    
+    // Determine task type and icon
+    const isDriverTask = task.metadata && task.metadata.driver;
+    const taskIcon = isDriverTask ? 'fa-truck' : 'fa-user';
+    const taskTypeBgClass = isDriverTask ? 'bg-blue-100' : 'bg-green-100';
+    const taskTypeTextClass = isDriverTask ? 'text-blue-600' : 'text-green-600';
+    
+    // Card styling based on status
+    let cardClass = 'flex flex-row justify-between items-center rounded-xl p-4 shadow-sm transition-all w-full ';
+    let statusIcon = '';
+    
+    if (status === 'done') {
+      cardClass += 'bg-green-50 border-l-4 border-l-green-500 hover:shadow-md';
+      statusIcon = '<i class="fas fa-check-circle text-green-500 ml-2"></i>';
+    } else if (status === 'pending') {
+      cardClass += 'bg-yellow-50 border-l-4 border-l-yellow-500 hover:shadow-md';
+      statusIcon = '<i class="fas fa-clock text-yellow-500 ml-2"></i>';
+    } else {
+      cardClass += 'bg-gray-50 border-l-4 border-l-gray-400 hover:shadow-md';
+      statusIcon = '<i class="fas fa-question-circle text-gray-500 ml-2"></i>';
+    }
 
     return `
-      <div class="hover:bg-gray-50 flex flex-row justify-between items-center bg-white rounded-xl p-4 shadow-sm transition-all hover:shadow-md w-full">
-        <div class="flex-1.5 min-w-0">
-          <div class="text-sm font-medium text-gray-900">${escapeHtml(taskTitle)}</div>
-          ${task.notes ? `<div class="text-xs text-gray-500 mt-1">${escapeHtml(task.notes.substring(0, 50))}${task.notes.length > 50 ? '...' : ''}</div>` : ''}
+      <div class="${cardClass}">
+        <div class="flex items-center flex-1.5 min-w-0">
+          <i class="fas ${taskIcon} ${taskTypeTextClass} text-lg mr-2"></i>
+          <div class="min-w-0">
+            <div class="flex items-center">
+              <div class="text-sm font-medium text-gray-900 truncate">${escapeHtml(taskTitle)}</div>
+              ${statusIcon}
+            </div>
+            ${task.notes ? `<div class="text-xs text-gray-500 mt-1">${escapeHtml(task.notes.substring(0, 50))}${task.notes.length > 50 ? '...' : ''}</div>` : ''}
+          </div>
         </div>
         <div class="flex-1 min-w-0 text-sm text-gray-700 truncate">
           ${escapeHtml(field.name)}

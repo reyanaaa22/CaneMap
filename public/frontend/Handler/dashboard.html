@@ -897,23 +897,14 @@ if (sidebar.classList.contains('closed')){
 
 /* Turn rows into card layout */
 #tasksTableBody > div:not(:first-child) {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-    transition: .15s ease;
     width: 100%;
     box-sizing: border-box;
 }
 
-/* Hover lift */
+/* Remove conflicting hover effect since it's now in JS */
 #tasksTableBody > div:not(:first-child):hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 24px rgba(15,23,42,0.12);
+    transform: none;
+    box-shadow: none;
 }
 
 /* Hide columns 3 + 4: Schedule, Status */
@@ -1075,6 +1066,7 @@ if (sidebar.classList.contains('closed')){
         max-width: 100%;
         box-sizing: border-box;
         overflow-x: hidden;
+        padding: 0.5rem;
     }
 
     /* Table wrapper */
@@ -1087,6 +1079,37 @@ if (sidebar.classList.contains('closed')){
         box-sizing: border-box;
     }
 
+    /* Mobile task cards - stack elements vertically */
+    #tasksTableBody > div:not(:first-child) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    /* Mobile task title section */
+    #tasksTableBody div > div:nth-child(1) {
+        width: 100%;
+        flex: none;
+    }
+
+    /* Mobile field info */
+    #tasksTableBody div > div:nth-child(2) {
+        width: 100%;
+        flex: none;
+        font-size: 0.875rem;
+    }
+
+    /* Mobile actions */
+    #tasksTableBody div > div:nth-child(5) {
+        width: 100%;
+        flex: none;
+        justify-content: flex-end;
+    }
+}
+
+/* MOBILE: Responsive task cards */
+@media (max-width: 768px) {
     /* Add left & right padding to the entire list section */
     #tasksTableBody {
         padding-left: 0.75rem;
@@ -1133,7 +1156,7 @@ if (sidebar.classList.contains('closed')){
         flex: 0 0 auto;
         min-width: fit-content;
         gap: 6px;
-}
+    }
 
     /* Slightly reduce icon sizes */
     #tasksTableBody div > div:nth-child(5) i {
