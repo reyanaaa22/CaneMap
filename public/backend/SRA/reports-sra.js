@@ -286,6 +286,125 @@ export async function getAllHandlers() {
 }
 
 /**
+ * Setup custom dropdown event listeners for filters
+ */
+function setupFilterDropdowns() {
+  // Status Dropdown
+  const statusBtn = document.getElementById('filterStatusBtn');
+  const statusMenu = document.getElementById('filterStatusMenu');
+  const statusLabel = document.getElementById('filterStatusLabel');
+  const statusIcon = document.getElementById('filterStatusIcon');
+  const statusInput = document.getElementById('filterStatus');
+  const statusOptions = document.querySelectorAll('.filter-status-option');
+
+  if (statusBtn) {
+    statusBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isHidden = statusMenu.classList.contains('hidden');
+      statusMenu.classList.toggle('hidden');
+      statusIcon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+
+    statusOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.preventDefault();
+        const value = option.getAttribute('data-value');
+        const label = option.querySelector('.font-medium').textContent;
+        statusInput.value = value;
+        statusLabel.textContent = label;
+        statusMenu.classList.add('hidden');
+        statusIcon.style.transform = 'rotate(0deg)';
+      });
+    });
+  }
+
+  // Report Type Dropdown
+  const reportTypeBtn = document.getElementById('filterReportTypeBtn');
+  const reportTypeMenu = document.getElementById('filterReportTypeMenu');
+  const reportTypeLabel = document.getElementById('filterReportTypeLabel');
+  const reportTypeIcon = document.getElementById('filterReportTypeIcon');
+  const reportTypeInput = document.getElementById('filterReportType');
+  const reportTypeOptions = document.querySelectorAll('.filter-report-type-option');
+
+  if (reportTypeBtn) {
+    reportTypeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isHidden = reportTypeMenu.classList.contains('hidden');
+      reportTypeMenu.classList.toggle('hidden');
+      reportTypeIcon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+
+    reportTypeOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.preventDefault();
+        const value = option.getAttribute('data-value');
+        const label = option.querySelector('.font-medium').textContent;
+        reportTypeInput.value = value;
+        reportTypeLabel.textContent = label;
+        reportTypeMenu.classList.add('hidden');
+        reportTypeIcon.style.transform = 'rotate(0deg)';
+      });
+    });
+  }
+
+  // Handler Dropdown
+  const handlerBtn = document.getElementById('filterHandlerBtn');
+  const handlerMenu = document.getElementById('filterHandlerMenu');
+  const handlerLabel = document.getElementById('filterHandlerLabel');
+  const handlerIcon = document.getElementById('filterHandlerIcon');
+  const handlerInput = document.getElementById('filterHandler');
+  const handlerSearch = document.getElementById('filterHandlerSearch');
+  const handlerOptions = document.querySelectorAll('.filter-handler-option');
+
+  if (handlerBtn) {
+    handlerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isHidden = handlerMenu.classList.contains('hidden');
+      handlerMenu.classList.toggle('hidden');
+      handlerIcon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+      if (isHidden) handlerSearch.focus();
+    });
+
+    // Handler search functionality
+    handlerSearch.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      handlerOptions.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      });
+    });
+
+    handlerOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.preventDefault();
+        const value = option.getAttribute('data-value');
+        const label = option.querySelector('.font-medium').textContent;
+        handlerInput.value = value;
+        handlerLabel.textContent = label;
+        handlerMenu.classList.add('hidden');
+        handlerIcon.style.transform = 'rotate(0deg)';
+      });
+    });
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (statusBtn && !statusBtn.contains(e.target) && !statusMenu.contains(e.target)) {
+      statusMenu.classList.add('hidden');
+      statusIcon.style.transform = 'rotate(0deg)';
+    }
+    if (reportTypeBtn && !reportTypeBtn.contains(e.target) && !reportTypeMenu.contains(e.target)) {
+      reportTypeMenu.classList.add('hidden');
+      reportTypeIcon.style.transform = 'rotate(0deg)';
+    }
+    if (handlerBtn && !handlerBtn.contains(e.target) && !handlerMenu.contains(e.target)) {
+      handlerMenu.classList.add('hidden');
+      handlerIcon.style.transform = 'rotate(0deg)';
+    }
+  });
+}
+
+/**
  * Render reports table with filters and export
  * @param {string} containerId - Container element ID
  * @param {Object} filters - Filter options
@@ -308,44 +427,108 @@ export async function renderReportsTable(containerId, filters = {}) {
 
   // Render filter controls
   const handlers = await getAllHandlers();
+  const statusOptions = [
+    { value: '', label: 'All Status' },
+    { value: 'pending_review', label: 'Pending Review' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' }
+  ];
+  const reportTypeOptions = [
+    { value: '', label: 'All Types' },
+    { value: 'crop_planting_records', label: 'Crop Planting Records' },
+    { value: 'growth_updates', label: 'Growth Updates' },
+    { value: 'harvest_schedules', label: 'Harvest Schedules' },
+    { value: 'fertilizer_usage', label: 'Fertilizer Usage' },
+    { value: 'land_titles', label: 'Land Titles' },
+    { value: 'barangay_certifications', label: 'Barangay Certifications' },
+    { value: 'production_costs', label: 'Production Costs' }
+  ];
+
   filterContainer.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 min-w-0">
-      <div class="min-w-0">
+      <!-- Custom Status Dropdown -->
+      <div class="min-w-0 relative">
         <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
-        <select id="filterStatus" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
-          <option value="">All Status</option>
-          <option value="pending_review">Pending Review</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
+        <div class="relative">
+          <button type="button" id="filterStatusBtn" 
+                  class="w-full px-3 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-[var(--cane-500)] focus:outline-none focus:border-[var(--cane-600)] focus:ring-2 focus:ring-[var(--cane-600)] focus:ring-opacity-20 transition-all">
+            <span id="filterStatusLabel" class="text-gray-600 truncate">All Status</span>
+            <i class="fas fa-chevron-down text-gray-400 transition-transform flex-shrink-0 ml-2" id="filterStatusIcon"></i>
+          </button>
+          
+          <!-- Custom Dropdown Menu -->
+          <div id="filterStatusMenu" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-lg z-50 max-h-56 overflow-y-auto">
+            <div id="filterStatusOptionsList" class="py-1">
+              ${statusOptions.map(opt => `
+                <button type="button" class="filter-status-option w-full text-left px-3 py-2 hover:bg-[var(--cane-50)] transition-colors border-b border-gray-100 last:border-b-0 text-sm" data-value="${opt.value}">
+                  <div class="font-medium text-gray-900">${opt.label}</div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <input type="hidden" id="filterStatus" value="">
+        </div>
       </div>
-      <div class="min-w-0">
+
+      <!-- Custom Report Type Dropdown -->
+      <div class="min-w-0 relative">
         <label class="block text-xs font-medium text-gray-700 mb-1">Report Type</label>
-        <select id="filterReportType" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
-          <option value="">All Types</option>
-          <option value="crop_planting_records">Crop Planting Records</option>
-          <option value="growth_updates">Growth Updates</option>
-          <option value="harvest_schedules">Harvest Schedules</option>
-          <option value="fertilizer_usage">Fertilizer Usage</option>
-          <option value="land_titles">Land Titles</option>
-          <option value="barangay_certifications">Barangay Certifications</option>
-          <option value="production_costs">Production Costs</option>
-        </select>
+        <div class="relative">
+          <button type="button" id="filterReportTypeBtn" 
+                  class="w-full px-3 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-[var(--cane-500)] focus:outline-none focus:border-[var(--cane-600)] focus:ring-2 focus:ring-[var(--cane-600)] focus:ring-opacity-20 transition-all">
+            <span id="filterReportTypeLabel" class="text-gray-600 truncate">All Types</span>
+            <i class="fas fa-chevron-down text-gray-400 transition-transform flex-shrink-0 ml-2" id="filterReportTypeIcon"></i>
+          </button>
+          
+          <!-- Custom Dropdown Menu -->
+          <div id="filterReportTypeMenu" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-lg z-50 max-h-56 overflow-y-auto">
+            <div id="filterReportTypeOptionsList" class="py-1">
+              ${reportTypeOptions.map(opt => `
+                <button type="button" class="filter-report-type-option w-full text-left px-3 py-2 hover:bg-[var(--cane-50)] transition-colors border-b border-gray-100 last:border-b-0 text-sm" data-value="${opt.value}">
+                  <div class="font-medium text-gray-900">${opt.label}</div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <input type="hidden" id="filterReportType" value="">
+        </div>
       </div>
-      <div class="min-w-0">
+
+      <!-- Custom Handler Dropdown -->
+      <div class="min-w-0 relative">
         <label class="block text-xs font-medium text-gray-700 mb-1">Handler</label>
-        <select id="filterHandler" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
-          <option value="">All Handlers</option>
-          ${handlers.map(h => `<option value="${h.id}">${escapeHtml(h.name)}</option>`).join('')}
-        </select>
+        <div class="relative">
+          <button type="button" id="filterHandlerBtn" 
+                  class="w-full px-3 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg text-left flex items-center justify-between hover:border-[var(--cane-500)] focus:outline-none focus:border-[var(--cane-600)] focus:ring-2 focus:ring-[var(--cane-600)] focus:ring-opacity-20 transition-all">
+            <span id="filterHandlerLabel" class="text-gray-600 truncate">All Handlers</span>
+            <i class="fas fa-chevron-down text-gray-400 transition-transform flex-shrink-0 ml-2" id="filterHandlerIcon"></i>
+          </button>
+          
+          <!-- Custom Dropdown Menu -->
+          <div id="filterHandlerMenu" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-lg z-50 max-h-56 overflow-y-auto">
+            <div class="sticky top-0 bg-gray-50 px-3 py-2 border-b border-gray-200">
+              <input type="text" id="filterHandlerSearch" placeholder="Search..." 
+                     class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]">
+            </div>
+            <div id="filterHandlerOptionsList" class="py-1">
+              ${handlers.map(h => `
+                <button type="button" class="filter-handler-option w-full text-left px-3 py-2 hover:bg-[var(--cane-50)] transition-colors border-b border-gray-100 last:border-b-0 text-sm" data-value="${h.id}">
+                  <div class="font-medium text-gray-900">${escapeHtml(h.name)}</div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <input type="hidden" id="filterHandler" value="">
+        </div>
       </div>
+
       <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-        <input type="date" id="filterStartDate" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
+        <input type="date" id="filterStartDate" class="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
       </div>
       <div class="min-w-0">
         <label class="block text-xs font-medium text-gray-700 mb-1">End Date</label>
-        <input type="date" id="filterEndDate" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
+        <input type="date" id="filterEndDate" class="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-600)] focus:border-transparent">
       </div>
     </div>
     <div class="flex items-center gap-2 mt-3">
@@ -360,6 +543,9 @@ export async function renderReportsTable(containerId, filters = {}) {
       </button>
     </div>
   `;
+
+  // Setup custom dropdown event listeners
+  setupFilterDropdowns();
 
   // Setup filter event listeners
   document.getElementById('applyFiltersBtn').addEventListener('click', () => {
