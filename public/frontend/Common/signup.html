@@ -770,16 +770,22 @@ html, body {
 
           <div class="form-field">
             <label for="password">Password</label>
-            <div class="input-wrapper">
+            <div class="input-wrapper" style="position: relative;">
               <input type="password" id="password" name="password" minlength="8" placeholder="Create a password" required>
+              <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password')">
+                <i class="fas fa-eye"></i>
+              </button>
             </div>
             <div id="error-password" class="error-message"></div>
           </div>
 
           <div class="form-field">
             <label for="confirm-password">Confirm password</label>
-            <div class="input-wrapper">
+            <div class="input-wrapper" style="position: relative;">
               <input type="password" id="confirm-password" name="confirm-password" minlength="8" placeholder="Confirm your password" required>
+              <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirm-password')">
+                <i class="fas fa-eye"></i>
+              </button>
             </div>
             <div id="error-confirm-password" class="error-message"></div>
           </div>
@@ -873,5 +879,22 @@ html, body {
 
   <script type="module" src="../../backend/Common/firebase-config.js"></script>
   <script type="module" src="../../backend/Common/signup.js"></script>
+  <script>
+    function togglePasswordVisibility(fieldId) {
+      const passwordField = document.getElementById(fieldId);
+      const toggleButton = passwordField.nextElementSibling || passwordField.parentElement.querySelector('.toggle-password');
+      const icon = toggleButton.querySelector('i');
+      
+      if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        passwordField.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+  </script>
 </body>
 </html>
