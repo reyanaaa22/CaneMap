@@ -41,10 +41,19 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // ✅ Prevent re-initialization for same user (fixes double rendering in production)
+  // ✅ Prevent re-initialization for same user ONLY if dashboard is actually populated
   if (isDriverInitialized && currentDriverUserId === user.uid) {
-    console.log('⏭️ Driver dashboard already initialized for this user, skipping...');
-    return;
+    // Check if dashboard is actually populated (not just initialized flag)
+    const userNameEl = document.getElementById("userName");
+    const isDashboardPopulated = userNameEl && userNameEl.textContent && userNameEl.textContent !== "Driver" && userNameEl.textContent.trim() !== "";
+    
+    if (isDashboardPopulated) {
+      console.log('⏭️ Driver dashboard already initialized and populated, skipping...');
+      return;
+    }
+    // If dashboard is not populated, reset initialization to allow proper setup
+    console.log('🔄 Dashboard not populated, re-initializing driver dashboard...');
+    isDriverInitialized = false;
   }
 
   // ✅ Cleanup listeners before re-initializing for a different user
@@ -78,9 +87,10 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const data = userSnap.data();
-    const role = (data.role || "").toLowerCase();
+    const role = (data.role || "").toLowerCase().trim();
 
     // 🚫 Restrict access if not a driver
+    // Check for common variations: "driver", "Driver", "DRIVER", etc.
     if (role !== "driver") {
       preBlur.remove(); // remove loading blur before showing restriction
       const overlay = document.createElement("div");
@@ -151,6 +161,26 @@ onAuthStateChanged(auth, async (user) => {
     console.log('✅ Driver dashboard fully initialized');
   } catch (error) {
     console.error("❌ Error verifying role:", error);
+    // CRITICAL: Remove loading overlay on error
+    const existingBlur = document.getElementById("preBlurOverlay");
+    if (existingBlur) existingBlur.remove();
+    
+    // Show error message to user
+    const errorOverlay = document.createElement("div");
+    errorOverlay.className = "fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]";
+    errorOverlay.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-md w-[90%] animate-fadeIn">
+        <div class="text-5xl mb-3">⚠️</div>
+        <h2 class="text-lg font-bold text-[var(--cane-800)] mb-2">Error Loading Dashboard</h2>
+        <p class="text-gray-600 mb-4 text-sm">
+          There was an error loading your driver dashboard. Please try refreshing the page.
+        </p>
+        <button class="mt-2 px-5 py-2 rounded-lg bg-[var(--cane-700)] text-white font-medium shadow-md hover:bg-[var(--cane-800)]" onclick="window.location.reload()">
+          Refresh Page
+        </button>
+      </div>
+    `;
+    document.body.appendChild(errorOverlay);
   }
 });
 
@@ -192,10 +222,11 @@ async function loadDriverNotifications(userId) {
 
       snapshot.forEach((docSnap) => {
         const notif = docSnap.data();
-        const read = notif.read === true;
+        // Check both 'read' and 'status' fields for lobby compatibility
+        const read = notif.read === true || notif.status === "read";
         if (!read) unreadCount++;
 
-        const isRead = notif.read === true;
+        const isRead = notif.read === true || notif.status === "read";
         const statusClass = isRead ? 'bg-gray-100' : 'bg-[var(--cane-50)]';
         const timestamp = notif.timestamp ? new Date(notif.timestamp.seconds * 1000) : new Date();
         const timeAgo = formatRelativeTime(timestamp);
@@ -214,8 +245,10 @@ async function loadDriverNotifications(userId) {
 
         notifItem.addEventListener('click', async () => {
           if (!read) {
+            // Update both 'read' and 'status' fields for lobby compatibility
             await updateDoc(doc(db, "notifications", docSnap.id), {
               read: true,
+              status: "read",
               readAt: serverTimestamp()
             });
           }
@@ -281,6 +314,8 @@ document.addEventListener('click', (event) => {
 document.addEventListener("DOMContentLoaded", () => {
   const notificationBtn = document.getElementById("notificationBtn");
   const markAllBtn = document.getElementById("markAllReadBtn");
+  const closeBtn = document.getElementById("closeNotificationDropdown");
+  const refreshBtn = document.getElementById("refreshNotifications");
 
   // Toggle dropdown on bell click
   notificationBtn?.addEventListener("click", (e) => {
@@ -290,25 +325,63 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('Notification button clicked');
   });
 
+  // Close dropdown button
+  closeBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  // Refresh notifications
+  refreshBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      await loadDriverNotifications(userId);
+    }
+  });
+
   // Mark all as read
-  markAllBtn?.addEventListener("click", async () => {
+  markAllBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const userId = localStorage.getItem("userId");
     if (!userId) return;
 
-    let q = query(collection(db, "notifications"), where("userId", "==", userId));
-    let snap = await getDocs(q);
+    try {
+      let q = query(collection(db, "notifications"), where("userId", "==", userId));
+      let snap = await getDocs(q);
 
-    const unread = snap.docs.filter((d) => !d.data().read);
-    if (unread.length === 0) return;
+      const unread = snap.docs.filter((d) => {
+        const data = d.data();
+        return !data.read && data.status !== "read";
+      });
+      
+      if (unread.length === 0) {
+        console.log("All notifications are already read.");
+        return;
+      }
 
-    await Promise.all(
-      unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
-        read: true,
-        readAt: serverTimestamp()
-      }))
-    );
+      // Update both 'read' and 'status' fields for lobby compatibility
+      await Promise.all(
+        unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
+          read: true,
+          status: "read",
+          readAt: serverTimestamp()
+        }))
+      );
 
-  console.log("✅ All notifications marked as read.");
+      console.log(`✅ Marked ${unread.length} notifications as read.`);
+      
+      // Reload notifications to reflect changes
+      await loadDriverNotifications(userId);
+    } catch (error) {
+      console.error("❌ Error marking all notifications as read:", error);
+    }
   });
 });
 

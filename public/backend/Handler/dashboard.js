@@ -145,6 +145,7 @@ async function initNotifications(userId) {
       'task_assigned': 'New Task Assigned',
       'task_completed': 'Task Completed',
       'task_deleted': 'Task Cancelled',
+      'driver_status_update': 'Driver Status Update',
       'work_logged': 'Work Logged',
       'rental_approved': 'Rental Request Approved',
       'rental_rejected': 'Rental Request Rejected',
@@ -1033,6 +1034,64 @@ function getTimeAgo(date) {
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
 
   return date.toLocaleDateString();
+}
+
+function formatTimeAgo(timestamp) {
+  return getTimeAgo(timestamp);
+}
+
+function getDriverStatusLabel(status) {
+  const statusMap = {
+    'preparing_to_load': 'Preparing to Load',
+    'loading_at_warehouse': 'Loading at Warehouse',
+    'en_route_to_field': 'En Route to Field',
+    'arrived_at_field': 'Arrived at Field',
+    'unloading_at_field': 'Unloading at Field',
+    'completed_delivery': 'Completed Delivery',
+    'returning_to_base': 'Returning to Base',
+    'vehicle_breakdown': 'Vehicle Breakdown',
+    'delayed': 'Delayed',
+    'loading_cane_at_field': 'Loading Cane at Field',
+    'en_route_to_mill': 'En Route to Mill',
+    'arrived_at_mill': 'Arrived at Mill',
+    'in_queue_at_mill': 'In Queue at Mill',
+    'unloading_at_mill': 'Unloading at Mill',
+    'returning_to_field': 'Returning to Field',
+    'en_route_to_collection': 'En Route to Collection Point',
+    'arrived_at_collection': 'Arrived at Collection Point',
+    'in_queue': 'In Queue',
+    'unloading': 'Unloading',
+    'en_route_to_weighbridge': 'En Route to Weighbridge',
+    'arrived_at_weighbridge': 'Arrived at Weighbridge',
+    'weighing_in_progress': 'Weighing in Progress',
+    'weight_recorded': 'Weight Recorded',
+    'waiting_for_loading': 'Waiting for Loading',
+    'scheduled': 'Scheduled',
+    'in_progress': 'In Progress',
+    'waiting_for_parts': 'Waiting for Parts',
+    'inspection_complete': 'Inspection Complete',
+    'maintenance_complete': 'Maintenance Complete',
+    'en_route_to_fuel_station': 'En Route to Fuel Station',
+    'arrived_at_fuel_station': 'Arrived at Fuel Station',
+    'refueling': 'Refueling',
+    'on_hold': 'On Hold',
+    'completed': 'Completed',
+    'issue_encountered': 'Issue Encountered'
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function getDriverStatusBadgeClass(status) {
+  const statusLower = (status || '').toLowerCase();
+  if (statusLower.includes('completed') || statusLower.includes('complete') || statusLower.includes('recorded')) {
+    return 'bg-green-100 text-green-800';
+  } else if (statusLower.includes('breakdown') || statusLower.includes('issue') || statusLower.includes('delayed')) {
+    return 'bg-red-100 text-red-800';
+  } else if (statusLower.includes('queue') || statusLower.includes('waiting') || statusLower.includes('hold')) {
+    return 'bg-yellow-100 text-yellow-800';
+  } else {
+    return 'bg-blue-100 text-blue-800';
+  }
 }
 
 // Helper function to get task display name
@@ -2683,9 +2742,29 @@ window.viewTaskDetails = function(taskId) {
           </div>
 
           <div>
-            <label class="text-sm font-medium text-gray-500">Status</label>
+            <label class="text-sm font-medium text-gray-500">Overall Status</label>
             <p class="text-gray-900">${(task.status || 'pending').charAt(0).toUpperCase() + (task.status || 'pending').slice(1)}</p>
           </div>
+          ${task.metadata && task.metadata.driver ? `
+          <div>
+            <label class="text-sm font-medium text-gray-500">Current Delivery Status</label>
+            ${task.driverDeliveryStatus && task.driverDeliveryStatus.status ? `
+              <div class="mt-1">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full ${getDriverStatusBadgeClass(task.driverDeliveryStatus.status)}">
+                  ${getDriverStatusLabel(task.driverDeliveryStatus.status)}
+                </span>
+                ${task.driverDeliveryStatus.updatedAt ? `
+                  <p class="text-xs text-gray-500 mt-1">
+                    Updated ${formatTimeAgo(task.driverDeliveryStatus.updatedAt)}
+                  </p>
+                ` : ''}
+                ${task.driverDeliveryStatus.notes ? `
+                  <p class="text-xs text-gray-600 mt-1">${(task.driverDeliveryStatus.notes || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                ` : ''}
+              </div>
+            ` : '<p class="text-gray-500 text-sm">No status update yet</p>'}
+          </div>
+          ` : ''}
 
           ${task.notes ? `
           <div>

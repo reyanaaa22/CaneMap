@@ -23,6 +23,12 @@ let unsubscribeListeners = [];
 
 onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; });
 
+// Export function to set currentUserId (called from driver-init.js after user data is loaded)
+export function setDriverUserId(userId) {
+  currentUserId = userId;
+  console.log('✅ driver-dashboard.js: currentUserId set to', userId);
+}
+
 /**
  * Get fields visible to driver (one-time query)
  * Fields where:
@@ -132,22 +138,25 @@ export function setupDriverFieldsListener(callback) {
   const processTasksUpdate = async () => {
     console.log(`📊 Processing driver fields update...`);
 
-    // Fetch field details for all unique field IDs
-    const fields = [];
-    for (const fieldId of fieldIds) {
+    // Batch fetch all field details at once instead of one by one
+    const fieldPromises = Array.from(fieldIds).map(async (fieldId) => {
       try {
         const fieldRef = doc(db, 'fields', fieldId);
         const fieldSnap = await getDoc(fieldRef);
         if (fieldSnap.exists()) {
-          fields.push({
+          return {
             id: fieldSnap.id,
             ...fieldSnap.data()
-          });
+          };
         }
       } catch (err) {
         console.debug(`Error fetching field ${fieldId}:`, err);
       }
-    }
+      return null;
+    });
+
+    const fieldResults = await Promise.all(fieldPromises);
+    const fields = fieldResults.filter(f => f !== null);
 
     console.log(`✅ Total unique fields for driver: ${fields.length}`);
     callback(fields);
@@ -240,26 +249,48 @@ export function setupDriverTasksListener(callback) {
   );
 
   const tasksMap = new Map(); // Use Map to deduplicate tasks
+  const fieldNameCache = new Map(); // Cache field names to avoid redundant fetches
 
   const processTasks = async () => {
     const tasks = [];
 
+    // Collect all unique field IDs first
+    const fieldIds = new Set();
     for (const [taskId, taskData] of tasksMap) {
-      // Get field name
-      let fieldName = 'Unknown Field';
-      if (taskData.fieldId || taskData.field_id) {
-        const fieldId = taskData.fieldId || taskData.field_id;
-        try {
-          const fieldRef = doc(db, 'fields', fieldId);
-          const fieldSnap = await getDoc(fieldRef);
-          if (fieldSnap.exists()) {
-            const fieldData = fieldSnap.data();
-            fieldName = fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field';
-          }
-        } catch (err) {
-          console.debug('Field name fetch error:', err);
-        }
+      const fieldId = taskData.fieldId || taskData.field_id;
+      if (fieldId) fieldIds.add(fieldId);
+    }
+
+    // Batch fetch all field names at once
+    const fieldPromises = Array.from(fieldIds).map(async (fieldId) => {
+      if (fieldNameCache.has(fieldId)) {
+        return { fieldId, fieldName: fieldNameCache.get(fieldId) };
       }
+      try {
+        const fieldRef = doc(db, 'fields', fieldId);
+        const fieldSnap = await getDoc(fieldRef);
+        if (fieldSnap.exists()) {
+          const fieldData = fieldSnap.data();
+          const fieldName = fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field';
+          fieldNameCache.set(fieldId, fieldName);
+          return { fieldId, fieldName };
+        }
+      } catch (err) {
+        console.debug('Field name fetch error:', err);
+      }
+      return { fieldId, fieldName: 'Unknown Field' };
+    });
+
+    const fieldNamesMap = new Map();
+    const fieldResults = await Promise.all(fieldPromises);
+    fieldResults.forEach(({ fieldId, fieldName }) => {
+      fieldNamesMap.set(fieldId, fieldName);
+    });
+
+    // Now process tasks with cached field names
+    for (const [taskId, taskData] of tasksMap) {
+      const fieldId = taskData.fieldId || taskData.field_id;
+      const fieldName = fieldId ? (fieldNamesMap.get(fieldId) || 'Unknown Field') : 'Unknown Field';
 
       tasks.push({
         id: taskId,
@@ -350,8 +381,10 @@ export async function getDriverTasks(statusFilter = null) {
       snapshot = await getDocs(tasksQuery);
     }
 
-    const tasks = [];
-
+    // Collect all unique field IDs first
+    const fieldIds = new Set();
+    const tasksData = [];
+    
     for (const docSnap of snapshot.docs) {
       const taskData = docSnap.data();
 
@@ -360,24 +393,48 @@ export async function getDriverTasks(statusFilter = null) {
         continue;
       }
 
-      // Get field name
-      let fieldName = 'Unknown Field';
-      if (taskData.fieldId || taskData.field_id) {
-        const fieldId = taskData.fieldId || taskData.field_id;
-        try {
-          const fieldRef = doc(db, 'fields', fieldId);
-          const fieldSnap = await getDoc(fieldRef);
-          if (fieldSnap.exists()) {
-            const fieldData = fieldSnap.data();
-            fieldName = fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field';
-          }
-        } catch (err) {
-          console.debug('Field name fetch error:', err);
+      // Collect field IDs for batch fetching
+      const fieldId = taskData.fieldId || taskData.field_id;
+      if (fieldId) fieldIds.add(fieldId);
+      
+      tasksData.push({
+        id: docSnap.id,
+        taskData,
+        fieldId
+      });
+    }
+
+    // Batch fetch all field names at once
+    const fieldPromises = Array.from(fieldIds).map(async (fieldId) => {
+      try {
+        const fieldRef = doc(db, 'fields', fieldId);
+        const fieldSnap = await getDoc(fieldRef);
+        if (fieldSnap.exists()) {
+          const fieldData = fieldSnap.data();
+          return {
+            fieldId,
+            fieldName: fieldData.fieldName || fieldData.field_name || fieldData.name || 'Unknown Field'
+          };
         }
+      } catch (err) {
+        console.debug('Field name fetch error:', err);
       }
+      return { fieldId, fieldName: 'Unknown Field' };
+    });
+
+    const fieldNamesMap = new Map();
+    const fieldResults = await Promise.all(fieldPromises);
+    fieldResults.forEach(({ fieldId, fieldName }) => {
+      fieldNamesMap.set(fieldId, fieldName);
+    });
+
+    // Now build tasks with cached field names
+    const tasks = [];
+    for (const { id, taskData, fieldId } of tasksData) {
+      const fieldName = fieldId ? (fieldNamesMap.get(fieldId) || 'Unknown Field') : 'Unknown Field';
 
       tasks.push({
-        id: docSnap.id,
+        id,
         ...taskData,
         fieldName,
         // Normalize field names

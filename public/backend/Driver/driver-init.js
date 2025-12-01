@@ -7,6 +7,7 @@ import {
   getDriverTasks,
   setupDriverFieldsListener,
   setupDriverTasksListener,
+  setDriverUserId,
 } from "./driver-dashboard.js";
 import { auth } from "../Common/firebase-config.js";
 import {
@@ -21,6 +22,139 @@ import {
 import {
   getRecommendedTasksForDAP,
 } from "../Handler/task-automation.js";
+
+// Helper function to escape HTML
+function escapeHtml(str) {
+  if (!str && str !== 0) return "";
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+// Helper function to get delivery status options based on task type
+function getDeliveryStatusOptions(taskType) {
+  const taskValue = (taskType || '').toLowerCase().trim();
+  
+  // Group A: Transport Materials, Fertilizer, Equipment
+  if (taskValue.includes('transport_materials') || taskValue.includes('transport_fertilizer') || taskValue.includes('transport_equipment') || 
+      taskValue.includes('transport materials') || taskValue.includes('transport fertilizer') || taskValue.includes('transport equipment')) {
+    return [
+      { value: 'preparing_to_load', label: 'Preparing to Load', icon: 'fa-box' },
+      { value: 'loading_at_warehouse', label: 'Loading at Warehouse', icon: 'fa-truck-loading' },
+      { value: 'en_route_to_field', label: 'En Route to Field', icon: 'fa-road' },
+      { value: 'arrived_at_field', label: 'Arrived at Field', icon: 'fa-map-marker-alt' },
+      { value: 'unloading_at_field', label: 'Unloading at Field', icon: 'fa-download' },
+      { value: 'completed_delivery', label: 'Completed Delivery', icon: 'fa-check-circle' },
+      { value: 'returning_to_base', label: 'Returning to Base', icon: 'fa-undo' },
+      { value: 'vehicle_breakdown', label: 'Vehicle Breakdown', icon: 'fa-tools' },
+      { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
+    ];
+  }
+  
+  // Group B: Transport Cane from Field to Mill
+  if (taskValue.includes('transport_cane_to_mill') || taskValue.includes('transport cane from field to mill')) {
+    return [
+      { value: 'loading_cane_at_field', label: 'Loading Cane at Field', icon: 'fa-box' },
+      { value: 'en_route_to_mill', label: 'En Route to Mill', icon: 'fa-road' },
+      { value: 'arrived_at_mill', label: 'Arrived at Mill', icon: 'fa-map-marker-alt' },
+      { value: 'in_queue_at_mill', label: 'In Queue at Mill', icon: 'fa-list' },
+      { value: 'unloading_at_mill', label: 'Unloading at Mill', icon: 'fa-download' },
+      { value: 'completed_delivery', label: 'Completed Delivery', icon: 'fa-check-circle' },
+      { value: 'returning_to_field', label: 'Returning to Field', icon: 'fa-undo' },
+      { value: 'vehicle_breakdown', label: 'Vehicle Breakdown', icon: 'fa-tools' },
+      { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
+    ];
+  }
+  
+  // Group C: Deliver Cane to Collection Points
+  if (taskValue.includes('deliver_to_collection') || taskValue.includes('deliver cane to collection')) {
+    return [
+      { value: 'loading_cane_at_field', label: 'Loading Cane at Field', icon: 'fa-box' },
+      { value: 'en_route_to_collection', label: 'En Route to Collection Point', icon: 'fa-road' },
+      { value: 'arrived_at_collection', label: 'Arrived at Collection Point', icon: 'fa-map-marker-alt' },
+      { value: 'in_queue', label: 'In Queue', icon: 'fa-list' },
+      { value: 'unloading', label: 'Unloading', icon: 'fa-download' },
+      { value: 'completed_delivery', label: 'Completed Delivery', icon: 'fa-check-circle' },
+      { value: 'returning_to_field', label: 'Returning to Field', icon: 'fa-undo' },
+      { value: 'vehicle_breakdown', label: 'Vehicle Breakdown', icon: 'fa-tools' }
+    ];
+  }
+  
+  // Group D: Check Cane Weight at Weighbridge
+  if (taskValue.includes('check_cane_weight') || taskValue.includes('check cane weight')) {
+    return [
+      { value: 'en_route_to_weighbridge', label: 'En Route to Weighbridge', icon: 'fa-road' },
+      { value: 'arrived_at_weighbridge', label: 'Arrived at Weighbridge', icon: 'fa-map-marker-alt' },
+      { value: 'in_queue', label: 'In Queue', icon: 'fa-list' },
+      { value: 'weighing_in_progress', label: 'Weighing in Progress', icon: 'fa-balance-scale' },
+      { value: 'weight_recorded', label: 'Weight Recorded', icon: 'fa-check-circle' },
+      { value: 'completed', label: 'Completed', icon: 'fa-check-double' },
+      { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
+    ];
+  }
+  
+  // Group E: Bring Empty Trucks Back to Fields
+  if (taskValue.includes('return_empty_truck') || taskValue.includes('bring empty trucks')) {
+    return [
+      { value: 'en_route_to_field', label: 'En Route to Field', icon: 'fa-road' },
+      { value: 'arrived_at_field', label: 'Arrived at Field', icon: 'fa-map-marker-alt' },
+      { value: 'waiting_for_loading', label: 'Waiting for Loading', icon: 'fa-clock' },
+      { value: 'completed', label: 'Completed', icon: 'fa-check-circle' },
+      { value: 'returning_to_base', label: 'Returning to Base', icon: 'fa-undo' },
+      { value: 'vehicle_breakdown', label: 'Vehicle Breakdown', icon: 'fa-tools' }
+    ];
+  }
+  
+  // Group F: Vehicle Maintenance/Inspection
+  if (taskValue.includes('vehicle_maintenance') || taskValue.includes('vehicle maintenance')) {
+    return [
+      { value: 'scheduled', label: 'Scheduled', icon: 'fa-calendar' },
+      { value: 'in_progress', label: 'In Progress', icon: 'fa-tools' },
+      { value: 'waiting_for_parts', label: 'Waiting for Parts', icon: 'fa-box' },
+      { value: 'inspection_complete', label: 'Inspection Complete', icon: 'fa-check-circle' },
+      { value: 'maintenance_complete', label: 'Maintenance Complete', icon: 'fa-check-double' },
+      { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
+    ];
+  }
+  
+  // Group G: Fuel Refill
+  if (taskValue.includes('fuel_refill') || taskValue.includes('fuel refill')) {
+    return [
+      { value: 'en_route_to_fuel_station', label: 'En Route to Fuel Station', icon: 'fa-road' },
+      { value: 'arrived_at_fuel_station', label: 'Arrived at Fuel Station', icon: 'fa-map-marker-alt' },
+      { value: 'in_queue', label: 'In Queue', icon: 'fa-list' },
+      { value: 'refueling', label: 'Refueling', icon: 'fa-gas-pump' },
+      { value: 'completed', label: 'Completed', icon: 'fa-check-circle' },
+      { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
+    ];
+  }
+  
+  // Group H: Others (Default statuses)
+  return [
+    { value: 'in_progress', label: 'In Progress', icon: 'fa-spinner' },
+    { value: 'on_hold', label: 'On Hold', icon: 'fa-pause' },
+    { value: 'completed', label: 'Completed', icon: 'fa-check-circle' },
+    { value: 'delayed', label: 'Delayed', icon: 'fa-clock' },
+    { value: 'issue_encountered', label: 'Issue Encountered', icon: 'fa-exclamation-triangle' }
+  ];
+}
+
+// Helper function to get status badge color class
+function getStatusBadgeClass(status) {
+  const statusLower = (status || '').toLowerCase();
+  if (statusLower.includes('completed') || statusLower.includes('complete') || statusLower.includes('recorded')) {
+    return 'bg-green-100 text-green-800';
+  } else if (statusLower.includes('breakdown') || statusLower.includes('issue') || statusLower.includes('delayed')) {
+    return 'bg-red-100 text-red-800';
+  } else if (statusLower.includes('queue') || statusLower.includes('waiting') || statusLower.includes('hold')) {
+    return 'bg-yellow-100 text-yellow-800';
+  } else {
+    return 'bg-blue-100 text-blue-800';
+  }
+}
 
 // Helper function to get display-friendly DRIVER task names
 function getTaskDisplayName(taskValue) {
@@ -57,19 +191,11 @@ function getTaskDisplayName(taskValue) {
 // Track current user ID and listeners
 let currentUserId = null;
 let unsubscribeListeners = [];
+let isUserDataLoaded = false;
 
-onAuthStateChanged(auth, (user) => {
-  currentUserId = user ? user.uid : null;
-
-  // Setup real-time listeners when user is authenticated
-  if (user) {
-    setupRealtimeListeners();
-  } else {
-    // Cleanup listeners on logout
-    unsubscribeListeners.forEach((unsub) => unsub());
-    unsubscribeListeners = [];
-  }
-});
+// Note: onAuthStateChanged is handled in Driver_Dashboard.js
+// We only set currentUserId here when initializeDriverDashboard is called
+// This ensures user data is loaded before setting up listeners
 
 // ============================================================
 // REAL-TIME LISTENERS SETUP
@@ -259,13 +385,21 @@ function renderTasksList(tasks) {
       <div class="bg-white border border-[var(--cane-200)] rounded-lg p-4 hover:shadow-md transition">
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1">
-            <div class="flex items-center gap-2 mb-2">
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
               <h3 class="font-semibold text-[var(--cane-900)]">${
                 task.title
               }</h3>
               <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
                 <i class="fas ${statusIcon} mr-1"></i>${task.status}
               </span>
+              ${task.driverDeliveryStatus && task.driverDeliveryStatus.status ? (() => {
+                const statusOpts = getDeliveryStatusOptions(task.title);
+                const statusOpt = statusOpts.find(opt => opt.value === task.driverDeliveryStatus.status);
+                const statusLabel = statusOpt ? statusOpt.label : task.driverDeliveryStatus.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                return `<span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(task.driverDeliveryStatus.status)}">
+                  <i class="fas fa-truck mr-1"></i>${statusLabel}
+                </span>`;
+              })() : ''}
             </div>
             <p class="text-sm text-gray-600 mb-2">
               <i class="fas fa-map-marker-alt text-[var(--cane-500)] mr-1"></i>
@@ -281,10 +415,15 @@ function renderTasksList(tasks) {
           ${
             isPending
               ? `
-            <div class="flex-shrink-0">
+            <div class="flex-shrink-0 flex flex-col sm:flex-row gap-2">
+              <button
+                onclick="openUpdateStatusModal('${task.id}', '${escapeHtml(task.title || task.taskType || '')}')"
+                class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap">
+                <i class="fas fa-sync-alt mr-1"></i>Update Status
+              </button>
               <button
                 onclick="markDriverTaskAsDone('${task.id}')"
-                class="px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap">
+                class="px-3 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap">
                 <i class="fas fa-check-circle mr-1"></i>Mark as Done
               </button>
             </div>
@@ -608,15 +747,7 @@ async function loadFieldsData() {
   console.log("Fields are loaded via real-time listener");
 }
 
-/**
- * Helper function to escape HTML
- */
-function escapeHtml(text) {
-  if (!text) return "";
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
+// escapeHtml function is already defined at the top of the file (line 27)
 
 // Note: loadTasksData is now handled by real-time listeners
 // Keeping this as a fallback for manual refresh if needed
@@ -1279,6 +1410,162 @@ window.markDriverTaskAsDone = async function (taskId) {
     alert("Failed to mark task as done. Please try again.");
   }
 };
+
+/**
+ * Open update status modal for driver task
+ */
+window.openUpdateStatusModal = async function(taskId, taskTitle) {
+  try {
+    const { db } = await import("../Common/firebase-config.js");
+    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
+    
+    const taskRef = doc(db, "tasks", taskId);
+    const taskSnap = await getDoc(taskRef);
+    
+    if (!taskSnap.exists()) {
+      alert("Task not found");
+      return;
+    }
+    
+    const task = taskSnap.data();
+    const taskType = task.title || task.taskType || taskTitle || '';
+    const statusOptions = getDeliveryStatusOptions(taskType);
+    const currentStatus = task.driverDeliveryStatus?.status || '';
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'updateStatusModal';
+    modal.className = 'fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-gray-900">Update Delivery Status</h3>
+          <button id="closeUpdateStatusModal" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="p-6">
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 mb-2">Task:</p>
+            <p class="font-semibold text-gray-900">${escapeHtml(taskType)}</p>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Select Status:</label>
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+              ${statusOptions.map(option => `
+                <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                  currentStatus === option.value ? 'border-[var(--cane-600)] bg-[var(--cane-50)]' : 'border-gray-200 hover:border-gray-300'
+                }">
+                  <input type="radio" name="deliveryStatus" value="${option.value}" class="mr-3" ${
+                    currentStatus === option.value ? 'checked' : ''
+                  }>
+                  <i class="fas ${option.icon} text-[var(--cane-600)] mr-2"></i>
+                  <span class="text-sm font-medium text-gray-900">${option.label}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional):</label>
+            <textarea id="statusNotes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--cane-500)] focus:border-transparent text-sm" placeholder="Add any additional details..."></textarea>
+          </div>
+          <div class="flex gap-3">
+            <button id="cancelUpdateStatus" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+              Cancel
+            </button>
+            <button id="confirmUpdateStatus" class="flex-1 px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors">
+              Send Update to Handler
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close handlers
+    modal.querySelector('#closeUpdateStatusModal').addEventListener('click', () => modal.remove());
+    modal.querySelector('#cancelUpdateStatus').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+    
+    // Confirm handler
+    modal.querySelector('#confirmUpdateStatus').addEventListener('click', async () => {
+      const selectedStatus = modal.querySelector('input[name="deliveryStatus"]:checked');
+      if (!selectedStatus) {
+        alert('Please select a status');
+        return;
+      }
+      
+      const status = selectedStatus.value;
+      const notes = modal.querySelector('#statusNotes').value.trim();
+      
+      await updateDriverDeliveryStatus(taskId, status, notes);
+      modal.remove();
+    });
+    
+  } catch (error) {
+    console.error('Error opening update status modal:', error);
+    alert('Failed to open update status modal. Please try again.');
+  }
+};
+
+/**
+ * Update driver delivery status and notify handler
+ */
+async function updateDriverDeliveryStatus(taskId, status, notes = '') {
+  try {
+    const { db } = await import("../Common/firebase-config.js");
+    const { doc, getDoc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
+    const { createNotification } = await import("../Common/notifications.js");
+    
+    const taskRef = doc(db, "tasks", taskId);
+    const taskSnap = await getDoc(taskRef);
+    
+    if (!taskSnap.exists()) {
+      alert("Task not found");
+      return;
+    }
+    
+    const task = taskSnap.data();
+    const handlerId = task.handlerId || task.created_by;
+    const driverName = localStorage.getItem("userFullName") || "A driver";
+    const taskTitle = task.title || task.taskType || "Task";
+    const statusLabel = getDeliveryStatusOptions(taskTitle).find(opt => opt.value === status)?.label || status;
+    
+    // Update task with delivery status
+    await updateDoc(taskRef, {
+      driverDeliveryStatus: {
+        status: status,
+        notes: notes || null,
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUserId
+      }
+    });
+    
+    // Notify handler
+    if (handlerId) {
+      await createNotification(
+        handlerId,
+        `${driverName} updated status: ${statusLabel} - ${taskTitle}`,
+        "driver_status_update",
+        taskId
+      );
+      console.log(`✅ Status update notification sent to handler ${handlerId}`);
+    }
+    
+    alert("Status updated successfully!");
+    console.log(`✅ Driver delivery status updated for task ${taskId}: ${status}`);
+    
+    // Reload tasks to show updated status
+    await loadTasksData();
+    
+  } catch (error) {
+    console.error("Error updating driver delivery status:", error);
+    alert("Failed to update status. Please try again.");
+  }
+}
 
 // ============================================================
 // TASK FILTERING HELPER - Same logic as worker filtering
@@ -2120,16 +2407,57 @@ if (logData.photoBlob) {
 export function initializeDriverDashboard() {
   console.log("Driver dashboard initializing...");
 
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeDriverDashboard();
+    });
+    return;
+  }
+
+  // Get current user ID from auth or localStorage (set by Driver_Dashboard.js)
+  const userId = auth.currentUser?.uid || localStorage.getItem("userId");
+  if (!userId) {
+    console.error("❌ No user ID available for driver dashboard initialization");
+    console.log("Auth currentUser:", auth.currentUser);
+    console.log("localStorage userId:", localStorage.getItem("userId"));
+    return;
+  }
+
+  currentUserId = userId;
+  // CRITICAL: Set userId in driver-dashboard.js BEFORE setting up listeners
+  setDriverUserId(userId);
+  console.log("✅ Driver user ID set:", currentUserId);
+  
+  // Setup real-time listeners now that user data is confirmed loaded
+  try {
+    setupRealtimeListeners();
+  } catch (error) {
+    console.error("❌ Error setting up real-time listeners:", error);
+  }
+
   // Setup all navigation
-  setupNavigation();
+  try {
+    setupNavigation();
+  } catch (error) {
+    console.error("❌ Error setting up navigation:", error);
+  }
 
   // Setup profile dropdown
-  setupProfileDropdown();
+  try {
+    setupProfileDropdown();
+  } catch (error) {
+    console.error("❌ Error setting up profile dropdown:", error);
+  }
 
   // Load initial dashboard data
-  loadDashboardData();
+  try {
+    loadDashboardData();
+  } catch (error) {
+    console.error("❌ Error loading dashboard data:", error);
+  }
 
-  console.log("Driver dashboard initialized");
+  console.log("✅ Driver dashboard initialized");
 }
 
 // Setup navigation on DOM load (safe to do before auth)

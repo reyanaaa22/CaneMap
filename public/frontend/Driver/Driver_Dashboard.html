@@ -275,19 +275,35 @@
               <!-- Notification Dropdown -->
               <div
                 id="notificationDropdown"
-                class="hidden fixed lg:absolute right-0 lg:right-auto lg:left-0 lg:mt-2 w-72 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-[70vh] overflow-y-auto"
-                style="top: 4.5rem; right: 1rem; left: auto; max-width: calc(100% - 2rem);"
+                class="hidden fixed lg:absolute lg:right-0 lg:left-auto lg:mt-2 w-72 lg:w-80 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-[70vh] overflow-y-auto"
               >
                 <div
                   class="p-3 border-b border-gray-200 flex items-center justify-between"
                 >
                   <h3 class="font-semibold text-[var(--cane-900)]">Notifications</h3>
-                  <button
-                    id="refreshNotifications"
-                    class="text-[var(--cane-600)] hover:text-[var(--cane-700)]"
-                  >
-                    <i class="fas fa-sync-alt text-sm"></i>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      id="markAllReadBtn"
+                      class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors"
+                      title="Mark all as read"
+                    >
+                      <i class="fas fa-check-double text-sm"></i>
+                    </button>
+                    <button
+                      id="refreshNotifications"
+                      class="text-[var(--cane-600)] hover:text-[var(--cane-700)] transition-colors"
+                      title="Refresh"
+                    >
+                      <i class="fas fa-sync-alt text-sm"></i>
+                    </button>
+                    <button
+                      id="closeNotificationDropdown"
+                      class="text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Close"
+                    >
+                      <i class="fas fa-times text-sm"></i>
+                    </button>
+                  </div>
                 </div>
                 <div id="notificationsList" class="divide-y divide-gray-100">
                   <!-- Notifications will be loaded here -->
@@ -1036,15 +1052,27 @@
             // Toggle dropdown
             const isHidden = notificationDropdown.classList.toggle('hidden');
             
-            if (!isHidden && isMobile) {
-              // Position dropdown below the header on mobile
-              const header = document.querySelector('header');
-              const headerRect = header.getBoundingClientRect();
-              notificationDropdown.style.top = `${headerRect.bottom + window.scrollY + 5}px`;
-              notificationDropdown.style.left = '1rem';
-              notificationDropdown.style.right = '1rem';
-              notificationDropdown.style.maxWidth = 'none';
-              notificationDropdown.style.width = 'auto';
+            if (!isHidden) {
+              if (isMobile) {
+                // Position dropdown below the header on mobile
+                const header = document.querySelector('header');
+                const headerRect = header.getBoundingClientRect();
+                notificationDropdown.style.position = 'fixed';
+                notificationDropdown.style.top = `${headerRect.bottom + window.scrollY + 5}px`;
+                notificationDropdown.style.left = '1rem';
+                notificationDropdown.style.right = '1rem';
+                notificationDropdown.style.maxWidth = 'calc(100% - 2rem)';
+                notificationDropdown.style.width = 'auto';
+              } else {
+                // Desktop: position relative to button
+                const btnRect = notificationBtn.getBoundingClientRect();
+                notificationDropdown.style.position = 'absolute';
+                notificationDropdown.style.top = `${btnRect.bottom + 8}px`;
+                notificationDropdown.style.right = '0';
+                notificationDropdown.style.left = 'auto';
+                notificationDropdown.style.maxWidth = 'none';
+                notificationDropdown.style.width = '20rem';
+              }
             }
             
             // Close other dropdowns

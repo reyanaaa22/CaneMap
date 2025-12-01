@@ -1490,6 +1490,62 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       return renderTaskList(sortedTasks);
     }
 
+  // Helper function to get driver status label
+  function getDriverStatusLabel(status) {
+    const statusMap = {
+      'preparing_to_load': 'Preparing to Load',
+      'loading_at_warehouse': 'Loading at Warehouse',
+      'en_route_to_field': 'En Route to Field',
+      'arrived_at_field': 'Arrived at Field',
+      'unloading_at_field': 'Unloading at Field',
+      'completed_delivery': 'Completed Delivery',
+      'returning_to_base': 'Returning to Base',
+      'vehicle_breakdown': 'Vehicle Breakdown',
+      'delayed': 'Delayed',
+      'loading_cane_at_field': 'Loading Cane at Field',
+      'en_route_to_mill': 'En Route to Mill',
+      'arrived_at_mill': 'Arrived at Mill',
+      'in_queue_at_mill': 'In Queue at Mill',
+      'unloading_at_mill': 'Unloading at Mill',
+      'returning_to_field': 'Returning to Field',
+      'en_route_to_collection': 'En Route to Collection Point',
+      'arrived_at_collection': 'Arrived at Collection Point',
+      'in_queue': 'In Queue',
+      'unloading': 'Unloading',
+      'en_route_to_weighbridge': 'En Route to Weighbridge',
+      'arrived_at_weighbridge': 'Arrived at Weighbridge',
+      'weighing_in_progress': 'Weighing in Progress',
+      'weight_recorded': 'Weight Recorded',
+      'waiting_for_loading': 'Waiting for Loading',
+      'scheduled': 'Scheduled',
+      'in_progress': 'In Progress',
+      'waiting_for_parts': 'Waiting for Parts',
+      'inspection_complete': 'Inspection Complete',
+      'maintenance_complete': 'Maintenance Complete',
+      'en_route_to_fuel_station': 'En Route to Fuel Station',
+      'arrived_at_fuel_station': 'Arrived at Fuel Station',
+      'refueling': 'Refueling',
+      'on_hold': 'On Hold',
+      'completed': 'Completed',
+      'issue_encountered': 'Issue Encountered'
+    };
+    return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  // Helper function to get driver status badge class
+  function getDriverStatusBadgeClass(status) {
+    const statusLower = (status || '').toLowerCase();
+    if (statusLower.includes('completed') || statusLower.includes('complete') || statusLower.includes('recorded')) {
+      return 'bg-green-100 text-green-800';
+    } else if (statusLower.includes('breakdown') || statusLower.includes('issue') || statusLower.includes('delayed')) {
+      return 'bg-red-100 text-red-800';
+    } else if (statusLower.includes('queue') || statusLower.includes('waiting') || statusLower.includes('hold')) {
+      return 'bg-yellow-100 text-yellow-800';
+    } else {
+      return 'bg-blue-100 text-blue-800';
+    }
+  }
+
   // Shared function to render task list (UPDATED: adds delete button)
   function renderTaskList(tasks) {
     const taskRows = tasks.map(t => {
@@ -1520,11 +1576,19 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
               ${t.details ? `<div class="text-xs text-gray-500 mt-1 line-clamp-2">${escapeHtml(t.details)}</div>` : ''}
             </div>
 
-            <div class="flex items-center gap-3 ml-3 flex-shrink-0">
-              <!-- Status badge -->
-              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor}">
-                ${status}
-              </span>
+            <div class="flex items-center gap-2 ml-3 flex-shrink-0 flex-col sm:flex-row">
+              <div class="flex flex-col gap-1 items-end">
+                <!-- Overall Status badge -->
+                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColor}">
+                  ${status}
+                </span>
+                ${t.metadata && t.metadata.driver && t.driverDeliveryStatus && t.driverDeliveryStatus.status ? `
+                <!-- Driver Delivery Status badge -->
+                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${getDriverStatusBadgeClass(t.driverDeliveryStatus.status)}">
+                  ${getDriverStatusLabel(t.driverDeliveryStatus.status)}
+                </span>
+                ` : ''}
+              </div>
 
               <!-- Delete button -->
               <button
