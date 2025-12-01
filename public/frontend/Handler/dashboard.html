@@ -909,6 +909,7 @@ if (sidebar.classList.contains('closed')){
     transition: .15s ease;
     width: 100% !important;
     box-sizing: border-box !important;
+    flex-wrap: wrap !important;
 }
 
 /* Hover lift */
@@ -981,11 +982,6 @@ if (sidebar.classList.contains('closed')){
 }
 
 /* Add padding left/right - removed to allow full width */
-#tasksTableBody {
-    padding-left: 0;
-    padding-right: 0;
-    width: 100% !important;
-}
 
 /* Convert table into block layout */
 #tasksTableBody tr td {
@@ -1003,7 +999,8 @@ if (sidebar.classList.contains('closed')){
 /* Ensure tbody takes full width */
 #tasksTableBody {
     width: 100% !important;
-    display: table-row-group !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 /* Ensure each row takes full width - override existing flex display */
@@ -1027,15 +1024,14 @@ if (sidebar.classList.contains('closed')){
         max-width: 100% !important;
     }
 
-    #tasks > div:first-child {
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
-    }
-
-    #tasks > div:nth-child(2),
-    #tasks > div:last-child {
-        margin-left: 1.5rem !important;
-        margin-right: 1.5rem !important;
+    /* Ensure table wrapper takes full width */
+    #tasks > div:nth-child(3) {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
     /* Task rows should stretch to full width */
@@ -1088,24 +1084,28 @@ if (sidebar.classList.contains('closed')){
         padding-right: 1rem !important;
     }
 
-    #tasks > div:nth-child(2),
-    #tasks > div:last-child {
+    #tasks > div:nth-child(2) {
+        margin-left: 1rem !important;
+        margin-right: 1rem !important;
+        width: calc(100% - 2rem) !important;
+        max-width: calc(100% - 2rem) !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Table container - full width */
+    #tasks > div:nth-child(3) {
         margin-left: 0 !important;
         margin-right: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
-    }
-
-    /* Tasks table container */
-    #tasks > div:last-child {
         overflow-x: hidden !important;
     }
 
     /* Table wrapper */
     #tasks table,
     #tasks table tbody,
-    #tasks > div:last-child > div {
+    #tasks > div:nth-child(3) > div {
         width: 100% !important;
         max-width: 100% !important;
         overflow-x: hidden !important;
@@ -1548,7 +1548,7 @@ if (sidebar.classList.contains('closed')){
 
   
          <!-- Tasks Table -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden mx-4 lg:mx-6">
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mx-4 lg:mx-6 w-full box-border">
                 <div class="overflow-x-hidden w-full">
                     
                     <table class="w-full" style="table-layout: fixed; width: 100%;">
