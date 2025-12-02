@@ -576,6 +576,17 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
   const user = auth.currentUser;
   if (!user) return;
   
+  // Show loading state
+  const saveBtn = ui.updateSaveBtn;
+  const saveIcon = document.getElementById('updateSaveIcon');
+  const saveText = document.getElementById('updateSaveText');
+  const originalIcon = saveIcon?.className;
+  const originalText = saveText?.textContent;
+  
+  saveBtn.disabled = true;
+  if (saveIcon) saveIcon.className = 'fa-solid fa-spinner fa-spin';
+  if (saveText) saveText.textContent = 'Saving...';
+  
   const updatePayload = {};
   
   // Try both old field IDs (miss_*) and new field IDs (update_*)
@@ -675,6 +686,15 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
   } catch (error) {
     console.error('Save failed:', error);
     showNotification('Failed to update profile: ' + (error?.message || 'Unknown error'), 'error');
+  } finally {
+    // Restore button state
+    const saveBtn = ui.updateSaveBtn;
+    const saveIcon = document.getElementById('updateSaveIcon');
+    const saveText = document.getElementById('updateSaveText');
+    
+    saveBtn.disabled = false;
+    if (saveIcon) saveIcon.className = 'fa-solid fa-floppy-disk';
+    if (saveText) saveText.textContent = 'Save Changes';
   }
 });
 
