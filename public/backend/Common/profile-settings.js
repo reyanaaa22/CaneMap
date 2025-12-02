@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase-config.js";
 import { createNotification } from "./notifications.js";
-import { getAuth, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider, updateEmail, updateProfile } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider, updateEmail, updateProfile, updatePassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
@@ -228,11 +228,8 @@ function populateEditInputs(data, user) {
 
 function buildMissingFieldsUI(data) {
   const completed = isAdditionalInfoComplete(data);
-  if (data.profileCompleted || completed) {
-    setUpdateButtonHidden(true);
-    setEditEnabled(true);
-    return;
-  }
+  const additionalInfoSection = document.getElementById('additionalInfoSection');
+  
   const missing = [];
   if (!data.barangay) missing.push(['barangay', 'Barangay']);
   if (!data.municipality) missing.push(['municipality', 'Municipality']);
@@ -240,15 +237,19 @@ function buildMissingFieldsUI(data) {
   if (!data.gender) missing.push(['gender', 'Gender', 'select']);
   if (!data.birthday) missing.push(['birthday', 'Birthday', 'date']);
   if (!data.address) missing.push(['address', 'Complete Address', 'textarea']);
-  ui.updateFields.innerHTML = missing.map(([n,l,t]) => buildMissingField(n,l,t)).join('');
-  // Show Update button only when at least one required additional field is missing; otherwise hide forever
-  if (missing.length === 0) {
-    setUpdateButtonHidden(true);
-    setEditEnabled(true);
-  } else {
-    setUpdateButtonHidden(false);
-    setEditEnabled(false);
+  
+  if (ui.updateFields) {
+    ui.updateFields.innerHTML = missing.map(([n,l,t]) => buildMissingField(n,l,t)).join('');
   }
+  
+  // Show/hide the missing information section
+  if (additionalInfoSection) {
+    additionalInfoSection.style.display = missing.length > 0 ? 'block' : 'none';
+  }
+  
+  // Always show Update button so users can update their profile anytime
+  setUpdateButtonHidden(false);
+  setEditEnabled(true);
 }
 
 function isAdditionalInfoComplete(data) {
@@ -493,12 +494,27 @@ ui.updateBtn?.addEventListener('click', () => {
   try {
     const map = [['ro_fullname','modal_ro_fullname'],['ro_email','modal_ro_email'],['ro_contact','modal_ro_contact']];
     map.forEach(([from,to])=>{ const a=document.getElementById(from); const b=document.getElementById(to); if(a&&b) b.textContent=a.textContent||'-'; });
+    
+    // Populate update modal fields with current data
+    if (userDocCache) {
+      const user = auth.currentUser;
+      document.getElementById('update_fullname').value = userDocCache.fullname || user?.displayName || '';
+      document.getElementById('update_email').value = user?.email || '';
+      document.getElementById('update_contact').value = userDocCache.contact || '';
+      document.getElementById('update_municipality').value = userDocCache.municipality || '';
+      document.getElementById('update_barangay').value = userDocCache.barangay || '';
+      document.getElementById('update_nickname').value = userDocCache.nickname || '';
+      document.getElementById('update_gender').value = userDocCache.gender || '';
+      document.getElementById('update_birthday').value = userDocCache.birthday || '';
+      document.getElementById('update_address').value = userDocCache.address || '';
+    }
+    
     // Set photo preview
     const currentPhoto = document.getElementById('viewProfilePhoto');
     if (ui.updateModalPhotoPreview && currentPhoto) {
       ui.updateModalPhotoPreview.src = currentPhoto.src;
     }
-  } catch(e) {}
+  } catch(e) { console.error('Error populating update modal:', e); }
 });
 ui.updateModalCancelBtn?.addEventListener('click', () => closeModal(ui.updateModal));
 ui.updateModalCancelSecondaryBtn?.addEventListener('click', () => closeModal(ui.updateModal));
@@ -561,12 +577,17 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
   if (!user) return;
   
   const updatePayload = {};
-  const missNickname = document.getElementById('miss_nickname')?.value?.trim();
-  const missGender = document.getElementById('miss_gender')?.value?.trim();
-  const missBirthday = document.getElementById('miss_birthday')?.value?.trim();
-  const missAddress = document.getElementById('miss_address')?.value?.trim();
-  const missBarangay = document.getElementById('miss_barangay')?.value?.trim();
-  const missMunicipality = document.getElementById('miss_municipality')?.value?.trim();
+  
+  // Try both old field IDs (miss_*) and new field IDs (update_*)
+  const missNickname = document.getElementById('miss_nickname')?.value?.trim() || document.getElementById('update_nickname')?.value?.trim();
+  const missGender = document.getElementById('miss_gender')?.value?.trim() || document.getElementById('update_gender')?.value?.trim();
+  const missBirthday = document.getElementById('miss_birthday')?.value?.trim() || document.getElementById('update_birthday')?.value?.trim();
+  const missAddress = document.getElementById('miss_address')?.value?.trim() || document.getElementById('update_address')?.value?.trim();
+  const missBarangay = document.getElementById('miss_barangay')?.value?.trim() || document.getElementById('update_barangay')?.value?.trim();
+  const missMunicipality = document.getElementById('miss_municipality')?.value?.trim() || document.getElementById('update_municipality')?.value?.trim();
+  const updateFullname = document.getElementById('update_fullname')?.value?.trim();
+  const updateEmail = document.getElementById('update_email')?.value?.trim();
+  const updateContact = document.getElementById('update_contact')?.value?.trim();
   
   if (missNickname) updatePayload.nickname = missNickname;
   if (missGender) updatePayload.gender = missGender;
@@ -574,6 +595,9 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
   if (missAddress) updatePayload.address = missAddress;
   if (missBarangay) updatePayload.barangay = missBarangay;
   if (missMunicipality) updatePayload.municipality = missMunicipality;
+  if (updateFullname) updatePayload.fullname = updateFullname;
+  if (updateEmail) updatePayload.email = updateEmail;
+  if (updateContact) updatePayload.contact = updateContact;
   
   if (Object.keys(updatePayload).length === 0 && !ui.updateModalPhotoFileInput.files?.length) {
     showNotification('Please fill in at least one field or upload a photo.', 'warning');
@@ -589,7 +613,7 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
       }
     }
     
-    await ensureUserDoc(user.uid, { ...updatePayload, profileCompleted: true, updatedAt: serverTimestamp() });
+    await ensureUserDoc(user.uid, { ...updatePayload, updatedAt: serverTimestamp() });
     const refreshed = await fetchUserDoc(user.uid);
     userDocCache = refreshed || userDocCache;
     populateReadOnly(userDocCache || {}, user);
@@ -598,9 +622,50 @@ ui.updateSaveBtn?.addEventListener('click', async () => {
     
     if (updatePayload.nickname) localStorage.setItem('farmerNickname', updatePayload.nickname);
     
-    // Permanently hide Update button after first completion
-    setUpdateButtonHidden(true);
-    setEditEnabled(true);
+    // Handle password change if provided (OPTIONAL)
+    const currentPassword = document.getElementById('update_currentPassword')?.value?.trim();
+    const newPassword = document.getElementById('update_newPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('update_confirmPassword')?.value?.trim();
+    
+    // Only process password change if user explicitly entered a new password
+    if (newPassword) {
+      if (!currentPassword) {
+        showNotification('Please enter your current password to change password', 'warning');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showNotification('New password and confirm password do not match', 'warning');
+        return;
+      }
+      if (newPassword.length < 6) {
+        showNotification('New password must be at least 6 characters long', 'warning');
+        return;
+      }
+      
+      try {
+        // Reauthenticate user with current password
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        // Update password in Firebase Authentication
+        await updatePassword(user, newPassword);
+        
+        // Clear password fields
+        document.getElementById('update_currentPassword').value = '';
+        document.getElementById('update_newPassword').value = '';
+        document.getElementById('update_confirmPassword').value = '';
+        
+        showNotification('Password changed successfully!', 'success');
+      } catch (passwordError) {
+        console.error('Password change failed:', passwordError);
+        if (passwordError.code === 'auth/wrong-password') {
+          showNotification('Current password is incorrect', 'error');
+        } else {
+          showNotification('Failed to change password: ' + (passwordError?.message || 'Unknown error'), 'error');
+        }
+        return;
+      }
+    }
     
     // Sync updates to dashboard and lobby
     try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}
@@ -657,14 +722,8 @@ ui.editModalSaveBtn?.addEventListener('click', async () => {
     
     closeModal(ui.editProfileModal);
     
-    // If after editing, all additional info is complete, mark profileCompleted and hide Update
-    if (isAdditionalInfoComplete(userDocCache)) {
-      await ensureUserDoc(user.uid, { profileCompleted: true, updatedAt: serverTimestamp() });
-      setUpdateButtonHidden(true);
-      if (ui.updatePanel) ui.updatePanel.classList.add('hidden');
-    } else {
-      setUpdateButtonHidden(false);
-    }
+    // Keep Update button always visible for users to update their profile anytime
+    buildMissingFieldsUI(userDocCache || {});
     
     // Sync updates to dashboard and lobby
     try { window.__profileViewSync && window.__profileViewSync(); } catch(e) {}

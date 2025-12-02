@@ -66,8 +66,8 @@
             </div>
 
             <section id="viewPanel" class="bg-white border border-[var(--cane-200)] rounded-xl p-4 sm:p-6 mb-6 transition-opacity duration-300">
-              <div class="flex justify-end mb-2 hidden" id="viewUpdateBtnWrapper">
-                <button id="viewUpdateBtn" class="inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-3 sm:px-4 py-2 rounded-lg hover:bg-[var(--cane-50)]">
+              <div class="flex justify-end mb-4 hidden" id="viewUpdateBtnWrapper">
+                <button id="viewUpdateBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
                   <i class="fa-solid fa-arrow-rotate-right"></i>
                   <span>Update Profile Information</span>
                 </button>
@@ -113,16 +113,6 @@
                   <div class="grid grid-cols-1 sm:grid-cols-3 items-center gap-3">
                     <div class="text-sm text-gray-600 bg-[var(--cane-50)] px-2 py-1 rounded">Birthday</div>
                     <div class="sm:col-span-2 font-semibold text-[var(--cane-950)]" id="v_birthday">-</div>
-                  </div>
-                  <div class="pt-2 flex items-center gap-2">
-                    <button id="viewEditBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-4 py-2 rounded-lg shadow-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
-                      <i class="fa-solid fa-pen"></i>
-                      <span>Edit Profile</span>
-                    </button>
-                    <button id="viewUpdateBtn" class="hidden inline-flex items-center gap-2 bg-white text-[var(--cane-800)] border border-[var(--cane-300)] px-4 py-2 rounded-lg hover:bg-[var(--cane-50)]">
-                      <i class="fa-solid fa-arrow-rotate-right"></i>
-                      <span>Update Profile Information</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -218,8 +208,8 @@
           // Default to view mode
           showView();
           syncView();
-          var btn = qs('viewEditBtn');
-          if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); showEdit(); });
+          var seeMoreBtn = qs('viewSeeMoreBtn');
+          if (seeMoreBtn) seeMoreBtn.addEventListener('click', function(e){ e.preventDefault(); var em = document.getElementById('editProfileModal'); if(em){ em.classList.remove('hidden'); em.classList.add('flex'); } });
           var pbtn = qs('viewPhotoBtn');
           if (pbtn) pbtn.addEventListener('click', function(e){ e.preventDefault(); var pm = document.getElementById('photoModal'); var img = document.getElementById('photoModalImg'); var vimg = document.getElementById('viewProfilePhoto'); if (img && vimg) img.src = vimg.src; if(pm){ pm.classList.remove('hidden'); pm.classList.add('flex'); } });
         });
@@ -322,41 +312,8 @@
           </div>
         </div>
         <div class="px-6 sm:px-8 pb-6 sm:pb-8 overflow-y-auto flex-1">
-          <!-- Existing Information Section -->
+          <!-- Profile Photo Section -->
           <div class="mb-6">
-            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
-              <i class="fa-solid fa-circle-check text-[var(--cane-600)]"></i>
-              Existing Information
-            </h4>
-            <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Full Name</div>
-                  <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_fullname">-</div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Email</div>
-                  <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_email">-</div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-xs sm:text-sm text-gray-600">Contact</div>
-                  <div class="col-span-2 font-semibold text-[var(--cane-950)]" id="modal_ro_contact">-</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- Missing Information Section -->
-          <div class="mb-6">
-            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
-              <i class="fa-solid fa-circle-exclamation text-orange-600"></i>
-              Missing Information
-            </h4>
-            <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="updateModalFields"></div>
-            </div>
-          </div>
-          <!-- Profile Photo Upload Section -->
-          <div>
             <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
               <i class="fa-solid fa-camera text-[var(--cane-600)]"></i>
               Profile Photo
@@ -380,13 +337,101 @@
               </div>
             </div>
           </div>
+
+          <!-- Existing Information Section -->
+          <div class="mb-6">
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-[var(--cane-600)]"></i>
+              Existing Information
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] bg-gradient-to-br from-[var(--cane-50)] to-white p-4 sm:p-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Full Name</label>
+                  <input id="update_fullname" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Email Address</label>
+                  <input id="update_email" type="email" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Contact Number</label>
+                  <input id="update_contact" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">City/Municipality</label>
+                  <input id="update_municipality" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Barangay</label>
+                  <input id="update_barangay" type="text" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Nickname</label>
+                  <input id="update_nickname" type="text" placeholder="Enter nickname" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Gender</label>
+                  <select id="update_gender" class="w-full px-3 py-2.5 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)] appearance-none bg-white">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Birthday</label>
+                  <input id="update_birthday" type="date" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+              </div>
+              <div class="mt-4">
+                <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Complete Address</label>
+                <textarea id="update_address" rows="3" placeholder="Enter complete address" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Information Section (Dynamically Populated) -->
+          <div class="mb-6" id="additionalInfoSection" style="display: none;">
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-circle-exclamation text-orange-600"></i>
+              Missing Information
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="updateModalFields"></div>
+            </div>
+          </div>
+
+          <!-- Change Password Section -->
+          <div>
+            <h4 class="text-base font-bold text-[var(--cane-900)] mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-lock text-[var(--cane-600)]"></i>
+              Change Password (Optional)
+            </h4>
+            <div class="rounded-2xl border border-[var(--cane-200)] p-4 sm:p-5">
+              <div class="grid grid-cols-1 gap-4">
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Current Password</label>
+                  <input id="update_currentPassword" type="password" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">New Password</label>
+                  <input id="update_newPassword" type="password" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--cane-700)] font-semibold block mb-1">Confirm Password</label>
+                  <input id="update_confirmPassword" type="password" class="w-full px-3 py-2 border border-[var(--cane-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cane-500)]" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="px-6 sm:px-8 pb-6 border-t border-[var(--cane-200)] pt-4 bg-white">
           <div class="flex items-center justify-end gap-3">
             <button id="updateModalCancelSecondaryBtn" class="px-4 py-2 rounded-lg border border-[var(--cane-300)] bg-white text-[var(--cane-800)] hover:bg-[var(--cane-50)]">Cancel</button>
             <button id="updateModalSaveBtn" class="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--cane-700)] to-[var(--cane-800)] text-white px-5 py-2.5 rounded-xl shadow-green-md hover:from-[var(--cane-800)] hover:to-[var(--cane-900)]">
               <i class="fa-solid fa-floppy-disk"></i>
-              <span>Save & Update</span>
+              <span>Save Changes</span>
             </button>
           </div>
         </div>
