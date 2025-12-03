@@ -2713,7 +2713,7 @@ function renderTasksTable(filter = 'all') {
     }
 
     return `
-      <div class="${cardClass}">
+      <div class="${cardClass}" style="will-change: transform;">
         <div class="flex items-center flex-1.5 min-w-0">
           <i class="fas ${taskIcon} ${taskTypeTextClass} text-lg mr-2"></i>
           <div class="min-w-0">
@@ -3040,6 +3040,11 @@ window.confirmDeleteTask = async function(taskId) {
       showHandlerToast('✅ Task deleted successfully', 'success');
 
       console.log(`✅ Task ${taskId} deleted successfully`);
+
+      // Force re-render to prevent layout shifts
+      const filterSelect = document.getElementById('tasksFilter');
+      const currentFilter = filterSelect ? filterSelect.value : 'all';
+      renderTasksTable(currentFilter);
     } catch (err) {
       console.error("❌ Error deleting task:", err);
       showHandlerToast('❌ Failed to delete task', 'error');

@@ -827,6 +827,14 @@ if (sidebar.classList.contains('closed')){
         .task-card.pending {
             @apply border-l-gray-400 bg-gray-50/20;
         }
+            
+        /* Task Cards - Prevent overflow */
+        #tasksTableBody > div {
+            max-width: 100%;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            box-sizing: border-box;
+        }
 
         
     </style>
@@ -1025,7 +1033,7 @@ if (sidebar.classList.contains('closed')){
     }
 }
 
-/* MOBILE IMPROVEMENTS */
+/* MOBILE: Responsive task cards */
 @media (max-width: 768px) {
     /* Prevent horizontal scroll on entire page */
     body, html {
@@ -1042,6 +1050,14 @@ if (sidebar.classList.contains('closed')){
         box-sizing: border-box;
         padding-left: 0;
         padding-right: 0;
+    }
+    
+    /* Ensure task table body doesn't cause overflow */
+    #tasksTableBody {
+        overflow-x: hidden;
+        max-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     /* Remove margins on mobile for full width */
@@ -1078,38 +1094,6 @@ if (sidebar.classList.contains('closed')){
         overflow-x: hidden;
         box-sizing: border-box;
     }
-
-    /* Mobile task cards - stack elements vertically */
-    #tasksTableBody > div:not(:first-child) {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-        padding: 1rem;
-    }
-
-    /* Mobile task title section */
-    #tasksTableBody div > div:nth-child(1) {
-        width: 100%;
-        flex: none;
-    }
-
-    /* Mobile field info */
-    #tasksTableBody div > div:nth-child(2) {
-        width: 100%;
-        flex: none;
-        font-size: 0.875rem;
-    }
-
-    /* Mobile actions */
-    #tasksTableBody div > div:nth-child(5) {
-        width: 100%;
-        flex: none;
-        justify-content: flex-end;
-    }
-}
-
-/* MOBILE: Responsive task cards */
-@media (max-width: 768px) {
     /* Add left & right padding to the entire list section */
     #tasksTableBody {
         padding-left: 0.75rem;
@@ -1129,20 +1113,25 @@ if (sidebar.classList.contains('closed')){
         padding: 12px;
         border-radius: 12px;
         box-sizing: border-box;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
     }
 
     /* Task name cell - flexible but allow text to wrap */
     #tasksTableBody div > div:nth-child(1) {
+        width: 100%;
         flex: 1 1 auto;
         min-width: 0;
         font-size: 0.9rem;
         padding-right: 0.5rem;
         word-wrap: break-word;
         overflow-wrap: break-word;
-}
+    }
 
     /* Field name cell - flexible */
     #tasksTableBody div > div:nth-child(2) {
+        width: 100%;
         flex: 0 1 auto;
         min-width: 0;
         font-size: 0.85rem;
@@ -1153,9 +1142,11 @@ if (sidebar.classList.contains('closed')){
 
     /* Actions cell - fixed width, don't shrink */
     #tasksTableBody div > div:nth-child(5) {
+        width: 100%;
         flex: 0 0 auto;
         min-width: fit-content;
         gap: 6px;
+        justify-content: flex-end;
     }
 
     /* Slightly reduce icon sizes */
@@ -1521,7 +1512,7 @@ if (sidebar.classList.contains('closed')){
         </div>
 
         <!-- Tasks Section (REQ-4: All Tasks Management) -->
-        <div id="tasks" class="content-section hidden">
+        <div id="tasks" class="content-section hidden" style="max-width: 100vw; overflow-x: hidden;">
             <div class="px-4 lg:px-6 py-4 mb-2">
                 <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-900">All Tasks</h2>
                 <p class="text-gray-600 text-sm mt-1">Manage all tasks across all your fields</p>
