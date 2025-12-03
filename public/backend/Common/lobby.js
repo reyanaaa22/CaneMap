@@ -2,7 +2,7 @@
 // Devtrace: identify when the updated lobby.js is actually loaded/executed in the browser
 try {
   console.info("LOBBY.JS loaded — build ts:", new Date().toISOString());
-} catch (_) {}
+} catch (_) { }
 // Global runtime error catcher to assist debugging in the browser
 window.addEventListener("error", function (ev) {
   try {
@@ -14,7 +14,7 @@ window.addEventListener("error", function (ev) {
       ev.colno,
       ev.error
     );
-  } catch (_) {}
+  } catch (_) { }
 });
 function animateOnScroll() {
   const elements = document.querySelectorAll(
@@ -33,7 +33,7 @@ function animateOnScroll() {
 // run once in case other code errors before listeners are attached
 try {
   animateOnScroll();
-} catch (_) {}
+} catch (_) { }
 window.addEventListener("scroll", animateOnScroll);
 window.addEventListener("load", animateOnScroll);
 
@@ -93,8 +93,8 @@ function showPopupMessage(message, type = "info") {
         type === "error"
           ? "#7f1d1d"
           : type === "warning"
-          ? "#92400e"
-          : "#14532d",
+            ? "#92400e"
+            : "#14532d",
       color: "#fff",
     });
 
@@ -116,7 +116,7 @@ function showPopupMessage(message, type = "info") {
   } catch (e) {
     try {
       console.error("showPopupMessage failed", e);
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 
@@ -212,7 +212,7 @@ async function getWeather() {
       const uvEl = document.getElementById("wxUv");
       const uvBar = document.getElementById("wxUvBar");
 
-  
+
       const tempNow =
         typeof cur.main?.temp === "number" ? Math.round(cur.main.temp) : "--";
       const windKmh =
@@ -241,17 +241,16 @@ async function getWeather() {
           else if (uvi >= 3) color = "#facc15";
           uvBar.style.background = color;
           uvEl.setAttribute("data-uv-level", String(uvi));
-          uvEl.title = `UV index ${uvi.toFixed(1)} — ${
-            uvi >= 11
+          uvEl.title = `UV index ${uvi.toFixed(1)} — ${uvi >= 11
               ? "Extreme"
               : uvi >= 8
-              ? "Very High"
-              : uvi >= 6
-              ? "High"
-              : uvi >= 3
-              ? "Moderate"
-              : "Low"
-          }`;
+                ? "Very High"
+                : uvi >= 6
+                  ? "High"
+                  : uvi >= 3
+                    ? "Moderate"
+                    : "Low"
+            }`;
         } else {
           uvEl.textContent = "--";
           uvBar.style.width = "0%";
@@ -278,46 +277,46 @@ async function getWeather() {
     }
 
 
-// --- Auto-refresh weather every 10 minutes ---
-setInterval(() => {
-  try { getWeather(); } catch(e) {}
-}, 10 * 60 * 1000);
+    // --- Auto-refresh weather every 10 minutes ---
+    setInterval(() => {
+      try { getWeather(); } catch (e) { }
+    }, 10 * 60 * 1000);
 
-// ---- NEW: Compact week tabs + modal details (Today + Mon..Sun) ----
-try {
-  const wxDailyEl = document.getElementById("wxDaily");
-  const wxTodayContainer = document.getElementById("wxTodayContainer"); // existing Today UI place
-  const weekRoot = document.createElement("div");
-  weekRoot.className = "wx-week-container space-y-2";
-
-  // Build 'Today' summary (keeps what you already set in Today metrics)
-  // show a small "safe to work?" verdict below
-  (function renderTodaySafety() {
+    // ---- NEW: Compact week tabs + modal details (Today + Mon..Sun) ----
     try {
-      const todayVerdictWrapperId = "wxTodayVerdict";
-      let verdictWrap = document.getElementById(todayVerdictWrapperId);
-      if (!verdictWrap) {
-        verdictWrap = document.createElement("div");
-        verdictWrap.id = todayVerdictWrapperId;
-        verdictWrap.className = "mt-2 text-sm";
-        if (wxTodayContainer) wxTodayContainer.appendChild(verdictWrap);
-      }
+      const wxDailyEl = document.getElementById("wxDaily");
+      const wxTodayContainer = document.getElementById("wxTodayContainer"); // existing Today UI place
+      const weekRoot = document.createElement("div");
+      weekRoot.className = "wx-week-container space-y-2";
 
-      // Evaluate safety: simple rules
-      const windKmh = typeof cur.wind?.speed === "number" ? cur.wind.speed * 3.6 : 0;
-      const rain = (onecall && onecall.daily && onecall.daily[0] && (onecall.daily[0].pop || 0)) || 0;
-      const uvi = onecall && onecall.current && typeof onecall.current.uvi === "number" ? onecall.current.uvi : null;
-      const hasStorm = (onecall && Array.isArray(onecall.alerts) && onecall.alerts.length > 0) || false;
+      // Build 'Today' summary (keeps what you already set in Today metrics)
+      // show a small "safe to work?" verdict below
+      (function renderTodaySafety() {
+        try {
+          const todayVerdictWrapperId = "wxTodayVerdict";
+          let verdictWrap = document.getElementById(todayVerdictWrapperId);
+          if (!verdictWrap) {
+            verdictWrap = document.createElement("div");
+            verdictWrap.id = todayVerdictWrapperId;
+            verdictWrap.className = "mt-2 text-sm";
+            if (wxTodayContainer) wxTodayContainer.appendChild(verdictWrap);
+          }
 
-      let safe = true;
-      let reasons = [];
+          // Evaluate safety: simple rules
+          const windKmh = typeof cur.wind?.speed === "number" ? cur.wind.speed * 3.6 : 0;
+          const rain = (onecall && onecall.daily && onecall.daily[0] && (onecall.daily[0].pop || 0)) || 0;
+          const uvi = onecall && onecall.current && typeof onecall.current.uvi === "number" ? onecall.current.uvi : null;
+          const hasStorm = (onecall && Array.isArray(onecall.alerts) && onecall.alerts.length > 0) || false;
 
-      if (hasStorm) { safe = false; reasons.push("storm/advisory"); }
-      if (windKmh >= 50) { safe = false; reasons.push("strong winds"); }
-      if (rain >= 0.6) { safe = false; reasons.push("heavy chance of rain"); }
-      if (uvi !== null && uvi >= 8) { reasons.push("very high UV"); }
+          let safe = true;
+          let reasons = [];
 
-verdictWrap.innerHTML = `
+          if (hasStorm) { safe = false; reasons.push("storm/advisory"); }
+          if (windKmh >= 50) { safe = false; reasons.push("strong winds"); }
+          if (rain >= 0.6) { safe = false; reasons.push("heavy chance of rain"); }
+          if (uvi !== null && uvi >= 8) { reasons.push("very high UV"); }
+
+          verdictWrap.innerHTML = `
   <div 
     class="rounded-2xl p-4 shadow-sm border backdrop-blur-xl transition-all"
     style="
@@ -354,15 +353,14 @@ verdictWrap.innerHTML = `
             background: ${safe ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)'};
           "
         >
-          ${
-            safe
+          ${safe
               ? `<svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5 text-white' viewBox='0 0 20 20' fill='currentColor'>
                    <path fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z' clip-rule='evenodd'/>
                  </svg>`
               : `<svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5 text-white' viewBox='0 0 20 20' fill='currentColor'>
                    <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.536-10.95a1 1 0 00-1.414-1.414L10 7.586 7.879 5.464A1 1 0 106.464 6.88L8.586 9l-2.122 2.121a1 1 0 101.415 1.415L10 10.414l2.121 2.122a1 1 0 101.415-1.415L11.414 9l2.122-2.121z' clip-rule='evenodd'/>
                  </svg>`
-          }
+            }
         </span>
       </div>
 
@@ -370,158 +368,157 @@ verdictWrap.innerHTML = `
 
     <!-- Reason List -->
     <div class="mt-2 space-y-1">
-      ${
-        reasons.length === 0
-          ? `
+      ${reasons.length === 0
+              ? `
             <div class="flex items-start gap-2 text-xs text-white/80">
               <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/70"></span>
               Conditions acceptable
             </div>`
-          : reasons
-              .map(
-                (r) => `
+              : reasons
+                .map(
+                  (r) => `
               <div class="flex items-start gap-2 text-xs text-white/85">
                 <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/70"></span>
                 ${r}
               </div>
             `
-              )
-              .join("")
-      }
+                )
+                .join("")
+            }
     </div>
 
   </div>
 `;
 
-    } catch (e) { console.warn("today safety render err", e); }
-  })();
-
-  // Build week tabs (7 days if available, else fallback)
-  const daysData = (onecall && Array.isArray(onecall.daily))
-    ? onecall.daily.slice(0, 7)
-    : (function fallbackDays() {
-        // fallback: build days from fdata grouped if onecall missing
-        if (!fdata || !Array.isArray(fdata.list)) return [];
-        const grouped = {};
-        fdata.list.forEach(it => {
-          const d = new Date(it.dt * 1000);
-          const key = d.toISOString().split("T")[0];
-          grouped[key] = grouped[key] || [];
-          grouped[key].push(it);
-        });
-        return Object.keys(grouped).slice(0,7).map((k, idx)=> {
-          // create pseudo-day mimicking onecall.daily shape
-          const sample = grouped[k][Math.floor(grouped[k].length/2)];
-          return {
-            dt: Math.floor(new Date(k).getTime()/1000),
-            temp: { min: Math.round(Math.min(...grouped[k].map(x=>x.main.temp_min))), max: Math.round(Math.max(...grouped[k].map(x=>x.main.temp_max))) },
-            pop: (grouped[k].reduce((s,x)=>s + (x.pop||0),0) / grouped[k].length) || 0,
-            weather: sample.weather || [{description: sample.weather?.[0]?.description || "" , icon: sample.weather?.[0]?.icon || "" }],
-            wind_speed: sample.wind?.speed || 0
-          };
-        });
+        } catch (e) { console.warn("today safety render err", e); }
       })();
 
-// ---------------- WEATHER ALERT NOTIFICATION (HEAVY RAIN) ----------------
-try {
-  // Today's probability of rain (0 = today)
-  const todayPop = onecall?.daily?.[0]?.pop || 0;
+      // Build week tabs (7 days if available, else fallback)
+      const daysData = (onecall && Array.isArray(onecall.daily))
+        ? onecall.daily.slice(0, 7)
+        : (function fallbackDays() {
+          // fallback: build days from fdata grouped if onecall missing
+          if (!fdata || !Array.isArray(fdata.list)) return [];
+          const grouped = {};
+          fdata.list.forEach(it => {
+            const d = new Date(it.dt * 1000);
+            const key = d.toISOString().split("T")[0];
+            grouped[key] = grouped[key] || [];
+            grouped[key].push(it);
+          });
+          return Object.keys(grouped).slice(0, 7).map((k, idx) => {
+            // create pseudo-day mimicking onecall.daily shape
+            const sample = grouped[k][Math.floor(grouped[k].length / 2)];
+            return {
+              dt: Math.floor(new Date(k).getTime() / 1000),
+              temp: { min: Math.round(Math.min(...grouped[k].map(x => x.main.temp_min))), max: Math.round(Math.max(...grouped[k].map(x => x.main.temp_max))) },
+              pop: (grouped[k].reduce((s, x) => s + (x.pop || 0), 0) / grouped[k].length) || 0,
+              weather: sample.weather || [{ description: sample.weather?.[0]?.description || "", icon: sample.weather?.[0]?.icon || "" }],
+              wind_speed: sample.wind?.speed || 0
+            };
+          });
+        })();
 
-  // Threshold for heavy rain
-  const IS_HEAVY_RAIN = todayPop >= 0.60; // 60% chance of rain
+      // ---------------- WEATHER ALERT NOTIFICATION (HEAVY RAIN) ----------------
+      try {
+        // Today's probability of rain (0 = today)
+        const todayPop = onecall?.daily?.[0]?.pop || 0;
 
-  // Prevent spam — notify once per day
-  const lastAlertDate = localStorage.getItem("lastRainAlertDate");
-  const todayKey = new Date().toISOString().split("T")[0];
+        // Threshold for heavy rain
+        const IS_HEAVY_RAIN = todayPop >= 0.60; // 60% chance of rain
 
-  if (IS_HEAVY_RAIN && lastAlertDate !== todayKey) {
-    localStorage.setItem("lastRainAlertDate", todayKey);
+        // Prevent spam — notify once per day
+        const lastAlertDate = localStorage.getItem("lastRainAlertDate");
+        const todayKey = new Date().toISOString().split("T")[0];
 
-    // Broadcast to all users (OR filter as needed)
-    sendHeavyRainNotificationToAll();
-  }
-} catch (err) {
-  console.warn("Weather alert failed:", err);
-}
+        if (IS_HEAVY_RAIN && lastAlertDate !== todayKey) {
+          localStorage.setItem("lastRainAlertDate", todayKey);
 
-// Sync profile photo in lobby header (optional, if elements exist)
-try {
-  document.addEventListener('DOMContentLoaded', async () => {
-    try {
-      const { auth, db } = await import('../../backend/Common/firebase-config.js');
-      const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
-      if (auth && auth.currentUser) {
-        const uid = auth.currentUser.uid;
-        const snap = await getDoc(doc(db, 'users', uid));
-        const url = (snap.exists() && snap.data().photoURL) || auth.currentUser.photoURL || '';
-        const img = document.getElementById('profilePhoto');
-        const icon = document.getElementById('profileIconDefault');
-        if (img && url) {
-          img.src = url;
-          img.classList.remove('hidden');
-          if (icon) icon.classList.add('hidden');
+          // Broadcast to all users (OR filter as needed)
+          sendHeavyRainNotificationToAll();
         }
+      } catch (err) {
+        console.warn("Weather alert failed:", err);
       }
-    } catch (e) {
-      try { console.warn('Lobby profile photo sync skipped:', e && e.message ? e.message : e); } catch(_) {}
-    }
-  });
-} catch(_) {}
 
-// --- NEW PROFESSIONAL WEEKLY CARDS LAYOUT ---
-const weeklyList = document.createElement("div");
-weeklyList.className = "space-y-3 mt-3";
+      // Sync profile photo in lobby header (optional, if elements exist)
+      try {
+        document.addEventListener('DOMContentLoaded', async () => {
+          try {
+            const { auth, db } = await import('../../backend/Common/firebase-config.js');
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
+            if (auth && auth.currentUser) {
+              const uid = auth.currentUser.uid;
+              const snap = await getDoc(doc(db, 'users', uid));
+              const url = (snap.exists() && snap.data().photoURL) || auth.currentUser.photoURL || '';
+              const img = document.getElementById('profilePhoto');
+              const icon = document.getElementById('profileIconDefault');
+              if (img && url) {
+                img.src = url;
+                img.classList.remove('hidden');
+                if (icon) icon.classList.add('hidden');
+              }
+            }
+          } catch (e) {
+            try { console.warn('Lobby profile photo sync skipped:', e && e.message ? e.message : e); } catch (_) { }
+          }
+        });
+      } catch (_) { }
 
-// Build vertical cards for each day
-daysData.forEach((day, idx) => {
-const date = new Date(day.dt * 1000);
+      // --- NEW PROFESSIONAL WEEKLY CARDS LAYOUT ---
+      const weeklyList = document.createElement("div");
+      weeklyList.className = "space-y-3 mt-3";
 
-// Add proper weekday label
-const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-const label = DAYS[date.getDay()];
+      // Build vertical cards for each day
+      daysData.forEach((day, idx) => {
+        const date = new Date(day.dt * 1000);
+
+        // Add proper weekday label
+        const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const label = DAYS[date.getDay()];
 
 
-  const icon = day.weather?.[0]?.icon
-    ? `https://openweathermap.org/img/wn/${day.weather[0].icon}.png`
-    : "";
-  const desc = day.weather?.[0]?.description || "No details";
-  const lo = Math.round(day.temp.min);
-  const hi = Math.round(day.temp.max);
-  const pop = Math.round((day.pop || 0) * 100);
-  const wind = ((day.wind_speed || 0) * 3.6).toFixed(1);
-  const uv =
-    onecall?.daily?.[idx]?.uvi ??
-    (idx === 0 ? onecall?.current?.uvi : null);
+        const icon = day.weather?.[0]?.icon
+          ? `https://openweathermap.org/img/wn/${day.weather[0].icon}.png`
+          : "";
+        const desc = day.weather?.[0]?.description || "No details";
+        const lo = Math.round(day.temp.min);
+        const hi = Math.round(day.temp.max);
+        const pop = Math.round((day.pop || 0) * 100);
+        const wind = ((day.wind_speed || 0) * 3.6).toFixed(1);
+        const uv =
+          onecall?.daily?.[idx]?.uvi ??
+          (idx === 0 ? onecall?.current?.uvi : null);
 
-  let safe = true;
-  let reasons = [];
+        let safe = true;
+        let reasons = [];
 
-  if (pop >= 60) {
-    safe = false;
-    reasons.push("High rain chance");
-  }
-  if (wind >= 50) {
-    safe = false;
-    reasons.push("Strong winds");
-  }
-  if (uv >= 8) {
-    reasons.push("Very high UV");
-  }
+        if (pop >= 60) {
+          safe = false;
+          reasons.push("High rain chance");
+        }
+        if (wind >= 50) {
+          safe = false;
+          reasons.push("Strong winds");
+        }
+        if (uv >= 8) {
+          reasons.push("Very high UV");
+        }
 
-  const card = document.createElement("div");
-  card.className = `
+        const card = document.createElement("div");
+        card.className = `
     p-2 rounded-2xl border shadow-md backdrop-blur-xl transition-all
     hover:scale-[1.01] hover:shadow-lg
     cursor-pointer
   `;
-  card.style.background = safe
-    ? "rgba(34,197,94,0.10)"
-    : "rgba(239,68,68,0.12)";
-  card.style.borderColor = safe
-    ? "rgba(34,197,94,0.35)"
-    : "rgba(239,68,68,0.35)";
+        card.style.background = safe
+          ? "rgba(34,197,94,0.10)"
+          : "rgba(239,68,68,0.12)";
+        card.style.borderColor = safe
+          ? "rgba(34,197,94,0.35)"
+          : "rgba(239,68,68,0.35)";
 
-  card.innerHTML = `
+        card.innerHTML = `
     <div class="flex items-center justify-between">
       <div>
         <div class="text-sm font-semibold text-white">${label}</div>
@@ -544,22 +541,19 @@ const label = DAYS[date.getDay()];
       style="
         width: fit-content;
         color: white;
-        background: ${
-          safe ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"
-        };
+        background: ${safe ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)"
+          };
       "
     >
-      ${
-        safe
-          ? "Safe to work"
-          : "Not recommended"
-      }
+      ${safe
+            ? "Safe to work"
+            : "Not recommended"
+          }
     </div>
 
     <div class="mt-2 space-y-1">
-      ${
-        reasons.length
-          ? reasons
+      ${reasons.length
+            ? reasons
               .map(
                 (r) => `
           <div class="flex items-start gap-2 text-[11px] text-white/75">
@@ -569,61 +563,61 @@ const label = DAYS[date.getDay()];
         `
               )
               .join("")
-          : `
+            : `
           <div class="flex items-start gap-2 text-[11px] text-white/70">
             <span class="mt-1 w-1.5 h-1.5 rounded-full bg-white/60"></span>
             Conditions acceptable
           </div>
         `
-      }
+          }
     </div>
   `;
 
-  weeklyList.appendChild(card);
-});
+        weeklyList.appendChild(card);
+      });
 
-weekRoot.appendChild(weeklyList);
+      weekRoot.appendChild(weeklyList);
 
-// place weekRoot into wxDaily element (replace content)
-if (wxDailyEl) {
-  wxDailyEl.innerHTML = "";
-  wxDailyEl.appendChild(weekRoot);
-}
-// FIX: Proper scroll + spacing so footer button is visible
-const wxCompact = document.getElementById("wxCompact");
-const wxDailyFixed = document.getElementById("wxDaily");
+      // place weekRoot into wxDaily element (replace content)
+      if (wxDailyEl) {
+        wxDailyEl.innerHTML = "";
+        wxDailyEl.appendChild(weekRoot);
+      }
+      // FIX: Proper scroll + spacing so footer button is visible
+      const wxCompact = document.getElementById("wxCompact");
+      const wxDailyFixed = document.getElementById("wxDaily");
 
-if (wxCompact && wxDailyFixed) {
+      if (wxCompact && wxDailyFixed) {
 
-  const isDesktop = window.matchMedia("(min-width: 1025px)").matches;
+        const isDesktop = window.matchMedia("(min-width: 1025px)").matches;
 
-  if (isDesktop) {
-    // DESKTOP ONLY: fixed height layout
-    wxCompact.style.height = "420px";
-    wxCompact.style.maxHeight = "430px";
-    wxCompact.style.overflow = "hidden";
+        if (isDesktop) {
+          // DESKTOP ONLY: fixed height layout
+          wxCompact.style.height = "420px";
+          wxCompact.style.maxHeight = "430px";
+          wxCompact.style.overflow = "hidden";
 
-    wxDailyFixed.style.maxHeight = "calc(300px - 70px)";
-    wxDailyFixed.style.paddingBottom = "20px";
+          wxDailyFixed.style.maxHeight = "calc(300px - 70px)";
+          wxDailyFixed.style.paddingBottom = "20px";
 
-    wxDailyFixed.style.overflowY = "auto";
+          wxDailyFixed.style.overflowY = "auto";
 
-  } else {
-    // MOBILE / TABLET: adaptive, fully responsive
-    wxCompact.style.height = "auto";
-    wxCompact.style.maxHeight = "none";
-    wxCompact.style.overflow = "visible";
+        } else {
+          // MOBILE / TABLET: adaptive, fully responsive
+          wxCompact.style.height = "auto";
+          wxCompact.style.maxHeight = "none";
+          wxCompact.style.overflow = "visible";
 
-    wxDailyFixed.style.maxHeight = window.innerHeight * 0.55 + "px";
-    wxDailyFixed.style.paddingBottom = "120px";  // ensure button visible
-    wxDailyFixed.style.overflowY = "auto";
-  }
-}
+          wxDailyFixed.style.maxHeight = window.innerHeight * 0.55 + "px";
+          wxDailyFixed.style.paddingBottom = "120px";  // ensure button visible
+          wxDailyFixed.style.overflowY = "auto";
+        }
+      }
 
 
-} catch (err) {
-  console.warn("Failed to build week tabs UI:", err);
-}
+    } catch (err) {
+      console.warn("Failed to build week tabs UI:", err);
+    }
 
   } catch (error) {
     console.error("Error fetching weather:", error);
@@ -639,10 +633,10 @@ if (wxCompact && wxDailyFixed) {
       el.appendChild(errNote);
     }
   }
-// --- Weather weekly tab responsive CSS ---
-(function(){
-  const s = document.createElement('style');
-  s.textContent = `
+  // --- Weather weekly tab responsive CSS ---
+  (function () {
+    const s = document.createElement('style');
+    s.textContent = `
     .wx-week-tabs { 
       gap: 6px;
     }
@@ -662,8 +656,8 @@ if (wxCompact && wxDailyFixed) {
       }
     }
   `;
-  document.head.appendChild(s);
-})();
+    document.head.appendChild(s);
+  })();
 
 }
 
@@ -1313,18 +1307,16 @@ function openFieldDetailsModal(field) {
                 </div>
             </div>
 
-            <h2 class="text-lg font-bold text-center text-[var(--cane-900)] mb-2">${
-              field.fieldName
-            }</h2>
+            <h2 class="text-lg font-bold text-center text-[var(--cane-900)] mb-2">${field.fieldName
+    }</h2>
 
             <p class="text-sm text-center mb-3 text-[var(--cane-700)]">
                 <span class="font-semibold">Owner:</span> ${field.applicantName}
             </p>
 
             <div class="text-[13px] text-[var(--cane-800)] bg-[var(--cane-50)] p-3 rounded-md border border-[var(--cane-200)] leading-relaxed mb-2 text-center">
-                🏠︎ ${field.street}, Brgy. ${
-    field.barangay
-  }, Ormoc City, Leyte 6541
+                🏠︎ ${field.street}, Brgy. ${field.barangay
+    }, Ormoc City, Leyte 6541
             </div>
 
             <div class="text-[11px] text-[var(--cane-600)] italic text-center mb-4">
@@ -1715,9 +1707,9 @@ async function confirmJoin(field, role) {
 
         // Get requester's name from localStorage or use userId
         const requesterName = localStorage.getItem("farmerName") ||
-                             localStorage.getItem("farmerNickname") ||
-                             localStorage.getItem("userEmail")?.split('@')[0] ||
-                             "A user";
+          localStorage.getItem("farmerNickname") ||
+          localStorage.getItem("userEmail")?.split('@')[0] ||
+          "A user";
 
         const notificationRef = doc(collection(db, "notifications"));
         await setDoc(notificationRef, {
@@ -2032,7 +2024,7 @@ window.addEventListener("message", (e) => {
       // E) Refresh rental button
       try {
         refreshDriverRentalButton();
-      } catch (_) {}
+      } catch (_) { }
 
       console.log("✅ Rental modal closed completely.");
     }
@@ -2043,6 +2035,18 @@ window.addEventListener("message", (e) => {
 
 // Initialize everything when page loads
 document.addEventListener("DOMContentLoaded", function () {
+  // Initialize offline sync for Worker and Driver accounts
+  try {
+    import('../Common/offline-sync.js').then(module => {
+      module.initOfflineSync();
+      console.log('Offline sync initialized on lobby page');
+    }).catch(err => {
+      console.error('Failed to initialize offline sync on lobby:', err);
+    });
+  } catch (error) {
+    console.error('Error loading offline sync module:', error);
+  }
+
   setTimeout(() => {
     initMap();
   }, 100);
@@ -2051,11 +2055,11 @@ document.addEventListener("DOMContentLoaded", function () {
   try {
     window.__canemap_weather_interval &&
       clearInterval(window.__canemap_weather_interval);
-  } catch (_) {}
+  } catch (_) { }
   window.__canemap_weather_interval = setInterval(() => {
     try {
       getWeather();
-    } catch (_) {}
+    } catch (_) { }
   }, 10 * 60 * 1000);
   const fullName = localStorage.getItem("farmerName") || "Farmer Name";
   const firstName = fullName.trim().split(/\s+/)[0] || fullName;
@@ -2079,7 +2083,7 @@ document.addEventListener("DOMContentLoaded", function () {
       dropdownRoleEl.textContent =
         map[role] ||
         (role ? role.charAt(0).toUpperCase() + role.slice(1) : "Farmer");
-    } catch (_) {}
+    } catch (_) { }
   })();
 
   // Initialize weather toggle state: collapsed by default (show Today only)
@@ -2146,8 +2150,8 @@ document.addEventListener("DOMContentLoaded", function () {
               expandBtnContainer.appendChild(expandBtn);
             }
           }
-        } catch (_) {}
-      } catch (_) {}
+        } catch (_) { }
+      } catch (_) { }
     }
 
     if (weatherCard && wxDaily) {
@@ -2172,7 +2176,7 @@ document.addEventListener("DOMContentLoaded", function () {
         syncToggleState(isExpanded);
       });
     }
-  } catch (_) {}
+  } catch (_) { }
 
   // Role gating for Dashboard
   const dashboardLink = document.getElementById("dashboardLink");
@@ -2196,7 +2200,7 @@ document.addEventListener("DOMContentLoaded", function () {
           dashboardLink.href = "../Handler/dashboard.html";
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
   // ==================== 🔄 LIVE ROLE LISTENER ====================
   (async () => {
@@ -2231,7 +2235,7 @@ document.addEventListener("DOMContentLoaded", function () {
               map[role] ||
               (role ? role.charAt(0).toUpperCase() + role.slice(1) : "Farmer");
           }
-        } catch (_) {}
+        } catch (_) { }
         // inside your onSnapshot(userRef, ...) after you set localStorage userRole:
         updatePendingFieldMenu();
 
@@ -2310,7 +2314,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const newPrev = prev.cloneNode(true);
                 prev.parentNode.replaceChild(newPrev, prev);
                 prev = newPrev; // ✅ Update reference to new button
-                newPrev.onclick = function() {
+                newPrev.onclick = function () {
                   if (idx > 0) {
                     idx--;
                     render();
@@ -2322,7 +2326,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const newNext = next.cloneNode(true);
                 next.parentNode.replaceChild(newNext, next);
                 next = newNext; // ✅ Update reference to new button
-                newNext.onclick = function() {
+                newNext.onclick = function () {
                   if (idx < slides.length - 1) {
                     idx++;
                     render();
@@ -2333,12 +2337,12 @@ document.addEventListener("DOMContentLoaded", function () {
               }
 
               // Close on background click
-              modal.onclick = function(ev) {
+              modal.onclick = function (ev) {
                 if (ev.target === modal) close();
               };
 
               // Close on Escape key
-              const escapeHandler = function(ev) {
+              const escapeHandler = function (ev) {
                 if (ev.key === "Escape") {
                   close();
                   document.removeEventListener("keydown", escapeHandler);
@@ -2401,7 +2405,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (regBtn) regBtn.style.display = "";
             if (driverBtn) driverBtn.style.display = "none";
           }
-        } catch (_) {}
+        } catch (_) { }
       });
     } catch (err) {
       console.error("🔥 Error setting up live role listener:", err);
@@ -2526,7 +2530,7 @@ document.addEventListener("DOMContentLoaded", function () {
             { once: true }
           );
           open();
-        } catch (_) {}
+        } catch (_) { }
       });
     } else {
       // ✅ Approved roles — unlocked dashboard access
@@ -2561,12 +2565,12 @@ document.addEventListener("DOMContentLoaded", function () {
       // If you want to refresh UI after publish
       try {
         checkRegisterFieldButton && checkRegisterFieldButton();
-      } catch (_) {}
+      } catch (_) { }
 
       // OPTIONAL toast UI (if you have your own)
       try {
         showToast && showToast("Your vehicle is now open for rental!", "green");
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // When user cancels the rental modal
@@ -2700,8 +2704,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // If there is an existing global openDriverRentalModal, call it to ensure compatibility
         try {
           openDriverRentalModal();
-        } catch (_) {}
-      } catch (_) {}
+        } catch (_) { }
+      } catch (_) { }
     } else {
       // fallback: create the overlay (lightweight)
       const overlayId = "driverRentalModalWrapper";
@@ -2782,7 +2786,7 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener("focus", () => {
     try {
       refreshDriverRentalButton();
-    } catch (_) {}
+    } catch (_) { }
   });
 
   // Listen for messages from iframe to refresh UI after publish/stop
@@ -2794,7 +2798,7 @@ document.addEventListener("DOMContentLoaded", function () {
       setTimeout(() => {
         try {
           refreshDriverRentalButton();
-        } catch (_) {}
+        } catch (_) { }
       }, 400);
     }
   });
@@ -2826,7 +2830,7 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem("userRole", role);
         refreshPendingFieldMenu(pendingLink, db, userId, role);
 
-        
+
       });
 
       // --- listen to field_applications changes in realtime ---
@@ -2884,149 +2888,149 @@ document.addEventListener("DOMContentLoaded", function () {
       initPendingFieldWatcher();
     }, 400);
   });
-/* ===== Robust: hide Driver Badge UI & Register a Field when role is handler, worker, or driver ===== */
-(function ensureHideDriverBadgeForHandlerWorker() {
-function hideDriverBadgeElements() {
-  try {
-    const role = (localStorage.getItem("userRole") || "").toLowerCase();
-
-// 🔥 READ PENDING FLAGS (must match profile dropdown logic)
-const pendingWorkerJoin =
-    localStorage.getItem("pendingWorker") === "true";
-const pendingFieldApplication =
-    localStorage.getItem("pendingFieldApplication") === "true";
-const pendingDriverBadge =
-    localStorage.getItem("pendingDriverBadge") === "true";
-const pendingJoinField =
-    localStorage.getItem("pendingJoinField") === "true";
-
-// 🔥 Farmer should be blocked if ANY pending exists
-const farmerHasPending =
-    pendingWorkerJoin ||
-    pendingFieldApplication ||
-    pendingDriverBadge ||
-    pendingJoinField;
-
-// 🔥 If should be hidden (same logic as your dropdown)
-const shouldHide =
-    role === "handler" ||
-    role === "worker" ||
-    (role === "farmer" && farmerHasPending);
-
-// 🔥 Override ALL icon visibility BEFORE viewport rules run
-if (shouldHide) {
-    if (regBtn) regBtn.style.display = "none";
-    if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
-}
-
-
-    // 🔽 Elements
-    const headerDriverLink = document.querySelector('a[href="#driver-badge"]');
-    const promoSection = document.getElementById("driver-badge");
-    const dropdownDriverLink = document.querySelector(
-      '#profileDropdown a[href*="Driver_Badge"]'
-    );
-    const mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
-    const driverRentalBtn = document.getElementById("btnDriverRental");
-    const regFieldDropdown = document.querySelector(
-      '#profileDropdown a[href*="Register-field.html"]'
-    );
-    const regBtn = document.getElementById("btnRegisterField");
-
-    // 🔥 APPLY HIDING LOGIC
-    if (headerDriverLink) headerDriverLink.style.display = shouldHide ? "none" : "";
-    if (promoSection) promoSection.style.display = shouldHide ? "none" : "";
-    if (dropdownDriverLink) dropdownDriverLink.style.display = shouldHide ? "none" : "";
-    if (mobileDriverBtn) mobileDriverBtn.style.display = shouldHide ? "none" : "";
-    if (driverRentalBtn) driverRentalBtn.style.display = shouldHide ? "none" : "";
-
-    // Register Field (dropdown + header)
-    if (regFieldDropdown) regFieldDropdown.style.display = shouldHide ? "none" : "";
-    if (regBtn) regBtn.style.display = shouldHide ? "none" : "";
-
-    // Extra safety: if visibility toggling is overridden by late DOM changes, disable clicks for worker
-    function disableLink(a){
+  /* ===== Robust: hide Driver Badge UI & Register a Field when role is handler, worker, or driver ===== */
+  (function ensureHideDriverBadgeForHandlerWorker() {
+    function hideDriverBadgeElements() {
       try {
-        a.setAttribute('aria-disabled','true');
-        a.style.pointerEvents = 'none';
-        a.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); }, { capture: true });
-      } catch(_){}
-    }
-    function enableLink(a){
-      try {
-        a.removeAttribute('aria-disabled');
-        a.style.pointerEvents = '';
-      } catch(_){}
-    }
-    if (role === 'worker'){
-      if (dropdownDriverLink) { if (shouldHide) disableLink(dropdownDriverLink); else enableLink(dropdownDriverLink); }
-      if (regFieldDropdown) { if (shouldHide) disableLink(regFieldDropdown); else enableLink(regFieldDropdown); }
-    }
+        const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-  } catch (err) {
-    console.warn("hideDriverBadgeElements error:", err);
-  }
-}
-  // Run immediately
-  hideDriverBadgeElements();
+        // 🔥 READ PENDING FLAGS (must match profile dropdown logic)
+        const pendingWorkerJoin =
+          localStorage.getItem("pendingWorker") === "true";
+        const pendingFieldApplication =
+          localStorage.getItem("pendingFieldApplication") === "true";
+        const pendingDriverBadge =
+          localStorage.getItem("pendingDriverBadge") === "true";
+        const pendingJoinField =
+          localStorage.getItem("pendingJoinField") === "true";
 
-  // Re-run if localStorage changes (role changes)
-  window.addEventListener("storage", (ev) => {
-    if (ev.key === "userRole") {
-      hideDriverBadgeElements();
+        // 🔥 Farmer should be blocked if ANY pending exists
+        const farmerHasPending =
+          pendingWorkerJoin ||
+          pendingFieldApplication ||
+          pendingDriverBadge ||
+          pendingJoinField;
+
+        // 🔥 If should be hidden (same logic as your dropdown)
+        const shouldHide =
+          role === "handler" ||
+          role === "worker" ||
+          (role === "farmer" && farmerHasPending);
+
+        // 🔥 Override ALL icon visibility BEFORE viewport rules run
+        if (shouldHide) {
+          if (regBtn) regBtn.style.display = "none";
+          if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
+        }
+
+
+        // 🔽 Elements
+        const headerDriverLink = document.querySelector('a[href="#driver-badge"]');
+        const promoSection = document.getElementById("driver-badge");
+        const dropdownDriverLink = document.querySelector(
+          '#profileDropdown a[href*="Driver_Badge"]'
+        );
+        const mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
+        const driverRentalBtn = document.getElementById("btnDriverRental");
+        const regFieldDropdown = document.querySelector(
+          '#profileDropdown a[href*="Register-field.html"]'
+        );
+        const regBtn = document.getElementById("btnRegisterField");
+
+        // 🔥 APPLY HIDING LOGIC
+        if (headerDriverLink) headerDriverLink.style.display = shouldHide ? "none" : "";
+        if (promoSection) promoSection.style.display = shouldHide ? "none" : "";
+        if (dropdownDriverLink) dropdownDriverLink.style.display = shouldHide ? "none" : "";
+        if (mobileDriverBtn) mobileDriverBtn.style.display = shouldHide ? "none" : "";
+        if (driverRentalBtn) driverRentalBtn.style.display = shouldHide ? "none" : "";
+
+        // Register Field (dropdown + header)
+        if (regFieldDropdown) regFieldDropdown.style.display = shouldHide ? "none" : "";
+        if (regBtn) regBtn.style.display = shouldHide ? "none" : "";
+
+        // Extra safety: if visibility toggling is overridden by late DOM changes, disable clicks for worker
+        function disableLink(a) {
+          try {
+            a.setAttribute('aria-disabled', 'true');
+            a.style.pointerEvents = 'none';
+            a.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); }, { capture: true });
+          } catch (_) { }
+        }
+        function enableLink(a) {
+          try {
+            a.removeAttribute('aria-disabled');
+            a.style.pointerEvents = '';
+          } catch (_) { }
+        }
+        if (role === 'worker') {
+          if (dropdownDriverLink) { if (shouldHide) disableLink(dropdownDriverLink); else enableLink(dropdownDriverLink); }
+          if (regFieldDropdown) { if (shouldHide) disableLink(regFieldDropdown); else enableLink(regFieldDropdown); }
+        }
+
+      } catch (err) {
+        console.warn("hideDriverBadgeElements error:", err);
+      }
     }
-  });
-
-  // Observe DOM changes (in case dropdown or buttons load later)
-  const observer = new MutationObserver(() => hideDriverBadgeElements());
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  // Safety retry for late-loading elements
-  let retries = 6;
-  (function retryLoop() {
+    // Run immediately
     hideDriverBadgeElements();
-    if (retries-- > 0) setTimeout(retryLoop, 200);
+
+    // Re-run if localStorage changes (role changes)
+    window.addEventListener("storage", (ev) => {
+      if (ev.key === "userRole") {
+        hideDriverBadgeElements();
+      }
+    });
+
+    // Observe DOM changes (in case dropdown or buttons load later)
+    const observer = new MutationObserver(() => hideDriverBadgeElements());
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Safety retry for late-loading elements
+    let retries = 6;
+    (function retryLoop() {
+      hideDriverBadgeElements();
+      if (retries-- > 0) setTimeout(retryLoop, 200);
+    })();
+
+    // Expose for manual testing if needed
+    window.hideDriverBadgeElements = hideDriverBadgeElements;
   })();
 
-  // Expose for manual testing if needed
-  window.hideDriverBadgeElements = hideDriverBadgeElements;
-})();
-
-// ---- AUTO-HIDE "Register a Field" WHEN DRIVER BADGE IS PENDING ---- //
-function hideRegisterFieldIfDriverPending() {
+  // ---- AUTO-HIDE "Register a Field" WHEN DRIVER BADGE IS PENDING ---- //
+  function hideRegisterFieldIfDriverPending() {
     const dropdown = document.getElementById("profileDropdown");
     if (!dropdown) return;
 
     // find the <a> by visible text only
     const links = dropdown.querySelectorAll("a");
     links.forEach(a => {
-        const text = a.textContent.trim().toLowerCase();
+      const text = a.textContent.trim().toLowerCase();
 
-        if (text.includes("register a field")) {
-            const hasPendingDriver = localStorage.getItem("pendingDriver") === "true";
+      if (text.includes("register a field")) {
+        const hasPendingDriver = localStorage.getItem("pendingDriver") === "true";
 
-            if (hasPendingDriver) {
-                a.classList.add("hidden");
-                a.style.display = "none";       // double safety
-                console.log("🚫 Hidden: Register a Field (driver badge pending)");
-            } else {
-                a.classList.remove("hidden");
-                a.style.display = "";
-                console.log("✅ Visible: Register a Field");
-            }
+        if (hasPendingDriver) {
+          a.classList.add("hidden");
+          a.style.display = "none";       // double safety
+          console.log("🚫 Hidden: Register a Field (driver badge pending)");
+        } else {
+          a.classList.remove("hidden");
+          a.style.display = "";
+          console.log("✅ Visible: Register a Field");
         }
+      }
     });
-}
+  }
 
-// Run once on load
-document.addEventListener("DOMContentLoaded", hideRegisterFieldIfDriverPending);
+  // Run once on load
+  document.addEventListener("DOMContentLoaded", hideRegisterFieldIfDriverPending);
 
-// React to Firestore updates (watchPendingConflicts triggers storage events)
-window.addEventListener("storage", (e) => {
+  // React to Firestore updates (watchPendingConflicts triggers storage events)
+  window.addEventListener("storage", (e) => {
     if (e.key === "pendingDriver") {
-        hideRegisterFieldIfDriverPending();
+      hideRegisterFieldIfDriverPending();
     }
-});
+  });
 
 
   // Feedback FAB bindings (ensure after DOM is ready)
@@ -3082,7 +3086,7 @@ window.addEventListener("storage", (e) => {
       // Feedback form submission is handled in the fallback binding below (to centralize logic).
       // Keep this block intentionally empty to avoid duplicate handlers when scripts re-run.
     }
-  } catch (_) {}
+  } catch (_) { }
 
   // Logout confirmation modal wiring
   try {
@@ -3146,7 +3150,7 @@ window.addEventListener("storage", (e) => {
           try {
             localStorage.clear();
             sessionStorage.clear();
-          } catch (_) {}
+          } catch (_) { }
 
           // Optional fade effect before redirect
           if (modal && dialog) {
@@ -3160,7 +3164,7 @@ window.addEventListener("storage", (e) => {
         }
       });
     }
-  } catch (_) {}
+  } catch (_) { }
 });
 
 // ✅ Logout confirmation modal wiring (must be inside DOMContentLoaded)
@@ -3230,7 +3234,7 @@ try {
         try {
           localStorage.clear();
           sessionStorage.clear();
-        } catch (_) {}
+        } catch (_) { }
 
         // Small fade animation before redirect
         modal.classList.add("opacity-0");
@@ -3593,12 +3597,12 @@ window.scrollToTop = scrollToTop;
         await window.setDoc(ref, data);
         try {
           if (window.NotificationSystem && typeof window.NotificationSystem.createBroadcastNotification === "function") {
-            const summary = (feedbackType === "like" ? "Like" : feedbackType === "dislike" ? "Dislike" : "Idea") + 
-              (email ? ` from ${email}` : "") + 
-              ": " + (feedbackMsg.length > 80 ? feedbackMsg.slice(0,80) + "…" : feedbackMsg);
+            const summary = (feedbackType === "like" ? "Like" : feedbackType === "dislike" ? "Dislike" : "Idea") +
+              (email ? ` from ${email}` : "") +
+              ": " + (feedbackMsg.length > 80 ? feedbackMsg.slice(0, 80) + "…" : feedbackMsg);
             await window.NotificationSystem.createBroadcastNotification("system_admin", summary, "feedback_submitted", null);
           }
-        } catch (_) {}
+        } catch (_) { }
         showConfirmationPopup();
       } catch (err) {
         showInlineError("Failed to send feedback. Please try again.");
@@ -3662,7 +3666,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     try {
       updatePendingFieldMenu();
-    } catch (_) {}
+    } catch (_) { }
   }, 200);
 });
 
@@ -3712,7 +3716,7 @@ function showConfirmationPopup() {
     setTimeout(() => {
       try {
         popup.remove();
-      } catch (_) {}
+      } catch (_) { }
     }, 3000);
   } catch (e) {
     console.error(e);
@@ -3723,7 +3727,7 @@ function showConfirmationPopup() {
 setTimeout(() => {
   console.log("🔔 [Notifications] Real-time system starting...");
 
-  const openNotifModal = document.getElementById("btnNotifHeader");  
+  const openNotifModal = document.getElementById("btnNotifHeader");
   const closeNotifModal = document.getElementById("closeNotifModal");
   const notifModal = document.getElementById("notifModal");
 
@@ -3813,68 +3817,66 @@ setTimeout(() => {
       }
 
       // --- Update UI for both modal + preview ---
-function updateUI() {
-    const unread = cachedData.filter((n) => n.status === "unread").length;
+      function updateUI() {
+        const unread = cachedData.filter((n) => n.status === "unread").length;
 
-// update both badges (header + sidebar)
-const headerBadge = document.getElementById("headerNotifBadgeCount");
+        // update both badges (header + sidebar)
+        const headerBadge = document.getElementById("headerNotifBadgeCount");
 
-    if (notifBadgeCount) {
-        if (unread > 0) {
+        if (notifBadgeCount) {
+          if (unread > 0) {
             notifBadgeCount.textContent = unread;
             notifBadgeCount.classList.remove("hidden");
-        } else {
+          } else {
             notifBadgeCount.classList.add("hidden");
+          }
         }
-    }
 
-    if (headerBadge) {
-        if (unread > 0) {
+        if (headerBadge) {
+          if (unread > 0) {
             headerBadge.textContent = unread;
             headerBadge.style.display = "flex";
-        } else {
+          } else {
             headerBadge.style.display = "none";
+          }
         }
-    }
 
-    // You removed the preview — ignore it
-    if (notifList) {
-        notifList.innerHTML = "";
-    }
+        // You removed the preview — ignore it
+        if (notifList) {
+          notifList.innerHTML = "";
+        }
 
-    // MODAL LIST
-    allNotifList.innerHTML =
-      cachedData.length === 0
-        ? `<div class="p-6 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
-        : cachedData
-            .map(
-              (n) => `
+        // MODAL LIST
+        allNotifList.innerHTML =
+          cachedData.length === 0
+            ? `<div class="p-6 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
+            : cachedData
+              .map(
+                (n) => `
         <div class="notification-card ${n.status} flex items-start space-x-3 p-3 mb-2 border border-[var(--cane-200)] rounded-lg" data-id="${n.id}">
           <div class="notif-icon">
-            <i class="fas ${
-              n.status === "unread" ? "fa-envelope" : "fa-envelope-open-text"
-            } text-white text-base"></i>
+            <i class="fas ${n.status === "unread" ? "fa-envelope" : "fa-envelope-open-text"
+                  } text-white text-base"></i>
           </div>
           <div class="flex-1">
             <h4 class="font-semibold">${getNotificationTitle(n)}</h4>
             <p class="text-sm text-[var(--cane-800)]">${n.message}</p>
             <p class="text-xs text-gray-400 mt-1">
-              ${
-                n.timestamp?.toDate?.()
-                  ? new Date(n.timestamp.toDate()).toLocaleString("en-US", {
+              ${n.timestamp?.toDate?.()
+                    ? new Date(n.timestamp.toDate()).toLocaleString("en-US", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })
-                  : ""
-              }
+                    : ""
+                  }
             </p>
           </div>
         </div>`
-            )
-            .join("");
+              )
+              .join("");
 
-    attachClickHandlers();
-}
+        attachClickHandlers();
+      }
 
       // --- Click any notification (mark as read + handle embedded links) ---
       function attachClickHandlers() {
@@ -3884,73 +3886,73 @@ const headerBadge = document.getElementById("headerNotifBadgeCount");
             const notifId = card.dataset.id;
             const notif = cachedData.find((n) => n.id === notifId);
             if (!notif) return;
-card.onclick = async (e) => {
-  if (e.target.tagName === "A") return;
+            card.onclick = async (e) => {
+              if (e.target.tagName === "A") return;
 
-  try {
-    // Mark as read
-    if (notif.status === "unread") {
-      await updateDoc(doc(db, "notifications", notifId), {
-        status: "read",
-        read: true,
-        readAt: serverTimestamp(),
-      });
-      notif.status = "read";
-    }
+              try {
+                // Mark as read
+                if (notif.status === "unread") {
+                  await updateDoc(doc(db, "notifications", notifId), {
+                    status: "read",
+                    read: true,
+                    readAt: serverTimestamp(),
+                  });
+                  notif.status = "read";
+                }
 
-    const title = (notif.title || "").toLowerCase();
-    const msg = (notif.message || "").toLowerCase();
+                const title = (notif.title || "").toLowerCase();
+                const msg = (notif.message || "").toLowerCase();
 
-    // 1️⃣ New Join Request → Handler Dashboard
-    if (
-      title.includes("new join request") ||
-      notif.type === "join_request"
-    ) {
-      window.location.href = "../../frontend/Handler/dashboard.html";
-      return;
-    }
+                // 1️⃣ New Join Request → Handler Dashboard
+                if (
+                  title.includes("new join request") ||
+                  notif.type === "join_request"
+                ) {
+                  window.location.href = "../../frontend/Handler/dashboard.html";
+                  return;
+                }
 
-    // 2️⃣ Driver Badge Approved → Driver Dashboard
-    if (
-      title.includes("drivers badge approved") ||
-      notif.type === "badge_approved"
-    ) {
-      window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
-      return;
-    }
+                // 2️⃣ Driver Badge Approved → Driver Dashboard
+                if (
+                  title.includes("drivers badge approved") ||
+                  notif.type === "badge_approved"
+                ) {
+                  window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
+                  return;
+                }
 
-    // 3️⃣ Field Join Approved (FOR DRIVER) → Driver Dashboard
-    if (
-      notif.type === "field_join_approved" ||
-      title.includes("field join")       // safe catch
-    ) {
-      window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
-      return;
-    }
+                // 3️⃣ Field Join Approved (FOR DRIVER) → Driver Dashboard
+                if (
+                  notif.type === "field_join_approved" ||
+                  title.includes("field join")       // safe catch
+                ) {
+                  window.location.href = "../../frontend/Driver/Driver_Dashboard.html";
+                  return;
+                }
 
-    // 4️⃣ Remarks → Field Form (Handler)
-    if (title.includes("remarks") || msg.includes("remarks")) {
-      window.location.href = "../../frontend/Handler/field_form.html";
-      return;
-    }
+                // 4️⃣ Remarks → Field Form (Handler)
+                if (title.includes("remarks") || msg.includes("remarks")) {
+                  window.location.href = "../../frontend/Handler/field_form.html";
+                  return;
+                }
 
-    // 5️⃣ Field Registration Approved → Handler Dashboard
-    if (
-      title.includes("field registration approved") ||
-      msg.includes("field registration approved") ||
-      notif.type === "field_approved"
-    ) {
-      window.location.href = "../../frontend/Handler/dashboard.html";
-      return;
-    }
+                // 5️⃣ Field Registration Approved → Handler Dashboard
+                if (
+                  title.includes("field registration approved") ||
+                  msg.includes("field registration approved") ||
+                  notif.type === "field_approved"
+                ) {
+                  window.location.href = "../../frontend/Handler/dashboard.html";
+                  return;
+                }
 
-    // 6️⃣ Default → Handler Dashboard
-    window.location.href = "../../frontend/Handler/dashboard.html";
+                // 6️⃣ Default → Handler Dashboard
+                window.location.href = "../../frontend/Handler/dashboard.html";
 
-  } catch (err) {
-    console.error("⚠️ Failed to handle notification click:", err);
-  }
-};
+              } catch (err) {
+                console.error("⚠️ Failed to handle notification click:", err);
+              }
+            };
 
             // 2️⃣ Handle direct link clicks (like <a href="...">here</a>)
             const links = card.querySelectorAll("a");
@@ -4055,7 +4057,7 @@ card.onclick = async (e) => {
               )
             );
             if (!fieldSnap.empty) hasPendingField = true;
-          } catch (_) {}
+          } catch (_) { }
 
           if (hasPendingJoin || hasPendingField) {
             const reason = hasPendingJoin
@@ -4151,7 +4153,7 @@ card.onclick = async (e) => {
           //
           // I left that line commented to avoid duplication here — but below I call it once after a brief timeout so everything has initialized.
           setTimeout(() => checkDriverBadgeEligibility(), 400);
-        } catch (_) {}
+        } catch (_) { }
       })();
 
       // -----------------------------
@@ -4400,13 +4402,13 @@ try {
   if (typeof checkDriverBadgeEligibility === "function") {
     window.checkDriverBadgeEligibility = checkDriverBadgeEligibility;
   } else {
-    window.checkDriverBadgeEligibility = async function () {};
+    window.checkDriverBadgeEligibility = async function () { };
   }
 
   if (typeof checkJoinFieldButton === "function") {
     window.checkJoinFieldButton = checkJoinFieldButton;
   } else {
-    window.checkJoinFieldButton = function () {};
+    window.checkJoinFieldButton = function () { };
   }
 
   if (typeof recheckAll === "function") {
@@ -4473,67 +4475,67 @@ function checkJoinFieldButton() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
-    const heading = document.querySelector("#mainContent h2");
+  const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+  const heading = document.querySelector("#mainContent h2");
 
-    if (!heading) return;
+  if (!heading) return;
 
-    if (userRole === "handler") {
-        // Replace ONLY the text
-        heading.childNodes[0].textContent = "Sugarcane Fields in Ormoc City";
+  if (userRole === "handler") {
+    // Replace ONLY the text
+    heading.childNodes[0].textContent = "Sugarcane Fields in Ormoc City";
 
-        // Remove the icon (hand)
-        const icon = heading.querySelector("i");
-        if (icon) icon.remove();
-    }
+    // Remove the icon (hand)
+    const icon = heading.querySelector("i");
+    if (icon) icon.remove();
+  }
 });
 
 /* ============================================================
    DROPDOWN MENU ROLE CONTROL (Truck / Register / Badge)
    ============================================================ */
 function updateDropdownByRole() {
-    const role = (localStorage.getItem("userRole") || "").toLowerCase();
+  const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-    const pendingJoin = localStorage.getItem("pendingWorker") === "true";
-    const pendingDriver = localStorage.getItem("pendingDriverBadge") === "true";
-    const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+  const pendingJoin = localStorage.getItem("pendingWorker") === "true";
+  const pendingDriver = localStorage.getItem("pendingDriverBadge") === "true";
+  const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
 
-    const truckRental = document.getElementById("openRentalOption");
-    const menuRegisterField = document.getElementById("menuRegisterField");
-    const menuDriverBadge = document.getElementById("menuDriverBadge");
+  const truckRental = document.getElementById("openRentalOption");
+  const menuRegisterField = document.getElementById("menuRegisterField");
+  const menuDriverBadge = document.getElementById("menuDriverBadge");
 
-    const farmerHasPending = pendingJoin || pendingDriver || pendingField;
+  const farmerHasPending = pendingJoin || pendingDriver || pendingField;
 
-    // --- Truck Rental (Driver only) ---
-    if (truckRental) {
-        truckRental.classList.toggle("hidden", role !== "driver");
-    }
+  // --- Truck Rental (Driver only) ---
+  if (truckRental) {
+    truckRental.classList.toggle("hidden", role !== "driver");
+  }
 
-    // --- Register Field (handler OR farmer w/out pending) ---
-    if (menuRegisterField) {
-        menuRegisterField.classList.toggle(
-            "hidden",
-            !(
-                role === "handler" ||
-                (role === "farmer" && !farmerHasPending)
-            )
-        );
-      }
+  // --- Register Field (handler OR farmer w/out pending) ---
+  if (menuRegisterField) {
+    menuRegisterField.classList.toggle(
+      "hidden",
+      !(
+        role === "handler" ||
+        (role === "farmer" && !farmerHasPending)
+      )
+    );
+  }
 
   // --- Apply Driver Badge (driver OR farmer w/out ANY pending)
   if (menuDriverBadge) {
-      const pendingJoin  = localStorage.getItem("pendingWorker") === "true";
-      const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+    const pendingJoin = localStorage.getItem("pendingWorker") === "true";
+    const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
 
-      const farmerHasPending = pendingJoin || pendingField;
+    const farmerHasPending = pendingJoin || pendingField;
 
-      menuDriverBadge.classList.toggle(
-          "hidden",
-          !(
-              role === "driver" ||
-              (role === "farmer" && !farmerHasPending)
-          )
-      );
+    menuDriverBadge.classList.toggle(
+      "hidden",
+      !(
+        role === "driver" ||
+        (role === "farmer" && !farmerHasPending)
+      )
+    );
   }
 }
 
@@ -4545,25 +4547,25 @@ setInterval(updateDropdownByRole, 400);
 
 
 function updateDriverBadgePromoVisibility() {
-    const role = (localStorage.getItem("userRole") || "").toLowerCase();
+  const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-    const pendingJoin  = localStorage.getItem("pendingWorker") === "true";
-    const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+  const pendingJoin = localStorage.getItem("pendingWorker") === "true";
+  const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
 
-    const promoSection = document.getElementById("driver-badge");
-    if (!promoSection) return;
+  const promoSection = document.getElementById("driver-badge");
+  if (!promoSection) return;
 
-    // Farmer has any pending?
-    const farmerHasPending = pendingJoin || pendingField;
+  // Farmer has any pending?
+  const farmerHasPending = pendingJoin || pendingField;
 
-    // SHOW only when:
-    // 1. driver
-    // 2. farmer with NO pendings
-    const shouldShow =
-        role === "driver" ||
-        (role === "farmer" && !farmerHasPending);
+  // SHOW only when:
+  // 1. driver
+  // 2. farmer with NO pendings
+  const shouldShow =
+    role === "driver" ||
+    (role === "farmer" && !farmerHasPending);
 
-    promoSection.classList.toggle("hidden", !shouldShow);
+  promoSection.classList.toggle("hidden", !shouldShow);
 }
 
 // Run once on load
@@ -4590,7 +4592,7 @@ setInterval(updateDriverBadgePromoVisibility, 400);
     btn.style.display = "inline-flex";
     btn.style.alignItems = "center";
     btn.style.justifyContent = "center";
-    btn.innerHTML = `<i class="fas fa-id-badge"></i>`; 
+    btn.innerHTML = `<i class="fas fa-id-badge"></i>`;
     btn.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
 
     btn.addEventListener("click", (e) => {
@@ -4601,128 +4603,128 @@ setInterval(updateDriverBadgePromoVisibility, 400);
     return btn;
   }
 
-function updateHeaderButtonsForViewport() {
+  function updateHeaderButtonsForViewport() {
     const regBtn = document.getElementById("btnRegisterField");
     let mobileDriverBtn = document.getElementById("btnDriverBadgeMobile");
     const notifBtn = document.getElementById("btnNotifHeader");
     const headerIcons = document.getElementById("headerIcons");
 
-        
+
     // get user role from localStorage (make sure it's lowercase)
     const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
-// Read all pending flags
-const pendingWorker = localStorage.getItem("pendingWorker") === "true";
-const pendingDriverBadge = localStorage.getItem("pendingDriverBadge") === "true";
-const pendingFieldApp = localStorage.getItem("pendingFieldApplication") === "true";
-const pendingJoinField = localStorage.getItem("pendingJoinField") === "true";
+    // Read all pending flags
+    const pendingWorker = localStorage.getItem("pendingWorker") === "true";
+    const pendingDriverBadge = localStorage.getItem("pendingDriverBadge") === "true";
+    const pendingFieldApp = localStorage.getItem("pendingFieldApplication") === "true";
+    const pendingJoinField = localStorage.getItem("pendingJoinField") === "true";
 
-const farmerHasPending =
-    pendingWorker ||
-    pendingDriverBadge ||
-    pendingFieldApp ||
-    pendingJoinField;
+    const farmerHasPending =
+      pendingWorker ||
+      pendingDriverBadge ||
+      pendingFieldApp ||
+      pendingJoinField;
 
-// Determine if header icons must be hidden
-const shouldHide =
-    (role === "farmer" && farmerHasPending);
+    // Determine if header icons must be hidden
+    const shouldHide =
+      (role === "farmer" && farmerHasPending);
 
-// 🔥 100% HIDE — INCLUDING HEADER + MOBILE — AND STOP EXECUTION
-if (shouldHide) {
-    if (regBtn) regBtn.style.display = "none";
-    if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
+    // 🔥 100% HIDE — INCLUDING HEADER + MOBILE — AND STOP EXECUTION
+    if (shouldHide) {
+      if (regBtn) regBtn.style.display = "none";
+      if (mobileDriverBtn) mobileDriverBtn.style.display = "none";
 
-    // ALSO remove them from headerIcons container
-    if (regBtn && headerIcons.contains(regBtn)) headerIcons.removeChild(regBtn);
-    if (mobileDriverBtn && headerIcons.contains(mobileDriverBtn)) headerIcons.removeChild(mobileDriverBtn);
+      // ALSO remove them from headerIcons container
+      if (regBtn && headerIcons.contains(regBtn)) headerIcons.removeChild(regBtn);
+      if (mobileDriverBtn && headerIcons.contains(mobileDriverBtn)) headerIcons.removeChild(mobileDriverBtn);
 
-    return; // ⛔ VERY IMPORTANT — stop further logic so they NEVER reappear
-}
+      return; // ⛔ VERY IMPORTANT — stop further logic so they NEVER reappear
+    }
 
     // Hide Driver Badge icon if handler or worker
     if (role !== "handler" && role !== "worker") {
-        if (!mobileDriverBtn) {
-            mobileDriverBtn = createDriverBadgeButton();
-            headerIcons.appendChild(mobileDriverBtn);
-        }
+      if (!mobileDriverBtn) {
+        mobileDriverBtn = createDriverBadgeButton();
+        headerIcons.appendChild(mobileDriverBtn);
+      }
     } else if (mobileDriverBtn) {
-        mobileDriverBtn.style.display = "none";
+      mobileDriverBtn.style.display = "none";
     }
 
     // Hide Register a Field completely if role is driver or worker
     if (role === "driver" || role === "worker") {
-        if (regBtn) regBtn.style.display = "none";
+      if (regBtn) regBtn.style.display = "none";
     } else {
-        if (regBtn) regBtn.style.display = "inline-flex";
+      if (regBtn) regBtn.style.display = "inline-flex";
     }
 
-    
+
     const isSmall = window.innerWidth <= 768;
     const defaultColor = "#ffffff";
     const smallColor = "#ffffff"; // same color as default, adjust if you want
 
-if (isSmall) {
-    // Convert Register → map icon
-if (isSmall) {
-    // Only create / display Register map icon if role is allowed
-    if (role !== "driver" && role !== "worker" && regBtn) {
-        regBtn.innerHTML = `
+    if (isSmall) {
+      // Convert Register → map icon
+      if (isSmall) {
+        // Only create / display Register map icon if role is allowed
+        if (role !== "driver" && role !== "worker" && regBtn) {
+          regBtn.innerHTML = `
             <span class="sr-only">Register a Field</span>
             <i class="fas fa-map-marker-alt" 
                style="font-size:18px; color:${defaultColor};"></i>
         `;
-        regBtn.style.width = "42px";
-        regBtn.style.height = "42px";
-        regBtn.style.borderRadius = "9999px";
-        regBtn.style.background = "transparent";
-        regBtn.style.display = "inline-flex";
-        regBtn.style.alignItems = "center";
-        regBtn.style.justifyContent = "center";
-        regBtn.style.margin = "0";
-        regBtn.style.padding = "0";
-        regBtn.style.boxShadow = "none";
+          regBtn.style.width = "42px";
+          regBtn.style.height = "42px";
+          regBtn.style.borderRadius = "9999px";
+          regBtn.style.background = "transparent";
+          regBtn.style.display = "inline-flex";
+          regBtn.style.alignItems = "center";
+          regBtn.style.justifyContent = "center";
+          regBtn.style.margin = "0";
+          regBtn.style.padding = "0";
+          regBtn.style.boxShadow = "none";
 
-        addTooltip(regBtn, "Register a Field");
-    } else if (regBtn) {
-        // Completely hide for driver or worker
-        regBtn.style.display = "none";
+          addTooltip(regBtn, "Register a Field");
+        } else if (regBtn) {
+          // Completely hide for driver or worker
+          regBtn.style.display = "none";
+        }
+
+        // Mobile driver icon
+        if (mobileDriverBtn) {
+          mobileDriverBtn.style.display = (role !== "handler" && role !== "worker") ? "inline-flex" : "none";
+          if (mobileDriverBtn.style.display === "inline-flex") addTooltip(mobileDriverBtn, "Apply a Driver Badge");
+        }
+
+        // Notification icon
+        if (notifBtn) addTooltip(notifBtn, "Notifications");
+
+        // Correct order & append
+        const buttonsToAppend = [];
+        if (regBtn && role !== "driver" && role !== "worker") buttonsToAppend.push(regBtn);
+        if (mobileDriverBtn && role !== "handler" && role !== "worker") buttonsToAppend.push(mobileDriverBtn);
+        if (notifBtn) buttonsToAppend.push(notifBtn);
+
+        buttonsToAppend.forEach(btn => {
+          btn.style.display = "inline-flex";
+          btn.style.alignItems = "center";
+          btn.style.justifyContent = "center";
+          btn.style.margin = "0";
+          if (!headerIcons.contains(btn)) headerIcons.appendChild(btn);
+          else headerIcons.appendChild(btn); // enforce order
+        });
+      }
+
     }
-
-    // Mobile driver icon
-    if (mobileDriverBtn) {
-        mobileDriverBtn.style.display = (role !== "handler" && role !== "worker") ? "inline-flex" : "none";
-        if (mobileDriverBtn.style.display === "inline-flex") addTooltip(mobileDriverBtn, "Apply a Driver Badge");
-    }
-
-    // Notification icon
-    if (notifBtn) addTooltip(notifBtn, "Notifications");
-
-    // Correct order & append
-    const buttonsToAppend = [];
-    if (regBtn && role !== "driver" && role !== "worker") buttonsToAppend.push(regBtn);
-    if (mobileDriverBtn && role !== "handler" && role !== "worker") buttonsToAppend.push(mobileDriverBtn);
-    if (notifBtn) buttonsToAppend.push(notifBtn);
-
-    buttonsToAppend.forEach(btn => {
-        btn.style.display = "inline-flex";
-        btn.style.alignItems = "center";
-        btn.style.justifyContent = "center";
-        btn.style.margin = "0";
-        if (!headerIcons.contains(btn)) headerIcons.appendChild(btn);
-        else headerIcons.appendChild(btn); // enforce order
-    });
-}
-
-}
-  else {
+    else {
       // Restore normal Register button for desktop
       if (role !== "driver") {
-          regBtn.innerHTML = "+ Register a Field";
-          regBtn.style = ""; // full reset
-          regBtn.style.display = "inline-flex"; // ensure it's visible
+        regBtn.innerHTML = "+ Register a Field";
+        regBtn.style = ""; // full reset
+        regBtn.style.display = "inline-flex"; // ensure it's visible
       } else {
-          // Hide completely for driver
-          regBtn.style.display = "none";
+        // Hide completely for driver
+        regBtn.style.display = "none";
       }
 
       // Restore icon colors
@@ -4740,8 +4742,8 @@ if (isSmall) {
       if (role !== "driver") addTooltip(regBtn, "Register a Field");
       addTooltip(mobileDriverBtn, "Driver Badge");
       if (notifBtn) addTooltip(notifBtn, "Notifications");
+    }
   }
-}
 
   // Run initially and on resize (debounced)
   function debounce(fn, wait = 120) {
@@ -4775,100 +4777,100 @@ let lastPendingJoinField = localStorage.getItem("pendingJoinField");
 
 // Re-run header update every 400ms if values changed
 setInterval(() => {
-    const newRole = (localStorage.getItem("userRole") || "").toLowerCase();
-    const newPendingWorker = localStorage.getItem("pendingWorker");
-    const newPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
-    const newPendingFieldApp = localStorage.getItem("pendingFieldApplication");
-    const newPendingJoinField = localStorage.getItem("pendingJoinField");
+  const newRole = (localStorage.getItem("userRole") || "").toLowerCase();
+  const newPendingWorker = localStorage.getItem("pendingWorker");
+  const newPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
+  const newPendingFieldApp = localStorage.getItem("pendingFieldApplication");
+  const newPendingJoinField = localStorage.getItem("pendingJoinField");
 
-    if (
-        newRole !== lastRole ||
-        newPendingWorker !== lastPendingWorker ||
-        newPendingDriverBadge !== lastPendingDriverBadge ||
-        newPendingFieldApp !== lastPendingFieldApp ||
-        newPendingJoinField !== lastPendingJoinField
-    ) {
-        console.log("🔄 Header updated automatically.");
-        updateHeaderButtonsForViewport();
-    }
+  if (
+    newRole !== lastRole ||
+    newPendingWorker !== lastPendingWorker ||
+    newPendingDriverBadge !== lastPendingDriverBadge ||
+    newPendingFieldApp !== lastPendingFieldApp ||
+    newPendingJoinField !== lastPendingJoinField
+  ) {
+    console.log("🔄 Header updated automatically.");
+    updateHeaderButtonsForViewport();
+  }
 
-    lastRole = newRole;
-    lastPendingWorker = newPendingWorker;
-    lastPendingDriverBadge = newPendingDriverBadge;
-    lastPendingFieldApp = newPendingFieldApp;
-    lastPendingJoinField = newPendingJoinField;
+  lastRole = newRole;
+  lastPendingWorker = newPendingWorker;
+  lastPendingDriverBadge = newPendingDriverBadge;
+  lastPendingFieldApp = newPendingFieldApp;
+  lastPendingJoinField = newPendingJoinField;
 }, 400);
 
 // =======================
 // SHOW/HIDE HEADER DRIVER BADGE LINK
 // =======================
 (function () {
-    const headerDriverBadgeLink = document.querySelector('a[href="#driver-badge"]');
+  const headerDriverBadgeLink = document.querySelector('a[href="#driver-badge"]');
 
-    function updateHeaderDriverLink() {
-        if (!headerDriverBadgeLink) return;
+  function updateHeaderDriverLink() {
+    if (!headerDriverBadgeLink) return;
 
-        const role = (localStorage.getItem("userRole") || "").toLowerCase();
-        const pendingJoin  = localStorage.getItem("pendingWorker") === "true";
-        const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
+    const role = (localStorage.getItem("userRole") || "").toLowerCase();
+    const pendingJoin = localStorage.getItem("pendingWorker") === "true";
+    const pendingField = localStorage.getItem("pendingFieldApplication") === "true";
 
-        const farmerHasPending = pendingJoin || pendingField;
+    const farmerHasPending = pendingJoin || pendingField;
 
-        const shouldShow =
-            role === "driver" ||
-            (role === "farmer" && !farmerHasPending);
+    const shouldShow =
+      role === "driver" ||
+      (role === "farmer" && !farmerHasPending);
 
-        headerDriverBadgeLink.classList.toggle("hidden", !shouldShow);
-    }
+    headerDriverBadgeLink.classList.toggle("hidden", !shouldShow);
+  }
 
-    // run every 400 ms (real-time, same as header updates)
-    setInterval(updateHeaderDriverLink, 400);
-    document.addEventListener("DOMContentLoaded", updateHeaderDriverLink);
+  // run every 400 ms (real-time, same as header updates)
+  setInterval(updateHeaderDriverLink, 400);
+  document.addEventListener("DOMContentLoaded", updateHeaderDriverLink);
 })();
 
 /* === Notification Bell Only (header + dropdown) === */
 (function () {
 
-function initNotifHeader() {
-  const headerIcons = document.getElementById("headerIcons");
-  const notifModal = document.getElementById("notifModal");
-  const sideBadge = document.getElementById("notifBadgeCount");
-  if (!headerIcons) return;
+  function initNotifHeader() {
+    const headerIcons = document.getElementById("headerIcons");
+    const notifModal = document.getElementById("notifModal");
+    const sideBadge = document.getElementById("notifBadgeCount");
+    if (!headerIcons) return;
 
-  function makeIcon({ id, iconClass, tooltipText, onClick }) {
-    const btn = document.createElement("button");
-    btn.id = id;
-    btn.className = "header-icon-btn";
-    btn.innerHTML = `<i class="${iconClass}"></i>`;
-    btn.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
-    btn.style.position = "relative";
-    btn.addEventListener("click", onClick);
-    addTooltip(btn, tooltipText);
-    return btn;
+    function makeIcon({ id, iconClass, tooltipText, onClick }) {
+      const btn = document.createElement("button");
+      btn.id = id;
+      btn.className = "header-icon-btn";
+      btn.innerHTML = `<i class="${iconClass}"></i>`;
+      btn.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
+      btn.style.position = "relative";
+      btn.addEventListener("click", onClick);
+      addTooltip(btn, tooltipText);
+      return btn;
+    }
+
+    const notifBtn = makeIcon({
+      id: "btnNotifHeader",
+      iconClass: "fas fa-bell",
+      tooltipText: "Notifications",
+      onClick: () => {
+        notifModal.classList.remove("hidden");
+        notifModal.classList.add("flex");
+      }
+    });
+
+    const headerBadge = document.createElement("span");
+    headerBadge.id = "headerNotifBadgeCount";
+    headerBadge.className = "hdr-badge";
+    headerBadge.style.display = "none";
+    notifBtn.appendChild(headerBadge);
+
+    headerIcons.appendChild(notifBtn);
   }
 
-  const notifBtn = makeIcon({
-    id: "btnNotifHeader",
-    iconClass: "fas fa-bell",
-    tooltipText: "Notifications",
-    onClick: () => {
-      notifModal.classList.remove("hidden");
-      notifModal.classList.add("flex");
-    }
+  document.addEventListener("DOMContentLoaded", () => {
+    initNotifHeader();
   });
-
-  const headerBadge = document.createElement("span");
-  headerBadge.id = "headerNotifBadgeCount";
-  headerBadge.className = "hdr-badge";
-  headerBadge.style.display = "none";
-  notifBtn.appendChild(headerBadge);
-
-  headerIcons.appendChild(notifBtn);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-   initNotifHeader();
-});
 
 })();
 
@@ -4906,79 +4908,79 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 function addTooltip(button, text) {
-    button.setAttribute("aria-label", text);
+  button.setAttribute("aria-label", text);
 
-    // Prevent duplicate listeners
-    if (button._tooltipListeners) return;
-    button._tooltipListeners = true;
+  // Prevent duplicate listeners
+  if (button._tooltipListeners) return;
+  button._tooltipListeners = true;
 
-    button.addEventListener("mouseenter", () => {
-        // Remove old tooltip if somehow still present
-        if (button._tooltip) button._tooltip.remove();
+  button.addEventListener("mouseenter", () => {
+    // Remove old tooltip if somehow still present
+    if (button._tooltip) button._tooltip.remove();
 
-        // Create tooltip
-        const tip = document.createElement("div");
-        tip.className = "custom-tooltip";
-        tip.textContent = text;
-        document.body.appendChild(tip);
+    // Create tooltip
+    const tip = document.createElement("div");
+    tip.className = "custom-tooltip";
+    tip.textContent = text;
+    document.body.appendChild(tip);
 
-        // Position below the icon
-        const rect = button.getBoundingClientRect();
-        tip.style.left = rect.left + rect.width / 2 + "px";
-        tip.style.top = rect.top + rect.height + 6 + "px";
-        tip.style.transform = "translateX(-50%)";
-        tip.style.position = "absolute";
-        tip.style.background = "rgba(0,0,0,0.75)";
-        tip.style.color = "white";
-        tip.style.padding = "4px 7px";
-        tip.style.fontSize = "10px";
-        tip.style.borderRadius = "6px";
-        tip.style.whiteSpace = "nowrap";
-        tip.style.zIndex = 9999;
-        tip.style.opacity = 0;
-        tip.style.transition = "opacity 0.2s";
+    // Position below the icon
+    const rect = button.getBoundingClientRect();
+    tip.style.left = rect.left + rect.width / 2 + "px";
+    tip.style.top = rect.top + rect.height + 6 + "px";
+    tip.style.transform = "translateX(-50%)";
+    tip.style.position = "absolute";
+    tip.style.background = "rgba(0,0,0,0.75)";
+    tip.style.color = "white";
+    tip.style.padding = "4px 7px";
+    tip.style.fontSize = "10px";
+    tip.style.borderRadius = "6px";
+    tip.style.whiteSpace = "nowrap";
+    tip.style.zIndex = 9999;
+    tip.style.opacity = 0;
+    tip.style.transition = "opacity 0.2s";
 
-        requestAnimationFrame(() => tip.style.opacity = 1);
+    requestAnimationFrame(() => tip.style.opacity = 1);
 
-        button._tooltip = tip;
-    });
+    button._tooltip = tip;
+  });
 
-    button.addEventListener("mouseleave", () => {
-        if (button._tooltip) {
-            button._tooltip.remove();
-            button._tooltip = null;
-        }
-    });
+  button.addEventListener("mouseleave", () => {
+    if (button._tooltip) {
+      button._tooltip.remove();
+      button._tooltip = null;
+    }
+  });
 }
 
 
 // Optional: ensure tooltips clean up automatically
 function cleanupTooltips() {
-    document.querySelectorAll(".custom-tooltip").forEach(tip => tip.remove());
+  document.querySelectorAll(".custom-tooltip").forEach(tip => tip.remove());
 }
 
 // Call this on mouseleave for all current tooltipped buttons
 document.addEventListener("mouseover", (e) => {
-    const btn = e.target.closest("button[aria-label]");
-    if (!btn) return;
+  const btn = e.target.closest("button[aria-label]");
+  if (!btn) return;
 
-    btn.addEventListener("mouseleave", () => {
-        if (btn._tooltip) {
-            btn._tooltip.remove();
-            btn._tooltip = null;
-        }
-    });
+  btn.addEventListener("mouseleave", () => {
+    if (btn._tooltip) {
+      btn._tooltip.remove();
+      btn._tooltip = null;
+    }
+  });
 });
 
 
 document.addEventListener("DOMContentLoaded", () => {
-    const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
-    const instructionBox = document.querySelector(".instruction-box .flex");
+  const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+  const instructionBox = document.querySelector(".instruction-box .flex");
 
-    if (!instructionBox) return;
+  if (!instructionBox) return;
 
-    if (userRole === "handler") {
-        instructionBox.innerHTML = `
+  if (userRole === "handler") {
+    instructionBox.innerHTML = `
             <span class="text-[rgba(50,50,0,1)]">
                 Simply tap any field
             </span>
@@ -4989,23 +4991,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 alt="Map Pin"
                 class="w-5 h-5 object-contain drop-shadow-sm">
         `;
-    }
+  }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
-    const heading = document.querySelector("#mainContent h2");
+  const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+  const heading = document.querySelector("#mainContent h2");
 
-    if (!heading) return;
+  if (!heading) return;
 
-    if (userRole === "handler") {
-        // Replace ONLY the text
-        heading.childNodes[0].textContent = "Sugarcane Fields in Ormoc City";
+  if (userRole === "handler") {
+    // Replace ONLY the text
+    heading.childNodes[0].textContent = "Sugarcane Fields in Ormoc City";
 
-        // Remove the icon (hand)
-        const icon = heading.querySelector("i");
-        if (icon) icon.remove();
-    }
+    // Remove the icon (hand)
+    const icon = heading.querySelector("i");
+    if (icon) icon.remove();
+  }
 });
 
 // ------------------------------
@@ -5017,43 +5019,43 @@ const driverRentalFrame = document.getElementById("driverRentalFrame");
 const closeDriverRental = document.getElementById("closeDriverRental");
 
 document.addEventListener("DOMContentLoaded", () => {
-    const openRentalOption = document.getElementById("openRentalOption");
-    const driverRentalModal = document.getElementById("driverRentalModal");
-    const driverRentalFrame = document.getElementById("driverRentalFrame");
-    const closeDriverRental = document.getElementById("closeDriverRental");
+  const openRentalOption = document.getElementById("openRentalOption");
+  const driverRentalModal = document.getElementById("driverRentalModal");
+  const driverRentalFrame = document.getElementById("driverRentalFrame");
+  const closeDriverRental = document.getElementById("closeDriverRental");
 
-    if (openRentalOption) {
-        openRentalOption.addEventListener("click", () => {
-            driverRentalFrame.src = "../../frontend/Driver/Driver_Rental.html";
-            driverRentalModal.classList.remove("opacity-0", "pointer-events-none");
-        });
-    }
+  if (openRentalOption) {
+    openRentalOption.addEventListener("click", () => {
+      driverRentalFrame.src = "../../frontend/Driver/Driver_Rental.html";
+      driverRentalModal.classList.remove("opacity-0", "pointer-events-none");
+    });
+  }
 
-    if (closeDriverRental) {
-        closeDriverRental.addEventListener("click", () => {
-            driverRentalModal.classList.add("opacity-0", "pointer-events-none");
-            driverRentalFrame.src = "";
-        });
-    }
+  if (closeDriverRental) {
+    closeDriverRental.addEventListener("click", () => {
+      driverRentalModal.classList.add("opacity-0", "pointer-events-none");
+      driverRentalFrame.src = "";
+    });
+  }
 });
 
 closeDriverRental.addEventListener("click", () => {
-    // HIDE MODAL
-    driverRentalModal.classList.add("opacity-0", "pointer-events-none");
+  // HIDE MODAL
+  driverRentalModal.classList.add("opacity-0", "pointer-events-none");
 
-    // CLEAR FRAME (para mag reset ang form)
-    driverRentalFrame.src = "";
+  // CLEAR FRAME (para mag reset ang form)
+  driverRentalFrame.src = "";
 });
 
 // Receive close commands from inside iframe (Driver_Rental.html)
 window.addEventListener("message", (ev) => {
-    if (!ev || !ev.data) return;
+  if (!ev || !ev.data) return;
 
-    if (ev.data.type === "driver_rental_cancel"
-        || ev.data.type === "driver_rental_published_close"
-        || ev.data.type === "driver_rental_stopped") {
+  if (ev.data.type === "driver_rental_cancel"
+    || ev.data.type === "driver_rental_published_close"
+    || ev.data.type === "driver_rental_stopped") {
 
-        driverRentalModal.classList.add("opacity-0", "pointer-events-none");
-        driverRentalFrame.src = "";
-    }
+    driverRentalModal.classList.add("opacity-0", "pointer-events-none");
+    driverRentalFrame.src = "";
+  }
 });

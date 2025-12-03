@@ -25,6 +25,9 @@ import {
 } from '../Handler/growth-tracker.js';
 import { getRecommendedTasksForDAP } from '../Handler/task-automation.js';
 
+// Offline sync support
+import { initOfflineSync } from '../Common/offline-sync.js';
+
 // Helper function to get display-friendly task names
 function getTaskDisplayName(taskValue) {
     const taskMap = {
@@ -56,24 +59,24 @@ let currentUserEmail = '';
 // Desktop: Uses front camera by default, can switch to back
 // -------------------------------------------------------
 function openWorkerCamera() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // Detect if mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      // overlay with very high z so it always sits above Swal
-      const overlay = document.createElement("div");
-      overlay.style.position = "fixed";
-      overlay.style.inset = "0";
-      overlay.style.background = "rgba(0,0,0,0.9)";
-      overlay.style.display = "flex";
-      overlay.style.flexDirection = "column";
-      overlay.style.alignItems = "center";
-      overlay.style.justifyContent = "center";
-      overlay.style.zIndex = "2000000"; // higher than Swal
-      overlay.id = "worker-camera-overlay";
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Detect if mobile device
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-      overlay.innerHTML = `
+            // overlay with very high z so it always sits above Swal
+            const overlay = document.createElement("div");
+            overlay.style.position = "fixed";
+            overlay.style.inset = "0";
+            overlay.style.background = "rgba(0,0,0,0.9)";
+            overlay.style.display = "flex";
+            overlay.style.flexDirection = "column";
+            overlay.style.alignItems = "center";
+            overlay.style.justifyContent = "center";
+            overlay.style.zIndex = "2000000"; // higher than Swal
+            overlay.id = "worker-camera-overlay";
+
+            overlay.innerHTML = `
         <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <video id="workerCamVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000; -webkit-transform: scaleX(-1); transform: scaleX(-1);"></video>
           
@@ -99,194 +102,194 @@ function openWorkerCamera() {
         </div>
       `;
 
-      document.body.appendChild(overlay);
+            document.body.appendChild(overlay);
 
-      const video = document.getElementById("workerCamVideo");
-      const captureArea = document.getElementById("workerCaptureArea");
-      const switchCamBtn = document.getElementById("workerSwitchCamBtn");
-      
-      let currentFacingMode = "user"; // Start with front camera
-      let stream = null;
+            const video = document.getElementById("workerCamVideo");
+            const captureArea = document.getElementById("workerCaptureArea");
+            const switchCamBtn = document.getElementById("workerSwitchCamBtn");
 
-      // Function to start camera with specific facing mode
-      const startCamera = async (facingMode) => {
-        try {
-          // Stop existing stream if any
-          if (stream) {
-            stream.getTracks().forEach(t => t.stop());
-          }
-          
-          // Mobile-optimized constraints
-          const constraints = {
-            video: {
-              facingMode: { ideal: facingMode },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
-          };
-          
-          try {
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-          } catch (err) {
-            // Fallback: try without ideal facingMode for better mobile compatibility
-            console.warn(`Failed with facingMode ${facingMode}, trying fallback...`);
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: facingMode,
-                width: { max: 1280 },
-                height: { max: 720 }
-              },
-              audio: false
+            let currentFacingMode = "user"; // Start with front camera
+            let stream = null;
+
+            // Function to start camera with specific facing mode
+            const startCamera = async (facingMode) => {
+                try {
+                    // Stop existing stream if any
+                    if (stream) {
+                        stream.getTracks().forEach(t => t.stop());
+                    }
+
+                    // Mobile-optimized constraints
+                    const constraints = {
+                        video: {
+                            facingMode: { ideal: facingMode },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: false
+                    };
+
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    } catch (err) {
+                        // Fallback: try without ideal facingMode for better mobile compatibility
+                        console.warn(`Failed with facingMode ${facingMode}, trying fallback...`);
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                facingMode: facingMode,
+                                width: { max: 1280 },
+                                height: { max: 720 }
+                            },
+                            audio: false
+                        });
+                    }
+
+                    video.srcObject = stream;
+                    currentFacingMode = facingMode;
+
+                    // Show switch button if multiple cameras available (especially on mobile)
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoCameras = devices.filter(d => d.kind === 'videoinput');
+                    if (videoCameras.length > 1) {
+                        switchCamBtn.style.display = 'block';
+                        switchCamBtn.textContent = facingMode === 'user' ? '🔄 Switch to Back Camera' : '🔄 Switch to Front Camera';
+                    }
+
+                    return true;
+                } catch (err) {
+                    console.error(`Failed to start camera with ${facingMode}:`, err);
+                    return false;
+                }
+            };
+
+            // Start with front camera
+            const cameraStarted = await startCamera("user");
+            if (!cameraStarted) {
+                // Fallback to any available camera
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { width: { max: 1280 }, height: { max: 720 } }, audio: false });
+                    video.srcObject = stream;
+                } catch (err) {
+                    overlay.remove();
+                    return reject(new Error("Camera access denied or not available. Please check permissions."));
+                }
+            }
+
+            // Switch camera handler
+            switchCamBtn.addEventListener("click", async (e) => {
+                e.preventDefault();
+                const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
+                await startCamera(newFacingMode);
             });
-          }
-          
-          video.srcObject = stream;
-          currentFacingMode = facingMode;
-          
-          // Show switch button if multiple cameras available (especially on mobile)
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const videoCameras = devices.filter(d => d.kind === 'videoinput');
-          if (videoCameras.length > 1) {
-            switchCamBtn.style.display = 'block';
-            switchCamBtn.textContent = facingMode === 'user' ? '🔄 Switch to Back Camera' : '🔄 Switch to Front Camera';
-          }
-          
-          return true;
-        } catch (err) {
-          console.error(`Failed to start camera with ${facingMode}:`, err);
-          return false;
-        }
-      };
 
-      // Start with front camera
-      const cameraStarted = await startCamera("user");
-      if (!cameraStarted) {
-        // Fallback to any available camera
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { width: { max: 1280 }, height: { max: 720 } }, audio: false });
-          video.srcObject = stream;
-        } catch (err) {
-          overlay.remove();
-          return reject(new Error("Camera access denied or not available. Please check permissions."));
-        }
-      }
-      
-      // Switch camera handler
-      switchCamBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
-        await startCamera(newFacingMode);
-      });
+            // Back button handler
+            const backBtn = document.getElementById("workerBackBtn");
+            if (backBtn) {
+                backBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    stopCamera();
+                    reject(new Error("User cancelled camera"));
+                });
+            }
 
-      // Back button handler
-      const backBtn = document.getElementById("workerBackBtn");
-      if (backBtn) {
-        backBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          stopCamera();
-          reject(new Error("User cancelled camera"));
-        });
-      }
+            const stopCamera = () => {
+                try { stream.getTracks().forEach(t => t.stop()); } catch (_) { }
+                const el = document.getElementById("worker-camera-overlay");
+                if (el) el.remove();
+            };
 
-      const stopCamera = () => {
-        try { stream.getTracks().forEach(t => t.stop()); } catch(_) {}
-        const el = document.getElementById("worker-camera-overlay");
-        if (el) el.remove();
-      };
+            // Capture handler
+            function attachCaptureHandler(btnEl) {
+                btnEl.addEventListener("click", () => {
+                    // Freeze frame to canvas
+                    const canvas = document.createElement("canvas");
+                    canvas.width = video.videoWidth || 1280;
+                    canvas.height = video.videoHeight || 720;
+                    const ctx = canvas.getContext("2d");
 
-      // Capture handler
-      function attachCaptureHandler(btnEl) {
-        btnEl.addEventListener("click", () => {
-          // Freeze frame to canvas
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth || 1280;
-          canvas.height = video.videoHeight || 720;
-          const ctx = canvas.getContext("2d");
-          
-          // Mirror the image for front camera (undo the CSS transform)
-          if (currentFacingMode === "user") {
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-          } else {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          }
+                    // Mirror the image for front camera (undo the CSS transform)
+                    if (currentFacingMode === "user") {
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+                    } else {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    }
 
-          // Pause video so it looks frozen
-          video.pause();
+                    // Pause video so it looks frozen
+                    video.pause();
 
-          // Hide switch button during preview
-          switchCamBtn.style.display = 'none';
+                    // Hide switch button during preview
+                    switchCamBtn.style.display = 'none';
 
-          // Replace capture button with bottom ✓ and ✕ (centered)
-          captureArea.innerHTML = `
+                    // Replace capture button with bottom ✓ and ✕ (centered)
+                    captureArea.innerHTML = `
             <div style="display:flex; gap:24px; align-items:center; justify-content:center; width:100%;">
               <button id="workerRetakeBtn" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg, #ef4444, #dc2626);color:#fff;border:4px solid rgba(255,255,255,0.3);font-size:28px;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 8px 24px rgba(239, 68, 68, 0.4);display:flex;align-items:center;justify-content:center;">✕</button>
               <button id="workerConfirmBtn" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg, #5ea500, #7ccf00);color:#fff;border:4px solid rgba(255,255,255,0.3);font-size:28px;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 8px 24px rgba(94, 165, 0, 0.4);display:flex;align-items:center;justify-content:center;">✓</button>
             </div>
           `;
 
-          // Retake
-          document.getElementById("workerRetakeBtn").addEventListener("click", async () => {
-            // Show switch button again if multiple cameras available
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoCameras = devices.filter(d => d.kind === 'videoinput');
-            if (videoCameras.length > 1) {
-              switchCamBtn.style.display = 'block';
+                    // Retake
+                    document.getElementById("workerRetakeBtn").addEventListener("click", async () => {
+                        // Show switch button again if multiple cameras available
+                        const devices = await navigator.mediaDevices.enumerateDevices();
+                        const videoCameras = devices.filter(d => d.kind === 'videoinput');
+                        if (videoCameras.length > 1) {
+                            switchCamBtn.style.display = 'block';
+                        }
+                        // remove confirm/retake and put capture back
+                        captureArea.innerHTML = `<button id="workerCaptureBtn" style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #5ea500, #7ccf00); color:#fff; font-weight:700; border:4px solid rgba(255,255,255,0.3); font-size:18px; cursor:pointer; transition: all 0.3s; box-shadow: 0 8px 24px rgba(94, 165, 0, 0.4); display:flex; align-items:center; justify-content:center;"><i class="fas fa-circle" style="font-size:24px;"></i></button>`;
+                        // resume video
+                        video.play();
+                        // re-attach handler
+                        attachCaptureHandler(document.getElementById("workerCaptureBtn"));
+                    });
+
+                    // Confirm
+                    document.getElementById("workerConfirmBtn").addEventListener("click", () => {
+                        // convert canvas to blob -> File and expose globally for preConfirm
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                alert("Failed to capture photo. Try again.");
+                                video.play();
+                                return;
+                            }
+                            const ts = Date.now();
+                            const fileName = `worker_photo_${ts}.jpg`;
+                            // Create a File so existing upload logic expecting .name works
+                            const file = new File([blob], fileName, { type: "image/jpeg" });
+                            // expose globally for preConfirm and preview
+                            window._workerCapturedFile = file;
+                            // If modal preview exists, set it (if not, other code can read this file)
+                            const previewImg = document.getElementById("swal-photoPreview");
+                            if (previewImg) {
+                                previewImg.src = URL.createObjectURL(blob);
+                                const previewContainer = document.getElementById("swal-photoPreviewContainer");
+                                if (previewContainer) previewContainer.classList.remove("hidden");
+                            }
+                            // stop camera and remove overlay
+                            stopCamera();
+                            return resolve(file);
+                        }, "image/jpeg", 0.92);
+                    });
+                });
             }
-            // remove confirm/retake and put capture back
-            captureArea.innerHTML = `<button id="workerCaptureBtn" style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #5ea500, #7ccf00); color:#fff; font-weight:700; border:4px solid rgba(255,255,255,0.3); font-size:18px; cursor:pointer; transition: all 0.3s; box-shadow: 0 8px 24px rgba(94, 165, 0, 0.4); display:flex; align-items:center; justify-content:center;"><i class="fas fa-circle" style="font-size:24px;"></i></button>`;
-            // resume video
-            video.play();
-            // re-attach handler
+
+            // initial attach
             attachCaptureHandler(document.getElementById("workerCaptureBtn"));
-          });
 
-          // Confirm
-          document.getElementById("workerConfirmBtn").addEventListener("click", () => {
-            // convert canvas to blob -> File and expose globally for preConfirm
-            canvas.toBlob((blob) => {
-              if (!blob) {
-                alert("Failed to capture photo. Try again.");
-                video.play();
-                return;
-              }
-              const ts = Date.now();
-              const fileName = `worker_photo_${ts}.jpg`;
-              // Create a File so existing upload logic expecting .name works
-              const file = new File([blob], fileName, { type: "image/jpeg" });
-              // expose globally for preConfirm and preview
-              window._workerCapturedFile = file;
-              // If modal preview exists, set it (if not, other code can read this file)
-              const previewImg = document.getElementById("swal-photoPreview");
-              if (previewImg) {
-                previewImg.src = URL.createObjectURL(blob);
-                const previewContainer = document.getElementById("swal-photoPreviewContainer");
-                if (previewContainer) previewContainer.classList.remove("hidden");
-              }
-              // stop camera and remove overlay
-              stopCamera();
-              return resolve(file);
-            }, "image/jpeg", 0.92);
-          });
-        });
-      }
+            // allow close by tapping outside overlay (optional)
+            overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) {
+                    stopCamera();
+                    return reject(new Error("User closed camera"));
+                }
+            });
 
-      // initial attach
-      attachCaptureHandler(document.getElementById("workerCaptureBtn"));
-
-      // allow close by tapping outside overlay (optional)
-      overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) {
-          stopCamera();
-          return reject(new Error("User closed camera"));
+        } catch (err) {
+            return reject(err);
         }
-      });
-
-    } catch (err) {
-      return reject(err);
-    }
-  });
+    });
 }
 
 let unsubscribeListeners = [];
@@ -295,18 +298,27 @@ let tasksListenerUnsubscribe = null; // ✅ Track tasks listener separately
 let isRenderingTasks = false; // ✅ Prevent concurrent task renders
 
 // Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeDashboard();
     initAuthSession();
+
+    // Initialize offline sync manager
+    try {
+        initOfflineSync();
+        console.log('Offline sync initialized on Workers dashboard');
+    } catch (error) {
+        console.error('Failed to initialize offline sync:', error);
+    }
+
     // Listen for cross-tab updates from profile-settings without reload
-    window.addEventListener('storage', function(e) {
+    window.addEventListener('storage', function (e) {
         if (e.key === 'farmerNickname' || e.key === 'farmerName') {
             setDisplayNameFromStorage();
         }
     });
     setupEventListeners();
     // Set initial header padding based on sidebar state
-    try { applyHeaderPadding(); } catch(_) {}
+    try { applyHeaderPadding(); } catch (_) { }
 });
 
 async function initAuthSession() {
@@ -323,9 +335,9 @@ async function initAuthSession() {
             currentUserEmail = user.email || '';
 
             // Persist uid for other modules
-            try { 
-                localStorage.setItem('userId', user.uid); 
-            } catch(e) {
+            try {
+                localStorage.setItem('userId', user.uid);
+            } catch (e) {
                 console.warn('Failed to save userId to localStorage:', e);
             }
 
@@ -355,16 +367,16 @@ async function loadUserData(user) {
         // Get only the first name and convert to uppercase
         const nameParts = fullname.split(' ');
         const displayName = nameParts[0] ? nameParts[0].toUpperCase() : '';
-            
-        const display = nickname.length > 0 ? nickname.toUpperCase() : 
-                      (displayName || (user.email ? user.email.split('@')[0].toUpperCase() : 'WORKER'));
+
+        const display = nickname.length > 0 ? nickname.toUpperCase() :
+            (displayName || (user.email ? user.email.split('@')[0].toUpperCase() : 'WORKER'));
 
         // Store in localStorage with error handling
-        try { 
-            localStorage.setItem('userRole', role); 
-            localStorage.setItem('farmerName', fullname || display); 
+        try {
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('farmerName', fullname || display);
             if (nickname) localStorage.setItem('farmerNickname', nickname);
-            localStorage.setItem('userEmail', user.email || ''); 
+            localStorage.setItem('userEmail', user.email || '');
         } catch (e) {
             console.warn('Error accessing localStorage:', e);
         }
@@ -372,33 +384,33 @@ async function loadUserData(user) {
         // Update UI elements with a small delay to ensure they exist
         const updateUI = () => {
             const nameEls = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
-            nameEls.forEach(el => { 
-                if (el) el.textContent = display; 
+            nameEls.forEach(el => {
+                if (el) el.textContent = display;
                 else console.warn('Name element not found');
             });
-            
+
             const dropdownUserType = document.getElementById('dropdownUserType');
             if (dropdownUserType) {
                 dropdownUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
             } else {
                 console.warn('dropdownUserType element not found');
             }
-            
+
             const sidebarUserType = document.getElementById('sidebarUserType');
             if (sidebarUserType) {
                 sidebarUserType.textContent = role.charAt(0).toUpperCase() + role.slice(1);
             }
 
-        // Update UI with user data
+            // Update UI with user data
             updateUserInterface();
-            
+
             // Load and display profile photo
             if (data.photoURL) {
                 // Update header profile image
                 const profilePhoto = document.getElementById('profilePhoto');
                 const profileIconDefault = document.getElementById('profileIconDefault');
                 const profileIconContainer = document.getElementById('profileIconContainer');
-                
+
                 if (profilePhoto) {
                     profilePhoto.src = data.photoURL;
                     profilePhoto.onload = () => {
@@ -410,7 +422,7 @@ async function loadUserData(user) {
                         if (profileIconDefault) profileIconDefault.classList.remove('hidden');
                     };
                 }
-                
+
                 // Also update sidebar profile image
                 const profileImageContainer = document.getElementById('profileImageContainer');
                 if (profileImageContainer) {
@@ -462,11 +474,11 @@ function setDisplayNameFromStorage() {
 }
 
 // Expose sync function for profile-settings to call
-window.__syncDashboardProfile = async function() {
+window.__syncDashboardProfile = async function () {
     try {
         // Update display name from localStorage
         setDisplayNameFromStorage();
-        
+
         // Try to fetch latest profile photo from Firestore if available
         if (typeof auth !== 'undefined' && auth.currentUser) {
             const uid = auth.currentUser.uid;
@@ -489,7 +501,7 @@ window.__syncDashboardProfile = async function() {
                             if (profileIconDefault) profileIconDefault.classList.remove('hidden');
                         };
                     }
-                    
+
                     // Also update sidebar profile image
                     const profileImageContainer = document.getElementById('profileImageContainer');
                     if (profileImageContainer) {
@@ -516,11 +528,11 @@ window.__syncDashboardProfile = async function() {
                         };
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error('Error syncing profile photo:', e);
             }
         }
-    } catch(e) {
+    } catch (e) {
         console.error('Profile sync error:', e);
     }
 };
@@ -530,16 +542,16 @@ function initializeDashboard() {
     // For now, set default values (you can integrate Firebase later)
     userType = 'worker';
     hasDriverBadge = false;
-    
+
     // Update UI elements
     updateUserInterface();
-    
+
     // Show/hide driver features based on badge status
     toggleDriverFeatures();
-    
+
     // Initialize map
     initializeMap();
-    
+
     // Initialize FullCalendar
     initializeCalendar();
 }
@@ -549,7 +561,7 @@ function updateUserInterface() {
     const badgeIndicator = document.getElementById('badgeIndicator');
     const dropdownUserType = document.getElementById('dropdownUserType');
     const sidebarUserType = document.getElementById('sidebarUserType');
-    
+
     // Add null checks for required elements
     if (!dropdownUserType) {
         console.warn('dropdownUserType element not found');
@@ -575,7 +587,7 @@ function updateUserInterface() {
 function toggleDriverFeatures() {
     const driverFeatures = document.getElementById('driverFeatures');
     const driverMenuItems = document.getElementById('driverMenuItems');
-    
+
     if (hasDriverBadge) {
         if (driverFeatures) driverFeatures.classList.remove('hidden');
         if (driverMenuItems) driverMenuItems.classList.remove('hidden');
@@ -595,7 +607,7 @@ function initializeMap() {
         }
 
         const map = L.map('fieldMap').setView([11.0064, 124.6075], 12);
-        
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -650,7 +662,7 @@ function initializeCalendar() {
             initialView: 'dayGridMonth'
         });
         calendar.render();
-        
+
         console.log('Calendar initialized successfully');
     } catch (error) {
         console.error('Error initializing calendar:', error);
@@ -664,14 +676,14 @@ function toggleSidebar() {
     const overlay = document.getElementById('sidebarOverlay');
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
-    
+
     if (!sidebar) return;
-    
+
     if (isDesktop) {
         // Desktop: Toggle collapse/expand (icon-only mode)
         body.classList.toggle('sidebar-collapsed');
         const isCollapsed = body.classList.contains('sidebar-collapsed');
-        
+
         if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
     } else {
         // Mobile: Toggle sidebar visibility with overlay
@@ -690,9 +702,9 @@ function toggleSidebar() {
 function toggleMobileSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    
+
     if (!sidebar) return;
-    
+
     const isOpen = sidebar.classList.contains('mobile-open');
     if (isOpen) {
         sidebar.classList.remove('mobile-open');
@@ -707,16 +719,16 @@ function toggleMobileSidebar() {
 function toggleDesktopSidebar() {
     const isDesktop = window.innerWidth >= 1024;
     if (!isDesktop) return;
-    
+
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
     const sidebar = document.getElementById('sidebar');
-    
+
     if (!mainWrapper || !sidebar) return;
-    
+
     body.classList.toggle('sidebar-collapsed');
     const isCollapsed = body.classList.contains('sidebar-collapsed');
-    
+
     mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
 }
 
@@ -724,16 +736,16 @@ function toggleDesktopSidebar() {
 function toggleSidebarCollapse() {
     const isDesktop = window.innerWidth >= 1024;
     if (!isDesktop) return; // Only works on desktop
-    
+
     const body = document.body;
     const mainWrapper = document.getElementById('mainWrapper');
     const sidebar = document.getElementById('sidebar');
-    
+
     if (!mainWrapper || !sidebar) return;
-    
+
     body.classList.toggle('sidebar-collapsed');
     const isCollapsed = body.classList.contains('sidebar-collapsed');
-    
+
     mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
 }
 
@@ -767,7 +779,7 @@ function showSection(sectionId) {
     if (selectedSection) {
         selectedSection.classList.remove('hidden');
     }
-    
+
     // Update active nav item - highlight the corresponding sidebar menu with dark blue
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active', 'bg-gray-800', 'text-white');
@@ -778,14 +790,14 @@ function showSection(sectionId) {
     if (activeNavItem) {
         activeNavItem.classList.add('active');
     }
-    
+
     currentSection = targetId;
-    
+
     // Close mobile sidebar after navigation
     if (window.innerWidth < 1024) {
         closeSidebar();
     }
-    
+
     // Ensure layout aligns with sidebar state on desktop after section switch
     try {
         const isDesktop = window.innerWidth >= 1024;
@@ -795,7 +807,7 @@ function showSection(sectionId) {
             mainWrapper.style.marginLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
         }
         if (header) header.style.paddingLeft = document.body.classList.contains('sidebar-collapsed') ? '5rem' : (isDesktop ? '16rem' : '0');
-    } catch(_) {}
+    } catch (_) { }
 }
 
 // Profile dropdown functionality
@@ -803,9 +815,9 @@ function toggleProfileDropdown() {
     const dropdown = document.getElementById('profileDropdown');
     const chevronIcon = document.getElementById('profileDropdownIcon');
     if (!dropdown) return;
-    
+
     const isVisible = dropdown.classList.contains('opacity-100');
-    
+
     if (isVisible) {
         dropdown.classList.remove('opacity-100', 'visible', 'scale-100');
         dropdown.classList.add('opacity-0', 'invisible', 'scale-95');
@@ -827,7 +839,7 @@ function toggleProfileDropdown() {
 
 // Navigation function for dashboard stats
 function navigateToSection(section) {
-    switch(section) {
+    switch (section) {
         case 'fields':
             showSection('available-fields');
             console.log('Navigating to available fields section');
@@ -1057,7 +1069,7 @@ async function setupWorkerTasksListener() {
                         snap1.forEach((doc) => { const t = doc.data(); t.id = doc.id; tasks.push(t); });
                         snap2.forEach((doc) => { const t = doc.data(); t.id = doc.id; tasks.push(t); });
                         console.log(`🔁 Fallback tasks by email loaded: ${tasks.length} tasks`);
-                    } catch(e) { console.warn('Tasks email fallback failed:', e); }
+                    } catch (e) { console.warn('Tasks email fallback failed:', e); }
                 }
 
                 // Sort tasks by createdAt (client-side sorting to avoid index requirement)
@@ -1076,28 +1088,28 @@ async function setupWorkerTasksListener() {
                 // Upcoming tasks: tasks with deadline within next 7 days that are not done
                 const upcomingTasks = [];
                 const invalidDeadlineTasks = [];
-                
+
                 tasks.forEach(t => {
                     // Skip completed tasks
                     if (t.status === 'done' || t.status === 'completed') return;
-                    
+
                     // Skip tasks with no deadline
                     if (!t.deadline) {
                         console.log(`Task ${t.id} has no deadline`);
                         return;
                     }
-                    
+
                     try {
                         // Handle both Firestore Timestamp and string dates
                         const dateObj = t.deadline.toDate ? t.deadline.toDate() : new Date(t.deadline);
-                        
+
                         // Check if the date is valid
                         if (isNaN(dateObj.getTime())) {
                             console.warn('Invalid date for task:', t.id, 'deadline:', t.deadline);
                             invalidDeadlineTasks.push(t.id);
                             return;
                         }
-                        
+
                         // Check if the date is in the future and within 7 days from now
                         if (dateObj >= now && dateObj <= sevenDaysFromNow) {
                             upcomingTasks.push(t);
@@ -1107,7 +1119,7 @@ async function setupWorkerTasksListener() {
                         invalidDeadlineTasks.push(t.id);
                     }
                 });
-                
+
                 // Log tasks with invalid deadlines for debugging
                 if (invalidDeadlineTasks.length > 0) {
                     console.log(`⚠️ ${invalidDeadlineTasks.length} tasks with invalid/missing deadlines:`, invalidDeadlineTasks);
@@ -1235,7 +1247,7 @@ async function setupWorkerNotificationsListener() {
                     const qByEmail = query(notificationsRef, where('userEmail', '==', currentUserEmail), orderBy('timestamp', 'desc'), limit(25));
                     const emailSnap = await getDocs(qByEmail);
                     emailSnap.forEach((doc) => { notifications.push({ id: doc.id, ...doc.data() }); });
-                } catch(e) { console.warn('Notifications email fallback failed:', e); }
+                } catch (e) { console.warn('Notifications email fallback failed:', e); }
             }
 
             const unreadCount = notifications.filter(n => !n.read).length;
@@ -1278,17 +1290,17 @@ function renderWorkerNotifications(notifications) {
         const statusClass = isRead ? 'bg-white' : 'bg-white';
         const meta = formatRelativeTime(notification.timestamp);
         const message = notification.message || 'Notification';
-        
+
         // Determine the section based on notification type
         let section = 'dashboard';
         // Check for field-related notifications first
-        if (notification.type && (notification.type.toLowerCase().includes('field') || 
-                                notification.message?.toLowerCase().includes('field'))) {
+        if (notification.type && (notification.type.toLowerCase().includes('field') ||
+            notification.message?.toLowerCase().includes('field'))) {
             section = 'my-fields';
-        } 
+        }
         // Then check for task-related notifications
-        else if (notification.type && (notification.type.toLowerCase().includes('task') || 
-                                     notification.message?.toLowerCase().includes('task'))) {
+        else if (notification.type && (notification.type.toLowerCase().includes('task') ||
+            notification.message?.toLowerCase().includes('task'))) {
             section = 'my-tasks';
         }
 
@@ -1317,10 +1329,10 @@ async function markWorkerNotificationRead(notificationId, section = 'my-tasks') 
             read: true,
             readAt: serverTimestamp()
         });
-        
+
         // Navigate to the appropriate section
         showSection(section);
-        
+
         // Close the notifications dropdown if open
         const dropdown = document.getElementById('notificationDropdown');
         if (dropdown) {
@@ -1512,7 +1524,7 @@ function displayRecentActivity(activities) {
 function updateDashboardStat(elementId, value) {
     // Try to get the element immediately
     let el = document.getElementById(elementId);
-    
+
     // If element not found, try again after a short delay (in case DOM isn't fully loaded)
     if (!el) {
         setTimeout(() => {
@@ -1523,10 +1535,10 @@ function updateDashboardStat(elementId, value) {
         }, 500);
         return;
     }
-    
+
     // Update the element's text content
     el.textContent = value;
-    
+
     // Special handling for specific elements
     if (elementId === 'activeFieldsCount') {
         const activeFieldsText = document.getElementById('activeFieldsText');
@@ -1588,15 +1600,15 @@ function viewFieldTasks(fieldId) {
 async function logout() {
     try {
         showWorkerToast('Logging out… Redirecting to sign-in page');
-        setTimeout(async function(){
+        setTimeout(async function () {
             const target = '/frontend/Common/farmers_login.html';
-            try { await signOut(auth); } catch (_) {}
+            try { await signOut(auth); } catch (_) { }
             try {
                 localStorage.clear();
                 sessionStorage.clear();
-            } catch(_) {}
-            try { window.location.replace(target); } catch(_) { window.location.href = target; }
-            setTimeout(function(){ try { window.location.replace(target); } catch(_) { window.location.href = target; } }, 800);
+            } catch (_) { }
+            try { window.location.replace(target); } catch (_) { window.location.href = target; }
+            setTimeout(function () { try { window.location.replace(target); } catch (_) { window.location.href = target; } }, 800);
         }, 1000);
     } catch (_) {
         const target = '/frontend/Common/farmers_login.html';
@@ -1611,39 +1623,39 @@ function setupEventListeners() {
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
     const overlay = document.getElementById('sidebarOverlay');
     const collapseBtn = document.getElementById('collapseSidebarBtn');
-    
+
     if (hamburgerBtn) {
         hamburgerBtn.addEventListener('click', toggleSidebar);
     }
-    
+
     if (closeSidebarBtn) {
         closeSidebarBtn.addEventListener('click', closeSidebar);
     }
-    
+
     if (overlay) {
         overlay.addEventListener('click', closeSidebar);
     }
     if (collapseBtn) {
-        collapseBtn.addEventListener('click', function(e){
+        collapseBtn.addEventListener('click', function (e) {
             e.preventDefault();
             toggleSidebarCollapse();
         });
     }
-    
+
     // Navigation menu
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function(e) {
+        item.addEventListener('click', function (e) {
             e.preventDefault();
             const sectionId = this.getAttribute('data-section');
             showSection(sectionId);
-            
+
             // Close sidebar on mobile after navigation
             if (window.innerWidth < 1024) {
                 closeSidebar();
             }
         });
     });
-    
+
     // Profile dropdown toggle
     const profileBtn = document.getElementById('profileDropdownBtn');
     if (profileBtn) {
@@ -1652,26 +1664,26 @@ function setupEventListeners() {
     // Header dropdown items
     const goSettingsBtn = document.getElementById('workerGoSettings');
     if (goSettingsBtn) {
-        goSettingsBtn.addEventListener('click', function(e){ e.preventDefault(); showSection('settings'); toggleProfileDropdown(); });
+        goSettingsBtn.addEventListener('click', function (e) { e.preventDefault(); showSection('settings'); toggleProfileDropdown(); });
     }
     const logoutBtn = document.getElementById('workerLogoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e){ e.preventDefault(); logout(); });
+        logoutBtn.addEventListener('click', function (e) { e.preventDefault(); logout(); });
     }
-    
+
     // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         const dropdown = document.getElementById('profileDropdown');
         const profileBtn = document.getElementById('profileDropdownBtn');
-        
+
         if (dropdown && profileBtn && !profileBtn.contains(e.target) && !dropdown.contains(e.target)) {
             dropdown.classList.remove('opacity-100', 'visible', 'scale-100');
             dropdown.classList.add('opacity-0', 'invisible', 'scale-95');
         }
     });
-    
+
     // Handle window resize
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         if (window.innerWidth >= 1024) {
             closeSidebar();
             // Reset mainWrapper margin to default when resizing
@@ -1686,7 +1698,7 @@ function setupEventListeners() {
     // Task filter change listener
     const taskFilter = document.getElementById('taskFilter');
     if (taskFilter) {
-        taskFilter.addEventListener('change', function() {
+        taskFilter.addEventListener('change', function () {
             // ✅ Don't create new listener - just re-render with current data
             console.log(`🔄 Filter changed to: ${taskFilter.value}`);
             displayWorkerTasks(currentTasks);
@@ -1696,7 +1708,7 @@ function setupEventListeners() {
     // Work log button listener
     const createWorkLogBtn = document.getElementById('createWorkLogBtn');
     if (createWorkLogBtn) {
-        createWorkLogBtn.addEventListener('click', function() {
+        createWorkLogBtn.addEventListener('click', function () {
             showWorkLogModal();
         });
     }
@@ -1704,7 +1716,7 @@ function setupEventListeners() {
     // Mobile work log button listener
     const createWorkLogBtnMobile = document.getElementById('createWorkLogBtnMobile');
     if (createWorkLogBtnMobile) {
-        createWorkLogBtnMobile.addEventListener('click', function() {
+        createWorkLogBtnMobile.addEventListener('click', function () {
             showWorkLogModal();
         });
     }
@@ -1712,13 +1724,13 @@ function setupEventListeners() {
     // Refresh notifications button
     const refreshNotifications = document.getElementById('refreshNotifications');
     if (refreshNotifications) {
-        refreshNotifications.addEventListener('click', function() {
+        refreshNotifications.addEventListener('click', function () {
             setupWorkerNotificationsListener();
         });
     }
 
     // Cleanup listeners on page unload
-    window.addEventListener('beforeunload', function() {
+    window.addEventListener('beforeunload', function () {
         unsubscribeListeners.forEach(unsubscribe => {
             try {
                 unsubscribe();
@@ -1789,12 +1801,12 @@ async function showWorkLogModal() {
                                 </div>
                                 <div id="swal-fieldId-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #5ea500; border-top: none; border-radius: 0 0 0.5rem 0.5rem; max-height: 300px; overflow-y: auto; display: none; z-index: 10000; margin-top: 0;">
                                     ${fieldsOptions.split('<option').slice(1).map(opt => {
-                                        const match = opt.match(/value="([^"]*)"[^>]*>([^<]*)/);
-                                        if (match) {
-                                            return `<div class="swal-field-option" data-value="${match[1]}">${match[2]}</div>`;
-                                        }
-                                        return '';
-                                    }).join('')}
+                const match = opt.match(/value="([^"]*)"[^>]*>([^<]*)/);
+                if (match) {
+                    return `<div class="swal-field-option" data-value="${match[1]}">${match[2]}</div>`;
+                }
+                return '';
+            }).join('')}
                                 </div>
                             </div>
                             <input type="hidden" id="swal-fieldId" value="">
@@ -1902,7 +1914,7 @@ async function showWorkLogModal() {
                 const cameraBtn = document.getElementById('swal-openCamera');
                 const modal = document.querySelector('.swal2-modal');
                 const htmlContainer = document.querySelector('.swal2-html-container');
-                
+
                 // Fix dropdown overflow
                 if (modal) {
                     modal.style.overflow = 'visible !important';
@@ -1910,7 +1922,7 @@ async function showWorkLogModal() {
                 if (htmlContainer) {
                     htmlContainer.style.overflow = 'visible !important';
                 }
-                
+
                 if (confirmBtn) {
                     confirmBtn.style.cssText = 'background-color: #5ea500 !important; color: white !important; padding: 12px 24px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; cursor: pointer !important; transition: all 0.3s ease !important; box-shadow: 0 2px 8px rgba(94, 165, 0, 0.3) !important;';
                     confirmBtn.onmouseover = () => confirmBtn.style.backgroundColor = '#497d00 !important';
@@ -1935,26 +1947,26 @@ async function showWorkLogModal() {
                 const fieldSelect = document.getElementById('swal-fieldId');
                 const taskTypeSelect = document.getElementById('swal-taskType');
                 const modal = document.querySelector('.swal2-modal');
-                
+
                 // Ensure modal and containers allow overflow
                 if (modal) {
                     modal.style.overflow = 'visible';
                     modal.style.zIndex = '9998';
                 }
-                
+
                 // Add event listeners to prevent upward dropdown
                 if (fieldSelect) {
                     fieldSelect.addEventListener('focus', () => {
                         if (modal) modal.style.overflow = 'visible';
                     });
                 }
-                
+
                 if (taskTypeSelect) {
                     taskTypeSelect.addEventListener('focus', () => {
                         if (modal) modal.style.overflow = 'visible';
                     });
                 }
-                
+
                 // Setup custom field dropdown
                 const fieldDisplay = document.getElementById('swal-fieldId-display');
                 const fieldDropdown = document.getElementById('swal-fieldId-dropdown');
@@ -1974,7 +1986,7 @@ async function showWorkLogModal() {
                             fieldInput.value = value;
                             fieldText.textContent = text;
                             fieldDropdown.style.display = 'none';
-                            
+
                             // Update selected state
                             fieldOptions.forEach(opt => opt.classList.remove('selected'));
                             option.classList.add('selected');
@@ -2001,7 +2013,7 @@ async function showWorkLogModal() {
                             taskTypeInput.value = value;
                             taskTypeText.textContent = text;
                             taskTypeDropdown.style.display = 'none';
-                            
+
                             // Update selected state
                             taskOptions.forEach(opt => opt.classList.remove('selected'));
                             option.classList.add('selected');
@@ -2100,34 +2112,34 @@ async function showWorkLogModal() {
                     }
                 });
 
-// ---- LIVE CAMERA SYSTEM for Worker Log ----
-let capturedBlob = null;
+                // ---- LIVE CAMERA SYSTEM for Worker Log ----
+                let capturedBlob = null;
 
-// ATTACH the worker camera opener (uses global openWorkerCamera)
-const openCamBtn = document.getElementById("swal-openCamera");
-const previewContainer = document.getElementById("swal-photoPreviewContainer");
-const previewImg = document.getElementById("swal-photoPreview");
+                // ATTACH the worker camera opener (uses global openWorkerCamera)
+                const openCamBtn = document.getElementById("swal-openCamera");
+                const previewContainer = document.getElementById("swal-photoPreviewContainer");
+                const previewImg = document.getElementById("swal-photoPreview");
 
-if (openCamBtn) {
-  openCamBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    try {
-      // open the global camera UI (returns a File)
-      await openWorkerCamera();
-      // openWorkerCamera already sets window._workerCapturedFile and sets preview if present
-      // make sure preview is visible if file already set
-      if (window._workerCapturedFile && previewImg) {
-        previewImg.src = URL.createObjectURL(window._workerCapturedFile);
-        if (previewContainer) {
-          previewContainer.style.display = "block";
-        }
-      }
-    } catch (err) {
-      // user cancelled or permission denied — swallow quietly
-      console.warn("Camera closed or failed:", err && err.message);
-    }
-  });
-}
+                if (openCamBtn) {
+                    openCamBtn.addEventListener("click", async (e) => {
+                        e.preventDefault();
+                        try {
+                            // open the global camera UI (returns a File)
+                            await openWorkerCamera();
+                            // openWorkerCamera already sets window._workerCapturedFile and sets preview if present
+                            // make sure preview is visible if file already set
+                            if (window._workerCapturedFile && previewImg) {
+                                previewImg.src = URL.createObjectURL(window._workerCapturedFile);
+                                if (previewContainer) {
+                                    previewContainer.style.display = "block";
+                                }
+                            }
+                        } catch (err) {
+                            // user cancelled or permission denied — swallow quietly
+                            console.warn("Camera closed or failed:", err && err.message);
+                        }
+                    });
+                }
 
             },
             preConfirm: () => {
@@ -2141,8 +2153,8 @@ if (openCamBtn) {
 
                 // Validate required photo
                 if (!photoFile) {
-                Swal.showValidationMessage('A live photo is required');
-                return false;
+                    Swal.showValidationMessage('A live photo is required');
+                    return false;
                 }
 
                 const verification = document.getElementById('swal-verification').checked;
@@ -2188,6 +2200,76 @@ async function createWorkerLog(logData) {
         return;
     }
 
+    // ========================================
+    // ✅ OFFLINE MODE: Save to IndexedDB
+    // ========================================
+    if (!navigator.onLine) {
+        try {
+            console.log('🔴 Device is offline. Saving work log to IndexedDB...');
+
+            // Dynamically import offline DB utilities
+            console.log('Importing offline-db module...');
+            const offlineDbModule = await import('../Common/offline-db.js');
+            const { addPendingLog, compressImage } = offlineDbModule;
+            console.log('✅ Offline DB module loaded');
+
+            // Compress photo
+            let photoBlob = null;
+            if (logData.photoFile) {
+                console.log('📸 Compressing photo for offline storage...');
+                photoBlob = await compressImage(logData.photoFile, 0.7);
+                console.log('✅ Photo compressed successfully, size:', photoBlob.size);
+            }
+
+            // Create offline log data
+            const offlineLogData = {
+                userId: currentUserId,
+                fieldId: logData.fieldId,
+                taskName: logData.taskType,
+                description: logData.notes || '',
+                taskStatus: 'completed', // Worker logs are always completed
+                photoBlob: photoBlob,
+                completionDate: logData.completionDate,
+                workerName: logData.workerName
+            };
+
+            console.log('💾 Saving to IndexedDB...', {
+                userId: offlineLogData.userId,
+                fieldId: offlineLogData.fieldId,
+                taskName: offlineLogData.taskName,
+                hasPhoto: !!photoBlob
+            });
+
+            // Save to IndexedDB
+            const logId = await addPendingLog(offlineLogData);
+            console.log('✅ Offline work log saved with ID:', logId);
+
+            // Show success message
+            await showPopupMessage(
+                'Work log saved offline — Will sync when internet is restored',
+                'success',
+                { autoClose: true, timeout: 3000 }
+            );
+            
+            console.log('✅ Offline save completed successfully');
+            
+            return;
+        } catch (error) {
+            console.error('❌ Error saving offline work log:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            await showPopupMessage(
+                `Failed to save offline: ${error.message}`,
+                'error'
+            );
+            return;
+        }
+    }
+
+    // ========================================
+    // ✅ ONLINE MODE: Normal Firebase submission
+    // ========================================
     try {
         // Show loading message
         await showPopupMessage('Creating work log...', 'info', { autoClose: false });
@@ -2363,44 +2445,44 @@ window.applyHeaderPadding = applyHeaderPadding;
 window.viewFieldTasks = viewFieldTasks;
 
 // Worker custom logout popup controls (HTML lives in Workers.html)
-function showWorkerToast(msg){
+function showWorkerToast(msg) {
     const overlay = document.getElementById('workerToastOverlay');
     const card = document.getElementById('workerToastCard');
     const msgEl = document.getElementById('workerToastMsg');
     if (!overlay || !card) return;
     if (msgEl) msgEl.textContent = msg || 'Logging out…';
-    overlay.classList.remove('opacity-0','invisible');
-    card.classList.remove('opacity-0','invisible','scale-95');
-    card.classList.add('opacity-100','scale-100');
-    setTimeout(function(){
+    overlay.classList.remove('opacity-0', 'invisible');
+    card.classList.remove('opacity-0', 'invisible', 'scale-95');
+    card.classList.add('opacity-100', 'scale-100');
+    setTimeout(function () {
         overlay.classList.add('opacity-0');
-        card.classList.add('opacity-0','scale-95');
-        setTimeout(function(){ overlay.classList.add('invisible'); card.classList.add('invisible'); }, 180);
+        card.classList.add('opacity-0', 'scale-95');
+        setTimeout(function () { overlay.classList.add('invisible'); card.classList.add('invisible'); }, 180);
     }, 1000);
 }
 window.showWorkerToast = showWorkerToast;
 
 // Attach sidebar event listeners
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', function () {
     try {
         // Mobile close button and overlay
         const closeBtn = document.getElementById('closeSidebarBtn');
         const overlay = document.getElementById('sidebarOverlay');
         if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
         if (overlay) overlay.addEventListener('click', closeSidebar);
-        
+
         // Handle window resize to adjust sidebar state
-        window.addEventListener('resize', function() {
+        window.addEventListener('resize', function () {
             const mainWrapper = document.getElementById('mainWrapper');
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
             const isDesktop = window.innerWidth >= 1024;
-            
+
             if (isDesktop) {
                 // On desktop, ensure sidebar is visible and respect collapsed state
                 if (sidebar) sidebar.classList.remove('-translate-x-full');
                 if (overlay) overlay.classList.add('hidden');
-                
+
                 const isCollapsed = document.body.classList.contains('sidebar-collapsed');
                 if (mainWrapper) mainWrapper.style.marginLeft = isCollapsed ? '5rem' : '16rem';
             } else {
@@ -2410,13 +2492,13 @@ document.addEventListener('DOMContentLoaded', function(){
                 document.body.classList.remove('sidebar-collapsed');
             }
         });
-    } catch(_){}
+    } catch (_) { }
 });
 
 // 🔥 Inject CSS for SweetAlert modal mobile fix (Worker Log)
-(function() {
-  const style = document.createElement("style");
-  style.innerHTML = `
+(function () {
+    const style = document.createElement("style");
+    style.innerHTML = `
     .worker-log-modal {
       max-height: calc(100vh - 60px) !important;
       margin-top: 30px !important;
@@ -2434,5 +2516,5 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
   `;
-  document.head.appendChild(style);
+    document.head.appendChild(style);
 })();

@@ -1,24 +1,28 @@
 // Firebase SDK imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import { 
-    getFirestore, 
-    collection, 
-    doc, 
-    getDoc, 
-    getDocs, 
-    addDoc, 
-    query, 
-    where, 
-    orderBy, 
-    serverTimestamp 
+import {
+    getFirestore,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    addDoc,
+    query,
+    where,
+    orderBy,
+    serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-import { 
-    getStorage, 
-    ref, 
-    uploadBytes, 
-    getDownloadURL 
+import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js';
+
+// Offline sync imports
+import { addPendingLog, compressImage } from '../Common/offline-db.js';
+import { initOfflineSync } from '../Common/offline-sync.js';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -45,8 +49,15 @@ class TaskLoggingManager {
         this.fieldData = null;
         this.taskLogs = [];
         this.fieldId = null;
-        
+
         this.initAuthListener();
+
+        // Initialize offline sync manager
+        try {
+            initOfflineSync();
+        } catch (error) {
+            console.error('Failed to initialize offline sync:', error);
+        }
     }
 
     // Initialize authentication state listener
@@ -75,7 +86,7 @@ class TaskLoggingManager {
     getFieldIdFromUrl() {
         const urlParams = new URLSearchParams(window.location.search);
         this.fieldId = urlParams.get('field_id');
-        
+
         if (!this.fieldId) {
             this.showMessage('No field ID specified. Redirecting to lobby...', 'error');
             setTimeout(() => {
@@ -83,7 +94,7 @@ class TaskLoggingManager {
             }, 2000);
             return false;
         }
-        
+
         return true;
     }
 
@@ -91,25 +102,25 @@ class TaskLoggingManager {
     async loadFieldData() {
         try {
             if (!this.getFieldIdFromUrl()) return;
-            
+
             // Get field document
             const fieldRef = doc(db, 'fields', this.fieldId);
             const fieldSnap = await getDoc(fieldRef);
-            
+
             if (!fieldSnap.exists()) {
-                            this.showMessage('Field not found. Redirecting to lobby...', 'error');
-            setTimeout(() => {
-                window.location.href = '../frontend/Common/lobby.html';
-            }, 2000);
+                this.showMessage('Field not found. Redirecting to lobby...', 'error');
+                setTimeout(() => {
+                    window.location.href = '../frontend/Common/lobby.html';
+                }, 2000);
                 return;
             }
-            
+
             const fieldData = fieldSnap.data();
             fieldData.id = fieldSnap.id;
-            
+
             // Check if user has access to this field
             const hasAccess = await this.verifyFieldAccess(fieldData);
-            
+
             if (!hasAccess) {
                 this.showMessage('You do not have access to this field. Redirecting to lobby...', 'error');
                 setTimeout(() => {
@@ -117,12 +128,12 @@ class TaskLoggingManager {
                 }, 2000);
                 return;
             }
-            
+
             this.fieldData = fieldData;
             this.updateFieldDisplay();
             this.loadTaskLogs();
             this.initializeMap();
-            
+
         } catch (error) {
             console.error('Error loading field data:', error);
             this.showMessage('Error loading field data. Please try again.', 'error');
@@ -136,7 +147,7 @@ class TaskLoggingManager {
             if (fieldData.registered_by === this.currentUser.uid) {
                 return true;
             }
-            
+
             // Check if user is approved worker
             const fieldWorkersRef = collection(db, 'field_workers');
             const fieldWorkersQuery = query(
@@ -145,10 +156,10 @@ class TaskLoggingManager {
                 where('user_id', '==', this.currentUser.uid),
                 where('status', '==', 'approved')
             );
-            
+
             const fieldWorkersSnapshot = await getDocs(fieldWorkersQuery);
             return !fieldWorkersSnapshot.empty;
-            
+
         } catch (error) {
             console.error('Error verifying field access:', error);
             return false;
@@ -309,11 +320,11 @@ class TaskLoggingManager {
         try {
             const userRef = doc(db, 'users', userId);
             const userSnap = await getDoc(userRef);
-            
+
             if (userSnap.exists()) {
                 return userSnap.data().full_name || 'Unknown User';
             }
-            
+
             return 'Unknown User';
         } catch (error) {
             console.error('Error getting user name:', error);
@@ -330,18 +341,18 @@ class TaskLoggingManager {
                 where('field_id', '==', this.fieldId),
                 orderBy('logged_at', 'desc')
             );
-            
+
             const snapshot = await getDocs(taskLogsQuery);
             this.taskLogs = [];
-            
+
             snapshot.forEach((doc) => {
                 const logData = doc.data();
                 logData.id = doc.id;
                 this.taskLogs.push(logData);
             });
-            
+
             this.updateTaskLogsDisplay();
-            
+
         } catch (error) {
             console.error('Error loading task logs:', error);
             this.showMessage('Error loading task logs. Please try again.', 'error');
@@ -374,7 +385,7 @@ class TaskLoggingManager {
                 const currentDAP = calculateDAP(fieldData.plantingDate);
                 if (currentDAP !== null && currentDAP < 200) {
                     return `❌ Cannot harvest: Field is only ${currentDAP} days old.\n\n` +
-                           `Sugarcane must be at least 200 DAP (preferably 300-400 DAP) for harvesting.`;
+                        `Sugarcane must be at least 200 DAP (preferably 300-400 DAP) for harvesting.`;
                 }
             }
 
@@ -385,7 +396,7 @@ class TaskLoggingManager {
                     : new Date(fieldData.plantingDate).toLocaleDateString();
 
                 return `❌ This field was already planted on ${plantingDateStr}.\n\n` +
-                       `If you need to replant, please select "Replanting" instead.`;
+                    `If you need to replant, please select "Replanting" instead.`;
             }
 
             // No issues found
@@ -451,7 +462,7 @@ class TaskLoggingManager {
         `).join('');
 
         taskLogsContainer.innerHTML = logsHTML;
-        
+
         // Reinitialize Lucide icons for new content
         if (window.lucide) {
             window.lucide.createIcons();
@@ -482,6 +493,16 @@ class TaskLoggingManager {
                 throw new Error(validationError);
             }
 
+            // ========================================
+            // ✅ OFFLINE MODE: Save to IndexedDB
+            // ========================================
+            if (!navigator.onLine) {
+                return await this.submitOfflineLog(formData, taskName, description, taskStatus);
+            }
+
+            // ========================================
+            // ✅ ONLINE MODE: Normal Firebase submission
+            // ========================================
             // Handle file uploads
             let selfiePath = '';
             let fieldPhotoPath = '';
@@ -531,16 +552,59 @@ class TaskLoggingManager {
         }
     }
 
+    // Submit offline log to IndexedDB
+    async submitOfflineLog(formData, taskName, description, taskStatus) {
+        try {
+            console.log('Device is offline. Saving log to IndexedDB...');
+
+            // Get photo file (prefer selfie, fallback to field_photo)
+            const selfieFile = formData.get('selfie');
+            const fieldPhotoFile = formData.get('field_photo');
+            const photoFile = (selfieFile && selfieFile.size > 0) ? selfieFile :
+                (fieldPhotoFile && fieldPhotoFile.size > 0) ? fieldPhotoFile : null;
+
+            // Compress photo if provided
+            let photoBlob = null;
+            if (photoFile) {
+                console.log('Compressing photo for offline storage...');
+                photoBlob = await compressImage(photoFile, 0.7);
+            }
+
+            // Create offline log data
+            const offlineLogData = {
+                userId: this.currentUser.uid,
+                fieldId: this.fieldId,
+                taskName: taskName,
+                description: description || '',
+                taskStatus: taskStatus,
+                photoBlob: photoBlob
+            };
+
+            // Save to IndexedDB
+            const logId = await addPendingLog(offlineLogData);
+            console.log('Offline log saved with ID:', logId);
+
+            return {
+                success: true,
+                message: 'Saved Offline — Will Sync Later',
+                offline: true
+            };
+        } catch (error) {
+            console.error('Error saving offline log:', error);
+            throw new Error('Failed to save offline log. Please try again.');
+        }
+    }
+
     // Upload file to Firebase Storage
     async uploadFile(file, type) {
         try {
             const timestamp = Date.now();
             const fileName = `${type}_${timestamp}_${this.currentUser.uid}_${file.name}`;
             const storageRef = ref(storage, `task_photos/${fileName}`);
-            
+
             const snapshot = await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
-            
+
             return downloadURL;
         } catch (error) {
             console.error('Error uploading file:', error);
@@ -587,11 +651,10 @@ class TaskLoggingManager {
         if (!messageContainer) return;
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = `px-4 py-3 rounded-lg mb-6 ${
-            type === 'error' 
-                ? 'bg-red-50 border border-red-200 text-red-700' 
+        messageDiv.className = `px-4 py-3 rounded-lg mb-6 ${type === 'error'
+                ? 'bg-red-50 border border-red-200 text-red-700'
                 : 'bg-green-50 border border-green-200 text-green-700'
-        }`;
+            }`;
         messageDiv.textContent = message;
 
         messageContainer.appendChild(messageDiv);
@@ -617,7 +680,7 @@ class TaskLoggingManager {
 
     formatDate(date) {
         if (!date) return 'N/A';
-        
+
         if (date.toDate) {
             // Firestore timestamp
             return date.toDate().toLocaleDateString('en-US', {
@@ -639,7 +702,7 @@ class TaskLoggingManager {
                 hour12: true
             });
         }
-        
+
         return 'N/A';
     }
 }

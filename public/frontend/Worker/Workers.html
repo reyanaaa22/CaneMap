@@ -1,982 +1,1023 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CaneMap - Workers Dashboard</title>
-    
-    <!-- Tailwind CSS -->
-    <link rel="stylesheet" href="../../css/output.css?v=20251124">
-    
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CaneMap - Workers Dashboard</title>
 
-    <!-- SweetAlert2 for modals -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="../../css/output.css?v=20251124">
 
-    <!-- FullCalendar -->
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
-    
-    <!-- Leaflet CSS and JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    
-    <style>
-        /* Main content adjustments */
-        #mainContent {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            max-width: 100%;
-        }
+  <!-- SweetAlert2 for modals -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-        /* Dashboard grid adjustments */
-        .dashboard-grid {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            width: 100% !important;
-        }
+  <!-- FullCalendar -->
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
 
-        /* Section card adjustments */
-        .section-card {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            width: 100% !important;
-        }
+  <!-- Leaflet CSS and JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-        /* Page title adjustments */
-        .page-title {
-            padding-left: 0 !important;
-            margin-left: 0 !important;
-        }
 
-        /* Stats grid adjustments */
-        .stats-grid {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            gap: 1rem !important;
-            padding: 0 !important;
-        }
 
-        /* Activity section adjustments */
-        .activity-section {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            padding: 0 !important;
-        }
+  <style>
+    /* Main content adjustments */
+    #mainContent {
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+      max-width: 100%;
+    }
 
-        /* Mobile-first styles */
-        @media (max-width: 1023px) {
-            body {
-                padding-top: 3.5rem !important; /* Adjust for fixed header */
-                padding-left: 0 !important;
-            }
-            
-            #sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
-                z-index: 40; /* Below overlay but above content */
-                position: fixed;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                width: 16rem;
-                background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);
-                overflow-y: auto;
-                padding-top: 0;
-            }
-            
-            #sidebar.mobile-open {
-                transform: translateX(0);
-            }
-            
-            #sidebarOverlay {
-                display: none;
-                opacity: 0;
-                transition: opacity 0.3s ease-in-out;
-                z-index: 39; /* Below sidebar */
-                position: fixed;
-                inset: 0;
-                background-color: rgba(0, 0, 0, 0.5);
-            }
-            
-            #sidebarOverlay.visible {
-                display: block;
-                opacity: 1;
-            }
-            
-            /* Mobile notification dropdown */
-            #notificationDropdown {
-                max-width: calc(100vw - 2rem) !important;
-                width: 60vw !important;
-                right: auto !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                max-height: 70vh !important;
-            }
-            
-            #mainWrapper {
-                margin-left: 0 !important;
-                width: 100%;
-            }
-            
-            #mainContent {
-                width: 100%;
-                padding-left: 1rem;
-                padding-right: 1rem;
-                margin-left: 0 !important;
-            }
-            
-            .dashboard-grid {
-                grid-template-columns: 1fr !important;
-                gap: 1rem !important;
-            }
-            
-            .section-card {
-                margin-bottom: 1rem;
-            }
+    /* Dashboard grid adjustments */
+    .dashboard-grid {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      width: 100% !important;
+    }
 
-            /* Mobile Log Work Button - positioned in top right of section */
-            #my-tasks #createWorkLogBtn {
-                position: absolute !important;
-                top: 1.5rem !important;
-                right: 1rem !important;
-                z-index: 20 !important;
-                margin: 0 !important;
-                border: none !important;
-                outline: none !important;
-                -webkit-appearance: none !important;
-                appearance: none !important;
-                padding: 0.5rem 1rem !important;
-            }
+    /* Section card adjustments */
+    .section-card {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      width: 100% !important;
+    }
 
-            #my-tasks #createWorkLogBtn:active {
-                transform: none !important;
-                outline: none !important;
-            }
+    /* Page title adjustments */
+    .page-title {
+      padding-left: 0 !important;
+      margin-left: 0 !important;
+    }
 
-            #my-tasks #createWorkLogBtn:focus {
-                outline: none !important;
-                box-shadow: 0 2px 8px rgba(94, 165, 0, 0.3) !important;
-            }
-            
-            /* Ensure the section container has relative positioning for absolute button */
-            #my-tasks .section-card {
-                position: relative !important;
-            }
-        }
-        
-        /* Unified active nav item styling - Dark Blue (#1f2937) */
-        .nav-item.active,
-        #sidebar .nav-item.active,
-        #sidebar .nav-item[data-section].active {
-            background-color: #1f2937 !important;
-            color: #FFFFFF !important;
-            font-weight: 600 !important;
-            border-radius: 8px !important;
-            background-image: none !important;
-        }
+    /* Stats grid adjustments */
+    .stats-grid {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      gap: 1rem !important;
+      padding: 0 !important;
+    }
 
-        /* Active item hover state - same dark blue */
-        .nav-item.active:hover,
-        #sidebar .nav-item.active:hover,
-        #sidebar .nav-item[data-section].active:hover {
-            background-color: #1f2937 !important;
-            color: #FFFFFF !important;
-        }
+    /* Activity section adjustments */
+    .activity-section {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      padding: 0 !important;
+    }
 
-        /* Active item text and icons - white */
-        .nav-item.active,
-        .nav-item.active span,
-        .nav-item.active i,
-        .nav-item.active i.fas,
-        #sidebar .nav-item.active,
-        #sidebar .nav-item.active span,
-        #sidebar .nav-item.active i,
-        #sidebar .nav-item.active i.fas,
-        #sidebar .nav-item[data-section].active,
-        #sidebar .nav-item[data-section].active span,
-        #sidebar .nav-item[data-section].active i,
-        #sidebar .nav-item[data-section].active i.fas {
-            color: #FFFFFF !important;
-        }
-        
-        :root {
-            --cane-50: #f7fee7;
-            --cane-100: #ecfcca;
-            --cane-200: #d8f999;
-            --cane-300: #bbf451;
-            --cane-400: #9ae600;
-            --cane-500: #7ccf00;
-            --cane-600: #5ea500;
-            --cane-700: #497d00;
-            --cane-800: #3c6300;
-            --cane-900: #35530e;
-            --cane-950: #192e03;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--cane-600), var(--cane-700));
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(94, 165, 0, 0.3);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, var(--cane-200), var(--cane-300));
-            color: var(--cane-800);
-            transition: all 0.3s ease;
-        }
-        
-        .btn-secondary:hover {
-            background: linear-gradient(135deg, var(--cane-300), var(--cane-400));
-            transform: translateY(-1px);
-        }
-        
-        .section-card {
-            background: linear-gradient(135deg, white, var(--cane-50));
-            border: 1px solid var(--cane-200);
-            transition: all 0.3s ease;
-        }
-        
-        .section-card:hover {
-            box-shadow: 0 8px 25px rgba(94, 165, 0, 0.15);
-            transform: translateY(-2px);
-        }
+    /* Mobile-first styles */
+    @media (max-width: 1023px) {
+      body {
+        padding-top: 3.5rem !important;
+        /* Adjust for fixed header */
+        padding-left: 0 !important;
+      }
 
-        /* Task Card Styling - Modern Design */
-        .task-card {
-            background: linear-gradient(135deg, #ffffff 0%, #fafaf9 100%);
-            border: 2px solid var(--cane-200);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            position: relative;
-            overflow: hidden;
-        }
+      #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 40;
+        /* Below overlay but above content */
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 16rem;
+        background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);
+        overflow-y: auto;
+        padding-top: 0;
+      }
 
-        .task-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--cane-600), var(--cane-500), var(--cane-400));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+      #sidebar.mobile-open {
+        transform: translateX(0);
+      }
 
-        .task-card::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--cane-300), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+      #sidebarOverlay {
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        z-index: 39;
+        /* Below sidebar */
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
 
-        .task-card:hover {
-            box-shadow: 0 8px 24px rgba(94, 165, 0, 0.15);
-            transform: translateY(-2px);
-            border-color: var(--cane-400);
-        }
+      #sidebarOverlay.visible {
+        display: block;
+        opacity: 1;
+      }
 
-        .task-card:hover::before {
-            opacity: 1;
-        }
+      /* Mobile notification dropdown */
+      #notificationDropdown {
+        max-width: calc(100vw - 2rem) !important;
+        width: 60vw !important;
+        right: auto !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        max-height: 70vh !important;
+      }
 
-        .task-card:hover::after {
-            opacity: 1;
-        }
+      #mainWrapper {
+        margin-left: 0 !important;
+        width: 100%;
+      }
 
-        .task-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-        }
+      #mainContent {
+        width: 100%;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        margin-left: 0 !important;
+      }
 
-        .task-card-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--cane-950);
-            margin: 0;
-            letter-spacing: -0.3px;
-        }
+      .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+      }
 
-        .task-card-field {
-            font-size: 0.875rem;
-            color: var(--cane-600);
-            margin: 0.375rem 0 0 0;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
+      .section-card {
+        margin-bottom: 1rem;
+      }
 
-        .task-card-field i {
-            color: var(--cane-500);
-            font-size: 0.75rem;
-        }
+      /* Mobile Log Work Button - positioned in top right of section */
+      #my-tasks #createWorkLogBtn {
+        position: absolute !important;
+        top: 1.5rem !important;
+        right: 1rem !important;
+        z-index: 20 !important;
+        margin: 0 !important;
+        border: none !important;
+        outline: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        padding: 0.5rem 1rem !important;
+      }
 
-        .task-card-subtitle {
-            font-size: 0.875rem;
-            color: var(--cane-600);
-            margin: 0;
-            font-weight: 500;
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            word-break: break-word;
-        }
+      #my-tasks #createWorkLogBtn:active {
+        transform: none !important;
+        outline: none !important;
+      }
 
-        .task-card-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            background: var(--cane-100);
-            color: var(--cane-700);
-            white-space: nowrap;
-            flex-shrink: 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+      #my-tasks #createWorkLogBtn:focus {
+        outline: none !important;
+        box-shadow: 0 2px 8px rgba(94, 165, 0, 0.3) !important;
+      }
 
-        .task-card-status.completed {
-            background: linear-gradient(135deg, #dcfce7, #d1fae5);
-            color: #166534;
-        }
+      /* Ensure the section container has relative positioning for absolute button */
+      #my-tasks .section-card {
+        position: relative !important;
+      }
+    }
 
-        .task-card-status i {
-            font-size: 0.625rem;
-        }
+    /* Unified active nav item styling - Dark Blue (#1f2937) */
+    .nav-item.active,
+    #sidebar .nav-item.active,
+    #sidebar .nav-item[data-section].active {
+      background-color: #1f2937 !important;
+      color: #FFFFFF !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      background-image: none !important;
+    }
 
-        .task-card-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1.5rem;
-            font-size: 0.875rem;
-            color: var(--cane-600);
-            margin-top: 0.5rem;
-        }
+    /* Active item hover state - same dark blue */
+    .nav-item.active:hover,
+    #sidebar .nav-item.active:hover,
+    #sidebar .nav-item[data-section].active:hover {
+      background-color: #1f2937 !important;
+      color: #FFFFFF !important;
+    }
 
-        .task-card-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
+    /* Active item text and icons - white */
+    .nav-item.active,
+    .nav-item.active span,
+    .nav-item.active i,
+    .nav-item.active i.fas,
+    #sidebar .nav-item.active,
+    #sidebar .nav-item.active span,
+    #sidebar .nav-item.active i,
+    #sidebar .nav-item.active i.fas,
+    #sidebar .nav-item[data-section].active,
+    #sidebar .nav-item[data-section].active span,
+    #sidebar .nav-item[data-section].active i,
+    #sidebar .nav-item[data-section].active i.fas {
+      color: #FFFFFF !important;
+    }
 
-        .task-card-meta-item i {
-            color: var(--cane-500);
-            font-size: 1rem;
-            width: 20px;
-            text-align: center;
-        }
+    :root {
+      --cane-50: #f7fee7;
+      --cane-100: #ecfcca;
+      --cane-200: #d8f999;
+      --cane-300: #bbf451;
+      --cane-400: #9ae600;
+      --cane-500: #7ccf00;
+      --cane-600: #5ea500;
+      --cane-700: #497d00;
+      --cane-800: #3c6300;
+      --cane-900: #35530e;
+      --cane-950: #192e03;
+    }
 
-        .task-card-meta-label {
-            font-weight: 600;
-            color: var(--cane-700);
-        }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cane-500), var(--cane-600));
+      transition: all 0.3s ease;
+    }
 
-        .task-card-footer {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            color: var(--cane-600);
-            font-weight: 600;
-            margin-top: 0.75rem;
-            padding-top: 1rem;
-            border-top: 2px solid var(--cane-100);
-            background: linear-gradient(90deg, transparent, var(--cane-50), transparent);
-            padding-left: 1rem;
-            padding-right: 1rem;
-            margin-left: -1.5rem;
-            margin-right: -1.5rem;
-            padding-bottom: 1rem;
-            margin-bottom: -1.5rem;
-            border-radius: 0 0 0.875rem 0.875rem;
-        }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--cane-600), var(--cane-700));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(94, 165, 0, 0.3);
+    }
 
-        .task-card-footer i {
-            color: var(--cane-500);
-            font-size: 1.125rem;
-        }
-        
-        .badge-indicator {
-            background: linear-gradient(135deg, var(--cane-400), var(--cane-500));
-            color: white;
-            font-size: 0.75rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-weight: 600;
-        }
-        
-        .driver-feature {
-            border-left: 4px solid var(--cane-500);
-            background: linear-gradient(135deg, var(--cane-50), white);
-        }
-        
-        /* Sidebar transitions */
-        .sidebar-transition {
-            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
-        }
-        
-        /* Mobile sidebar overlay */
-        .sidebar-overlay {
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        /* Responsive improvements for medium screens */
-        @media (min-width: 768px) and (max-width: 1023px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-            }
-            
-            #mainContent {
-                padding-left: 1.5rem;
-                padding-right: 1.5rem;
-            }
-        }
-        
-        /* Desktop collapsed sidebar - icon-only mode */
-        @media (min-width: 1024px) {
-            body.sidebar-collapsed #sidebar {
-                width: 5rem;
-            }
-            body.sidebar-collapsed #sidebar .nav-item span {
-                opacity: 0;
-                width: 0;
-                overflow: hidden;
-                display: none;
-            }
-            body.sidebar-collapsed #sidebar .nav-item {
-                justify-content: center;
-                padding-left: 0.75rem;
-                padding-right: 0.75rem;
-            }
-            body.sidebar-collapsed #sidebar .nav-item i {
-                margin: 0;
-            }
-            body.sidebar-collapsed #sidebar #sidebarUserName,
-            body.sidebar-collapsed #sidebar #sidebarUserType {
-                display: none;
-            }
-            body.sidebar-collapsed #sidebar #profileImageContainer {
-                width: 2.5rem;
-                height: 2.5rem;
-                font-size: 1rem;
-            }
-            body.sidebar-collapsed #sidebar .space-x-3 {
-                gap: 0;
-            }
-            body.sidebar-collapsed #sidebar div[style*="text-transform: uppercase"] {
-                display: none;
-            }
-            body.sidebar-collapsed #sidebar nav {
-                padding-left: 0;
-                padding-right: 0;
-            }
-        }
-        
-        /* Ensure content/header shift with sidebar state on desktop */
-        @media (min-width: 1024px) {
-            body {
-                transition: padding-left 0.3s ease;
-            }
-            
-            #sidebar {
-                transform: translateX(0);
-                position: fixed;
-                left: 0;
-                top: 0;
-                height: 100vh;
-                width: 16rem;
-                transition: width 0.3s ease, transform 0.3s ease;
-                z-index: 50; /* Higher than header */
-                padding-top: 1rem; /* Add some top padding */
-                overflow: hidden;
-            }
-            
-            body.sidebar-collapsed #sidebar {
-                width: 5rem;
-            }
-            
-            /* Hide text and non-essential elements when collapsed */
-            body.sidebar-collapsed #sidebar .nav-item-text,
-            body.sidebar-collapsed #sidebar .user-name,
-            body.sidebar-collapsed #sidebar .user-email,
-            body.sidebar-collapsed #sidebar .nav-item-description,
-            body.sidebar-collapsed #sidebar .sidebar-header,
-            body.sidebar-collapsed #sidebar .sidebar-footer,
-            body.sidebar-collapsed #sidebar .sidebar-divider,
-            body.sidebar-collapsed #sidebar .sidebar-title,
-            body.sidebar-collapsed #sidebar .sidebar-submenu,
-            body.sidebar-collapsed #sidebar .sidebar-badge {
-                display: none !important;
-            }
-            
-            /* Hide user name and type when collapsed */
-            body.sidebar-collapsed #sidebarUserName,
-            body.sidebar-collapsed #sidebarUserType {
-                display: none !important;
-            }
-            
-            /* Show only icons and profile image when collapsed */
-            body.sidebar-collapsed #sidebar .nav-item i {
-                margin: 0;
-                font-size: 1.25rem;
-            }
-            
-            /* Keep profile image size and position consistent when collapsed */
-            body.sidebar-collapsed #profileImageContainer {
-                width: 3.5rem !important;
-                height: 3.5rem !important;
-                margin: 0.5rem auto !important;
-                position: relative;
-                left: 0;
-                transform: none;
-            }
-            
-            /* Center profile section when collapsed */
-            body.sidebar-collapsed #sidebar > div > div:first-child {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 0.5rem 0.5rem 1.5rem 0.5rem;
-            }
-            
-            /* Center the profile container div */
-            body.sidebar-collapsed #sidebar > div > div:first-child > div:nth-child(2) {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 0;
-                margin-top: 0.5rem;
-            }
-            
-            /* Hide overview text label in sidebar when collapsed */
-            body.sidebar-collapsed #sidebar nav > div:nth-child(2) {
-                display: none !important;
-            }
-            
-            
-            /* Main content container */
-            #mainWrapper {
-                transition: all 0.3s ease;
-                margin-left: 16rem;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            
-            body.sidebar-collapsed #mainWrapper {
-                margin-left: 5rem;
-                width: 100%;
-            }
-            
-            /* Main content area */
-            #mainContent {
-                transition: all 0.3s ease;
-                width: 100%;
-                max-width: 100%;
-                box-sizing: border-box;
-            }
-            
-            /* Navigation items - centered icons when collapsed */
-            #sidebar .nav-item {
-                display: flex;
-                align-items: center;
-                padding: 0.75rem 1rem;
-                color: rgba(255, 255, 255, 0.8);
-                transition: all 0.2s;
-                text-decoration: none;
-                border-radius: 0.375rem;
-                margin: 0.25rem 0.5rem;
-            }
-            
-            #sidebar .nav-item i {
-                min-width: 1.5rem;
-                text-align: center;
-                margin-right: 0.75rem;
-                transition: margin 0.2s;
-            }
-            
-            /* Collapsed state */
-            body.sidebar-collapsed #sidebar .nav-item {
-                justify-content: center;
-                padding: 0.75rem 0;
-                margin: 0.5rem auto;
-                width: auto;
-                gap: 0;
-            }
-            
-            body.sidebar-collapsed #sidebar .nav-item i {
-                margin: 0;
-                font-size: 1.25rem;
-                width: auto;
-                text-align: center;
-            }
-            
-            /* Hide nav-item text when collapsed */
-            body.sidebar-collapsed #sidebar .nav-item span {
-                display: none !important;
-            }
-            
-            /* Adjust profile section */
-            body.sidebar-collapsed #sidebar .profile-section {
-                flex-direction: column;
-                align-items: center;
-                padding: 1rem 0.5rem;
-            }
-            
-            body.sidebar-collapsed #profileImageContainer {
-                margin: 0 auto;
-            }
-        }
-        
-        /* FullCalendar customization */
-        .fc {
-            font-family: inherit;
-            background: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            font-size: 0.875rem;
-        }
-        /* Make FullCalendar auto-height and non-scrollable */
-        .fc { height: auto !important; }
-        .fc .fc-scroller { overflow: visible !important; }
-        
-        .fc-toolbar {
-            background: linear-gradient(135deg, var(--cane-50), white);
-            border-bottom: 1px solid var(--cane-200);
-            padding: 0.5rem;
-        }
-        
-        .fc-toolbar-title {
-            color: var(--cane-800);
-            font-weight: 600;
-            font-size: 1rem;
-        }
-        
-        .fc-button-primary {
-            background: linear-gradient(135deg, var(--cane-500), var(--cane-600)) !important;
-            border: none !important;
-            border-radius: 0.375rem !important;
-            padding: 0.25rem 0.5rem !important;
-            font-weight: 500 !important;
-            font-size: 0.75rem !important;
-            box-shadow: 0 1px 2px rgba(94, 165, 0, 0.2) !important;
-            transition: all 0.3s ease !important;
-            min-height: auto !important;
-            line-height: 1.2 !important;
-        }
-        
-        .fc-button-primary:hover {
-            background: linear-gradient(135deg, var(--cane-600), var(--cane-700)) !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 4px 8px rgba(94, 165, 0, 0.3) !important;
-        }
-        
-        .fc-button-primary:focus {
-            outline: none !important;
-            box-shadow: 0 0 0 3px rgba(94, 165, 0, 0.3) !important;
-        }
-        
-        .fc-daygrid-day {
-            border: 1px solid var(--cane-100) !important;
-        }
-        
-        .fc-daygrid-day-number {
-            color: var(--cane-800) !important;
-            font-weight: 500 !important;
-            padding: 0.125rem !important;
-            font-size: 0.75rem !important;
-        }
-        
-        .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
-            color: var(--cane-400) !important;
-        }
-        
-        .fc-daygrid-day.fc-day-today {
-            background: linear-gradient(135deg, var(--cane-50), var(--cane-100)) !important;
-        }
-        
-        .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-            background: var(--cane-500) !important;
-            color: white !important;
-            border-radius: 50% !important;
-            width: 1.5rem !important;
-            height: 1.5rem !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0.125rem !important;
-            font-size: 0.75rem !important;
-        }
-        
-        .fc-col-header-cell {
-            background: linear-gradient(135deg, var(--cane-100), var(--cane-200)) !important;
-            border: 1px solid var(--cane-200) !important;
-        }
-        
-        .fc-col-header-cell-cushion {
-            color: var(--cane-800) !important;
-            font-weight: 600 !important;
-            padding: 0.25rem 0.125rem !important;
-            text-transform: uppercase !important;
-            font-size: 0.75rem !important;
-        }
-        
-        .fc-scrollgrid {
-            border: none !important;
-        }
-        
-        .fc-scrollgrid-section-header {
-            border: none !important;
-        }
-        
-        .fc-daygrid-day {
-            border: 1px solid var(--cane-100) !important;
-            min-height: 2rem !important;
-        }
-        
-        .fc-col-header-cell {
-            background: linear-gradient(135deg, var(--cane-100), var(--cane-200)) !important;
-            border: 1px solid var(--cane-200) !important;
-            min-height: 2rem !important;
-        }
-        
-        .fc-daygrid-body {
-            min-height: auto !important;
-        }
-        
-        .fc-daygrid-day-frame {
-            min-height: 2rem !important;
-        }
-        
-        .fc-button-primary {
-            background-color: var(--cane-600) !important;
-            border-color: var(--cane-600) !important;
-        }
-        
-        .fc-button-primary:hover {
-            background-color: var(--cane-700) !important;
-            border-color: var(--cane-700) !important;
-        }
-        .header-container {
-            max-width: 100%;
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
-            transition: padding-left 0.3s ease;
-        }
-        
-        /* Header adjustments for sidebar */
-        #workerHeaderContainer {
-            transition: margin-left 0.3s ease;
-            margin-left: 0;
-        }
-        
-        @media (min-width: 1024px) {
-            .header-container {
-                padding-left: calc(1.5rem + 16rem); /* 16rem is the width of the sidebar */
-            }
-            
-            #workerHeaderContainer {
-                margin-left: 16rem;
-            }
-            
-            body.sidebar-collapsed .header-container {
-                padding-left: calc(1.5rem + 5rem); /* 5rem is the width of the collapsed sidebar */
-            }
-            
-            body.sidebar-collapsed #workerHeaderContainer {
-                margin-left: 5rem;
-            }
-            
-            /* Adjust body padding when sidebar is collapsed */
-            body.sidebar-collapsed {
-                padding-left: 5rem !important;
-            }
-        }
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--cane-200), var(--cane-300));
+      color: var(--cane-800);
+      transition: all 0.3s ease;
+    }
 
-        /* SweetAlert2 Modal - Fix dropdown direction */
-        .swal2-modal {
-            overflow: visible !important;
-        }
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, var(--cane-300), var(--cane-400));
+      transform: translateY(-1px);
+    }
 
-        .swal2-html-container {
-            overflow: visible !important;
-        }
+    .section-card {
+      background: linear-gradient(135deg, white, var(--cane-50));
+      border: 1px solid var(--cane-200);
+      transition: all 0.3s ease;
+    }
 
-        .swal2-popup {
-            overflow: visible !important;
-        }
+    .section-card:hover {
+      box-shadow: 0 8px 25px rgba(94, 165, 0, 0.15);
+      transform: translateY(-2px);
+    }
 
-        /* Force dropdown to open downward */
-        #swal-taskType,
-        #swal-fieldId {
-            position: relative !important;
-            z-index: 9999 !important;
-        }
+    /* Task Card Styling - Modern Design */
+    .task-card {
+      background: linear-gradient(135deg, #ffffff 0%, #fafaf9 100%);
+      border: 2px solid var(--cane-200);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
 
-        /* Ensure select dropdowns don't get cut off */
-        select {
-            overflow: visible !important;
-        }
+    .task-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--cane-600), var(--cane-500), var(--cane-400));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
 
-        /* Force dropdown menu to appear below */
-        select option {
-            padding: 0.5rem !important;
-        }
+    .task-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cane-300), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
 
-        /* Custom dropdown styling */
-        .swal-task-option,
-        .swal-field-option {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background-color 0.2s;
-        }
+    .task-card:hover {
+      box-shadow: 0 8px 24px rgba(94, 165, 0, 0.15);
+      transform: translateY(-2px);
+      border-color: var(--cane-400);
+    }
 
-        .swal-task-option:hover,
-        .swal-field-option:hover {
-            background-color: #f7fee7;
-        }
+    .task-card:hover::before {
+      opacity: 1;
+    }
 
-        .swal-task-option:last-child,
-        .swal-field-option:last-child {
-            border-bottom: none;
-        }
+    .task-card:hover::after {
+      opacity: 1;
+    }
 
-        .swal-task-option.selected,
-        .swal-field-option.selected {
-            background-color: #bbf451;
-            color: #3c6300;
-            font-weight: 600;
-        }
-    </style>
+    .task-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .task-card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--cane-950);
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .task-card-field {
+      font-size: 0.875rem;
+      color: var(--cane-600);
+      margin: 0.375rem 0 0 0;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .task-card-field i {
+      color: var(--cane-500);
+      font-size: 0.75rem;
+    }
+
+    .task-card-subtitle {
+      font-size: 0.875rem;
+      color: var(--cane-600);
+      margin: 0;
+      font-weight: 500;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
+    }
+
+    .task-card-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--cane-100);
+      color: var(--cane-700);
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .task-card-status.completed {
+      background: linear-gradient(135deg, #dcfce7, #d1fae5);
+      color: #166534;
+    }
+
+    .task-card-status i {
+      font-size: 0.625rem;
+    }
+
+    .task-card-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.5rem;
+      font-size: 0.875rem;
+      color: var(--cane-600);
+      margin-top: 0.5rem;
+    }
+
+    .task-card-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .task-card-meta-item i {
+      color: var(--cane-500);
+      font-size: 1rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .task-card-meta-label {
+      font-weight: 600;
+      color: var(--cane-700);
+    }
+
+    .task-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      color: var(--cane-600);
+      font-weight: 600;
+      margin-top: 0.75rem;
+      padding-top: 1rem;
+      border-top: 2px solid var(--cane-100);
+      background: linear-gradient(90deg, transparent, var(--cane-50), transparent);
+      padding-left: 1rem;
+      padding-right: 1rem;
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+      padding-bottom: 1rem;
+      margin-bottom: -1.5rem;
+      border-radius: 0 0 0.875rem 0.875rem;
+    }
+
+    .task-card-footer i {
+      color: var(--cane-500);
+      font-size: 1.125rem;
+    }
+
+    .badge-indicator {
+      background: linear-gradient(135deg, var(--cane-400), var(--cane-500));
+      color: white;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    .driver-feature {
+      border-left: 4px solid var(--cane-500);
+      background: linear-gradient(135deg, var(--cane-50), white);
+    }
+
+    /* Sidebar transitions */
+    .sidebar-transition {
+      transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+    }
+
+    /* Mobile sidebar overlay */
+    .sidebar-overlay {
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    /* Responsive improvements for medium screens */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+
+      #mainContent {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+      }
+    }
+
+    /* Desktop collapsed sidebar - icon-only mode */
+    @media (min-width: 1024px) {
+      body.sidebar-collapsed #sidebar {
+        width: 5rem;
+      }
+
+      body.sidebar-collapsed #sidebar .nav-item span {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+        display: none;
+      }
+
+      body.sidebar-collapsed #sidebar .nav-item {
+        justify-content: center;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+
+      body.sidebar-collapsed #sidebar .nav-item i {
+        margin: 0;
+      }
+
+      body.sidebar-collapsed #sidebar #sidebarUserName,
+      body.sidebar-collapsed #sidebar #sidebarUserType {
+        display: none;
+      }
+
+      body.sidebar-collapsed #sidebar #profileImageContainer {
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1rem;
+      }
+
+      body.sidebar-collapsed #sidebar .space-x-3 {
+        gap: 0;
+      }
+
+      body.sidebar-collapsed #sidebar div[style*="text-transform: uppercase"] {
+        display: none;
+      }
+
+      body.sidebar-collapsed #sidebar nav {
+        padding-left: 0;
+        padding-right: 0;
+      }
+    }
+
+    /* Ensure content/header shift with sidebar state on desktop */
+    @media (min-width: 1024px) {
+      body {
+        transition: padding-left 0.3s ease;
+      }
+
+      #sidebar {
+        transform: translateX(0);
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 16rem;
+        transition: width 0.3s ease, transform 0.3s ease;
+        z-index: 50;
+        /* Higher than header */
+        padding-top: 1rem;
+        /* Add some top padding */
+        overflow: hidden;
+      }
+
+      body.sidebar-collapsed #sidebar {
+        width: 5rem;
+      }
+
+      /* Hide text and non-essential elements when collapsed */
+      body.sidebar-collapsed #sidebar .nav-item-text,
+      body.sidebar-collapsed #sidebar .user-name,
+      body.sidebar-collapsed #sidebar .user-email,
+      body.sidebar-collapsed #sidebar .nav-item-description,
+      body.sidebar-collapsed #sidebar .sidebar-header,
+      body.sidebar-collapsed #sidebar .sidebar-footer,
+      body.sidebar-collapsed #sidebar .sidebar-divider,
+      body.sidebar-collapsed #sidebar .sidebar-title,
+      body.sidebar-collapsed #sidebar .sidebar-submenu,
+      body.sidebar-collapsed #sidebar .sidebar-badge {
+        display: none !important;
+      }
+
+      /* Hide user name and type when collapsed */
+      body.sidebar-collapsed #sidebarUserName,
+      body.sidebar-collapsed #sidebarUserType {
+        display: none !important;
+      }
+
+      /* Show only icons and profile image when collapsed */
+      body.sidebar-collapsed #sidebar .nav-item i {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      /* Keep profile image size and position consistent when collapsed */
+      body.sidebar-collapsed #profileImageContainer {
+        width: 3.5rem !important;
+        height: 3.5rem !important;
+        margin: 0.5rem auto !important;
+        position: relative;
+        left: 0;
+        transform: none;
+      }
+
+      /* Center profile section when collapsed */
+      body.sidebar-collapsed #sidebar>div>div:first-child {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem 0.5rem 1.5rem 0.5rem;
+      }
+
+      /* Center the profile container div */
+      body.sidebar-collapsed #sidebar>div>div:first-child>div:nth-child(2) {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        margin-top: 0.5rem;
+      }
+
+      /* Hide overview text label in sidebar when collapsed */
+      body.sidebar-collapsed #sidebar nav>div:nth-child(2) {
+        display: none !important;
+      }
+
+
+      /* Main content container */
+      #mainWrapper {
+        transition: all 0.3s ease;
+        margin-left: 16rem;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      body.sidebar-collapsed #mainWrapper {
+        margin-left: 5rem;
+        width: 100%;
+      }
+
+      /* Main content area */
+      #mainContent {
+        transition: all 0.3s ease;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* Navigation items - centered icons when collapsed */
+      #sidebar .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.2s;
+        text-decoration: none;
+        border-radius: 0.375rem;
+        margin: 0.25rem 0.5rem;
+      }
+
+      #sidebar .nav-item i {
+        min-width: 1.5rem;
+        text-align: center;
+        margin-right: 0.75rem;
+        transition: margin 0.2s;
+      }
+
+      /* Collapsed state */
+      body.sidebar-collapsed #sidebar .nav-item {
+        justify-content: center;
+        padding: 0.75rem 0;
+        margin: 0.5rem auto;
+        width: auto;
+        gap: 0;
+      }
+
+      body.sidebar-collapsed #sidebar .nav-item i {
+        margin: 0;
+        font-size: 1.25rem;
+        width: auto;
+        text-align: center;
+      }
+
+      /* Hide nav-item text when collapsed */
+      body.sidebar-collapsed #sidebar .nav-item span {
+        display: none !important;
+      }
+
+      /* Adjust profile section */
+      body.sidebar-collapsed #sidebar .profile-section {
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem 0.5rem;
+      }
+
+      body.sidebar-collapsed #profileImageContainer {
+        margin: 0 auto;
+      }
+    }
+
+    /* FullCalendar customization */
+    .fc {
+      font-family: inherit;
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      font-size: 0.875rem;
+    }
+
+    /* Make FullCalendar auto-height and non-scrollable */
+    .fc {
+      height: auto !important;
+    }
+
+    .fc .fc-scroller {
+      overflow: visible !important;
+    }
+
+    .fc-toolbar {
+      background: linear-gradient(135deg, var(--cane-50), white);
+      border-bottom: 1px solid var(--cane-200);
+      padding: 0.5rem;
+    }
+
+    .fc-toolbar-title {
+      color: var(--cane-800);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .fc-button-primary {
+      background: linear-gradient(135deg, var(--cane-500), var(--cane-600)) !important;
+      border: none !important;
+      border-radius: 0.375rem !important;
+      padding: 0.25rem 0.5rem !important;
+      font-weight: 500 !important;
+      font-size: 0.75rem !important;
+      box-shadow: 0 1px 2px rgba(94, 165, 0, 0.2) !important;
+      transition: all 0.3s ease !important;
+      min-height: auto !important;
+      line-height: 1.2 !important;
+    }
+
+    .fc-button-primary:hover {
+      background: linear-gradient(135deg, var(--cane-600), var(--cane-700)) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 8px rgba(94, 165, 0, 0.3) !important;
+    }
+
+    .fc-button-primary:focus {
+      outline: none !important;
+      box-shadow: 0 0 0 3px rgba(94, 165, 0, 0.3) !important;
+    }
+
+    .fc-daygrid-day {
+      border: 1px solid var(--cane-100) !important;
+    }
+
+    .fc-daygrid-day-number {
+      color: var(--cane-800) !important;
+      font-weight: 500 !important;
+      padding: 0.125rem !important;
+      font-size: 0.75rem !important;
+    }
+
+    .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
+      color: var(--cane-400) !important;
+    }
+
+    .fc-daygrid-day.fc-day-today {
+      background: linear-gradient(135deg, var(--cane-50), var(--cane-100)) !important;
+    }
+
+    .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+      background: var(--cane-500) !important;
+      color: white !important;
+      border-radius: 50% !important;
+      width: 1.5rem !important;
+      height: 1.5rem !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: 0.125rem !important;
+      font-size: 0.75rem !important;
+    }
+
+    .fc-col-header-cell {
+      background: linear-gradient(135deg, var(--cane-100), var(--cane-200)) !important;
+      border: 1px solid var(--cane-200) !important;
+    }
+
+    .fc-col-header-cell-cushion {
+      color: var(--cane-800) !important;
+      font-weight: 600 !important;
+      padding: 0.25rem 0.125rem !important;
+      text-transform: uppercase !important;
+      font-size: 0.75rem !important;
+    }
+
+    .fc-scrollgrid {
+      border: none !important;
+    }
+
+    .fc-scrollgrid-section-header {
+      border: none !important;
+    }
+
+    .fc-daygrid-day {
+      border: 1px solid var(--cane-100) !important;
+      min-height: 2rem !important;
+    }
+
+    .fc-col-header-cell {
+      background: linear-gradient(135deg, var(--cane-100), var(--cane-200)) !important;
+      border: 1px solid var(--cane-200) !important;
+      min-height: 2rem !important;
+    }
+
+    .fc-daygrid-body {
+      min-height: auto !important;
+    }
+
+    .fc-daygrid-day-frame {
+      min-height: 2rem !important;
+    }
+
+    .fc-button-primary {
+      background-color: var(--cane-600) !important;
+      border-color: var(--cane-600) !important;
+    }
+
+    .fc-button-primary:hover {
+      background-color: var(--cane-700) !important;
+      border-color: var(--cane-700) !important;
+    }
+
+    .header-container {
+      max-width: 100%;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+      transition: padding-left 0.3s ease;
+    }
+
+    /* Header adjustments for sidebar */
+    #workerHeaderContainer {
+      transition: margin-left 0.3s ease;
+      margin-left: 0;
+    }
+
+    @media (min-width: 1024px) {
+      .header-container {
+        padding-left: calc(1.5rem + 16rem);
+        /* 16rem is the width of the sidebar */
+      }
+
+      #workerHeaderContainer {
+        margin-left: 16rem;
+      }
+
+      body.sidebar-collapsed .header-container {
+        padding-left: calc(1.5rem + 5rem);
+        /* 5rem is the width of the collapsed sidebar */
+      }
+
+      body.sidebar-collapsed #workerHeaderContainer {
+        margin-left: 5rem;
+      }
+
+      /* Adjust body padding when sidebar is collapsed */
+      body.sidebar-collapsed {
+        padding-left: 5rem !important;
+      }
+    }
+
+    /* SweetAlert2 Modal - Fix dropdown direction */
+    .swal2-modal {
+      overflow: visible !important;
+    }
+
+    .swal2-html-container {
+      overflow: visible !important;
+    }
+
+    .swal2-popup {
+      overflow: visible !important;
+    }
+
+    /* Force dropdown to open downward */
+    #swal-taskType,
+    #swal-fieldId {
+      position: relative !important;
+      z-index: 9999 !important;
+    }
+
+    /* Ensure select dropdowns don't get cut off */
+    select {
+      overflow: visible !important;
+    }
+
+    /* Force dropdown menu to appear below */
+    select option {
+      padding: 0.5rem !important;
+    }
+
+    /* Custom dropdown styling */
+    .swal-task-option,
+    .swal-field-option {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s;
+    }
+
+    .swal-task-option:hover,
+    .swal-field-option:hover {
+      background-color: #f7fee7;
+    }
+
+    .swal-task-option:last-child,
+    .swal-field-option:last-child {
+      border-bottom: none;
+    }
+
+    .swal-task-option.selected,
+    .swal-field-option.selected {
+      background-color: #bbf451;
+      color: #3c6300;
+      font-weight: 600;
+    }
+  </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen pt-16 lg:pl-64">
-    <!-- This empty div creates space for the fixed header -->
-    <div class="h-12"></div>
-    <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-40 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
-        <div id="workerHeaderContainer" class="w-full flex items-center justify-between px-4">
-            <!-- Left side: Hamburger and Logo (always at far left) -->
-            <div class="flex items-center space-x-3">
-                <!-- Mobile Hamburger Button (hidden on desktop) -->
-                <button id="mobileHamburgerBtn" class="lg:hidden text-gray-800 hover:text-cane-600 transition-colors p-3 -ml-2" onclick="toggleMobileSidebar()" aria-label="Toggle mobile menu">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
-                
-                <!-- Logo/Title -->
+  <!-- This empty div creates space for the fixed header -->
+  <div class="h-12"></div>
+  <!-- Header -->
+  <header class="fixed top-0 left-0 right-0 z-40 shadow-lg bg-white h-12 flex items-center border-b border-gray-100">
+    <div id="workerHeaderContainer" class="w-full flex items-center justify-between px-4">
+      <!-- Left side: Hamburger and Logo (always at far left) -->
+      <div class="flex items-center space-x-3">
+        <!-- Mobile Hamburger Button (hidden on desktop) -->
+        <button id="mobileHamburgerBtn" class="lg:hidden text-gray-800 hover:text-cane-600 transition-colors p-3 -ml-2"
+          onclick="toggleMobileSidebar()" aria-label="Toggle mobile menu">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+
+        <!-- Logo/Title -->
+      </div>
+
+      <!-- Navigation links removed - now only in sidebar -->
+
+      <!-- Right side with user controls -->
+      <div class="flex items-center space-x-4">
+        <div class="relative">
+          <button id="notificationBtn" class="text-gray-800 hover:text-gray-600 transition-colors relative"
+            onclick="toggleNotifications()">
+            <i class="fas fa-bell text-lg"></i>
+            <span id="notificationCount"
+              class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+          </button>
+
+          <!-- Notification Dropdown -->
+          <div id="notificationDropdown"
+            class="hidden absolute right-0 mt-2 w-80 sm:w-96 md:w-80 lg:w-80 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-96 overflow-y-auto"
+            style="max-width: calc(100vw - 2rem); width: 60vw; right: auto; left: 50%; transform: translateX(-50%);">
+            <div class="p-3 border-b border-gray-200 flex items-center justify-between">
+              <h3 class="font-semibold text-gray-900">Notifications</h3>
+              <button id="refreshNotifications" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
+                <i class="fas fa-sync-alt text-sm"></i>
+              </button>
             </div>
-                
-                <!-- Navigation links removed - now only in sidebar -->
-                
-                <!-- Right side with user controls -->
-                <div class="flex items-center space-x-4">
-                    <div class="relative">
-                        <button id="notificationBtn" class="text-gray-800 hover:text-gray-600 transition-colors relative" onclick="toggleNotifications()">
-                            <i class="fas fa-bell text-lg"></i>
-                            <span id="notificationCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
-                        </button>
-
-                        <!-- Notification Dropdown -->
-                        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 md:w-80 lg:w-80 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] z-50 max-h-96 overflow-y-auto" style="max-width: calc(100vw - 2rem); width: 60vw; right: auto; left: 50%; transform: translateX(-50%);">
-                            <div class="p-3 border-b border-gray-200 flex items-center justify-between">
-                                <h3 class="font-semibold text-gray-900">Notifications</h3>
-                                <button id="refreshNotifications" class="text-[var(--cane-600)] hover:text-[var(--cane-700)]">
-                                    <i class="fas fa-sync-alt text-sm"></i>
-                                </button>
-                            </div>
-                            <div id="notificationsList" class="divide-y divide-gray-100">
-                                <!-- Notifications will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative">
-                        <button id="profileDropdownBtn" class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-all duration-300 focus:outline-none">
-                            <div class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30 overflow-hidden" id="profileIconContainer">
-                                <i class="fas fa-user text-white text-sm" id="profileIconDefault"></i>
-                                <img id="profilePhoto" class="w-full h-full object-cover hidden" alt="Profile" />
-                            </div>
-                            <span class="font-medium max-w-[120px] sm:max-w-[180px] truncate" id="userName" title="Worker Name">Worker Name</span>
-                            <i id="profileDropdownIcon" class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-200 transform"></i>
-                        </button>
-                        
-                        <!-- Profile Dropdown -->
-                        <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] opacity-0 invisible transition-all duration-300 transform scale-95 origin-top-right z-50">
-                            <div class="py-2">
-                                <div class="px-4 py-3 border-b border-[var(--cane-100)]">
-                                    <p class="text-sm font-medium text-[var(--cane-900)]" id="dropdownUserName">Worker Name</p>
-                                    <p class="text-xs text-[var(--cane-600)]" id="dropdownUserType">Worker</p>
-                                </div>
-                                <a href="../Common/profile-settings.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
-                                    <i class="fas fa-user-edit mr-3 text-[var(--cane-500)]"></i>
-                                    Profile Information
-                                </a>
-                                <div class="border-t border-[var(--cane-100)] mt-2">
-                                    <a href="../Common/lobby.html" class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
-                                        <i class="fas fa-home mr-3 text-[var(--cane-500)]"></i>
-                                        Back to Lobby
-                                    </a>
-                                    <button id="workerLogoutBtn" class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                                        <i class="fas fa-sign-out-alt mr-3"></i>
-                                        Logout
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div id="notificationsList" class="divide-y divide-gray-100">
+              <!-- Notifications will be loaded here -->
+            </div>
+          </div>
         </div>
-    </header>
+        <div class="relative">
+          <button id="profileDropdownBtn"
+            class="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-all duration-300 focus:outline-none">
+            <div
+              class="w-8 h-8 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow-md border border-white/30 overflow-hidden"
+              id="profileIconContainer">
+              <i class="fas fa-user text-white text-sm" id="profileIconDefault"></i>
+              <img id="profilePhoto" class="w-full h-full object-cover hidden" alt="Profile" />
+            </div>
+            <span class="font-medium max-w-[120px] sm:max-w-[180px] truncate" id="userName" title="Worker Name">Worker
+              Name</span>
+            <i id="profileDropdownIcon"
+              class="fas fa-chevron-down text-gray-800 text-xs transition-transform duration-200 transform"></i>
+          </button>
 
-    <!-- Main Content with Sidebar -->
-    <div id="mainWrapper" class="relative">
-        <!-- Mobile Sidebar Overlay -->
-        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden" aria-hidden="true" role="presentation" onclick="toggleSidebar()"></div>
-        
-        <!-- Left Sidebar -->
-        <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col" 
-            style="background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);" 
-            aria-label="Main navigation" 
-            role="navigation">
-            
-            <div style="padding: 1.25rem 1rem; flex-grow: 1; overflow-y: auto;">
-                <!-- Sidebar Header with close button and desktop hamburger -->
-                <div style="display: flex; flex-direction: column; padding: 0.5rem 1rem 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <!-- Desktop Hamburger (aligned to the right) -->
-                    <div class="flex justify-end w-full">
-                        <button id="desktopHamburgerBtn" class="lg:block text-white hover:text-cane-200 p-2 -mt-2 -mr-2" onclick="toggleDesktopSidebar()" aria-label="Toggle desktop menu">
-                            <i class="fas fa-bars text-lg"></i>
-                        </button>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem;">
-                        <div id="profileImageContainer" style="
+          <!-- Profile Dropdown -->
+          <div id="profileDropdown"
+            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-[var(--cane-200)] opacity-0 invisible transition-all duration-300 transform scale-95 origin-top-right z-50">
+            <div class="py-2">
+              <div class="px-4 py-3 border-b border-[var(--cane-100)]">
+                <p class="text-sm font-medium text-[var(--cane-900)]" id="dropdownUserName">Worker Name</p>
+                <p class="text-xs text-[var(--cane-600)]" id="dropdownUserType">Worker</p>
+              </div>
+              <a href="../Common/profile-settings.html"
+                class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
+                <i class="fas fa-user-edit mr-3 text-[var(--cane-500)]"></i>
+                Profile Information
+              </a>
+              <div class="border-t border-[var(--cane-100)] mt-2">
+                <a href="../Common/lobby.html"
+                  class="flex items-center px-4 py-2 text-sm text-[var(--cane-700)] hover:bg-[var(--cane-50)] transition-colors">
+                  <i class="fas fa-home mr-3 text-[var(--cane-500)]"></i>
+                  Back to Lobby
+                </a>
+                <button id="workerLogoutBtn"
+                  class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  <i class="fas fa-sign-out-alt mr-3"></i>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content with Sidebar -->
+  <div id="mainWrapper" class="relative">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden" aria-hidden="true"
+      role="presentation" onclick="toggleSidebar()"></div>
+
+    <!-- Left Sidebar -->
+    <aside id="sidebar"
+      class="fixed left-0 top-0 h-full w-64 transform -translate-x-full lg:translate-x-0 z-40 transition-all duration-300 ease-in-out flex flex-col"
+      style="background: linear-gradient(180deg, var(--cane-600) 0%, var(--cane-700) 100%);"
+      aria-label="Main navigation" role="navigation">
+
+      <div style="padding: 1.25rem 1rem; flex-grow: 1; overflow-y: auto;">
+        <!-- Sidebar Header with close button and desktop hamburger -->
+        <div
+          style="display: flex; flex-direction: column; padding: 0.5rem 1rem 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <!-- Desktop Hamburger (aligned to the right) -->
+          <div class="flex justify-end w-full">
+            <button id="desktopHamburgerBtn" class="lg:block text-white hover:text-cane-200 p-2 -mt-2 -mr-2"
+              onclick="toggleDesktopSidebar()" aria-label="Toggle desktop menu">
+              <i class="fas fa-bars text-lg"></i>
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem;">
+            <div id="profileImageContainer" style="
                             width: 3.5rem !important;
                             height: 3.5rem !important;
                             min-width: 3.5rem !important;
@@ -994,999 +1035,1024 @@
                             border: 2px solid rgba(255,255,255,0.3);
                             transition: all 0.3s ease;
                         " id="userInitials">
-                            U
-                        </div>
-                        <div>
-                            <p style="color: white; font-weight: 600; line-height: 1.25; margin: 0; font-size: 1.2rem;" id="sidebarUserName">User Name</p>
-                            <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;" id="sidebarUserType">Worker</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Navigation Menu -->
-                <nav class="flex flex-col gap-1 p-4">
-                    <!-- Dashboard -->
-                    <a href="#" class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base" data-section="dashboard">
-                        <i class="fas fa-gauge-high w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
-                        <span class="font-medium">Dashboard</span>
-                    </a>
-
-                    <!-- Overview Text Label -->
-                    <div class="text-white/80 text-sm font-semibold uppercase mt-4 mb-2 ml-4 tracking-wider">
-                        Overview
-                    </div>
-
-                    <!-- My Fields -->
-                    <a href="#" class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base" data-section="my-fields">
-                        <i class="fas fa-map-marked-alt w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
-                        <span class="font-medium">My Fields</span>
-                    </a>
-
-                    <!-- My Tasks -->
-                    <a href="#" class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base" data-section="my-tasks">
-                        <i class="fas fa-tasks w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
-                        <span class="font-medium">My Tasks</span>
-                    </a>
-                </nav>
+              U
             </div>
+            <div>
+              <p style="color: white; font-weight: 600; line-height: 1.25; margin: 0; font-size: 1.2rem;"
+                id="sidebarUserName">User Name</p>
+              <p style="color: rgba(255,255,255,0.8); font-size: 0.75rem; line-height: 1.2; margin: 0.1rem 0 0 0;"
+                id="sidebarUserType">Worker</p>
+            </div>
+          </div>
         </div>
 
-        <!-- Main Content Area -->
-        <main id="mainContent" class="w-full px-4 -mt-4 pb-6 transition-all duration-300" style="transition: all 0.3s ease;">
-            <!-- Dashboard Section -->
-            <div id="dashboard" class="content-section">
-                    <div class="-mt-2">
-                        <h2 class="text-2xl font-bold text-[var(--cane-950)] -mb-1 lg:text-3xl">Worker Dashboard</h2>
-                        <div>
-                            <p class="text-[var(--cane-700)] text-sm -mt-1">Overview of your tasks and assigned fields</p>
-                            <div style="height: 1px; background: var(--cane-400); margin: 0.25rem 0 2rem 0; opacity: 0.7;"></div>
-                        </div>
-                    </div>
+        <!-- Navigation Menu -->
+        <nav class="flex flex-col gap-1 p-4">
+          <!-- Dashboard -->
+          <a href="#"
+            class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base"
+            data-section="dashboard">
+            <i class="fas fa-gauge-high w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
+            <span class="font-medium">Dashboard</span>
+          </a>
 
-                <!-- Dashboard Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Active Fields Card -->
-                    <a href="#" class="block group" data-section="my-fields" onclick="event.preventDefault(); showSection('my-fields');">
-                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
-                            <div class="h-2 bg-[var(--cane-600)]"></div>
-                            <div class="p-6">
-                                <div class="flex justify-between items-start mb-3">
-                                    <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Active Fields</h3>
-                                    <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">LIVE</span>
-                                </div>
-                                <div class="flex items-end justify-between mt-5">
-                                    <div>
-                                        <p class="text-5xl font-bold text-gray-900" id="activeFieldsCount">0</p>
-                                        <p class="text-base text-gray-600 mt-2"><span id="activeFieldsText">Currently active fields</span></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+          <!-- Overview Text Label -->
+          <div class="text-white/80 text-sm font-semibold uppercase mt-4 mb-2 ml-4 tracking-wider">
+            Overview
+          </div>
 
-                    <!-- Assigned Tasks Card -->
-                    <a href="#" class="block group" data-section="my-tasks" onclick="event.preventDefault(); showSection('my-tasks');">
-                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
-                            <div class="h-2 bg-[var(--cane-600)]"></div>
-                            <div class="p-6">
-                                <div class="flex justify-between items-start mb-3">
-                                    <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Assigned Tasks</h3>
-                                    <span class="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">TASKS</span>
-                                </div>
-                                <div class="flex items-end justify-between mt-5">
-                                    <div>
-                                        <p class="text-5xl font-bold text-gray-900" id="assignedTasksCount">0</p>
-                                        <p class="text-base text-gray-600 mt-2">Tasks assigned to you</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+          <!-- My Fields -->
+          <a href="#"
+            class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base"
+            data-section="my-fields">
+            <i class="fas fa-map-marked-alt w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
+            <span class="font-medium">My Fields</span>
+          </a>
 
-                    <!-- Upcoming Tasks Card -->
-                    <a href="#" class="block group" data-section="my-tasks" onclick="event.preventDefault(); showSection('my-tasks');">
-                        <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100" style="cursor: pointer;">
-                            <div class="h-2 bg-[var(--cane-600)]"></div>
-                            <div class="p-6">
-                                <div class="flex justify-between items-start mb-3">
-                                    <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Upcoming Tasks</h3>
-                                    <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">SCHEDULE</span>
-                                </div>
-                                <div class="flex items-end justify-between mt-5">
-                                    <div>
-                                        <p class="text-5xl font-bold text-gray-900" id="upcomingTasksCount">0</p>
-                                        <p class="text-base text-gray-600 mt-2">Due within 7 days</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+          <!-- My Tasks -->
+          <a href="#"
+            class="nav-item flex items-center gap-4 p-4 text-white/95 hover:bg-white/10 rounded-lg transition-all duration-200 text-base"
+            data-section="my-tasks">
+            <i class="fas fa-tasks w-6 text-center text-lg text-white/95 transition-colors duration-200"></i>
+            <span class="font-medium">My Tasks</span>
+          </a>
+        </nav>
+      </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <main id="mainContent" class="w-full px-4 -mt-4 pb-6 transition-all duration-300" style="transition: all 0.3s ease;">
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="content-section">
+      <div class="-mt-2">
+        <h2 class="text-2xl font-bold text-[var(--cane-950)] -mb-1 lg:text-3xl">Worker Dashboard</h2>
+        <div>
+          <p class="text-[var(--cane-700)] text-sm -mt-1">Overview of your tasks and assigned fields</p>
+          <div style="height: 1px; background: var(--cane-400); margin: 0.25rem 0 2rem 0; opacity: 0.7;"></div>
+        </div>
+      </div>
+
+      <!-- Dashboard Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Active Fields Card -->
+        <a href="#" class="block group" data-section="my-fields"
+          onclick="event.preventDefault(); showSection('my-fields');">
+          <div
+            class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100"
+            style="cursor: pointer;">
+            <div class="h-2 bg-[var(--cane-600)]"></div>
+            <div class="p-6">
+              <div class="flex justify-between items-start mb-3">
+                <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Active Fields</h3>
+                <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">LIVE</span>
+              </div>
+              <div class="flex items-end justify-between mt-5">
+                <div>
+                  <p class="text-5xl font-bold text-gray-900" id="activeFieldsCount">0</p>
+                  <p class="text-base text-gray-600 mt-2"><span id="activeFieldsText">Currently active fields</span></p>
                 </div>
-
-                <!-- Recent Activity Section -->
-                <div class="section-card rounded-xl p-6 hover:shadow-md transition">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-[var(--cane-900)] flex items-center gap-2">
-                            <i class="fas fa-bolt text-[var(--cane-600)]"></i>
-                            Recent Activity
-                        </h3>
-                        <a href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] flex items-center gap-1" data-section="activity">
-                            View All <i class="fas fa-arrow-right text-xs"></i>
-                        </a>
-                    </div>
-                    <ul id="recentActivityList" class="divide-y divide-gray-200 text-sm">
-                        <li class="py-3 text-center text-gray-500">
-                            <i class="fas fa-spinner fa-spin mr-2"></i>
-                            Loading recent activity...
-                        </li>
-                    </ul>
-                </div>
+              </div>
             </div>
+          </div>
+        </a>
 
-            <!-- My Tasks Section -->
-            <div id="my-tasks" class="content-section hidden">
-                    <div class="section-card rounded-xl p-6 shadow-sm">
-                    <div class="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4">
-                        <div class="flex-1">
-                            <h2 class="text-2xl font-bold text-[var(--cane-950)] text-left">My Tasks</h2>
-                            <p class="text-[var(--cane-700)] text-sm mt-1 text-left">Tasks assigned to you across all fields</p>
-                        </div>
-                        <button id="createWorkLogBtn" class="px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0">
-                            <i class="fas fa-plus mr-2"></i>Log Work
-                        </button>
-                    </div>
-
-                    <!-- Task Filters -->
-                    <div class="flex gap-2 mb-6 mt-6">
-                        <select id="taskFilter" class="px-4 py-2 border-2 border-[var(--cane-200)] rounded-lg text-sm font-medium text-[var(--cane-800)] bg-white hover:border-[var(--cane-300)] focus:border-[var(--cane-600)] focus:outline-none transition-colors cursor-pointer">
-                            <option value="all">All Tasks</option>
-                            <option value="pending">Pending</option>
-                            <option value="done">Completed</option>
-                        </select>
-                    </div>
-                    <div id="myTasksList" class="space-y-4">
-                        <div class="text-center py-8">
-                            <i class="fas fa-spinner fa-spin text-[var(--cane-500)] text-2xl mb-3"></i>
-                            <p class="text-[var(--cane-600)]">Loading your tasks...</p>
-                        </div>
-                    </div>
+        <!-- Assigned Tasks Card -->
+        <a href="#" class="block group" data-section="my-tasks"
+          onclick="event.preventDefault(); showSection('my-tasks');">
+          <div
+            class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100"
+            style="cursor: pointer;">
+            <div class="h-2 bg-[var(--cane-600)]"></div>
+            <div class="p-6">
+              <div class="flex justify-between items-start mb-3">
+                <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Assigned Tasks</h3>
+                <span class="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">TASKS</span>
+              </div>
+              <div class="flex items-end justify-between mt-5">
+                <div>
+                  <p class="text-5xl font-bold text-gray-900" id="assignedTasksCount">0</p>
+                  <p class="text-base text-gray-600 mt-2">Tasks assigned to you</p>
                 </div>
+              </div>
             </div>
+          </div>
+        </a>
 
-            <!-- My Fields Section -->
-            <div id="my-fields" class="content-section hidden">
-                    <div class="section-card rounded-xl p-6 shadow-sm">
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-[var(--cane-950)]">My Fields</h2>
-                        <p class="text-[var(--cane-700)] text-sm mt-1">Fields where you are actively assigned</p>
-                    </div>
-                    <div id="myFieldsList" class="space-y-3">
-                        <div class="text-center py-8">
-                            <i class="fas fa-spinner fa-spin text-[var(--cane-500)] text-2xl mb-3"></i>
-                            <p class="text-[var(--cane-600)]">Loading your fields...</p>
-                        </div>
-                    </div>
+        <!-- Upcoming Tasks Card -->
+        <a href="#" class="block group" data-section="my-tasks"
+          onclick="event.preventDefault(); showSection('my-tasks');">
+          <div
+            class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full border border-gray-100"
+            style="cursor: pointer;">
+            <div class="h-2 bg-[var(--cane-600)]"></div>
+            <div class="p-6">
+              <div class="flex justify-between items-start mb-3">
+                <h3 class="text-base font-semibold text-gray-800 uppercase tracking-wide">Upcoming Tasks</h3>
+                <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">SCHEDULE</span>
+              </div>
+              <div class="flex items-end justify-between mt-5">
+                <div>
+                  <p class="text-5xl font-bold text-gray-900" id="upcomingTasksCount">0</p>
+                  <p class="text-base text-gray-600 mt-2">Due within 7 days</p>
                 </div>
+              </div>
             </div>
+          </div>
+        </a>
+      </div>
 
-            <!-- Work Logs Section -->
-            <div id="work-logs" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <div class="mb-4">
-                        <h2 class="text-2xl font-bold text-[var(--cane-900)]">Work Logs</h2>
-                        <p class="text-[var(--cane-600)] mt-1">View your manually logged work activities</p>
-                    </div>
-                    <div id="workLogsList" class="space-y-3">
-                        <div class="text-center py-8">
-                            <i class="fas fa-clipboard text-[var(--cane-400)] text-4xl mb-3"></i>
-                            <p class="text-[var(--cane-600)]">No work logs yet. Use "Log Work" in the Tasks section to create one.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="timelog" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Time Log</h2>
-                    <p class="text-[var(--cane-600)]">Time logging functionality will be implemented here.</p>
-                </div>
-            </div>
-
-            <div id="activity" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Activity Log</h2>
-                    <p class="text-[var(--cane-600)]">Activity logging functionality will be implemented here.</p>
-                </div>
-            </div>
-
-            <div id="driver-board" class="content-section hidden">
-                <div class="section-card rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Driver Board</h2>
-                    <p class="text-[var(--cane-600)]">Driver board functionality will be implemented here.</p>
-                </div>
-            </div>
-        </main>
+      <!-- Recent Activity Section -->
+      <div class="section-card rounded-xl p-6 hover:shadow-md transition">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-[var(--cane-900)] flex items-center gap-2">
+            <i class="fas fa-bolt text-[var(--cane-600)]"></i>
+            Recent Activity
+          </h3>
+          <a href="#" class="text-sm text-[var(--cane-600)] hover:text-[var(--cane-700)] flex items-center gap-1"
+            data-section="activity">
+            View All <i class="fas fa-arrow-right text-xs"></i>
+          </a>
+        </div>
+        <ul id="recentActivityList" class="divide-y divide-gray-200 text-sm">
+          <li class="py-3 text-center text-gray-500">
+            <i class="fas fa-spinner fa-spin mr-2"></i>
+            Loading recent activity...
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <!-- Workers Dashboard JavaScript -->
-    <script type="module" src="../../backend/Common/activity-logger.js"></script>
-    <script type="module" src="../../backend/Worker/Workers.js"></script>
-    
-    <!-- Notification Handler -->
-    <script>
-      // Function to handle notification clicks
-      function handleNotificationClick(sectionId) {
-        // Close the notification dropdown
-        const dropdown = document.getElementById('notificationDropdown');
-        if (dropdown) {
-          dropdown.classList.add('hidden');
-        }
-        
-        // Update the active navigation item and navigate to the section
-        updateActiveNavItem(sectionId);
-        navigateToSection(sectionId);
-      }
-      
-      // Add click handler for notification items
-      document.addEventListener('click', function(e) {
-        const notificationItem = e.target.closest('.notification-item');
-        if (notificationItem) {
-          e.preventDefault();
-          const sectionId = notificationItem.getAttribute('data-section');
-          if (sectionId) {
-            handleNotificationClick(sectionId);
-          }
-        }
-      });
-    </script>
-
-    <!-- Custom popup for logout message (Worker) -->
-    <div id="workerToastOverlay" class="fixed inset-0 bg-black/40 opacity-0 invisible transition-opacity duration-200 z-[90]"></div>
-    <div id="workerToastCard" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-xl shadow-2xl border border-[var(--cane-200)] opacity-0 scale-95 invisible transition-all duration-200 z-[100]">
-      <div class="px-5 pt-5 pb-4">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow">
-            <i class="fas fa-sign-out-alt"></i>
+    <!-- My Tasks Section -->
+    <div id="my-tasks" class="content-section hidden">
+      <div class="section-card rounded-xl p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4">
+          <div class="flex-1">
+            <h2 class="text-2xl font-bold text-[var(--cane-950)] text-left">My Tasks</h2>
+            <p class="text-[var(--cane-700)] text-sm mt-1 text-left">Tasks assigned to you across all fields</p>
           </div>
-          <div>
-            <p id="workerToastMsg" class="text-[var(--cane-900)] font-semibold">Logging out…</p>
-            <p class="text-sm text-[var(--cane-700)]">Redirecting to sign-in page</p>
+          <button id="createWorkLogBtn"
+            class="px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0">
+            <i class="fas fa-plus mr-2"></i>Log Work
+          </button>
+        </div>
+
+        <!-- Task Filters -->
+        <div class="flex gap-2 mb-6 mt-6">
+          <select id="taskFilter"
+            class="px-4 py-2 border-2 border-[var(--cane-200)] rounded-lg text-sm font-medium text-[var(--cane-800)] bg-white hover:border-[var(--cane-300)] focus:border-[var(--cane-600)] focus:outline-none transition-colors cursor-pointer">
+            <option value="all">All Tasks</option>
+            <option value="pending">Pending</option>
+            <option value="done">Completed</option>
+          </select>
+        </div>
+        <div id="myTasksList" class="space-y-4">
+          <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-[var(--cane-500)] text-2xl mb-3"></i>
+            <p class="text-[var(--cane-600)]">Loading your tasks...</p>
           </div>
         </div>
       </div>
     </div>
 
-    <script>
-      // Function to update active navigation item styling
-      function updateActiveNavItem(sectionId) {
-        // Reset all nav items
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.classList.remove('active');
-          // Reset inline styles but keep layout and transition properties
-          item.style.backgroundColor = '';
-          item.style.color = '';
-          item.style.fontWeight = '';
-          
-          // Reset icon color
-          const icon = item.querySelector('i');
-          if (icon) {
-            icon.style.color = 'rgba(255,255,255,0.9)';
-          }
-          
-          // Reset text color and weight
-          const text = item.querySelector('span');
-          if (text) {
-            text.style.color = '';
-            text.style.fontWeight = '';
-          }
-        });
-        
-        // Set active state for the selected item
-        const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
-        activeItems.forEach(item => {
-          item.classList.add('active');
-          
-          // Apply styles directly to the nav item
-          item.style.backgroundColor = '#FFFFFF';
-          item.style.color = 'var(--cane-600)';
-          item.style.fontWeight = '600';
-          item.style.borderRadius = '8px';
-          
-          // Update icon color
-          const icon = item.querySelector('i');
-          if (icon) {
-            icon.style.color = 'var(--cane-600)';
-          }
-          
-          // Ensure text is dark green and bold
-          const text = item.querySelector('span');
-          if (text) {
-            text.style.color = 'var(--cane-600)';
-            text.style.fontWeight = '600';
-          }
-        });
-      }
-      
-      // Navigation function to handle section changes
-      function navigateToSection(sectionId) {
-        if (!sectionId) return;
+    <!-- My Fields Section -->
+    <div id="my-fields" class="content-section hidden">
+      <div class="section-card rounded-xl p-6 shadow-sm">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-[var(--cane-950)]">My Fields</h2>
+          <p class="text-[var(--cane-700)] text-sm mt-1">Fields where you are actively assigned</p>
+        </div>
+        <div id="myFieldsList" class="space-y-3">
+          <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-[var(--cane-500)] text-2xl mb-3"></i>
+            <p class="text-[var(--cane-600)]">Loading your fields...</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // Hide all content sections
-        document.querySelectorAll('.content-section').forEach(section => {
-          section.classList.add('hidden');
-        });
-        
-        // Show the selected section
-        const sectionToShow = document.getElementById(sectionId);
-        if (sectionToShow) {
-          sectionToShow.classList.remove('hidden');
-        } else {
-          console.warn('Section not found:', sectionId);
-          return;
+    <!-- Work Logs Section -->
+    <div id="work-logs" class="content-section hidden">
+      <div class="section-card rounded-xl p-6">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold text-[var(--cane-900)]">Work Logs</h2>
+          <p class="text-[var(--cane-600)] mt-1">View your manually logged work activities</p>
+        </div>
+        <div id="workLogsList" class="space-y-3">
+          <div class="text-center py-8">
+            <i class="fas fa-clipboard text-[var(--cane-400)] text-4xl mb-3"></i>
+            <p class="text-[var(--cane-600)]">No work logs yet. Use "Log Work" in the Tasks section to create one.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="timelog" class="content-section hidden">
+      <div class="section-card rounded-xl p-6">
+        <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Time Log</h2>
+        <p class="text-[var(--cane-600)]">Time logging functionality will be implemented here.</p>
+      </div>
+    </div>
+
+    <div id="activity" class="content-section hidden">
+      <div class="section-card rounded-xl p-6">
+        <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Activity Log</h2>
+        <p class="text-[var(--cane-600)]">Activity logging functionality will be implemented here.</p>
+      </div>
+    </div>
+
+    <div id="driver-board" class="content-section hidden">
+      <div class="section-card rounded-xl p-6">
+        <h2 class="text-2xl font-bold text-[var(--cane-900)] mb-6">Driver Board</h2>
+        <p class="text-[var(--cane-600)]">Driver board functionality will be implemented here.</p>
+      </div>
+    </div>
+  </main>
+  </div>
+
+  <!-- Workers Dashboard -->
+  <!-- JavaScript -->
+  <script type="module" src="../../backend/Common/activity-logger.js"></script>
+  <script type="module" src="../../backend/Common/sw-register.js"></script>
+  <script type="module" src="../../backend/Worker/Workers.js"></script>
+
+  <!-- Notification Handler -->
+  <script>
+    // Function to handle notification clicks
+    function handleNotificationClick(sectionId) {
+      // Close the notification dropdown
+      const dropdown = document.getElementById('notificationDropdown');
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+      }
+
+      // Update the active navigation item and navigate to the section
+      updateActiveNavItem(sectionId);
+      navigateToSection(sectionId);
+    }
+
+    // Add click handler for notification items
+    document.addEventListener('click', function (e) {
+      const notificationItem = e.target.closest('.notification-item');
+      if (notificationItem) {
+        e.preventDefault();
+        const sectionId = notificationItem.getAttribute('data-section');
+        if (sectionId) {
+          handleNotificationClick(sectionId);
+        }
+      }
+    });
+  </script>
+
+  <!-- Custom popup for logout message (Worker) -->
+  <div id="workerToastOverlay"
+    class="fixed inset-0 bg-black/40 opacity-0 invisible transition-opacity duration-200 z-[90]"></div>
+  <div id="workerToastCard"
+    class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-xl shadow-2xl border border-[var(--cane-200)] opacity-0 scale-95 invisible transition-all duration-200 z-[100]">
+    <div class="px-5 pt-5 pb-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--cane-600)] text-white shadow">
+          <i class="fas fa-sign-out-alt"></i>
+        </div>
+        <div>
+          <p id="workerToastMsg" class="text-[var(--cane-900)] font-semibold">Logging out…</p>
+          <p class="text-sm text-[var(--cane-700)]">Redirecting to sign-in page</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Function to update active navigation item styling
+    function updateActiveNavItem(sectionId) {
+      // Reset all nav items
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        // Reset inline styles but keep layout and transition properties
+        item.style.backgroundColor = '';
+        item.style.color = '';
+        item.style.fontWeight = '';
+
+        // Reset icon color
+        const icon = item.querySelector('i');
+        if (icon) {
+          icon.style.color = 'rgba(255,255,255,0.9)';
         }
 
-        // Update active state in navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
-          // Reset all items to default state
-          item.classList.remove('bg-gray-800', 'text-white', 'font-semibold', 'active');
-          item.classList.add('text-white/90', 'hover:bg-white/10');
-          
-          // Reset all inline styles
-          item.style.backgroundColor = '';
-          item.style.color = '';
-          
-          // Reset icon color
-          const icon = item.querySelector('i');
-          if (icon) {
-            icon.classList.remove('text-white');
-            icon.classList.add('text-white/90');
-            icon.style.color = '';
-          }
-        });
+        // Reset text color and weight
+        const text = item.querySelector('span');
+        if (text) {
+          text.style.color = '';
+          text.style.fontWeight = '';
+        }
+      });
 
-        // Set active state for the selected navigation item
-        const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
-        activeItems.forEach(item => {
-          // Set active state with dark background
-          item.classList.remove('text-white/90', 'hover:bg-white/10');
-          item.classList.add('bg-gray-800', 'text-white', 'font-semibold', 'active');
-          
-          // Force dark background and white text
-          item.style.backgroundColor = '#1f2937';
-          item.style.color = '#FFFFFF';
-          item.style.fontWeight = '600';
-          item.style.borderRadius = '8px';
-          
-          // Update icon color
-          const icon = item.querySelector('i');
-          if (icon) {
-            icon.classList.remove('text-white/90');
-            icon.classList.add('text-white');
-            icon.style.color = '#FFFFFF';
-          }
-          
-          // Ensure text is white and bold
-          const text = item.querySelector('span');
-          if (text) {
-            text.style.color = '#FFFFFF';
-            text.style.fontWeight = '600';
-          }
-        });
+      // Set active state for the selected item
+      const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
+      activeItems.forEach(item => {
+        item.classList.add('active');
 
-        // Store the active section
-        localStorage.setItem('activeSection', sectionId);
-        
-        // Update URL
-        history.pushState({}, '', `#${sectionId}`);
+        // Apply styles directly to the nav item
+        item.style.backgroundColor = '#FFFFFF';
+        item.style.color = 'var(--cane-600)';
+        item.style.fontWeight = '600';
+        item.style.borderRadius = '8px';
+
+        // Update icon color
+        const icon = item.querySelector('i');
+        if (icon) {
+          icon.style.color = 'var(--cane-600)';
+        }
+
+        // Ensure text is dark green and bold
+        const text = item.querySelector('span');
+        if (text) {
+          text.style.color = 'var(--cane-600)';
+          text.style.fontWeight = '600';
+        }
+      });
+    }
+
+    // Navigation function to handle section changes
+    function navigateToSection(sectionId) {
+      if (!sectionId) return;
+
+      // Hide all content sections
+      document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.add('hidden');
+      });
+
+      // Show the selected section
+      const sectionToShow = document.getElementById(sectionId);
+      if (sectionToShow) {
+        sectionToShow.classList.remove('hidden');
+      } else {
+        console.warn('Section not found:', sectionId);
+        return;
       }
-      
-      
-      // Initialize navigation when DOM is loaded
-      document.addEventListener('DOMContentLoaded', function() {
-        // Set up navigation for sidebar items
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', function(e) {
+
+      // Update active state in navigation
+      document.querySelectorAll('.nav-item').forEach(item => {
+        // Reset all items to default state
+        item.classList.remove('bg-gray-800', 'text-white', 'font-semibold', 'active');
+        item.classList.add('text-white/90', 'hover:bg-white/10');
+
+        // Reset all inline styles
+        item.style.backgroundColor = '';
+        item.style.color = '';
+
+        // Reset icon color
+        const icon = item.querySelector('i');
+        if (icon) {
+          icon.classList.remove('text-white');
+          icon.classList.add('text-white/90');
+          icon.style.color = '';
+        }
+      });
+
+      // Set active state for the selected navigation item
+      const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
+      activeItems.forEach(item => {
+        // Set active state with dark background
+        item.classList.remove('text-white/90', 'hover:bg-white/10');
+        item.classList.add('bg-gray-800', 'text-white', 'font-semibold', 'active');
+
+        // Force dark background and white text
+        item.style.backgroundColor = '#1f2937';
+        item.style.color = '#FFFFFF';
+        item.style.fontWeight = '600';
+        item.style.borderRadius = '8px';
+
+        // Update icon color
+        const icon = item.querySelector('i');
+        if (icon) {
+          icon.classList.remove('text-white/90');
+          icon.classList.add('text-white');
+          icon.style.color = '#FFFFFF';
+        }
+
+        // Ensure text is white and bold
+        const text = item.querySelector('span');
+        if (text) {
+          text.style.color = '#FFFFFF';
+          text.style.fontWeight = '600';
+        }
+      });
+
+      // Store the active section
+      localStorage.setItem('activeSection', sectionId);
+
+      // Update URL
+      history.pushState({}, '', `#${sectionId}`);
+    }
+
+
+    // Initialize navigation when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+      // Set up navigation for sidebar items
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function (e) {
+          e.preventDefault();
+          const section = this.getAttribute('data-section');
+          if (section) {
+            navigateToSection(section);
+          }
+        });
+      });
+
+      // Set up navigation for card items
+      document.querySelectorAll('a[data-section]').forEach(item => {
+        if (!item.classList.contains('nav-item')) {
+          item.addEventListener('click', function (e) {
             e.preventDefault();
             const section = this.getAttribute('data-section');
             if (section) {
               navigateToSection(section);
             }
           });
-        });
-        
-        // Set up navigation for card items
-        document.querySelectorAll('a[data-section]').forEach(item => {
-          if (!item.classList.contains('nav-item')) {
-            item.addEventListener('click', function(e) {
-              e.preventDefault();
-              const section = this.getAttribute('data-section');
-              if (section) {
-                navigateToSection(section);
-              }
-            });
-          }
-        });
-        
-        // Initialize the active section from URL or localStorage
-        const initialSection = window.location.hash.replace('#', '') || localStorage.getItem('activeSection') || 'dashboard';
-        navigateToSection(initialSection);
-        
-        // Set up popstate handler for browser back/forward buttons
-        window.addEventListener('popstate', function() {
-          const sectionId = window.location.hash.replace('#', '') || 'dashboard';
-          navigateToSection(sectionId);
-        });
-      });
-
-      // Initialize FullCalendar instances
-      document.addEventListener('DOMContentLoaded', function() {
-        if (window.FullCalendar) {
-          const today = new Date();
-          const defaultEvents = [
-            { title: 'Morning Task', start: today },
-          ];
-
-          const calendarEl = document.getElementById('calendar');
-          if (calendarEl) {
-            const calendar = new FullCalendar.Calendar(calendarEl, {
-              initialView: 'dayGridMonth',
-              height: 'auto',
-              contentHeight: 'auto',
-              expandRows: true,
-              headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,dayGridWeek,dayGridDay'
-              },
-              events: defaultEvents,
-            });
-            calendar.render();
-          }
-
-          const scheduleEl = document.getElementById('scheduleCalendar');
-          if (scheduleEl) {
-            const scheduleCal = new FullCalendar.Calendar(scheduleEl, {
-              initialView: 'dayGridMonth',
-              height: 'auto',
-              contentHeight: 'auto',
-              expandRows: true,
-              headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-              },
-              events: defaultEvents,
-            });
-            scheduleCal.render();
-          }
         }
       });
 
-      // Submenu toggle functionality
-      function toggleSubmenu(menuId) {
-        const submenu = document.getElementById(menuId + '-submenu');
-        const arrow = document.getElementById(menuId + '-arrow');
-        if (!submenu || !arrow) return;
-        const isHidden = submenu.classList.contains('hidden');
-        // Close all other submenus
-        document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
-          if (menu.id !== menuId + '-submenu') {
-            menu.classList.add('hidden');
-          }
-        });
-        // Reset other arrows
-        document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
-          if (arr.id !== menuId + '-arrow') {
-            arr.style.transform = 'rotate(0deg)';
-          }
-        });
-        // Toggle current submenu
-        if (isHidden) {
-          submenu.classList.remove('hidden');
-          arrow.style.transform = 'rotate(180deg)';
-        } else {
-          submenu.classList.add('hidden');
-          arrow.style.transform = 'rotate(0deg)';
-        }
-      }
+      // Initialize the active section from URL or localStorage
+      const initialSection = window.location.hash.replace('#', '') || localStorage.getItem('activeSection') || 'dashboard';
+      navigateToSection(initialSection);
 
-      // SPA-style section switcher
-      function showSection(sectionId) {
-        // Use the navigateToSection function to handle section changes
+      // Set up popstate handler for browser back/forward buttons
+      window.addEventListener('popstate', function () {
+        const sectionId = window.location.hash.replace('#', '') || 'dashboard';
         navigateToSection(sectionId);
+      });
+    });
 
-        // Load section content if needed
-        if (sectionId === 'my-fields') {
-          const container = document.getElementById('my-fields');
-          if (container && !container.dataset.loaded) {
-            fetch('../Worker/submenu/my_fields.html')
-              .then(r => r.text())
-              .then(html => {
-                container.innerHTML = html;
-                container.dataset.loaded = 'true';
-              });
-          }
+    // Initialize FullCalendar instances
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.FullCalendar) {
+        const today = new Date();
+        const defaultEvents = [
+          { title: 'Morning Task', start: today },
+        ];
+
+        const calendarEl = document.getElementById('calendar');
+        if (calendarEl) {
+          const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            contentHeight: 'auto',
+            expandRows: true,
+            headerToolbar: {
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,dayGridWeek,dayGridDay'
+            },
+            events: defaultEvents,
+          });
+          calendar.render();
         }
-            
-            // Show the selected section
-            const sectionToShow = document.getElementById(sectionId);
-            if (sectionToShow) {
-              sectionToShow.classList.remove('hidden');
-            } else {
-              console.warn('Section not found:', sectionId);
-              return;
-            }
 
-            // Update active state in navigation
-            document.querySelectorAll('.nav-item').forEach(item => {
-              // Reset all items to default state
-              item.classList.remove('bg-white', 'text-cane-600', 'font-semibold', 'active');
-              item.classList.add('text-white/90', 'hover:bg-white/10');
-              
-              // Reset all inline styles
-              item.style.backgroundColor = '';
-              item.style.color = '';
-              
-              // Reset icon color
-              const icon = item.querySelector('i');
-              if (icon) {
-                icon.classList.remove('text-cane-600');
-                icon.classList.add('text-white/90');
-                icon.style.color = '';
-              }
-            });
-
-            // Set active state for the selected navigation item
-            const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
-            activeItems.forEach(item => {
-              // Set active state with white background
-              item.classList.remove('text-white/90', 'hover:bg-white/10');
-              item.classList.add('bg-white', 'text-cane-600', 'font-semibold', 'active');
-              
-              // Force white background and dark text with !important
-              item.style.cssText += 'background-color: #FFFFFF !important; color: var(--cane-600) !important;';
-              
-              // Update icon color
-              const icon = item.querySelector('i');
-              if (icon) {
-                icon.classList.remove('text-white/90');
-                icon.classList.add('text-cane-600');
-                icon.style.cssText += 'color: var(--cane-600) !important;';
-              }
-              
-              // Ensure text is dark green and bold
-              const text = item.querySelector('span');
-              if (text) {
-                text.style.color = 'var(--cane-600)';
-                text.style.fontWeight = '600';
-              }
-            });
-
-            // Store the active section
-            localStorage.setItem('activeSection', sectionId);
-            
-            // Update URL
-            history.pushState({}, '', `#${sectionId}`);
-          }
-          
-          
-          // Initialize navigation when DOM is loaded
-          document.addEventListener('DOMContentLoaded', function() {
-            // Set up navigation for sidebar items
-            document.querySelectorAll('.nav-item').forEach(item => {
-              item.addEventListener('click', function(e) {
-                e.preventDefault();
-                const section = this.getAttribute('data-section');
-                if (section) {
-                  navigateToSection(section);
-                }
-              });
-            });
-            
-            // Set up navigation for card items
-            document.querySelectorAll('a[data-section]').forEach(item => {
-              if (!item.classList.contains('nav-item')) {
-                item.addEventListener('click', function(e) {
-                  e.preventDefault();
-                  const section = this.getAttribute('data-section');
-                  if (section) {
-                    navigateToSection(section);
-                  }
-                });
-              }
-            });
-            
-            // Initialize the active section from URL or localStorage
-            const initialSection = window.location.hash.replace('#', '') || localStorage.getItem('activeSection') || 'dashboard';
-            navigateToSection(initialSection);
-            
-            // Set up popstate handler for browser back/forward buttons
-            window.addEventListener('popstate', function() {
-              const sectionId = window.location.hash.replace('#', '') || 'dashboard';
-              navigateToSection(sectionId);
-            });
+        const scheduleEl = document.getElementById('scheduleCalendar');
+        if (scheduleEl) {
+          const scheduleCal = new FullCalendar.Calendar(scheduleEl, {
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            contentHeight: 'auto',
+            expandRows: true,
+            headerToolbar: {
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            events: defaultEvents,
           });
-
-          // Initialize FullCalendar instances
-          document.addEventListener('DOMContentLoaded', function() {
-            if (window.FullCalendar) {
-              const today = new Date();
-              const defaultEvents = [
-                { title: 'Morning Task', start: today },
-              ];
-
-              const calendarEl = document.getElementById('calendar');
-              if (calendarEl) {
-                const calendar = new FullCalendar.Calendar(calendarEl, {
-                  initialView: 'dayGridMonth',
-                  height: 'auto',
-                  contentHeight: 'auto',
-                  expandRows: true,
-                  headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,dayGridWeek,dayGridDay'
-                  },
-                  events: defaultEvents,
-                });
-                calendar.render();
-              }
-
-              const scheduleEl = document.getElementById('scheduleCalendar');
-              if (scheduleEl) {
-                const scheduleCal = new FullCalendar.Calendar(scheduleEl, {
-                  initialView: 'dayGridMonth',
-                  height: 'auto',
-                  contentHeight: 'auto',
-                  expandRows: true,
-                  headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                  },
-                  events: defaultEvents,
-                });
-                scheduleCal.render();
-              }
-            }
-          });
-
-          // Submenu toggle functionality
-          function toggleSubmenu(menuId) {
-            const submenu = document.getElementById(menuId + '-submenu');
-            const arrow = document.getElementById(menuId + '-arrow');
-            if (!submenu || !arrow) return;
-            const isHidden = submenu.classList.contains('hidden');
-            // Close all other submenus
-            document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
-              if (menu.id !== menuId + '-submenu') {
-                menu.classList.add('hidden');
-              }
-            });
-            // Reset other arrows
-            document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
-              if (arr.id !== menuId + '-arrow') {
-                arr.style.transform = 'rotate(0deg)';
-              }
-            });
-            // Toggle current submenu
-            if (isHidden) {
-              submenu.classList.remove('hidden');
-              arrow.style.transform = 'rotate(180deg)';
-            } else {
-              submenu.classList.add('hidden');
-              arrow.style.transform = 'rotate(0deg)';
-            }
-          }
-
-          // SPA-style section switcher
-          function showSection(sectionId) {
-            // Use the navigateToSection function to handle section changes
-            navigateToSection(sectionId);
-
-            // Load section content if needed
-            if (sectionId === 'my-fields') {
-              const container = document.getElementById('my-fields');
-              if (container && !container.dataset.loaded) {
-                fetch('../Worker/submenu/my_fields.html')
-                  .then(r => r.text())
-                  .then(html => {
-                    container.innerHTML = html;
-                    container.dataset.loaded = 'true';
-                  });
-              }
-            }
-            
-            // Update URL without page reload
-            history.pushState({}, '', `#${sectionId}`);
-            
-            // Toggle sidebar on mobile
-            // Toggle profile dropdown
-          const profileDropdownBtn = document.getElementById('profileDropdownBtn');
-          const profileDropdown = document.getElementById('profileDropdown');
-          const profileDropdownIcon = document.getElementById('profileDropdownIcon');
-
-          // Initialize dropdown functionality when DOM is fully loaded
-          document.addEventListener('DOMContentLoaded', function() {
-              const profileDropdownBtn = document.getElementById('profileDropdownBtn');
-              const profileDropdown = document.getElementById('profileDropdown');
-              const profileDropdownIcon = document.getElementById('profileDropdownIcon');
-              let isDropdownOpen = false;
-
-              // Toggle dropdown function
-              const toggleDropdown = (e) => {
-                  if (e) e.stopPropagation();
-                  isDropdownOpen = !isDropdownOpen;
-                  
-                  // Toggle dropdown visibility
-                  if (isDropdownOpen) {
-                      profileDropdown.classList.remove('opacity-0', 'invisible', 'scale-95');
-                      profileDropdown.classList.add('opacity-100');
-                      profileDropdownIcon.style.transform = 'rotate(180deg)';
-                  } else {
-                      profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
-                      profileDropdownIcon.style.transform = 'rotate(0deg)';
-                  }
-              };
-
-              // Add click event to dropdown button
-              if (profileDropdownBtn && profileDropdown) {
-                  // Initialize dropdown as closed
-                  profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
-                  profileDropdownIcon.style.transform = 'rotate(0deg)';
-                  
-                  // Toggle dropdown on button click
-                  profileDropdownBtn.addEventListener('click', toggleDropdown);
-
-                  // Close dropdown when clicking outside
-                  document.addEventListener('click', (e) => {
-                      if (isDropdownOpen && !profileDropdown.contains(e.target) && !profileDropdownBtn.contains(e.target)) {
-                          toggleDropdown();
-                      }
-                  });
-
-                  // Close dropdown when pressing Escape key
-                  document.addEventListener('keydown', (e) => {
-                      if (e.key === 'Escape' && isDropdownOpen) {
-                          toggleDropdown();
-                      }
-                  });
-              }
-          });
-            // Open sidebar
-            const overlay = document.getElementById('sidebarOverlay');
-            const sidebar = document.getElementById('sidebar');
-            const icon = document.getElementById('hamburgerIcon');
-            const body = document.body;
-            
-            if (sidebar.classList.contains('mobile-open')) {
-              // Close sidebar
-              sidebar.classList.remove('mobile-open');
-              overlay.classList.remove('visible');
-              icon.classList.remove('fa-times');
-              icon.classList.add('fa-bars');
-              body.style.overflow = ''; // Re-enable scrolling
-              
-              // Close after transition ends
-              setTimeout(() => {
-                if (!sidebar.classList.contains('mobile-open')) {
-                  overlay.style.display = 'none';
-                }
-              }, 300);
-            } else {
-              // Open sidebar
-              overlay.style.display = 'block';
-              setTimeout(() => {
-                overlay.classList.add('visible');
-                sidebar.classList.add('mobile-open');
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-times');
-                body.style.overflow = 'hidden';
-              }, 10);
-            }
-        
-        // Close sidebar when clicking on nav items on mobile
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', function() {
-            if (window.innerWidth < 1024) {
-              toggleSidebar();
-            }
-          });
-        });
-        
-        // Handle window resize
-        function handleResize() {
-          const sidebar = document.getElementById('sidebar');
-          const overlay = document.getElementById('sidebarOverlay');
-          const icon = document.getElementById('hamburgerIcon');
-          
-          if (window.innerWidth >= 1024) {
-            // Desktop view
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('visible');
-            overlay.style.display = 'none';
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-            document.body.style.overflow = '';
-          }
+          scheduleCal.render();
         }
-        
-        // Add resize event listener
-        window.addEventListener('resize', handleResize);
-        
-        // Initial check
-        handleResize();
-        
-        // Close mobile sidebar if open
-        if (window.innerWidth < 1024) {
-          const sidebar = document.getElementById('sidebar');
-          const overlay = document.getElementById('sidebarOverlay');
-          if (sidebar && overlay) {
-            sidebar.classList.add('-translate-x-full');
-            overlay.classList.add('hidden');
-            document.body.style.overflow = '';
-          }
-        }
-        
-        // Scroll to top of the page
-        window.scrollTo(0, 0);
       }
-      // Handle main nav items and submenu items
-      document.addEventListener('click', function(e) {
-        // Find the closest data-section element that was clicked
-        const navItem = e.target.closest('[data-section]');
-        if (navItem) {
+    });
+
+    // Submenu toggle functionality
+    function toggleSubmenu(menuId) {
+      const submenu = document.getElementById(menuId + '-submenu');
+      const arrow = document.getElementById(menuId + '-arrow');
+      if (!submenu || !arrow) return;
+      const isHidden = submenu.classList.contains('hidden');
+      // Close all other submenus
+      document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
+        if (menu.id !== menuId + '-submenu') {
+          menu.classList.add('hidden');
+        }
+      });
+      // Reset other arrows
+      document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
+        if (arr.id !== menuId + '-arrow') {
+          arr.style.transform = 'rotate(0deg)';
+        }
+      });
+      // Toggle current submenu
+      if (isHidden) {
+        submenu.classList.remove('hidden');
+        arrow.style.transform = 'rotate(180deg)';
+      } else {
+        submenu.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // SPA-style section switcher
+    function showSection(sectionId) {
+      // Use the navigateToSection function to handle section changes
+      navigateToSection(sectionId);
+
+      // Load section content if needed
+      if (sectionId === 'my-fields') {
+        const container = document.getElementById('my-fields');
+        if (container && !container.dataset.loaded) {
+          fetch('../Worker/submenu/my_fields.html')
+            .then(r => r.text())
+            .then(html => {
+              container.innerHTML = html;
+              container.dataset.loaded = 'true';
+            });
+        }
+      }
+
+      // Show the selected section
+      const sectionToShow = document.getElementById(sectionId);
+      if (sectionToShow) {
+        sectionToShow.classList.remove('hidden');
+      } else {
+        console.warn('Section not found:', sectionId);
+        return;
+      }
+
+      // Update active state in navigation
+      document.querySelectorAll('.nav-item').forEach(item => {
+        // Reset all items to default state
+        item.classList.remove('bg-white', 'text-cane-600', 'font-semibold', 'active');
+        item.classList.add('text-white/90', 'hover:bg-white/10');
+
+        // Reset all inline styles
+        item.style.backgroundColor = '';
+        item.style.color = '';
+
+        // Reset icon color
+        const icon = item.querySelector('i');
+        if (icon) {
+          icon.classList.remove('text-cane-600');
+          icon.classList.add('text-white/90');
+          icon.style.color = '';
+        }
+      });
+
+      // Set active state for the selected navigation item
+      const activeItems = document.querySelectorAll(`.nav-item[data-section="${sectionId}"]`);
+      activeItems.forEach(item => {
+        // Set active state with white background
+        item.classList.remove('text-white/90', 'hover:bg-white/10');
+        item.classList.add('bg-white', 'text-cane-600', 'font-semibold', 'active');
+
+        // Force white background and dark text with !important
+        item.style.cssText += 'background-color: #FFFFFF !important; color: var(--cane-600) !important;';
+
+        // Update icon color
+        const icon = item.querySelector('i');
+        if (icon) {
+          icon.classList.remove('text-white/90');
+          icon.classList.add('text-cane-600');
+          icon.style.cssText += 'color: var(--cane-600) !important;';
+        }
+
+        // Ensure text is dark green and bold
+        const text = item.querySelector('span');
+        if (text) {
+          text.style.color = 'var(--cane-600)';
+          text.style.fontWeight = '600';
+        }
+      });
+
+      // Store the active section
+      localStorage.setItem('activeSection', sectionId);
+
+      // Update URL
+      history.pushState({}, '', `#${sectionId}`);
+    }
+
+
+    // Initialize navigation when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+      // Set up navigation for sidebar items
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function (e) {
           e.preventDefault();
-          const section = navItem.getAttribute('data-section');
+          const section = this.getAttribute('data-section');
           if (section) {
-            showSection(section);
+            navigateToSection(section);
           }
-        }
-      });
-      
-      // Handle browser back/forward buttons
-      window.addEventListener('popstate', function() {
-        const sectionId = window.location.hash.replace('#', '') || 'dashboard';
-        showSection(sectionId);
-      });
-      
-      // Initialize the correct section on page load
-      document.addEventListener('DOMContentLoaded', function() {
-        const sectionId = window.location.hash.replace('#', '') || 'dashboard';
-        showSection(sectionId);
-        
-        // Close sidebar on navigation for mobile
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', closeSidebar);
         });
-        
-        // Close sidebar when clicking on overlay (outside screen)
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
-        if (sidebarOverlay) {
-          sidebarOverlay.addEventListener('click', function(e) {
-            if (e.target === sidebarOverlay) {
-              closeSidebar();
+      });
+
+      // Set up navigation for card items
+      document.querySelectorAll('a[data-section]').forEach(item => {
+        if (!item.classList.contains('nav-item')) {
+          item.addEventListener('click', function (e) {
+            e.preventDefault();
+            const section = this.getAttribute('data-section');
+            if (section) {
+              navigateToSection(section);
             }
           });
         }
-        
-        // Handle window resize
-        function handleResize() {
-          if (window.innerWidth >= 1024) {
-            // On desktop, ensure sidebar is visible
-            document.getElementById('sidebar').classList.remove('-translate-x-full');
-            document.body.style.overflow = '';
-          } else {
-            // On mobile, ensure overlay is hidden when resizing to mobile
-            document.getElementById('sidebarOverlay').classList.add('hidden');
-          }
-        }
-        
-        window.addEventListener('resize', handleResize);
-        handleResize(); // Initial check
       });
 
-      // Toggle mobile sidebar (for mobile view)
-      function toggleMobileSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const body = document.body;
-        
-        // Toggle mobile sidebar
-        sidebar.classList.toggle('mobile-open');
-        overlay.classList.toggle('hidden');
-        overlay.classList.toggle('visible');
-        
-        // Toggle body scroll
-        body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
-      }
-      
-      // Toggle desktop sidebar (for desktop view)
-      function toggleDesktopSidebar() {
-        // Toggle collapsed class on body
-        document.body.classList.toggle('sidebar-collapsed');
-        
-        // Keep the hamburger icon the same in both states
-        const desktopHamburger = document.getElementById('desktopHamburgerBtn');
-        const icon = desktopHamburger.querySelector('i');
-        icon.className = 'fas fa-bars text-lg'; // Always keep it as bars icon
-      }
-      
-      // Close sidebar function (for mobile)
-      function closeSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        sidebar.classList.remove('mobile-open');
-        overlay.classList.add('hidden');
-        overlay.classList.remove('visible');
-        document.body.style.overflow = '';
-      }
-      
-      // Leaflet map for Available Fields (initialized lazily)
-      let availableFieldsMap;
-      function initAvailableFieldsMap() {
-        if (!window.L) return; // Leaflet not loaded
-        const mapEl = document.getElementById('availableFieldsMap');
-        if (!mapEl) return;
-        if (!availableFieldsMap) {
-          availableFieldsMap = L.map('availableFieldsMap');
-          // Focus map on Ormoc City, Leyte
-          const defaultCenter = [11.0064, 124.6075];
-          availableFieldsMap.setView(defaultCenter, 12);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
-          }).addTo(availableFieldsMap);
+      // Initialize the active section from URL or localStorage
+      const initialSection = window.location.hash.replace('#', '') || localStorage.getItem('activeSection') || 'dashboard';
+      navigateToSection(initialSection);
 
-          const form = document.getElementById('afSearchForm');
-          const input = document.getElementById('afSearchInput');
-          if (form && input) {
-            form.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              const q = (input.value || '').trim();
-              if (!q) return;
-              try {
-                const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q), {
-                  headers: { 'Accept-Language': 'en' }
-                });
-                const results = await resp.json();
-                if (Array.isArray(results) && results.length > 0) {
-                  const { lat, lon, display_name } = results[0];
-                  const latNum = parseFloat(lat);
-                  const lonNum = parseFloat(lon);
-                  availableFieldsMap.setView([latNum, lonNum], 14);
-                  L.marker([latNum, lonNum]).addTo(availableFieldsMap).bindPopup(display_name || 'Location').openPopup();
-                }
-              } catch (_) {}
-            });
-          }
-        } else {
-          // Ensure correct sizing after being revealed
-          availableFieldsMap.invalidateSize();
+      // Set up popstate handler for browser back/forward buttons
+      window.addEventListener('popstate', function () {
+        const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+        navigateToSection(sectionId);
+      });
+    });
+
+    // Initialize FullCalendar instances
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.FullCalendar) {
+        const today = new Date();
+        const defaultEvents = [
+          { title: 'Morning Task', start: today },
+        ];
+
+        const calendarEl = document.getElementById('calendar');
+        if (calendarEl) {
+          const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            contentHeight: 'auto',
+            expandRows: true,
+            headerToolbar: {
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,dayGridWeek,dayGridDay'
+            },
+            events: defaultEvents,
+          });
+          calendar.render();
+        }
+
+        const scheduleEl = document.getElementById('scheduleCalendar');
+        if (scheduleEl) {
+          const scheduleCal = new FullCalendar.Calendar(scheduleEl, {
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            contentHeight: 'auto',
+            expandRows: true,
+            headerToolbar: {
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            events: defaultEvents,
+          });
+          scheduleCal.render();
         }
       }
-    </script>
+    });
 
-        
+    // Submenu toggle functionality
+    function toggleSubmenu(menuId) {
+      const submenu = document.getElementById(menuId + '-submenu');
+      const arrow = document.getElementById(menuId + '-arrow');
+      if (!submenu || !arrow) return;
+      const isHidden = submenu.classList.contains('hidden');
+      // Close all other submenus
+      document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
+        if (menu.id !== menuId + '-submenu') {
+          menu.classList.add('hidden');
+        }
+      });
+      // Reset other arrows
+      document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
+        if (arr.id !== menuId + '-arrow') {
+          arr.style.transform = 'rotate(0deg)';
+        }
+      });
+      // Toggle current submenu
+      if (isHidden) {
+        submenu.classList.remove('hidden');
+        arrow.style.transform = 'rotate(180deg)';
+      } else {
+        submenu.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    }
 
-        
+    // SPA-style section switcher
+    function showSection(sectionId) {
+      // Use the navigateToSection function to handle section changes
+      navigateToSection(sectionId);
 
-        
+      // Load section content if needed
+      if (sectionId === 'my-fields') {
+        const container = document.getElementById('my-fields');
+        if (container && !container.dataset.loaded) {
+          fetch('../Worker/submenu/my_fields.html')
+            .then(r => r.text())
+            .then(html => {
+              container.innerHTML = html;
+              container.dataset.loaded = 'true';
+            });
+        }
+      }
 
-        
+      // Update URL without page reload
+      history.pushState({}, '', `#${sectionId}`);
 
-        
+      // Toggle sidebar on mobile
+      // Toggle profile dropdown
+      const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+      const profileDropdown = document.getElementById('profileDropdown');
+      const profileDropdownIcon = document.getElementById('profileDropdownIcon');
 
-        
+      // Initialize dropdown functionality when DOM is fully loaded
+      document.addEventListener('DOMContentLoaded', function () {
+        const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const profileDropdownIcon = document.getElementById('profileDropdownIcon');
+        let isDropdownOpen = false;
 
-        
+        // Toggle dropdown function
+        const toggleDropdown = (e) => {
+          if (e) e.stopPropagation();
+          isDropdownOpen = !isDropdownOpen;
 
-        
+          // Toggle dropdown visibility
+          if (isDropdownOpen) {
+            profileDropdown.classList.remove('opacity-0', 'invisible', 'scale-95');
+            profileDropdown.classList.add('opacity-100');
+            profileDropdownIcon.style.transform = 'rotate(180deg)';
+          } else {
+            profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+            profileDropdownIcon.style.transform = 'rotate(0deg)';
+          }
+        };
 
-        
+        // Add click event to dropdown button
+        if (profileDropdownBtn && profileDropdown) {
+          // Initialize dropdown as closed
+          profileDropdown.classList.add('opacity-0', 'invisible', 'scale-95');
+          profileDropdownIcon.style.transform = 'rotate(0deg)';
 
-        
+          // Toggle dropdown on button click
+          profileDropdownBtn.addEventListener('click', toggleDropdown);
+
+          // Close dropdown when clicking outside
+          document.addEventListener('click', (e) => {
+            if (isDropdownOpen && !profileDropdown.contains(e.target) && !profileDropdownBtn.contains(e.target)) {
+              toggleDropdown();
+            }
+          });
+
+          // Close dropdown when pressing Escape key
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isDropdownOpen) {
+              toggleDropdown();
+            }
+          });
+        }
+      });
+      // Open sidebar
+      const overlay = document.getElementById('sidebarOverlay');
+      const sidebar = document.getElementById('sidebar');
+      const icon = document.getElementById('hamburgerIcon');
+      const body = document.body;
+
+      if (sidebar.classList.contains('mobile-open')) {
+        // Close sidebar
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('visible');
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
+        body.style.overflow = ''; // Re-enable scrolling
+
+        // Close after transition ends
+        setTimeout(() => {
+          if (!sidebar.classList.contains('mobile-open')) {
+            overlay.style.display = 'none';
+          }
+        }, 300);
+      } else {
+        // Open sidebar
+        overlay.style.display = 'block';
+        setTimeout(() => {
+          overlay.classList.add('visible');
+          sidebar.classList.add('mobile-open');
+          icon.classList.remove('fa-bars');
+          icon.classList.add('fa-times');
+          body.style.overflow = 'hidden';
+        }, 10);
+      }
+
+      // Close sidebar when clicking on nav items on mobile
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function () {
+          if (window.innerWidth < 1024) {
+            toggleSidebar();
+          }
+        });
+      });
+
+      // Handle window resize
+      function handleResize() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const icon = document.getElementById('hamburgerIcon');
+
+        if (window.innerWidth >= 1024) {
+          // Desktop view
+          sidebar.classList.remove('mobile-open');
+          overlay.classList.remove('visible');
+          overlay.style.display = 'none';
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+          document.body.style.overflow = '';
+        }
+      }
+
+      // Add resize event listener
+      window.addEventListener('resize', handleResize);
+
+      // Initial check
+      handleResize();
+
+      // Close mobile sidebar if open
+      if (window.innerWidth < 1024) {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar && overlay) {
+          sidebar.classList.add('-translate-x-full');
+          overlay.classList.add('hidden');
+          document.body.style.overflow = '';
+        }
+      }
+
+      // Scroll to top of the page
+      window.scrollTo(0, 0);
+    }
+    // Handle main nav items and submenu items
+    document.addEventListener('click', function (e) {
+      // Find the closest data-section element that was clicked
+      const navItem = e.target.closest('[data-section]');
+      if (navItem) {
+        e.preventDefault();
+        const section = navItem.getAttribute('data-section');
+        if (section) {
+          showSection(section);
+        }
+      }
+    });
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function () {
+      const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+      showSection(sectionId);
+    });
+
+    // Initialize the correct section on page load
+    document.addEventListener('DOMContentLoaded', function () {
+      const sectionId = window.location.hash.replace('#', '') || 'dashboard';
+      showSection(sectionId);
+
+      // Close sidebar on navigation for mobile
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', closeSidebar);
+      });
+
+      // Close sidebar when clicking on overlay (outside screen)
+      const sidebarOverlay = document.getElementById('sidebarOverlay');
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function (e) {
+          if (e.target === sidebarOverlay) {
+            closeSidebar();
+          }
+        });
+      }
+
+      // Handle window resize
+      function handleResize() {
+        if (window.innerWidth >= 1024) {
+          // On desktop, ensure sidebar is visible
+          document.getElementById('sidebar').classList.remove('-translate-x-full');
+          document.body.style.overflow = '';
+        } else {
+          // On mobile, ensure overlay is hidden when resizing to mobile
+          document.getElementById('sidebarOverlay').classList.add('hidden');
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+      handleResize(); // Initial check
+    });
+
+    // Toggle mobile sidebar (for mobile view)
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const body = document.body;
+
+      // Toggle mobile sidebar
+      sidebar.classList.toggle('mobile-open');
+      overlay.classList.toggle('hidden');
+      overlay.classList.toggle('visible');
+
+      // Toggle body scroll
+      body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
+    }
+
+    // Toggle desktop sidebar (for desktop view)
+    function toggleDesktopSidebar() {
+      // Toggle collapsed class on body
+      document.body.classList.toggle('sidebar-collapsed');
+
+      // Keep the hamburger icon the same in both states
+      const desktopHamburger = document.getElementById('desktopHamburgerBtn');
+      const icon = desktopHamburger.querySelector('i');
+      icon.className = 'fas fa-bars text-lg'; // Always keep it as bars icon
+    }
+
+    // Close sidebar function (for mobile)
+    function closeSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      sidebar.classList.remove('mobile-open');
+      overlay.classList.add('hidden');
+      overlay.classList.remove('visible');
+      document.body.style.overflow = '';
+    }
+
+    // Leaflet map for Available Fields (initialized lazily)
+    let availableFieldsMap;
+    function initAvailableFieldsMap() {
+      if (!window.L) return; // Leaflet not loaded
+      const mapEl = document.getElementById('availableFieldsMap');
+      if (!mapEl) return;
+      if (!availableFieldsMap) {
+        availableFieldsMap = L.map('availableFieldsMap');
+        // Focus map on Ormoc City, Leyte
+        const defaultCenter = [11.0064, 124.6075];
+        availableFieldsMap.setView(defaultCenter, 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(availableFieldsMap);
+
+        const form = document.getElementById('afSearchForm');
+        const input = document.getElementById('afSearchInput');
+        if (form && input) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const q = (input.value || '').trim();
+            if (!q) return;
+            try {
+              const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q), {
+                headers: { 'Accept-Language': 'en' }
+              });
+              const results = await resp.json();
+              if (Array.isArray(results) && results.length > 0) {
+                const { lat, lon, display_name } = results[0];
+                const latNum = parseFloat(lat);
+                const lonNum = parseFloat(lon);
+                availableFieldsMap.setView([latNum, lonNum], 14);
+                L.marker([latNum, lonNum]).addTo(availableFieldsMap).bindPopup(display_name || 'Location').openPopup();
+              }
+            } catch (_) { }
+          });
+        }
+      } else {
+        // Ensure correct sizing after being revealed
+        availableFieldsMap.invalidateSize();
+      }
+    }
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </body>
+
 </html>

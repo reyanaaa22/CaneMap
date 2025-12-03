@@ -17,6 +17,9 @@ import {
 import { onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { initializeDriverDashboard } from './driver-init.js';
 
+// Offline sync support
+import { initOfflineSync } from '../Common/offline-sync.js';
+
 /*
   FUNCTION:
   - Fetch the current user's Firestore document (/users/{uid})
@@ -155,6 +158,14 @@ onAuthStateChanged(auth, async (user) => {
 
     // ✅ Initialize dashboard after authentication
     initializeDriverDashboard();
+
+    // ✅ Initialize offline sync manager
+    try {
+      initOfflineSync();
+      console.log('Offline sync initialized on Driver dashboard');
+    } catch (error) {
+      console.error('Failed to initialize offline sync:', error);
+    }
 
     // ✅ Mark as initialized
     isDriverInitialized = true;
