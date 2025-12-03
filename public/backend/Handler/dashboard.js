@@ -413,14 +413,44 @@ async function loadUserProfile(user) {
       userId: user.uid
     });
 
-    // Load and display profile photo
+    // Load and display profile photo in header and sidebar
     if (userData.photoURL) {
+      // Update header profile photo
       const profilePhoto = document.getElementById('profilePhoto');
       const profileIconDefault = document.getElementById('profileIconDefault');
       if (profilePhoto) {
         profilePhoto.src = userData.photoURL;
         profilePhoto.classList.remove('hidden');
         if (profileIconDefault) profileIconDefault.classList.add('hidden');
+      }
+      
+      // Update sidebar profile photo
+      const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+      const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+      if (sidebarProfilePhoto) {
+        sidebarProfilePhoto.src = userData.photoURL;
+        sidebarProfilePhoto.classList.remove('hidden');
+        if (sidebarProfileIconDefault) sidebarProfileIconDefault.classList.add('hidden');
+      }
+    } else {
+      // No photo URL - ensure icons are visible
+      const profileIconDefault = document.getElementById('profileIconDefault');
+      const profilePhoto = document.getElementById('profilePhoto');
+      if (profilePhoto) {
+        profilePhoto.classList.add('hidden');
+      }
+      if (profileIconDefault) {
+        profileIconDefault.classList.remove('hidden');
+      }
+      
+      // Ensure sidebar icon is visible too
+      const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+      const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+      if (sidebarProfilePhoto) {
+        sidebarProfilePhoto.classList.add('hidden');
+      }
+      if (sidebarProfileIconDefault) {
+        sidebarProfileIconDefault.classList.remove('hidden');
       }
     }
 
