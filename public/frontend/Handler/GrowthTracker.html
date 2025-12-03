@@ -94,6 +94,186 @@
 }
 
 /* Tooltip bubble BELOW */
+/* Custom Mobile Dropdown Styles */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-trigger {
+  appearance: none;
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 1rem;
+  padding-right: 2.5rem;
+  text-align: left;
+  font-size: 0.875rem;
+  background: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-trigger:hover {
+  background-color: var(--cane-50);
+}
+
+.dropdown-trigger:focus {
+  outline: none;
+  background-color: var(--cane-50);
+}
+
+.dropdown-trigger-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: transform 0.3s ease;
+  color: var(--cane-600);
+}
+
+.dropdown-trigger.open .dropdown-trigger-icon {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.dropdown-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dropdown-menu.open {
+  display: flex;
+  opacity: 1;
+}
+
+.dropdown-menu-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 1rem 1rem 0 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+  z-index: 1001;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.dropdown-menu-header {
+  position: sticky;
+  top: 0;
+  padding: 1rem;
+  border-bottom: 1px solid var(--cane-200);
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 1rem 1rem 0 0;
+}
+
+.dropdown-menu-header h3 {
+  font-weight: 600;
+  color: var(--cane-900);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.dropdown-menu-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--cane-600);
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-menu-close:hover {
+  color: var(--cane-900);
+}
+
+.dropdown-options {
+  padding: 0.5rem 0;
+}
+
+.dropdown-option {
+  padding: 1rem;
+  border: none;
+  background: white;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--cane-800);
+  border-bottom: 1px solid var(--cane-100);
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdown-option:hover {
+  background-color: var(--cane-50);
+}
+
+.dropdown-option.selected {
+  background-color: var(--cane-100);
+  color: var(--cane-700);
+  font-weight: 600;
+}
+
+.dropdown-option.selected::after {
+  content: '✓';
+  color: var(--cane-600);
+  font-weight: bold;
+}
+
+/* Desktop: Use native select */
+@media (min-width: 768px) {
+  .custom-dropdown {
+    display: none;
+  }
+  
+  .native-select-wrapper {
+    display: block;
+  }
+}
+
+/* Mobile: Use custom dropdown */
+@media (max-width: 767px) {
+  .native-select-wrapper {
+    display: none;
+  }
+  
+  .custom-dropdown {
+    display: block;
+  }
+}
+
 .tooltip-text {
   transition: all 0.2s ease;
   opacity: 0;
@@ -174,13 +354,36 @@
       <!-- Field select -->
       <div class="section-card rounded-xl p-0 overflow-hidden">
         <div class="px-3 py-2 text-xs text-[var(--cane-700)] bg-[var(--cane-100)] border-b border-[var(--cane-200)] font-medium">Select Field</div>
-        <div class="relative">
+        
+        <!-- Desktop: Native Select -->
+        <div class="native-select-wrapper relative">
           <select id="gtField" class="appearance-none w-full px-4 py-2 pr-10 text-sm bg-white focus:outline-none">
             <option>Field A</option>
             <option>Field B</option>
             <option>Field C</option>
           </select>
           <i class="fa-solid fa-chevron-down absolute right-3 top-2.5 text-gray-500 text-xs"></i>
+        </div>
+        
+        <!-- Mobile: Custom Dropdown -->
+        <div class="custom-dropdown">
+          <button class="dropdown-trigger" id="dropdownTrigger">
+            <span id="dropdownTriggerText">Select a field</span>
+            <i class="fa-solid fa-chevron-down dropdown-trigger-icon"></i>
+          </button>
+          
+          <!-- Dropdown Menu -->
+          <div class="dropdown-menu" id="dropdownMenu">
+            <div class="dropdown-menu-content">
+              <div class="dropdown-menu-header">
+                <h3>Select Field</h3>
+                <button class="dropdown-menu-close" id="dropdownClose">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div class="dropdown-options" id="dropdownOptions"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -312,19 +515,26 @@
       }
     }
 
-    // Populate field dropdown
+    // Populate field dropdown (both native and custom)
     function populateFieldDropdown() {
       const fieldSelect = document.getElementById('gtField');
+      const dropdownOptions = document.getElementById('dropdownOptions');
+      const dropdownTrigger = document.getElementById('dropdownTrigger');
+      const dropdownTriggerText = document.getElementById('dropdownTriggerText');
+      
       if (!fieldSelect) return;
 
       fieldSelect.innerHTML = '';
+      if (dropdownOptions) dropdownOptions.innerHTML = '';
 
       if (userFields.length === 0) {
         fieldSelect.innerHTML = '<option>No fields available</option>';
         fieldSelect.disabled = true;
+        if (dropdownTriggerText) dropdownTriggerText.textContent = 'No fields available';
         return;
       }
 
+      // Populate native select
       userFields.forEach(field => {
         const option = document.createElement('option');
         option.value = field.id;
@@ -332,11 +542,98 @@
         fieldSelect.appendChild(option);
       });
 
+      // Populate custom dropdown
+      if (dropdownOptions) {
+        userFields.forEach((field, index) => {
+          const optionBtn = document.createElement('button');
+          optionBtn.type = 'button';
+          optionBtn.className = 'dropdown-option' + (index === 0 ? ' selected' : '');
+          optionBtn.textContent = field.field_name || field.fieldName || 'Unnamed Field';
+          optionBtn.dataset.value = field.id;
+          
+          optionBtn.addEventListener('click', async () => {
+            selectedFieldId = field.id;
+            dropdownTriggerText.textContent = field.field_name || field.fieldName || 'Unnamed Field';
+            
+            // Update selected state
+            document.querySelectorAll('.dropdown-option').forEach(opt => opt.classList.remove('selected'));
+            optionBtn.classList.add('selected');
+            
+            // Close dropdown
+            closeDropdown();
+            
+            // Load data
+            await displayFieldGrowthData(selectedFieldId);
+          });
+          
+          dropdownOptions.appendChild(optionBtn);
+        });
+      }
+
+      // Native select change handler
       fieldSelect.addEventListener('change', async (e) => {
         selectedFieldId = e.target.value;
+        const selectedField = userFields.find(f => f.id === selectedFieldId);
+        if (dropdownTriggerText && selectedField) {
+          dropdownTriggerText.textContent = selectedField.field_name || selectedField.fieldName || 'Unnamed Field';
+        }
         await displayFieldGrowthData(selectedFieldId);
       });
     }
+
+    // Custom dropdown functions
+    function openDropdown() {
+      const dropdownMenu = document.getElementById('dropdownMenu');
+      const dropdownTrigger = document.getElementById('dropdownTrigger');
+      if (dropdownMenu) dropdownMenu.classList.add('open');
+      if (dropdownTrigger) dropdownTrigger.classList.add('open');
+    }
+
+    function closeDropdown() {
+      const dropdownMenu = document.getElementById('dropdownMenu');
+      const dropdownTrigger = document.getElementById('dropdownTrigger');
+      if (dropdownMenu) dropdownMenu.classList.remove('open');
+      if (dropdownTrigger) dropdownTrigger.classList.remove('open');
+    }
+
+    // Dropdown event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      const dropdownTrigger = document.getElementById('dropdownTrigger');
+      const dropdownClose = document.getElementById('dropdownClose');
+      const dropdownMenu = document.getElementById('dropdownMenu');
+
+      if (dropdownTrigger) {
+        dropdownTrigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = dropdownMenu?.classList.contains('open');
+          if (isOpen) {
+            closeDropdown();
+          } else {
+            openDropdown();
+          }
+        });
+      }
+
+      if (dropdownClose) {
+        dropdownClose.addEventListener('click', closeDropdown);
+      }
+
+      if (dropdownMenu) {
+        dropdownMenu.addEventListener('click', (e) => {
+          if (e.target === dropdownMenu) {
+            closeDropdown();
+          }
+        });
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        const dropdown = document.querySelector('.custom-dropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+          closeDropdown();
+        }
+      });
+    });
 
     // Display field growth data
     async function displayFieldGrowthData(fieldId) {
