@@ -7,7 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteDoc, s
 import { initializeFieldsSection } from "./fields-map.js";
 import { initializeRentDriverSection } from "./rent-driver.js";
 import { initializeHandlerWorkersSection } from "./worker.js";
-import { notifyTaskDeletion } from "../Common/notifications.js";
+import { notifyTaskDeletion, createBatchNotifications } from "../Common/notifications.js";
 import { calculateDAP } from "./growth-tracker.js";
 import './analytics.js';
 
@@ -2879,7 +2879,11 @@ window.viewTaskDetails = async function(taskId) {
 
           <div>
             <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Deadline</label>
-            <p class="text-lg text-gray-900">${deadline ? deadline.toLocaleString() : 'No deadline'}</p>
+            <p id="taskDeadlineDisplay" class="text-lg text-gray-900">${deadline ? deadline.toLocaleString() : 'No deadline'}</p>
+            <div id="deadlineEditContainer" class="mt-3 hidden">
+              <input id="taskDeadlineInput" type="date" class="px-3 py-2 border rounded-md text-sm w-full" />
+              <span id="taskDeadlineError" class="text-xs text-red-600 mt-1 hidden">Please select a deadline date.</span>
+            </div>
           </div>
 
           <div>
@@ -2947,7 +2951,8 @@ window.viewTaskDetails = async function(taskId) {
           ` : ''}
         </div>
 
-        <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end">
+        <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+          <button id="updateDeadlineBtn" class="px-6 py-2.5 bg-[var(--cane-500)] text-white rounded-lg hover:bg-[var(--cane-600)] transition-colors font-medium text-base">Update Deadline</button>
           <button onclick="document.getElementById('taskDetailsModal').remove()" 
                   class="px-6 py-2.5 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors font-medium text-base">
             Close
@@ -2958,6 +2963,105 @@ window.viewTaskDetails = async function(taskId) {
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  (function(){
+    const modal = document.getElementById('taskDetailsModal');
+    if (!modal) return;
+    const updateBtn = modal.querySelector('#updateDeadlineBtn');
+    const editContainer = modal.querySelector('#deadlineEditContainer');
+    const input = modal.querySelector('#taskDeadlineInput');
+    const errorEl = modal.querySelector('#taskDeadlineError');
+    const displayEl = modal.querySelector('#taskDeadlineDisplay');
+    let confirmMode = false;
+
+    const fmtDate = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const da = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${da}`;
+    };
+    if (input && deadline) input.value = fmtDate(deadline);
+
+    const openConfirm = () => {
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+      overlay.innerHTML = `
+        <div class="bg-white rounded-xl p-6 max-w-[360px] w-full text-center shadow">
+          <h3 class="text-lg font-semibold mb-3">You are about to update the task deadline.</h3>
+          <p class="text-sm text-gray-700 mb-6">Continue?</p>
+          <div class="flex justify-center gap-3">
+            <button id="ud_cancel" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Cancel</button>
+            <button id="ud_yes" class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white hover:bg-[var(--cane-800)]">Yes</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      const close = () => overlay.remove();
+      overlay.querySelector('#ud_cancel').addEventListener('click', close);
+      overlay.querySelector('#ud_yes').addEventListener('click', () => {
+        close();
+        confirmMode = true;
+        if (editContainer) editContainer.classList.remove('hidden');
+        if (updateBtn) updateBtn.textContent = 'Confirm Update';
+        if (input && !input.value && deadline) input.value = fmtDate(deadline);
+        if (errorEl) { errorEl.textContent=''; errorEl.classList.add('hidden'); }
+      });
+    };
+
+    const showSuccess = (msg) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+      overlay.innerHTML = `
+        <div class="bg-white rounded-xl p-6 max-w-[360px] w-full text-center shadow">
+          <h3 class="text-lg font-semibold mb-3">Task updated successfully.</h3>
+          <p class="text-sm text-gray-700 mb-6">${msg}</p>
+          <div class="flex justify-center">
+            <button id="ud_ok" class="px-5 py-2 bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white rounded-lg font-medium">OK</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#ud_ok').addEventListener('click', () => overlay.remove());
+    };
+
+    updateBtn && updateBtn.addEventListener('click', async () => {
+      if (!confirmMode) { openConfirm(); return; }
+      if (!input || !input.value) {
+        if (errorEl) { errorEl.textContent='Please select a deadline date.'; errorEl.classList.remove('hidden'); }
+        return;
+      }
+      try {
+        const selected = new Date(input.value);
+        await updateDoc(doc(db, 'tasks', taskId), { deadline: selected });
+        if (displayEl) displayEl.textContent = selected.toLocaleString();
+        const assigned = Array.isArray(task.assignedTo) ? task.assignedTo : [];
+        if (assigned.length > 0) {
+          const taskName = task.title || task.task || task.taskType || 'Task';
+          const msg = `Deadline updated: ${taskName} at ${field.name}. New: ${selected.toLocaleDateString()}`;
+          try { await createBatchNotifications(assigned, msg, 'task_updated', taskId); } catch(_) {}
+        }
+        showSuccess('The deadline has been updated and assigned users notified.');
+      } catch (err) {
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 z-[23000] flex items-center justify-center bg-black/40';
+        overlay.innerHTML = `
+          <div class="bg-white rounded-xl p-6 max-w-[360px] w-full text-center shadow">
+            <h3 class="text-lg font-semibold mb-3 text-red-600">Error</h3>
+            <p class="text-sm text-gray-700 mb-6">Failed to update deadline.</p>
+            <div class="flex justify-center">
+              <button id="ud_err_ok" class="px-5 py-2 bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white rounded-lg font-medium">OK</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#ud_err_ok').addEventListener('click', () => overlay.remove());
+        return;
+      }
+      confirmMode = false;
+      if (editContainer) editContainer.classList.add('hidden');
+      if (updateBtn) updateBtn.textContent = 'Update Deadline';
+    });
+  })();
 };
 
 /**
@@ -3419,4 +3523,3 @@ window.__syncDashboardProfile = async function() {
         console.error('Profile sync error:', e);
     }
 };
-
