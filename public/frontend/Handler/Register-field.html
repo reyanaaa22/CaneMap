@@ -117,6 +117,152 @@
   animation: spin 1s linear infinite;
 }
 
+/* Custom Mobile Dropdown Styles */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-trigger {
+  appearance: none;
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 1rem;
+  padding-right: 2.5rem;
+  text-align: left;
+  font-size: 0.95rem;
+  background: white;
+  border: 2px solid var(--cane-300);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  color: var(--cane-900);
+  font-weight: 500;
+}
+
+.dropdown-trigger:hover {
+  border-color: var(--cane-400);
+  background-color: var(--cane-50);
+}
+
+.dropdown-trigger:focus {
+  outline: none;
+  border-color: var(--cane-500);
+  box-shadow: 0 0 0 3px rgba(124, 207, 0, 0.1);
+}
+
+.dropdown-trigger-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: transform 0.3s ease;
+  color: var(--cane-600);
+}
+
+.dropdown-trigger.open .dropdown-trigger-icon {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: none;
+  border-radius: 0 0 0.5rem 0.5rem;
+  max-height: 0;
+  overflow: hidden;
+  z-index: 1000;
+  transition: max-height 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: -2px;
+}
+
+.dropdown-menu.open {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-menu-content {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-menu-header {
+  display: none;
+}
+
+.dropdown-menu-close {
+  display: none;
+}
+
+.dropdown-options {
+  padding: 0;
+}
+
+.dropdown-option {
+  padding: 0.75rem 1rem;
+  border: none;
+  background: white;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--cane-800);
+  border-bottom: 1px solid var(--cane-100);
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdown-option:last-child {
+  border-bottom: none;
+}
+
+.dropdown-option:hover {
+  background-color: var(--cane-100);
+}
+
+.dropdown-option.selected {
+  background-color: var(--cane-200);
+  color: var(--cane-700);
+  font-weight: 600;
+}
+
+.dropdown-option.selected::after {
+  content: '✓';
+  color: var(--cane-600);
+  font-weight: bold;
+}
+
+/* Desktop: Use native select */
+@media (min-width: 768px) {
+  .custom-dropdown {
+    display: none;
+  }
+  
+  .native-select-wrapper {
+    display: block;
+  }
+}
+
+/* Mobile: Use custom dropdown */
+@media (max-width: 767px) {
+  .native-select-wrapper {
+    display: none;
+  }
+  
+  .custom-dropdown {
+    display: block;
+  }
+}
+
 </style>
 
 </head>
@@ -1081,6 +1227,130 @@ function populateBarangayDropdown() {
 // 🟩 Global variables accessible to Register-field.js
 window.selectedBarangay = "";
 window.getFieldCoordinates = () => fieldCoordinates;
+
+// ✅ Initialize custom dropdowns for mobile
+function initializeCustomDropdowns() {
+  const selectElements = document.querySelectorAll('select.form-select');
+  
+  selectElements.forEach((select) => {
+    const selectId = select.id;
+    const selectName = select.getAttribute('data-label') || select.name || 'Select';
+    const parentDiv = select.parentElement;
+    
+    // Create wrapper for both native and custom
+    const wrapper = document.createElement('div');
+    wrapper.className = 'dropdown-wrapper';
+    
+    // Create native select wrapper
+    const nativeWrapper = document.createElement('div');
+    nativeWrapper.className = 'native-select-wrapper relative';
+    select.classList.add('form-select');
+    const clonedSelect = select.cloneNode(true);
+    nativeWrapper.appendChild(clonedSelect);
+    
+    // Create custom dropdown
+    const customDropdown = document.createElement('div');
+    customDropdown.className = 'custom-dropdown';
+    customDropdown.innerHTML = `
+      <button class="dropdown-trigger" type="button">
+        <span class="dropdown-trigger-text">Select...</span>
+        <i class="fa-solid fa-chevron-down dropdown-trigger-icon"></i>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-menu-content">
+          <div class="dropdown-options"></div>
+        </div>
+      </div>
+    `;
+    
+    // Populate custom dropdown options
+    const dropdownOptions = customDropdown.querySelector('.dropdown-options');
+    const originalSelect = select;
+    
+    Array.from(clonedSelect.options).forEach((option, index) => {
+      if (option.value === '') return; // Skip placeholder
+      
+      const optionBtn = document.createElement('button');
+      optionBtn.type = 'button';
+      optionBtn.className = 'dropdown-option';
+      optionBtn.textContent = option.textContent;
+      optionBtn.dataset.value = option.value;
+      
+      optionBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Update both original and cloned select
+        originalSelect.value = option.value;
+        clonedSelect.value = option.value;
+        // Update trigger text
+        customDropdown.querySelector('.dropdown-trigger-text').textContent = option.textContent;
+        // Update selected state
+        customDropdown.querySelectorAll('.dropdown-option').forEach(opt => opt.classList.remove('selected'));
+        optionBtn.classList.add('selected');
+        // Close dropdown
+        closeCustomDropdown(customDropdown);
+        // Trigger change event on both
+        originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        clonedSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      
+      dropdownOptions.appendChild(optionBtn);
+    });
+    
+    // Add event listeners
+    const trigger = customDropdown.querySelector('.dropdown-trigger');
+    const menu = customDropdown.querySelector('.dropdown-menu');
+    
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = menu.classList.contains('open');
+      if (isOpen) {
+        closeCustomDropdown(customDropdown);
+      } else {
+        openCustomDropdown(customDropdown);
+      }
+    });
+    
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (!customDropdown.contains(e.target)) {
+        closeCustomDropdown(customDropdown);
+      }
+    });
+    
+    // Hide original select (remove required attribute to prevent validation errors)
+    originalSelect.style.display = 'none';
+    originalSelect.removeAttribute('required');
+    
+    // Make the cloned select required instead (for form validation)
+    clonedSelect.required = true;
+    
+    // Replace original select with wrapper
+    parentDiv.replaceChild(nativeWrapper, select);
+    nativeWrapper.insertAdjacentElement('afterend', customDropdown);
+  });
+}
+
+function openCustomDropdown(dropdown) {
+  const menu = dropdown.querySelector('.dropdown-menu');
+  const trigger = dropdown.querySelector('.dropdown-trigger');
+  if (menu) menu.classList.add('open');
+  if (trigger) trigger.classList.add('open');
+}
+
+function closeCustomDropdown(dropdown) {
+  const menu = dropdown.querySelector('.dropdown-menu');
+  const trigger = dropdown.querySelector('.dropdown-trigger');
+  if (menu) menu.classList.remove('open');
+  if (trigger) trigger.classList.remove('open');
+}
+
+// Initialize custom dropdowns when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    initializeCustomDropdowns();
+  }, 500);
+});
 
 </script>
 
