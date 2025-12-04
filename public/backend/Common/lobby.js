@@ -4764,42 +4764,43 @@ setInterval(updateDriverBadgePromoVisibility, 400);
   });
 
   window.addEventListener("resize", debounce(updateHeaderButtonsForViewport, 120));
+  
+  // Auto-update header when role or pending status changes
+  let lastRole = (localStorage.getItem("userRole") || "").toLowerCase();
+  let lastPendingWorker = localStorage.getItem("pendingWorker");
+  let lastPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
+  let lastPendingFieldApp = localStorage.getItem("pendingFieldApplication");
+  let lastPendingJoinField = localStorage.getItem("pendingJoinField");
+
+  setInterval(() => {
+    const newRole = (localStorage.getItem("userRole") || "").toLowerCase();
+    const newPendingWorker = localStorage.getItem("pendingWorker");
+    const newPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
+    const newPendingFieldApp = localStorage.getItem("pendingFieldApplication");
+    const newPendingJoinField = localStorage.getItem("pendingJoinField");
+
+    if (
+      newRole !== lastRole ||
+      newPendingWorker !== lastPendingWorker ||
+      newPendingDriverBadge !== lastPendingDriverBadge ||
+      newPendingFieldApp !== lastPendingFieldApp ||
+      newPendingJoinField !== lastPendingJoinField
+    ) {
+      try {
+        updateHeaderButtonsForViewport();
+      } catch (e) {
+        console.warn("Header update failed:", e);
+      }
+    }
+
+    lastRole = newRole;
+    lastPendingWorker = newPendingWorker;
+    lastPendingDriverBadge = newPendingDriverBadge;
+    lastPendingFieldApp = newPendingFieldApp;
+    lastPendingJoinField = newPendingJoinField;
+  }, 400);
 })();
 
-/* === AUTO UPDATE HEADER WHEN ROLE OR PENDING STATUS CHANGES === */
-
-// Save previous values for comparison
-let lastRole = (localStorage.getItem("userRole") || "").toLowerCase();
-let lastPendingWorker = localStorage.getItem("pendingWorker");
-let lastPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
-let lastPendingFieldApp = localStorage.getItem("pendingFieldApplication");
-let lastPendingJoinField = localStorage.getItem("pendingJoinField");
-
-// Re-run header update every 400ms if values changed
-setInterval(() => {
-  const newRole = (localStorage.getItem("userRole") || "").toLowerCase();
-  const newPendingWorker = localStorage.getItem("pendingWorker");
-  const newPendingDriverBadge = localStorage.getItem("pendingDriverBadge");
-  const newPendingFieldApp = localStorage.getItem("pendingFieldApplication");
-  const newPendingJoinField = localStorage.getItem("pendingJoinField");
-
-  if (
-    newRole !== lastRole ||
-    newPendingWorker !== lastPendingWorker ||
-    newPendingDriverBadge !== lastPendingDriverBadge ||
-    newPendingFieldApp !== lastPendingFieldApp ||
-    newPendingJoinField !== lastPendingJoinField
-  ) {
-    console.log("🔄 Header updated automatically.");
-    updateHeaderButtonsForViewport();
-  }
-
-  lastRole = newRole;
-  lastPendingWorker = newPendingWorker;
-  lastPendingDriverBadge = newPendingDriverBadge;
-  lastPendingFieldApp = newPendingFieldApp;
-  lastPendingJoinField = newPendingJoinField;
-}, 400);
 
 // =======================
 // SHOW/HIDE HEADER DRIVER BADGE LINK
