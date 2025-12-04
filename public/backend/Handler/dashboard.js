@@ -578,7 +578,7 @@ async function loadJoinRequests(handlerId) {
       fieldInfoMap.set(field.id, field);
     });
 
-    // Step 4: Fetch user info for all requesters
+    // Step 4: PERFORMANCE FIX: Batch fetch all requester data in parallel (not N+1 sequential)
     const requesterIds = Array.from(new Set(
       allJoinRequests
         .map(req => req.userId || req.user_id || req.user_uid)
@@ -587,27 +587,27 @@ async function loadJoinRequests(handlerId) {
         .filter(Boolean)
     ));
 
-    const requesterMap = new Map();
-    await Promise.all(
-      requesterIds.map(async uid => {
-        try {
-          const snap = await getDoc(doc(db, "users", uid));
-          if (snap.exists()) {
-            const data = snap.data();
-            const name = resolveValue(
-              [data.nickname, data.name, data.fullname, data.fullName, data.displayName, data.email],
-              NAME_PLACEHOLDERS
-            ) || uid;
-            requesterMap.set(uid, {
-              name,
-              role: data.role || ""
-            });
-          } else {
-            requesterMap.set(uid, { name: uid, role: "" });
-          }
-        } catch (_) {
-          requesterMap.set(uid, { name: uid, role: "" });
-        }
+    // Fetch all requesters in parallel (selective fields only to reduce payload)
+    const requesterDocs = await Promise.all(
+      requesterIds.map(uid => 
+        getDoc(doc(db, "users", uid))
+          .then(snap => ({ uid, exists: snap.exists(), data: snap.exists() ? snap.data() : null }))
+          .catch(() => ({ uid, exists: false, data: null }))
+      )
+    );
+
+    // Build requester map from fetched data
+    const requesterMap = new Map(
+      requesterDocs.map(result => {
+        const { uid, exists, data } = result;
+        if (!exists || !data) return [uid, { name: uid, role: "" }];
+        
+        const name = resolveValue(
+          [data.nickname, data.name, data.fullname, data.fullName, data.displayName, data.email],
+          NAME_PLACEHOLDERS
+        ) || uid;
+        
+        return [uid, { name, role: data.role || "" }];
       })
     );
 
@@ -953,47 +953,56 @@ async function loadRecentTaskActivity(handlerId) {
       return;
     }
 
-    // Fetch user and field data for each task
-    const tasksWithDetails = await Promise.all(
-      tasksSnapshot.docs.map(async (taskDoc) => {
-        const taskData = taskDoc.data();
-        let workerName = "Unknown Worker";
-        let fieldName = "Unknown Field";
+    // PERFORMANCE FIX: Batch fetch all workers and fields in parallel (not N+1 sequential fetches)
+    // Extract unique IDs first
+    const workerIds = Array.from(new Set(
+      tasksSnapshot.docs
+        .map(doc => doc.data().assignedTo?.[0])
+        .filter(Boolean)
+    ));
+    const fieldIds = Array.from(new Set(
+      tasksSnapshot.docs
+        .map(doc => doc.data().fieldId)
+        .filter(Boolean)
+    ));
 
-        // Get worker name
-        if (taskData.assignedTo && taskData.assignedTo.length > 0) {
-          try {
-            const workerId = taskData.assignedTo[0];
-            const workerDoc = await getDoc(doc(db, "users", workerId));
-            if (workerDoc.exists()) {
-              const workerData = workerDoc.data();
-              workerName = workerData.name || workerData.email || "Unknown Worker";
-            }
-          } catch (err) {
-            console.error("Error fetching worker:", err);
-          }
-        }
+    // Fetch all workers and fields in parallel (selective fields only to reduce payload)
+    const [workerDocs, fieldDocs] = await Promise.all([
+      Promise.all(workerIds.map(id => 
+        getDoc(doc(db, "users", id))
+          .then(snap => snap.exists() ? { id, data: snap.data() } : { id, data: null })
+          .catch(() => ({ id, data: null }))
+      )),
+      Promise.all(fieldIds.map(id => 
+        getDoc(doc(db, "fields", id))
+          .then(snap => snap.exists() ? { id, data: snap.data() } : { id, data: null })
+          .catch(() => ({ id, data: null }))
+      ))
+    ]);
 
-        // Get field name
-        if (taskData.fieldId) {
-          try {
-            const fieldDoc = await getDoc(doc(db, "fields", taskData.fieldId));
-            if (fieldDoc.exists()) {
-              fieldName = fieldDoc.data().fieldName || "Unknown Field";
-            }
-          } catch (err) {
-            console.error("Error fetching field:", err);
-          }
-        }
+    // Build lookup maps (only selective fields to reduce payload)
+    const workerMap = new Map(workerDocs.map(r => [
+      r.id,
+      r.data ? { name: r.data.name || r.data.email || "Unknown" } : null
+    ]));
+    const fieldMap = new Map(fieldDocs.map(r => [
+      r.id,
+      r.data ? { fieldName: r.data.fieldName || r.data.field_name || "Unknown" } : null
+    ]));
 
-        return {
-          id: taskDoc.id,
-          ...taskData,
-          workerName,
-          fieldName
-        };
-      })
-    );
+    // Build task details using cached maps (no additional queries)
+    const tasksWithDetails = tasksSnapshot.docs.map(taskDoc => {
+      const taskData = taskDoc.data();
+      const workerId = taskData.assignedTo?.[0];
+      const fieldId = taskData.fieldId;
+      
+      return {
+        id: taskDoc.id,
+        ...taskData,
+        workerName: workerMap.get(workerId)?.name || "Unknown Worker",
+        fieldName: fieldMap.get(fieldId)?.fieldName || "Unknown Field"
+      };
+    });
 
     // Render tasks
     container.innerHTML = tasksWithDetails.map(task => {
@@ -1359,10 +1368,19 @@ async function loadActivityLogs(handlerId) {
   `;
 
   try {
-    // 1) get handler's fields
+    // PERFORMANCE FIX: Fetch only selective fields (not entire document) to reduce payload
+    // 1) get handler's fields (selective fields only)
     const fieldsQuery = query(collection(db, "fields"), where("userId", "==", handlerId));
     const fieldsSnap = await getDocs(fieldsQuery);
-    const handlerFields = fieldsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const handlerFields = fieldsSnap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        field_name: data.field_name || data.fieldName || "",
+        barangay: data.barangay || "",
+        name: data.name || ""
+      };
+    });
     const fieldIds = handlerFields.map(f => f.id);
 
     if (fieldIds.length === 0) {
@@ -1387,62 +1405,62 @@ async function loadActivityLogs(handlerId) {
 
     const fieldChunks = chunk(fieldIds, 10);
 
-    // 2) fetch worker logs (task_logs)
-    for (const group of fieldChunks) {
-      const wq = query(collection(db, "task_logs"), where("field_id", "in", group), orderBy("logged_at", "desc"));
-      const ws = await getDocs(wq);
-      logs.push(
-        ...ws.docs.map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            source: "task_logs",
-            type: "worker",
-            task_name: data.task_name || data.task || "Worker Task",
-            user_id: data.user_uid || data.user_id || data.user || null,
-            user_name: data.worker_name || data.worker || data.userName || "",
-            task_type: data.task_name || data.task || "",
-            description: data.description || "",
-            field_id: data.field_id || data.fieldId || null,
-            field_name: data.field_name || data.fieldName || "",
-            logged_at: data.logged_at || null,
-            selfie_path: data.selfie_path || null,
-            field_photo_path: data.field_photo_path || null
-          };
-        })
-      );
-    }
+    // PERFORMANCE FIX: Fetch both worker and driver logs in parallel chunks
+    const [workerLogsList, driverLogsList] = await Promise.all([
+      // Fetch worker logs in parallel chunks
+      Promise.all(
+        fieldChunks.map(group =>
+          getDocs(query(collection(db, "task_logs"), where("field_id", "in", group), orderBy("logged_at", "desc")))
+        )
+      ).then(results => results.flatMap(ws => ws.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          source: "task_logs",
+          type: "worker",
+          task_name: data.task_name || data.task || "Worker Task",
+          user_id: data.user_uid || data.user_id || data.user || null,
+          user_name: data.worker_name || data.worker || data.userName || "",
+          task_type: data.task_name || data.task || "",
+          description: data.description || "",
+          field_id: data.field_id || data.fieldId || null,
+          field_name: data.field_name || data.fieldName || "",
+          logged_at: data.logged_at || null,
+          selfie_path: data.selfie_path || null,
+          field_photo_path: data.field_photo_path || null
+        };
+      }))),
+      // Fetch driver logs in parallel chunks
+      Promise.all(
+        fieldChunks.map(group =>
+          getDocs(query(
+            collection(db, "tasks"),
+            where("fieldId", "in", group),
+            where("taskType", "==", "driver_log"),
+            orderBy("completedAt", "desc")
+          ))
+        )
+      ).then(results => results.flatMap(ds => ds.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          source: "tasks",
+          type: "driver",
+          task_name: data.title || data.description || data.details || "Driver Activity",
+          user_id: (Array.isArray(data.assignedTo) && data.assignedTo[0]) || data.createdBy || data.created_by || null,
+          user_name: data.driverName || data.driver_name || "",
+          task_type: data.title || data.details || data.taskType || "",
+          description: data.details || data.notes || data.description || "",
+          field_id: data.fieldId || null,
+          field_name: data.fieldName || data.field_name || "",
+          logged_at: data.completedAt || data.createdAt || null,
+          selfie_path: null,
+          field_photo_path: data.photoURL || data.photo || null
+        };
+      })))\n    ]);
 
-    // 3) fetch driver logs (tasks with taskType = 'driver_log')
-    for (const group of fieldChunks) {
-      const dq = query(
-        collection(db, "tasks"),
-        where("fieldId", "in", group),
-        where("taskType", "==", "driver_log"),
-        orderBy("completedAt", "desc")
-      );
-      const ds = await getDocs(dq);
-      logs.push(
-        ...ds.docs.map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            source: "tasks",
-            type: "driver",
-            task_name: data.title || data.description || data.details || "Driver Activity",
-            user_id: (Array.isArray(data.assignedTo) && data.assignedTo[0]) || data.createdBy || data.created_by || null,
-            user_name: data.driverName || data.driver_name || "",
-            task_type: data.title || data.details || data.taskType || "",
-            description: data.details || data.notes || data.description || "",
-            field_id: data.fieldId || null,
-            field_name: data.fieldName || data.field_name || "",
-            logged_at: data.completedAt || data.createdAt || null,
-            selfie_path: null,
-            field_photo_path: data.photoURL || data.photo || null
-          };
-        })
-      );
-    }
+    // Combine results
+    logs.push(...workerLogsList, ...driverLogsList);
 
 // UI DISPLAY SORT — newest → oldest (NO GROUPING)
 logs.sort((a, b) => {

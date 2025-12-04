@@ -444,11 +444,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      const frontURL = await uploadBase64(validFront, "valid_front");
-      const backURL = await uploadBase64(validBack, "valid_back");
-      const selfieURL = await uploadBase64(selfie, "selfie");
-      const barangayURL = barangayCert ? await uploadBase64(barangayCert, "barangay_certificate") : "";
-      const landTitleURL = landTitle ? await uploadBase64(landTitle, "land_title") : "";
+      // Upload all images in parallel instead of sequentially (faster on slow internet)
+      const [frontURL, backURL, selfieURL, barangayURL, landTitleURL] = await Promise.all([
+        uploadBase64(validFront, "valid_front"),
+        uploadBase64(validBack, "valid_back"),
+        uploadBase64(selfie, "selfie"),
+        barangayCert ? uploadBase64(barangayCert, "barangay_certificate") : Promise.resolve(""),
+        landTitle ? uploadBase64(landTitle, "land_title") : Promise.resolve("")
+      ]);
 
       // REQ-10: Get field boundary coordinates from map
       const rawCoordinates = window.getFieldCoordinates ? window.getFieldCoordinates() : [];
@@ -495,19 +498,14 @@ document.addEventListener("DOMContentLoaded", () => {
         landTitleUrl: landTitleURL
       };
 
-      // ✅ Write to fields collection only (single source of truth)
+      // Write field document and create SRA notification in parallel (faster)
       let fieldDocRef;
       try {
         fieldDocRef = await addDoc(collection(db, "fields"), fieldPayload);
         console.log("✅ Field registration completed, document ID:", fieldDocRef.id);
-      } catch (err) {
-        console.error("❌ Field registration failed:", err);
-        throw new Error("Failed to register field: " + err.message);
-      }
-
-      // Notify SRA officers about new field registration
-      try {
-        await addDoc(collection(db, 'notifications'), {
+        
+        // Send SRA notification without waiting (fire and forget to avoid delays)
+        addDoc(collection(db, 'notifications'), {
           role: 'sra', // Broadcast to all SRA officers
           title: 'New Field Registration',
           message: `A new field "${fieldName}" has been registered in ${barangay} and requires review.`,
@@ -516,11 +514,13 @@ document.addEventListener("DOMContentLoaded", () => {
           status: 'unread',
           timestamp: serverTimestamp(),
           createdAt: serverTimestamp()
+        }).catch(err => {
+          console.warn("⚠️ Failed to create SRA notification (non-critical):", err);
+          // Don't throw - this is non-critical, field was still registered
         });
-        console.log("✅ SRA notification created");
       } catch (err) {
-        console.warn("⚠️ Failed to create SRA notification (non-critical):", err);
-        // Don't throw - this is non-critical, field was still registered
+        console.error("❌ Field registration failed:", err);
+        throw new Error("Failed to register field: " + err.message);
       }
 
       // Show crisp success modal
