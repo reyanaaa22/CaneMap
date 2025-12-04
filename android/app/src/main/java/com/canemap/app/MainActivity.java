@@ -57,6 +57,7 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
 
+<<<<<<< HEAD
             // Handle download requests coming from WebView
             webView.setDownloadListener(new DownloadListener() {
                 @Override
@@ -83,6 +84,45 @@ public class MainActivity extends BridgeActivity {
                     }
                 }
             });
+=======
+// Handle download requests coming from WebView
+webView.setDownloadListener(new DownloadListener() {
+    @Override
+    public void onDownloadStart(String url, String userAgent, String contentDisposition,
+                                String mimetype, long contentLength) {
+
+        // 🔥 FIX: Prevent downloading HTML/JS/CSS pages
+        if (
+            url.endsWith(".html") || url.endsWith(".htm") ||
+            url.contains(".html?") || url.contains(".htm?") ||
+            (mimetype != null && mimetype.equals("text/html")) ||
+            (mimetype != null && mimetype.equals("text/plain"))
+        ) {
+            System.out.println("⛔ BLOCKED download of HTML page: " + url);
+            return; // Don't download — WebView should load it normally
+        }
+
+        if (checkStoragePermission()) {
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setMimeType(mimetype);
+            request.addRequestHeader("User-Agent", userAgent);
+            request.setDescription("Downloading file...");
+            request.setTitle("CaneMap Download");
+            request.allowScanningByMediaScanner();
+            request.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            );
+            request.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    getFileNameFromUrl(url, contentDisposition)
+            );
+
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            dm.enqueue(request);
+        }
+    }
+});
+>>>>>>> 332aba6b73bc6fec1a91fb8e517fb10dfb3fb346
 
             // JS interface for downloads & permissions
             webView.addJavascriptInterface(new Object() {
