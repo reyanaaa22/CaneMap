@@ -1815,23 +1815,28 @@ document.getElementById("toggleActivityFilters").addEventListener("click", () =>
 const downloadToggle = document.getElementById("downloadToggle");
 const downloadMenu = document.getElementById("downloadMenu");
 
-downloadToggle.addEventListener("click", () => {
-  downloadMenu.classList.toggle("hidden");
-});
+if (downloadToggle && downloadMenu) {
+  downloadToggle.addEventListener("click", () => {
+    downloadMenu.classList.toggle("hidden");
+  });
 
-// close when clicking outside
-document.addEventListener("click", (e) => {
-  if (!downloadToggle.contains(e.target) && !downloadMenu.contains(e.target)) {
-    downloadMenu.classList.add("hidden");
-  }
-});
+  // close when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!downloadToggle.contains(e.target) && !downloadMenu.contains(e.target)) {
+      downloadMenu.classList.add("hidden");
+    }
+  });
+}
 
 // Close modal when clicking outside
-document.getElementById("activityLogDetailsModal").addEventListener("click", (e) => {
-  if (e.target.id === "activityLogDetailsModal") {
-    closeActivityLogDetails();
-  }
-});
+const activityLogDetailsModal = document.getElementById("activityLogDetailsModal");
+if (activityLogDetailsModal) {
+  activityLogDetailsModal.addEventListener("click", (e) => {
+    if (e.target.id === "activityLogDetailsModal") {
+      closeActivityLogDetails();
+    }
+  });
+}
 
 // Activity Log Modal Functions
 function openActivityLogDetails(logId) {

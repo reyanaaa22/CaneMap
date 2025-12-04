@@ -918,9 +918,8 @@ async function loadRecentTaskActivity(handlerId) {
       where("userId", "==", handlerId)
     );
     const fieldsSnapshot = await getDocs(fieldsQuery);
-    const fieldIds = fieldsSnapshot.docs.map(doc => doc.id);
 
-    if (fieldIds.length === 0) {
+    if (fieldsSnapshot.docs.length === 0) {
       container.innerHTML = `
         <div class="text-center py-8">
           <i class="fas fa-map-marked-alt text-4xl text-gray-300 mb-3"></i>
