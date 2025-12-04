@@ -14,10 +14,24 @@ const OFFLINE_PAGES = [
     '/backend/Common/ui-popup.js',
     '/backend/Common/firebase-config.js',
     // Add Font Awesome for icons
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    // Add Tailwind CSS
-    'https://cdn.tailwindcss.com'
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+    // Note: Tailwind CDN removed due to CORS issues - use local CSS instead
 ];
+
+// Helper function to check if request can be cached
+function isCacheableRequest(request) {
+    // Don't cache non-GET requests
+    if (request.method !== 'GET') {
+        return false;
+    }
+    
+    // Don't cache chrome-extension or other non-http(s) schemes
+    if (!request.url.startsWith('http://') && !request.url.startsWith('https://')) {
+        return false;
+    }
+    
+    return true;
+}
 
 // Install event - cache essential files
 self.addEventListener('install', (event) => {
@@ -72,10 +86,14 @@ self.addEventListener('fetch', (event) => {
             fetch(request)
                 .then((response) => {
                     // If online, return network response and update cache
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
+                    if (isCacheableRequest(request) && response.status === 200) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, responseClone).catch((err) => {
+                                console.warn('Service Worker: Failed to cache response:', err);
+                            });
+                        });
+                    }
                     return response;
                 })
                 .catch(() => {
@@ -105,11 +123,13 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    // Cache successful responses
-                    if (response.status === 200) {
+                    // Cache successful responses only if they're cacheable
+                    if (response.status === 200 && isCacheableRequest(request)) {
                         const responseClone = response.clone();
                         caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
+                            cache.put(request, responseClone).catch((err) => {
+                                console.warn('Service Worker: Failed to cache response:', err);
+                            });
                         });
                     }
                     return response;
