@@ -37,10 +37,10 @@ function escapeHtml(str) {
 // Helper function to get delivery status options based on task type
 function getDeliveryStatusOptions(taskType) {
   const taskValue = (taskType || '').toLowerCase().trim();
-  
+
   // Group A: Transport Materials, Fertilizer, Equipment
-  if (taskValue.includes('transport_materials') || taskValue.includes('transport_fertilizer') || taskValue.includes('transport_equipment') || 
-      taskValue.includes('transport materials') || taskValue.includes('transport fertilizer') || taskValue.includes('transport equipment')) {
+  if (taskValue.includes('transport_materials') || taskValue.includes('transport_fertilizer') || taskValue.includes('transport_equipment') ||
+    taskValue.includes('transport materials') || taskValue.includes('transport fertilizer') || taskValue.includes('transport equipment')) {
     return [
       { value: 'preparing_to_load', label: 'Preparing to Load', icon: 'fa-box' },
       { value: 'loading_at_warehouse', label: 'Loading at Warehouse', icon: 'fa-truck-loading' },
@@ -53,7 +53,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
     ];
   }
-  
+
   // Group B: Transport Cane from Field to Mill
   if (taskValue.includes('transport_cane_to_mill') || taskValue.includes('transport cane from field to mill')) {
     return [
@@ -68,7 +68,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
     ];
   }
-  
+
   // Group C: Deliver Cane to Collection Points
   if (taskValue.includes('deliver_to_collection') || taskValue.includes('deliver cane to collection')) {
     return [
@@ -82,7 +82,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'vehicle_breakdown', label: 'Vehicle Breakdown', icon: 'fa-tools' }
     ];
   }
-  
+
   // Group D: Check Cane Weight at Weighbridge
   if (taskValue.includes('check_cane_weight') || taskValue.includes('check cane weight')) {
     return [
@@ -95,7 +95,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
     ];
   }
-  
+
   // Group E: Bring Empty Trucks Back to Fields
   if (taskValue.includes('return_empty_truck') || taskValue.includes('bring empty trucks')) {
     return [
@@ -107,7 +107,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'vehicle_breakdown', label: 'Vehicle Breakdown', icon: 'fa-tools' }
     ];
   }
-  
+
   // Group F: Vehicle Maintenance/Inspection
   if (taskValue.includes('vehicle_maintenance') || taskValue.includes('vehicle maintenance')) {
     return [
@@ -119,7 +119,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
     ];
   }
-  
+
   // Group G: Fuel Refill
   if (taskValue.includes('fuel_refill') || taskValue.includes('fuel refill')) {
     return [
@@ -131,7 +131,7 @@ function getDeliveryStatusOptions(taskType) {
       { value: 'delayed', label: 'Delayed', icon: 'fa-clock' }
     ];
   }
-  
+
   // Group H: Others (Default statuses)
   return [
     { value: 'in_progress', label: 'In Progress', icon: 'fa-spinner' },
@@ -304,27 +304,25 @@ function renderFieldsList(fields) {
           <div class="flex items-center gap-2 mb-1">
             <i class="fas fa-map-marked-alt text-[var(--cane-500)]"></i>
             <p class="font-semibold text-[var(--cane-900)] text-lg">${escapeHtml(
-              fieldName
-            )}</p>
+        fieldName
+      )}</p>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-sm text-[var(--cane-600)]">
             <p><i class="fas fa-ruler-combined text-[var(--cane-400)] mr-2"></i>Area: ${escapeHtml(
-              area
-            )} hectares</p>
+        area
+      )} hectares</p>
             <p><i class="fas fa-seedling text-[var(--cane-400)] mr-2"></i>Variety: ${escapeHtml(
-              variety
-            )}</p>
-            ${
-              location
-                ? `<p class="md:col-span-2"><i class="fas fa-location-dot text-[var(--cane-400)] mr-2"></i>${escapeHtml(
-                    location
-                  )}</p>`
-                : ""
-            }
+        variety
+      )}</p>
+            ${location
+          ? `<p class="md:col-span-2"><i class="fas fa-location-dot text-[var(--cane-400)] mr-2"></i>${escapeHtml(
+            location
+          )}</p>`
+          : ""
+        }
           </div>
         </div>
-        <button onclick="viewFieldDetails('${
-          field.id
+        <button onclick="viewFieldDetails('${field.id
         }')" class="ml-4 px-4 py-2 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg transition-colors font-medium">
           <i class="fas fa-eye mr-2"></i>View Details
         </button>
@@ -359,9 +357,8 @@ function renderTasksList(tasks) {
     tasksList.innerHTML = `
       <div class="text-center py-12 text-gray-500">
         <i class="fas fa-inbox text-4xl mb-3"></i>
-        <p class="text-lg font-medium">No ${
-          filter === "all" ? "" : filter
-        } tasks</p>
+        <p class="text-lg font-medium">No ${filter === "all" ? "" : filter
+      } tasks</p>
       </div>
     `;
     return;
@@ -386,35 +383,32 @@ function renderTasksList(tasks) {
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-2 flex-wrap">
-              <h3 class="font-semibold text-[var(--cane-900)]">${
-                task.title
-              }</h3>
+              <h3 class="font-semibold text-[var(--cane-900)]">${task.title
+        }</h3>
               <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
                 <i class="fas ${statusIcon} mr-1"></i>${task.status}
               </span>
               ${task.driverDeliveryStatus && task.driverDeliveryStatus.status ? (() => {
-                const statusOpts = getDeliveryStatusOptions(task.title);
-                const statusOpt = statusOpts.find(opt => opt.value === task.driverDeliveryStatus.status);
-                const statusLabel = statusOpt ? statusOpt.label : task.driverDeliveryStatus.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                return `<span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(task.driverDeliveryStatus.status)}">
+          const statusOpts = getDeliveryStatusOptions(task.title);
+          const statusOpt = statusOpts.find(opt => opt.value === task.driverDeliveryStatus.status);
+          const statusLabel = statusOpt ? statusOpt.label : task.driverDeliveryStatus.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          return `<span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(task.driverDeliveryStatus.status)}">
                   <i class="fas fa-truck mr-1"></i>${statusLabel}
                 </span>`;
-              })() : ''}
+        })() : ''}
             </div>
             <p class="text-sm text-gray-600 mb-2">
               <i class="fas fa-map-marker-alt text-[var(--cane-500)] mr-1"></i>
               ${task.fieldName || "Unknown Field"}
             </p>
-            ${
-              task.description
-                ? `<p class="text-sm text-gray-500">${task.description}</p>`
-                : ""
-            }
+            ${task.description
+          ? `<p class="text-sm text-gray-500">${task.description}</p>`
+          : ""
+        }
             <p class="text-xs text-gray-400 mt-2">${timeAgo}</p>
           </div>
-          ${
-            isPending
-              ? `
+          ${isPending
+          ? `
             <div class="flex-shrink-0 flex flex-col sm:flex-row gap-2">
               <button
                 onclick="openUpdateStatusModal('${task.id}', '${escapeHtml(task.title || task.taskType || '')}')"
@@ -428,8 +422,8 @@ function renderTasksList(tasks) {
               </button>
             </div>
           `
-              : ""
-          }
+          : ""
+        }
         </div>
       </div>
     `;
@@ -695,9 +689,8 @@ async function loadRecentActivity() {
         <div class="py-3 flex items-start justify-between">
           <div class="flex items-start gap-2">
             <i class="fas ${icon} mt-1"></i>
-            <span class="text-[var(--cane-800)]">${action}: ${
-          task.title || task.taskType || "Task"
-        }</span>
+            <span class="text-[var(--cane-800)]">${action}: ${task.title || task.taskType || "Task"
+          }</span>
           </div>
           <span class="text-[var(--cane-600)] text-xs whitespace-nowrap ml-2">${timeAgo}</span>
         </div>
@@ -793,8 +786,8 @@ async function loadTransportData() {
           rental.status === "approved"
             ? "bg-green-100 text-green-800"
             : rental.status === "rejected"
-            ? "bg-red-100 text-red-800"
-            : "bg-yellow-100 text-yellow-800";
+              ? "bg-red-100 text-red-800"
+              : "bg-yellow-100 text-yellow-800";
 
         const scheduledDate = rental.scheduledStart?.toDate?.() || new Date();
         const dateStr = scheduledDate.toLocaleDateString();
@@ -819,18 +812,16 @@ async function loadTransportData() {
                   <i class="fas fa-calendar text-[var(--cane-500)] mr-1"></i>
                   Scheduled: ${dateStr}
                 </p>
-                ${
-                  rental.remarks
-                    ? `<p class="text-sm text-gray-500 mt-2 italic">"${escapeHtml(
-                        rental.remarks
-                      )}"</p>`
-                    : ""
-                }
+                ${rental.remarks
+            ? `<p class="text-sm text-gray-500 mt-2 italic">"${escapeHtml(
+              rental.remarks
+            )}"</p>`
+            : ""
+          }
               </div>
             </div>
-            ${
-              isPending
-                ? `
+            ${isPending
+            ? `
               <div class="flex gap-2 pt-2 border-t border-gray-200">
                 <button
                   onclick="handleRentalApprove('${rental.id}', '${rental.handlerId}')"
@@ -846,8 +837,8 @@ async function loadTransportData() {
                 </button>
               </div>
             `
-                : ""
-            }
+            : ""
+          }
           </div>
         </div>
       `;
@@ -918,46 +909,46 @@ function setupProfileDropdown() {
 }
 
 // Expose sync function for profile-settings to call
-window.__syncDashboardProfile = async function() {
-    try {
-        // Update display name from localStorage
-        const nickname = localStorage.getItem('farmerNickname');
-        const name = localStorage.getItem('userFullName') || 'Driver';
-        const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
-        
-        const userNameElements = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
-        userNameElements.forEach(el => { 
-            if (el) el.textContent = display; 
-        });
-        
-        // Try to fetch latest profile photo from Firestore if available
-        if (typeof auth !== 'undefined' && auth.currentUser) {
-            const uid = auth.currentUser.uid;
-            try {
-                const { doc, getDoc } = await import(
-                    'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js'
-                );
-                const { db } = await import('../Common/firebase-config.js');
-                const userRef = doc(db, 'users', uid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists() && userSnap.data().photoURL) {
-                    const photoUrl = userSnap.data().photoURL;
-                    // Update profile icon
-                    const profilePhoto = document.getElementById('profilePhoto');
-                    const profileIconDefault = document.getElementById('profileIconDefault');
-                    if (profilePhoto) {
-                        profilePhoto.src = photoUrl;
-                        profilePhoto.classList.remove('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
-                    }
-                }
-            } catch(e) {
-                console.error('Error syncing profile photo:', e);
-            }
+window.__syncDashboardProfile = async function () {
+  try {
+    // Update display name from localStorage
+    const nickname = localStorage.getItem('farmerNickname');
+    const name = localStorage.getItem('userFullName') || 'Driver';
+    const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
+
+    const userNameElements = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
+    userNameElements.forEach(el => {
+      if (el) el.textContent = display;
+    });
+
+    // Try to fetch latest profile photo from Firestore if available
+    if (typeof auth !== 'undefined' && auth.currentUser) {
+      const uid = auth.currentUser.uid;
+      try {
+        const { doc, getDoc } = await import(
+          'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js'
+        );
+        const { db } = await import('../Common/firebase-config.js');
+        const userRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().photoURL) {
+          const photoUrl = userSnap.data().photoURL;
+          // Update profile icon
+          const profilePhoto = document.getElementById('profilePhoto');
+          const profileIconDefault = document.getElementById('profileIconDefault');
+          if (profilePhoto) {
+            profilePhoto.src = photoUrl;
+            profilePhoto.classList.remove('hidden');
+            if (profileIconDefault) profileIconDefault.classList.add('hidden');
+          }
         }
-    } catch(e) {
-        console.error('Profile sync error:', e);
+      } catch (e) {
+        console.error('Error syncing profile photo:', e);
+      }
     }
+  } catch (e) {
+    console.error('Profile sync error:', e);
+  }
 };
 
 // ============================================================
@@ -1044,7 +1035,7 @@ document.addEventListener("DOMContentLoaded", function () {
           try {
             localStorage.clear();
             sessionStorage.clear();
-          } catch (_) {}
+          } catch (_) { }
 
           // Small fade animation before redirect
           if (modal && dialog) {
@@ -1158,8 +1149,8 @@ window.viewFieldDetails = async function (fieldId) {
                 <div>
                   <span class="text-gray-600">Area:</span>
                   <span class="ml-1 font-medium text-gray-900">${escapeHtml(
-                    area
-                  )} hectares</span>
+      area
+    )} hectares</span>
                 </div>
               </div>
               <div class="flex items-start gap-2">
@@ -1167,78 +1158,75 @@ window.viewFieldDetails = async function (fieldId) {
                 <div>
                   <span class="text-gray-600">Variety:</span>
                   <span class="ml-1 font-medium text-gray-900">${escapeHtml(
-                    variety
-                  )}</span>
+      variety
+    )}</span>
                 </div>
               </div>
-              ${
-                barangay
-                  ? `
+              ${barangay
+        ? `
               <div class="flex items-start gap-2">
                 <i class="fas fa-map-marker-alt text-[var(--cane-500)] mt-1"></i>
                 <div>
                   <span class="text-gray-600">Barangay:</span>
                   <span class="ml-1 font-medium text-gray-900">${escapeHtml(
-                    barangay
-                  )}</span>
+          barangay
+        )}</span>
                 </div>
               </div>
               `
-                  : ""
-              }
-              ${
-                location
-                  ? `
+        : ""
+      }
+              ${location
+        ? `
               <div class="flex items-start gap-2 md:col-span-2">
                 <i class="fas fa-location-dot text-[var(--cane-500)] mt-1"></i>
                 <div>
                   <span class="text-gray-600">Location:</span>
                   <span class="ml-1 font-medium text-gray-900">${escapeHtml(
-                    location
-                  )}</span>
+          location
+        )}</span>
                 </div>
               </div>
               `
-                  : ""
-              }
+        : ""
+      }
             </div>
           </div>
 
           <!-- My Tasks on This Field -->
           <div>
             <h4 class="text-lg font-semibold text-[var(--cane-900)] mb-3">My Tasks</h4>
-            ${
-              myTasks.length === 0
-                ? `
+            ${myTasks.length === 0
+        ? `
               <div class="text-center py-8 text-gray-500">
                 <i class="fas fa-inbox text-3xl mb-2"></i>
                 <p>No tasks assigned to you on this field</p>
               </div>
             `
-                : `
+        : `
               <div class="space-y-2">
                 ${myTasks
-                  .map((task) => {
-                    const statusColor =
-                      task.status === "done"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800";
-                    const timeField = task.deadline || task.createdAt;
-                    const dateStr = timeField
-                      ? (timeField.toDate
-                          ? timeField.toDate()
-                          : new Date(timeField)
-                        ).toLocaleDateString()
-                      : "—";
+          .map((task) => {
+            const statusColor =
+              task.status === "done"
+                ? "bg-green-100 text-green-800"
+                : "bg-yellow-100 text-yellow-800";
+            const timeField = task.deadline || task.createdAt;
+            const dateStr = timeField
+              ? (timeField.toDate
+                ? timeField.toDate()
+                : new Date(timeField)
+              ).toLocaleDateString()
+              : "—";
 
-                    return `
+            return `
                     <div class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition">
                       <div class="flex items-start justify-between">
                         <div class="flex-1">
                           <div class="flex items-center gap-2 mb-1">
                             <span class="font-semibold text-gray-900">${escapeHtml(
-                              task.title || "Task"
-                            )}</span>
+              task.title || "Task"
+            )}</span>
                             <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
                               ${task.status || "pending"}
                             </span>
@@ -1250,11 +1238,11 @@ window.viewFieldDetails = async function (fieldId) {
                       </div>
                     </div>
                   `;
-                  })
-                  .join("")}
+          })
+          .join("")}
               </div>
             `
-            }
+      }
           </div>
         </div>
 
@@ -1414,24 +1402,24 @@ window.markDriverTaskAsDone = async function (taskId) {
 /**
  * Open update status modal for driver task
  */
-window.openUpdateStatusModal = async function(taskId, taskTitle) {
+window.openUpdateStatusModal = async function (taskId, taskTitle) {
   try {
     const { db } = await import("../Common/firebase-config.js");
     const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
-    
+
     const taskRef = doc(db, "tasks", taskId);
     const taskSnap = await getDoc(taskRef);
-    
+
     if (!taskSnap.exists()) {
       alert("Task not found");
       return;
     }
-    
+
     const task = taskSnap.data();
     const taskType = task.title || task.taskType || taskTitle || '';
     const statusOptions = getDeliveryStatusOptions(taskType);
     const currentStatus = task.driverDeliveryStatus?.status || '';
-    
+
     // Create modal
     const modal = document.createElement('div');
     modal.id = 'updateStatusModal';
@@ -1453,12 +1441,10 @@ window.openUpdateStatusModal = async function(taskId, taskTitle) {
             <label class="block text-sm font-medium text-gray-700 mb-2">Select Status:</label>
             <div class="space-y-2 max-h-64 overflow-y-auto">
               ${statusOptions.map(option => `
-                <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                  currentStatus === option.value ? 'border-[var(--cane-600)] bg-[var(--cane-50)]' : 'border-gray-200 hover:border-gray-300'
-                }">
-                  <input type="radio" name="deliveryStatus" value="${option.value}" class="mr-3" ${
-                    currentStatus === option.value ? 'checked' : ''
-                  }>
+                <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${currentStatus === option.value ? 'border-[var(--cane-600)] bg-[var(--cane-50)]' : 'border-gray-200 hover:border-gray-300'
+      }">
+                  <input type="radio" name="deliveryStatus" value="${option.value}" class="mr-3" ${currentStatus === option.value ? 'checked' : ''
+      }>
                   <i class="fas ${option.icon} text-[var(--cane-600)] mr-2"></i>
                   <span class="text-sm font-medium text-gray-900">${option.label}</span>
                 </label>
@@ -1480,16 +1466,16 @@ window.openUpdateStatusModal = async function(taskId, taskTitle) {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Close handlers
     modal.querySelector('#closeUpdateStatusModal').addEventListener('click', () => modal.remove());
     modal.querySelector('#cancelUpdateStatus').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.remove();
     });
-    
+
     // Confirm handler
     modal.querySelector('#confirmUpdateStatus').addEventListener('click', async () => {
       const selectedStatus = modal.querySelector('input[name="deliveryStatus"]:checked');
@@ -1497,14 +1483,14 @@ window.openUpdateStatusModal = async function(taskId, taskTitle) {
         alert('Please select a status');
         return;
       }
-      
+
       const status = selectedStatus.value;
       const notes = modal.querySelector('#statusNotes').value.trim();
-      
+
       await updateDriverDeliveryStatus(taskId, status, notes);
       modal.remove();
     });
-    
+
   } catch (error) {
     console.error('Error opening update status modal:', error);
     alert('Failed to open update status modal. Please try again.');
@@ -1519,21 +1505,21 @@ async function updateDriverDeliveryStatus(taskId, status, notes = '') {
     const { db } = await import("../Common/firebase-config.js");
     const { doc, getDoc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
     const { createNotification } = await import("../Common/notifications.js");
-    
+
     const taskRef = doc(db, "tasks", taskId);
     const taskSnap = await getDoc(taskRef);
-    
+
     if (!taskSnap.exists()) {
       alert("Task not found");
       return;
     }
-    
+
     const task = taskSnap.data();
     const handlerId = task.handlerId || task.created_by;
     const driverName = localStorage.getItem("userFullName") || "A driver";
     const taskTitle = task.title || task.taskType || "Task";
     const statusLabel = getDeliveryStatusOptions(taskTitle).find(opt => opt.value === status)?.label || status;
-    
+
     // Update task with delivery status
     await updateDoc(taskRef, {
       driverDeliveryStatus: {
@@ -1543,7 +1529,7 @@ async function updateDriverDeliveryStatus(taskId, status, notes = '') {
         updatedBy: currentUserId
       }
     });
-    
+
     // Notify handler
     if (handlerId) {
       await createNotification(
@@ -1554,13 +1540,13 @@ async function updateDriverDeliveryStatus(taskId, status, notes = '') {
       );
       console.log(`✅ Status update notification sent to handler ${handlerId}`);
     }
-    
+
     alert("Status updated successfully!");
     console.log(`✅ Driver delivery status updated for task ${taskId}: ${status}`);
-    
+
     // Reload tasks to show updated status
     await loadTasksData();
-    
+
   } catch (error) {
     console.error("Error updating driver delivery status:", error);
     alert("Failed to update status. Please try again.");
@@ -1708,9 +1694,8 @@ window.openDriverLogWorkModal = async function () {
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
-            <input type="date" id="swal-completionDate" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" max="${
-              new Date().toISOString().split("T")[0]
-            }">
+            <input type="date" id="swal-completionDate" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" max="${new Date().toISOString().split("T")[0]
+        }">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Driver Name</label>
@@ -1780,22 +1765,22 @@ window.openDriverLogWorkModal = async function () {
           "task-suggestions-chips"
         );
 
-  const takePhotoBtn = document.getElementById("swal-takePhotoBtn");
-  const previewContainer = document.getElementById("swal-photoPreviewContainer");
-  const previewImg = document.getElementById("swal-photoPreview");
-  const photoHint = document.getElementById("swal-photoHint");
+        const takePhotoBtn = document.getElementById("swal-takePhotoBtn");
+        const previewContainer = document.getElementById("swal-photoPreviewContainer");
+        const previewImg = document.getElementById("swal-photoPreview");
+        const photoHint = document.getElementById("swal-photoHint");
 
-  // Ensure no stale stored blob
-  window._swalCapturedPhotoBlob = null;
+        // Ensure no stale stored blob
+        window._swalCapturedPhotoBlob = null;
 
-  // Helper: create camera modal
-  function openCameraModal() {
-    // Create overlay
-    const overlay = document.createElement("div");
-    overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4";
-    overlay.id = "swal-cameraOverlay";
+        // Helper: create camera modal
+        function openCameraModal() {
+          // Create overlay
+          const overlay = document.createElement("div");
+          overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4";
+          overlay.id = "swal-cameraOverlay";
 
-    overlay.innerHTML = `
+          overlay.innerHTML = `
       <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
         <button id="swal-closeCamBtn" style="position:absolute; top:20px; right:20px; z-index:10; padding:10px 16px; border-radius:8px; background:rgba(0,0,0,0.6); color:#fff; border:0; font-weight:600; cursor:pointer;">Close</button>
         <video id="swal-cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
@@ -1812,103 +1797,103 @@ window.openDriverLogWorkModal = async function () {
       </div>
     `;
 
-    document.body.appendChild(overlay);
+          document.body.appendChild(overlay);
 
-    const videoEl = overlay.querySelector("#swal-cameraVideo");
-    const captureBtn = overlay.querySelector("#swal-captureBtn");
-    const closeCamBtn = overlay.querySelector("#swal-closeCamBtn");
-    const switchCamBtn = overlay.querySelector("#swal-switchCamBtn");
+          const videoEl = overlay.querySelector("#swal-cameraVideo");
+          const captureBtn = overlay.querySelector("#swal-captureBtn");
+          const closeCamBtn = overlay.querySelector("#swal-closeCamBtn");
+          const switchCamBtn = overlay.querySelector("#swal-switchCamBtn");
 
-    let stream = null;
-    let currentFacingMode = "environment"; // Start with back camera
+          let stream = null;
+          let currentFacingMode = "environment"; // Start with back camera
 
-    // Start camera with specific facing mode
-    async function startCamera(facingMode) {
-      try {
-        // Stop existing stream if any
-        if (stream) {
-          stream.getTracks().forEach((t) => t.stop());
-        }
+          // Start camera with specific facing mode
+          async function startCamera(facingMode) {
+            try {
+              // Stop existing stream if any
+              if (stream) {
+                stream.getTracks().forEach((t) => t.stop());
+              }
 
-        // Mobile-optimized constraints
-        const constraints = {
-          video: {
-            facingMode: { ideal: facingMode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
+              // Mobile-optimized constraints
+              const constraints = {
+                video: {
+                  facingMode: { ideal: facingMode },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 }
+                },
+                audio: false
+              };
 
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-        } catch (err) {
-          // Fallback: try without ideal facingMode for better mobile compatibility
-          console.warn(`Failed with facingMode ${facingMode}, trying fallback...`);
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: facingMode,
-              width: { max: 1280 },
-              height: { max: 720 }
-            },
-            audio: false
+              try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+              } catch (err) {
+                // Fallback: try without ideal facingMode for better mobile compatibility
+                console.warn(`Failed with facingMode ${facingMode}, trying fallback...`);
+                stream = await navigator.mediaDevices.getUserMedia({
+                  video: {
+                    facingMode: facingMode,
+                    width: { max: 1280 },
+                    height: { max: 720 }
+                  },
+                  audio: false
+                });
+              }
+
+              videoEl.srcObject = stream;
+              await videoEl.play();
+              currentFacingMode = facingMode;
+
+              // Show switch button if multiple cameras available (especially on mobile)
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoCameras = devices.filter(d => d.kind === 'videoinput');
+              if (videoCameras.length > 1) {
+                switchCamBtn.style.display = 'block';
+                switchCamBtn.innerHTML = facingMode === 'user'
+                  ? '<i class="fas fa-camera-rotate"></i> Switch to Back Camera'
+                  : '<i class="fas fa-camera-rotate"></i> Switch to Front Camera';
+              }
+            } catch (err) {
+              console.error("Camera error:", err);
+              alert("Cannot access camera. Please ensure camera permission is allowed.");
+              overlay.remove();
+            }
+          }
+
+          // Switch camera handler
+          switchCamBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
+            await startCamera(newFacingMode);
           });
-        }
 
-        videoEl.srcObject = stream;
-        await videoEl.play();
-        currentFacingMode = facingMode;
+          // Stop camera tracks
+          function stopCamera() {
+            if (stream) {
+              stream.getTracks().forEach((t) => t.stop());
+              stream = null;
+            }
+          }
 
-        // Show switch button if multiple cameras available (especially on mobile)
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoCameras = devices.filter(d => d.kind === 'videoinput');
-        if (videoCameras.length > 1) {
-          switchCamBtn.style.display = 'block';
-          switchCamBtn.innerHTML = facingMode === 'user' 
-            ? '<i class="fas fa-camera-rotate"></i> Switch to Back Camera'
-            : '<i class="fas fa-camera-rotate"></i> Switch to Front Camera';
-        }
-      } catch (err) {
-        console.error("Camera error:", err);
-        alert("Cannot access camera. Please ensure camera permission is allowed.");
-        overlay.remove();
-      }
-    }
+          captureBtn.addEventListener("click", () => {
+            // Freeze frame
+            const canvas = document.createElement("canvas");
+            canvas.width = videoEl.videoWidth || 1280;
+            canvas.height = videoEl.videoHeight || 720;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
 
-    // Switch camera handler
-    switchCamBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const newFacingMode = currentFacingMode === "user" ? "environment" : "user";
-      await startCamera(newFacingMode);
-    });
+            videoEl.pause();
 
-    // Stop camera tracks
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-        stream = null;
-      }
-    }
+            // Hide switch button during preview
+            switchCamBtn.style.display = 'none';
 
-captureBtn.addEventListener("click", () => {
-  // Freeze frame
-  const canvas = document.createElement("canvas");
-  canvas.width = videoEl.videoWidth || 1280;
-  canvas.height = videoEl.videoHeight || 720;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            // Hide capture button by clearing container
+            const captureContainer = document.getElementById("swal-captureContainer");
+            captureContainer.innerHTML = "";
 
-  videoEl.pause();
-
-  // Hide switch button during preview
-  switchCamBtn.style.display = 'none';
-
-  // Hide capture button by clearing container
-  const captureContainer = document.getElementById("swal-captureContainer");
-  captureContainer.innerHTML = "";
-
-  // Add ✓ and ✕ buttons IN PLACE of the capture button
-  captureContainer.innerHTML = `
+            // Add ✓ and ✕ buttons IN PLACE of the capture button
+            captureContainer.innerHTML = `
     <div class="flex items-center justify-center gap-10">
       <button id="swal-retakePhoto"
         class="w-16 h-16 flex items-center justify-center bg-red-600 text-white text-3xl font-bold rounded-full shadow-lg">
@@ -1922,75 +1907,75 @@ captureBtn.addEventListener("click", () => {
     </div>
   `;
 
-  const confirmBtn = document.getElementById("swal-confirmPhoto");
-  const retakeBtn = document.getElementById("swal-retakePhoto");
+            const confirmBtn = document.getElementById("swal-confirmPhoto");
+            const retakeBtn = document.getElementById("swal-retakePhoto");
 
-  // ✓ Confirm photo
-  confirmBtn.addEventListener("click", () => {
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+            // ✓ Confirm photo
+            confirmBtn.addEventListener("click", () => {
+              canvas.toBlob((blob) => {
+                if (!blob) return;
 
-      window._swalCapturedPhotoBlob = blob;
+                window._swalCapturedPhotoBlob = blob;
 
-      previewImg.src = URL.createObjectURL(blob);
-      previewContainer.classList.remove("hidden");
+                previewImg.src = URL.createObjectURL(blob);
+                previewContainer.classList.remove("hidden");
 
-      stopCamera();
-      overlay.remove();
-    }, "image/jpeg", 0.92);
-  });
+                stopCamera();
+                overlay.remove();
+              }, "image/jpeg", 0.92);
+            });
 
-  // ✕ Retake photo
-  retakeBtn.addEventListener("click", async () => {
-    // Show switch button again if multiple cameras available
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoCameras = devices.filter(d => d.kind === 'videoinput');
-    if (videoCameras.length > 1) {
-      switchCamBtn.style.display = 'block';
-    }
+            // ✕ Retake photo
+            retakeBtn.addEventListener("click", async () => {
+              // Show switch button again if multiple cameras available
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoCameras = devices.filter(d => d.kind === 'videoinput');
+              if (videoCameras.length > 1) {
+                switchCamBtn.style.display = 'block';
+              }
 
-    // Remove ✓ and ✕
-    captureContainer.innerHTML = `
+              // Remove ✓ and ✕
+              captureContainer.innerHTML = `
       <button id="swal-captureBtn"
         class="px-5 py-3 rounded bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white font-semibold">
         Capture
       </button>
     `;
 
-    const newCaptureBtn = document.getElementById("swal-captureBtn");
+              const newCaptureBtn = document.getElementById("swal-captureBtn");
 
-    // Resume camera
-    videoEl.play();
+              // Resume camera
+              videoEl.play();
 
-    // Attach capture logic again
-    newCaptureBtn.addEventListener("click", () => {
-      captureBtn.click(); // recursion style
-    });
-  });
-});
+              // Attach capture logic again
+              newCaptureBtn.addEventListener("click", () => {
+                captureBtn.click(); // recursion style
+              });
+            });
+          });
 
-    closeCamBtn.addEventListener("click", () => {
-      stopCamera();
-      overlay.remove();
-    });
+          closeCamBtn.addEventListener("click", () => {
+            stopCamera();
+            overlay.remove();
+          });
 
-    // Remove overlay on outside click
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) {
-        stopCamera();
-        overlay.remove();
-      }
-    });
+          // Remove overlay on outside click
+          overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) {
+              stopCamera();
+              overlay.remove();
+            }
+          });
 
-    // Start with back camera (environment)
-    startCamera("environment");
-  }
+          // Start with back camera (environment)
+          startCamera("environment");
+        }
 
-  // Bind button
-  takePhotoBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    openCameraModal();
-  });
+        // Bind button
+        takePhotoBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          openCameraModal();
+        });
 
         fieldSelect.addEventListener("change", async () => {
           const selectedFieldId = fieldSelect.value;
@@ -2112,53 +2097,53 @@ captureBtn.addEventListener("click", () => {
           }
         });
       },
-preConfirm: () => {
-  const fieldId = document.getElementById("swal-fieldId").value;
-  const taskType = document.getElementById("swal-taskType").value;
-  const completionDate = document.getElementById("swal-completionDate").value;
-  const driverName = document.getElementById("swal-driverName").value;
-  const notes = document.getElementById("swal-notes").value;
-  // Note: previously used input file; now we expect window._swalCapturedPhotoBlob
-  const photoBlob = window._swalCapturedPhotoBlob || null;
-  const verification = document.getElementById("swal-verification").checked;
+      preConfirm: () => {
+        const fieldId = document.getElementById("swal-fieldId").value;
+        const taskType = document.getElementById("swal-taskType").value;
+        const completionDate = document.getElementById("swal-completionDate").value;
+        const driverName = document.getElementById("swal-driverName").value;
+        const notes = document.getElementById("swal-notes").value;
+        // Note: previously used input file; now we expect window._swalCapturedPhotoBlob
+        const photoBlob = window._swalCapturedPhotoBlob || null;
+        const verification = document.getElementById("swal-verification").checked;
 
-  if (!fieldId) {
-    Swal.showValidationMessage("Field is required");
-    return false;
-  }
+        if (!fieldId) {
+          Swal.showValidationMessage("Field is required");
+          return false;
+        }
 
-  if (!taskType) {
-    Swal.showValidationMessage("Task type is required");
-    return false;
-  }
+        if (!taskType) {
+          Swal.showValidationMessage("Task type is required");
+          return false;
+        }
 
-  if (!completionDate) {
-    Swal.showValidationMessage("Completion date is required");
-    return false;
-  }
+        if (!completionDate) {
+          Swal.showValidationMessage("Completion date is required");
+          return false;
+        }
 
-  if (!verification) {
-    Swal.showValidationMessage("You must verify that this work was completed");
-    return false;
-  }
+        if (!verification) {
+          Swal.showValidationMessage("You must verify that this work was completed");
+          return false;
+        }
 
-  // Photo is required now
-  if (!photoBlob) {
-    Swal.showValidationMessage("Photo is required. Please take a photo using the 'Take a photo' button.");
-    return false;
-  }
+        // Photo is required now
+        if (!photoBlob) {
+          Swal.showValidationMessage("Photo is required. Please take a photo using the 'Take a photo' button.");
+          return false;
+        }
 
-  return {
-    fieldId,
-    taskType,
-    completionDate,
-    driverName,
-    notes,
-    // pass the blob (will be uploaded later)
-    photoBlob,
-    verification,
-  };
-},
+        return {
+          fieldId,
+          taskType,
+          completionDate,
+          driverName,
+          notes,
+          // pass the blob (will be uploaded later)
+          photoBlob,
+          verification,
+        };
+      },
     });
 
     if (formValues) {
@@ -2176,6 +2161,80 @@ async function createDriverLog(logData) {
     return;
   }
 
+  // ========================================
+  // ✅ OFFLINE MODE: Save to IndexedDB
+  // ========================================
+  if (!navigator.onLine) {
+    try {
+      console.log('🔴 Device is offline. Saving driver work log to IndexedDB...');
+
+      // Dynamically import offline DB utilities and UI popup
+      console.log('Importing offline-db module...');
+      const offlineDbModule = await import('../Common/offline-db.js');
+      const { addPendingLog, compressImage } = offlineDbModule;
+      const { showPopupMessage } = await import('../Common/ui-popup.js');
+      console.log('✅ Offline DB module loaded');
+
+      // Compress photo
+      let photoBlob = null;
+      if (logData.photoBlob) {
+        console.log('📸 Compressing photo for offline storage...');
+        photoBlob = await compressImage(logData.photoBlob, 0.7);
+        console.log('✅ Photo compressed successfully, size:', photoBlob.size);
+      }
+
+      // Create offline log data
+      const offlineLogData = {
+        userId: currentUserId,
+        fieldId: logData.fieldId,
+        taskName: logData.taskType,
+        description: logData.notes || '',
+        taskStatus: 'completed',
+        photoBlob: photoBlob,
+        completionDate: logData.completionDate,
+        workerName: logData.driverName || localStorage.getItem("userFullName") || "Unknown Driver"
+      };
+
+      console.log('💾 Saving to IndexedDB...', {
+        userId: offlineLogData.userId,
+        fieldId: offlineLogData.fieldId,
+        taskName: offlineLogData.taskName,
+        hasPhoto: !!photoBlob
+      });
+
+      // Save to IndexedDB
+      const logId = await addPendingLog(offlineLogData);
+      console.log('✅ Offline driver work log saved with ID:', logId);
+
+      // Show success message using showPopupMessage (same as Worker)
+      await showPopupMessage(
+        'Work log saved offline — Will sync when internet is restored',
+        'success',
+        { autoClose: true, timeout: 3000 }
+      );
+
+      console.log('✅ Offline save completed successfully');
+
+      return;
+    } catch (error) {
+      console.error('❌ Error saving offline driver work log:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+
+      // Import showPopupMessage for error display
+      const { showPopupMessage } = await import('../Common/ui-popup.js');
+      await showPopupMessage(
+        `Failed to save offline: ${error.message}`,
+        'error'
+      );
+      return;
+    }
+  }
+
+  // ========================================
+  // ✅ ONLINE MODE: Normal Firebase submission
+  // ========================================
   try {
     // ========================================
     // ✅ VALIDATE TASK LOGIC BEFORE SUBMITTING
@@ -2219,11 +2278,11 @@ async function createDriverLog(logData) {
           text: "This field was already harvested. Transport and delivery tasks are still available.",
           confirmButtonColor: "#166534",
           customClass: {
-  popup: "mobile-adjust-modal"
-},
-heightAuto: false,
-padding: "1.2rem",
-scrollbarPadding: false,
+            popup: "mobile-adjust-modal"
+          },
+          heightAuto: false,
+          padding: "1.2rem",
+          scrollbarPadding: false,
 
         });
         // Allow to continue - just a warning
@@ -2258,21 +2317,21 @@ scrollbarPadding: false,
 
     let photoURL = "";
 
-// Upload photo if provided (accept blob from camera)
-if (logData.photoBlob) {
-  const { getStorage, ref, uploadBytes, getDownloadURL } = await import(
-    "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js"
-  );
-  const storage = getStorage();
-  const timestamp = Date.now();
-  // Use .jpg filename
-  const fileName = `driver_logs/${currentUserId}_${timestamp}.jpg`;
-  const storageRef = ref(storage, fileName);
+    // Upload photo if provided (accept blob from camera)
+    if (logData.photoBlob) {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import(
+        "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js"
+      );
+      const storage = getStorage();
+      const timestamp = Date.now();
+      // Use .jpg filename
+      const fileName = `driver_logs/${currentUserId}_${timestamp}.jpg`;
+      const storageRef = ref(storage, fileName);
 
-  // uploadBytes accepts Blob
-  await uploadBytes(storageRef, logData.photoBlob);
-  photoURL = await getDownloadURL(storageRef);
-}
+      // uploadBytes accepts Blob
+      await uploadBytes(storageRef, logData.photoBlob);
+      photoURL = await getDownloadURL(storageRef);
+    }
 
 
     // Create work log as a task (same as worker implementation)
@@ -2288,13 +2347,13 @@ if (logData.photoBlob) {
     }
 
     // Update all name placeholders with just the first name
-  const firstName = driverName.split(' ')[0];
+    const firstName = driverName.split(' ')[0];
 
-  // Update header name (only first name)
-  const userNameElements = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
-  userNameElements.forEach(el => {
-    el.textContent = firstName; // Only take first part of the name
-  });
+    // Update header name (only first name)
+    const userNameElements = document.querySelectorAll('#userName, #dropdownUserName, #sidebarUserName');
+    userNameElements.forEach(el => {
+      el.textContent = firstName; // Only take first part of the name
+    });
 
     // Get field details including variety for growth tracking
     let fieldName = "Unknown Field";
@@ -2428,7 +2487,7 @@ export function initializeDriverDashboard() {
   // CRITICAL: Set userId in driver-dashboard.js BEFORE setting up listeners
   setDriverUserId(userId);
   console.log("✅ Driver user ID set:", currentUserId);
-  
+
   // Setup real-time listeners now that user data is confirmed loaded
   try {
     setupRealtimeListeners();
@@ -2438,21 +2497,21 @@ export function initializeDriverDashboard() {
 
   // Setup all navigation
   try {
-  setupNavigation();
+    setupNavigation();
   } catch (error) {
     console.error("❌ Error setting up navigation:", error);
   }
 
   // Setup profile dropdown
   try {
-  setupProfileDropdown();
+    setupProfileDropdown();
   } catch (error) {
     console.error("❌ Error setting up profile dropdown:", error);
   }
 
   // Load initial dashboard data
   try {
-  loadDashboardData();
+    loadDashboardData();
   } catch (error) {
     console.error("❌ Error loading dashboard data:", error);
   }
@@ -2467,7 +2526,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Inject CSS for Log Work Modal Mobile Fix
-(function() {
+(function () {
   const style = document.createElement("style");
   style.innerHTML = `
     .mobile-adjust-modal {
