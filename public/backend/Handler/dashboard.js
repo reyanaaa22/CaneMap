@@ -1456,7 +1456,8 @@ async function loadActivityLogs(handlerId) {
           selfie_path: null,
           field_photo_path: data.photoURL || data.photo || null
         };
-      })))\n    ]);
+      })))
+    ]);
 
     // Combine results
     logs.push(...workerLogsList, ...driverLogsList);
