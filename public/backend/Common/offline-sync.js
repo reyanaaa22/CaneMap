@@ -277,7 +277,6 @@ export async function syncPendingLogs() {
         const results = await Promise.all(syncPromises);
         const successCount = results.filter(r => r.success).length;
         const failCount = results.filter(r => !r.success).length;
-        }
 
         // Show completion notification
         if (successCount > 0) {
