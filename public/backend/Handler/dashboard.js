@@ -930,11 +930,13 @@ async function loadRecentTaskActivity(handlerId) {
       return;
     }
 
-    // Get recent completed tasks for handler's fields
+    // Get recent completed tasks for handler's fields (last 24 hours only)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const tasksQuery = query(
       collection(db, "tasks"),
       where("handlerId", "==", handlerId),
       where("status", "==", "done"),
+      where("completedAt", ">=", oneDayAgo),
       orderBy("completedAt", "desc"),
       limit(10)
     );
@@ -3513,10 +3515,12 @@ function setupRecentTaskActivityListener(handlerId) {
 
   if (recentActivityUnsub) recentActivityUnsub();
 
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const q = query(
     collection(db, "tasks"),
     where("handlerId", "==", handlerId),
-    where("status", "==", "done")
+    where("status", "==", "done"),
+    where("completedAt", ">=", oneDayAgo)
   );
 
   recentActivityUnsub = onSnapshot(q, () => {
