@@ -80,7 +80,7 @@ async function initNotifications(userId) {
     event.stopPropagation();
     const isOpen = !dropdown.classList.contains("hidden");
     dropdown.classList.toggle("hidden");
-    
+
     if (!dropdown.classList.contains("hidden")) {
       bellBtn.classList.add("text-white");
       // Center dropdown on mobile view
@@ -97,7 +97,7 @@ async function initNotifications(userId) {
           });
           document.body.appendChild(backdrop);
         }
-        
+
         // Center the dropdown on mobile
         dropdown.style.position = 'fixed';
         dropdown.style.left = '50%';
@@ -271,19 +271,19 @@ async function initNotifications(userId) {
       try {
         const { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js');
         const { db } = await import('../Common/firebase-config.js');
-        
+
         // Get all unread notifications for this user
         const notificationsRef = collection(db, "notifications");
         const notificationsQuery = query(
           notificationsRef,
           where("userId", "==", userId)
         );
-        
+
         const snapshot = await getDocs(notificationsQuery);
         const unreadNotifications = snapshot.docs
           .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
           .filter(notif => !notif.read);
-        
+
         // Mark all as read
         const updatePromises = unreadNotifications.map(notif =>
           updateDoc(doc(db, "notifications", notif.id), {
@@ -291,7 +291,7 @@ async function initNotifications(userId) {
             readAt: serverTimestamp()
           })
         );
-        
+
         await Promise.all(updatePromises);
         console.log(`✅ Marked ${unreadNotifications.length} notifications as read`);
       } catch (err) {
@@ -423,7 +423,7 @@ async function loadUserProfile(user) {
         profilePhoto.classList.remove('hidden');
         if (profileIconDefault) profileIconDefault.classList.add('hidden');
       }
-      
+
       // Update sidebar profile photo
       const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
       const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
@@ -442,7 +442,7 @@ async function loadUserProfile(user) {
       if (profileIconDefault) {
         profileIconDefault.classList.remove('hidden');
       }
-      
+
       // Ensure sidebar icon is visible too
       const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
       const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
@@ -508,7 +508,7 @@ async function loadJoinRequests(handlerId) {
     const handlerFieldIds = new Set(handlerFields.map(f => f.id).filter(Boolean));
 
     console.log(`📋 Found ${handlerFields.length} field(s) for handler`);
-    
+
     if (handlerFieldIds.size === 0) {
       container.innerHTML = `<div class="p-3 text-gray-600">No fields found. Register a field to receive join requests.</div>`;
       updateJoinRequestCounts(0);
@@ -589,7 +589,7 @@ async function loadJoinRequests(handlerId) {
 
     // Fetch all requesters in parallel (selective fields only to reduce payload)
     const requesterDocs = await Promise.all(
-      requesterIds.map(uid => 
+      requesterIds.map(uid =>
         getDoc(doc(db, "users", uid))
           .then(snap => ({ uid, exists: snap.exists(), data: snap.exists() ? snap.data() : null }))
           .catch(() => ({ uid, exists: false, data: null }))
@@ -601,12 +601,12 @@ async function loadJoinRequests(handlerId) {
       requesterDocs.map(result => {
         const { uid, exists, data } = result;
         if (!exists || !data) return [uid, { name: uid, role: "" }];
-        
+
         const name = resolveValue(
           [data.nickname, data.name, data.fullname, data.fullName, data.displayName, data.email],
           NAME_PLACEHOLDERS
         ) || uid;
-        
+
         return [uid, { name, role: data.role || "" }];
       })
     );
@@ -649,10 +649,10 @@ async function loadJoinRequests(handlerId) {
     for (const req of allJoinRequests) {
       const requesterId = cleanString(req.userId || req.user_id || req.user_uid || "");
       const requester = requesterMap.get(requesterId) || { name: requesterId || "Unknown User", role: "" };
-      
+
       const fieldId = req.fieldId || req.field_id || req.fieldID;
       const fieldInfo = fieldInfoMap.get(fieldId) || {};
-      
+
       const fieldName = req.fieldName || req.field_name || fieldInfo.field_name || fieldInfo.fieldName || fieldInfo.name || `Field ${fieldId}`;
       const barangay = req.barangay || fieldInfo.barangay || fieldInfo.location || "—";
       const street = req.street || fieldInfo.street || "";
@@ -681,16 +681,19 @@ async function loadJoinRequests(handlerId) {
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
             ${
-              // Only show buttons for pending requests (since we filter to only show pending)
-              `
-                <button class="px-4 py-2 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" data-join-action="approve" data-path="${req.refPath}" data-request-id="${req.id}">
-                  <i class="fas fa-check mr-1"></i>Approve
+        // Only show buttons for pending requests (since we filter to only show pending)
+        `
+                <button class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[var(--cane-600)] text-white hover:bg-[var(--cane-700)] transition-all duration-200 flex items-center gap-1.5" data-user-id="${requesterId}" data-action="see-details">
+                  <i class="fas fa-eye"></i>See Details
                 </button>
-                <button class="px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" data-join-action="reject" data-path="${req.refPath}" data-request-id="${req.id}">
-                  <i class="fas fa-times mr-1"></i>Reject
+                <button class="w-9 h-9 rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center" data-join-action="approve" data-path="${req.refPath}" data-request-id="${req.id}" title="Approve">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="w-9 h-9 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center" data-join-action="reject" data-path="${req.refPath}" data-request-id="${req.id}" title="Reject">
+                  <i class="fas fa-times"></i>
                 </button>
               `
-            }
+        }
           </div>
         </div>
       `;
@@ -704,7 +707,7 @@ async function loadJoinRequests(handlerId) {
         const path = btn.dataset.path;
         const action = btn.dataset.joinAction;
         const requestId = btn.dataset.requestId;
-        
+
         if (!path || !action) {
           console.error("Missing path or action for join request button");
           return;
@@ -717,7 +720,7 @@ async function loadJoinRequests(handlerId) {
         const iconColor = action === "approve" ? "text-green-600" : "text-red-600";
         const bgColor = action === "approve" ? "bg-green-100" : "bg-red-100";
         const btnColor = action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700";
-        
+
         confirmModal.innerHTML = `
           <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-lg">
             <div class="mb-4">
@@ -836,7 +839,7 @@ async function loadJoinRequests(handlerId) {
             const successIconClass = action === "approve" ? "check-circle" : "times-circle";
             const successIconColor = action === "approve" ? "text-green-600" : "text-red-600";
             const successBgColor = action === "approve" ? "bg-green-100" : "bg-red-100";
-            
+
             successModal.innerHTML = `
               <div class="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center border border-gray-200 shadow-lg">
                 <div class="mb-4">
@@ -874,6 +877,17 @@ async function loadJoinRequests(handlerId) {
       });
     });
 
+    // Attach event listeners to "See Details" buttons
+    container.querySelectorAll("[data-action='see-details']").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const userId = btn.dataset.userId;
+        if (userId) {
+          showUserDetailsModal(userId);
+        }
+      });
+    });
+
   } catch (err) {
     console.error("Join Request Error:", err);
     const container = document.getElementById("joinRequestsList");
@@ -900,6 +914,240 @@ function updateJoinRequestCounts(count) {
 
   if (mRequests) mRequests.textContent = count;
   if (badge) badge.textContent = `${count} pending`;
+}
+
+// =============================
+// 🟢 Show User Details Modal (for Join Requests)
+// =============================
+async function showUserDetailsModal(userId) {
+  const existing = document.getElementById('userDetailsModal');
+  if (existing) existing.remove();
+
+  // Create loading modal
+  const loadingModal = document.createElement('div');
+  loadingModal.id = 'userDetailsModal';
+  loadingModal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]';
+  loadingModal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl p-8 max-w-md w-[90%]">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin text-3xl text-[var(--cane-600)] mb-4"></i>
+        <p class="text-[var(--cane-700)]">Loading user details...</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(loadingModal);
+
+  try {
+    // Fetch user profile data
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      loadingModal.remove();
+      alert('User not found');
+      return;
+    }
+
+    const userData = userSnap.data();
+    const userRole = (userData.role || '').toLowerCase();
+
+    // Fetch driver badge data if driver
+    let badgeData = null;
+    if (userRole === 'driver') {
+      try {
+        const badgeRef = doc(db, 'Drivers_Badge', userId);
+        const badgeSnap = await getDoc(badgeRef);
+        if (badgeSnap.exists()) {
+          badgeData = badgeSnap.data();
+        }
+      } catch (err) {
+        console.warn('Failed to fetch driver badge data:', err);
+      }
+    }
+
+    // Build personal information HTML
+    const photoURL = userData.photoURL || userData.photo_url || '';
+    const defaultPhoto = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><rect width='100%' height='100%' fill='%23ecfcca'/><g fill='%235ea500'><circle cx='64' cy='48' r='22'/><rect x='28' y='80' width='72' height='28' rx='14'/></g></svg>`)}`;
+
+    const fullname = userData.fullname || userData.name || userData.fullName || userData.displayName || 'N/A';
+    const email = userData.email || 'N/A';
+    const contact = userData.contact || userData.phone || userData.phoneNumber || userData.mobile || 'N/A';
+    const nickname = userData.nickname || 'N/A';
+    const gender = userData.gender || 'N/A';
+    const birthday = userData.birthday || 'N/A';
+    const age = birthday !== 'N/A' ? computeAge(birthday) : 'N/A';
+    const barangay = userData.barangay || 'N/A';
+    const municipality = userData.municipality || 'N/A';
+    const address = userData.address || (barangay !== 'N/A' && municipality !== 'N/A' ? `${barangay}, ${municipality}` : 'N/A');
+
+    let personalInfoHTML = `
+      <div class="mb-6">
+        <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center gap-2">
+          <i class="fas fa-user text-[var(--cane-600)]"></i>
+          Personal Information
+        </h3>
+        <div class="flex flex-col sm:flex-row gap-6 mb-6">
+          <div class="flex-shrink-0 mx-auto sm:mx-0">
+            <img src="${photoURL || defaultPhoto}" alt="Profile" 
+                 class="w-32 h-32 rounded-full object-cover border-4 border-[var(--cane-200)] shadow-md"
+                 onerror="this.src='${defaultPhoto}'">
+          </div>
+          <div class="flex-1 space-y-3">
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Full Name</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(fullname)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Email</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(email)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Contact Number</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(contact)}</p>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label class="text-sm font-semibold text-[var(--cane-700)]">Nickname</label>
+            <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(nickname)}</p>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-[var(--cane-700)]">Gender</label>
+            <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(gender)}</p>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-[var(--cane-700)]">Birthday</label>
+            <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(birthday)}</p>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-[var(--cane-700)]">Age</label>
+            <p class="text-base text-[var(--cane-900)] mt-1">${age}</p>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-sm font-semibold text-[var(--cane-700)]">Address</label>
+            <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(address)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Build driver badge information HTML if driver
+    let driverInfoHTML = '';
+    if (userRole === 'driver' && badgeData) {
+      const licenseNumber = badgeData.license_number || badgeData.licenseNumber || 'N/A';
+      const vehicleType = badgeData.other_vehicle_type || badgeData.vehicleType || badgeData.vehicle_type || 'N/A';
+      const vehicleModel = badgeData.vehicle_model || badgeData.vehicleModel || 'N/A';
+      const plateNumber = badgeData.plate_number || badgeData.plateNumber || badgeData.plate || 'N/A';
+      const badgeContact = badgeData.contact_number || badgeData.contactNumber || 'N/A';
+      const badgeStatus = badgeData.status || 'N/A';
+
+      driverInfoHTML = `
+        <div class="mt-6 pt-6 border-t border-[var(--cane-200)]">
+          <h3 class="text-lg font-bold text-[var(--cane-900)] mb-4 flex items-center gap-2">
+            <i class="fas fa-id-card text-[var(--cane-600)]"></i>
+            Additional Documents Information
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">License Number</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(licenseNumber)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Vehicle Type</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(vehicleType)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Vehicle Model</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(vehicleModel)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Plate Number</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(plateNumber)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Contact Number</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">${escapeHtml(badgeContact)}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-[var(--cane-700)]">Badge Status</label>
+              <p class="text-base text-[var(--cane-900)] mt-1">
+                <span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeStatus === 'approved' ? 'bg-green-100 text-green-800' :
+          badgeStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+            badgeStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+              'bg-gray-100 text-gray-800'
+        }">${escapeHtml(badgeStatus.charAt(0).toUpperCase() + badgeStatus.slice(1))}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'userDetailsModal';
+    modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[10000]';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[var(--cane-200)]">
+        <div class="sticky top-0 bg-white border-b border-[var(--cane-200)] px-6 py-4 flex items-center justify-between z-10">
+          <h2 class="text-xl font-bold text-[var(--cane-900)]">User Details</h2>
+          <button id="closeUserDetailsModal" class="text-[var(--cane-700)] hover:text-[var(--cane-900)] text-2xl font-bold transition-colors">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-6">
+          ${personalInfoHTML}
+          ${driverInfoHTML}
+        </div>
+      </div>
+    `;
+
+    // Close handlers
+    const closeBtn = modal.querySelector('#closeUserDetailsModal');
+    closeBtn.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+    document.addEventListener('keydown', function escapeHandler(e) {
+      if (e.key === 'Escape' && document.getElementById('userDetailsModal')) {
+        modal.remove();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    });
+
+    loadingModal.remove();
+    document.body.appendChild(modal);
+  } catch (err) {
+    console.error('Error loading user details:', err);
+    loadingModal.remove();
+    alert('Failed to load user details. Please try again.');
+  }
+}
+
+// Compute age from birthday (accepts YYYY-MM-DD string or Date)
+function computeAge(birth) {
+  if (!birth) return "N/A";
+  let birthDate;
+  if (typeof birth === "string") {
+    const s = birth.trim();
+    const maybe = s.split("T")[0];
+    birthDate = new Date(maybe);
+  } else if (birth.toDate && typeof birth.toDate === "function") {
+    birthDate = birth.toDate();
+  } else if (birth instanceof Date) {
+    birthDate = birth;
+  } else {
+    return "N/A";
+  }
+  if (isNaN(birthDate.getTime())) return "N/A";
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age.toString() : "N/A";
 }
 
 // =============================
@@ -969,12 +1217,12 @@ async function loadRecentTaskActivity(handlerId) {
 
     // Fetch all workers and fields in parallel (selective fields only to reduce payload)
     const [workerDocs, fieldDocs] = await Promise.all([
-      Promise.all(workerIds.map(id => 
+      Promise.all(workerIds.map(id =>
         getDoc(doc(db, "users", id))
           .then(snap => snap.exists() ? { id, data: snap.data() } : { id, data: null })
           .catch(() => ({ id, data: null }))
       )),
-      Promise.all(fieldIds.map(id => 
+      Promise.all(fieldIds.map(id =>
         getDoc(doc(db, "fields", id))
           .then(snap => snap.exists() ? { id, data: snap.data() } : { id, data: null })
           .catch(() => ({ id, data: null }))
@@ -996,7 +1244,7 @@ async function loadRecentTaskActivity(handlerId) {
       const taskData = taskDoc.data();
       const workerId = taskData.assignedTo?.[0];
       const fieldId = taskData.fieldId;
-      
+
       return {
         id: taskDoc.id,
         ...taskData,
@@ -1066,7 +1314,7 @@ async function loadRecentTaskActivity(handlerId) {
 // Helper function to get time ago string
 function getTimeAgo(date) {
   if (!date) return 'Unknown';
-  
+
   // Convert to Date if it's a Firestore Timestamp
   let dateObj;
   if (date.toDate && typeof date.toDate === 'function') {
@@ -1085,12 +1333,12 @@ function getTimeAgo(date) {
     // Try to parse as date string
     dateObj = new Date(date);
   }
-  
+
   // Validate the date
   if (isNaN(dateObj.getTime())) {
     return 'Invalid date';
   }
-  
+
   const now = new Date();
   const diffInSeconds = Math.floor((now - dateObj) / 1000);
 
@@ -1286,12 +1534,12 @@ Please register a field and wait for SRA approval to become a Handler.`);
 
   loadUserProfile(user);
   loadJoinRequests(user.uid);
-loadRecentTaskActivity(user.uid);
-setupRecentTaskActivityListener(user.uid);
+  loadRecentTaskActivity(user.uid);
+  setupRecentTaskActivityListener(user.uid);
   setupJoinRequestsListener(user.uid);
   initNotifications(user.uid);
-loadActivityLogs(user.uid);
-setupActivityLogsListener(user.uid);
+  loadActivityLogs(user.uid);
+  setupActivityLogsListener(user.uid);
 
   // REQ-3: Initialize dashboard statistics with realtime listeners
   initActiveWorkersMetric(user.uid);
@@ -1464,18 +1712,18 @@ async function loadActivityLogs(handlerId) {
     // Combine results
     logs.push(...workerLogsList, ...driverLogsList);
 
-// UI DISPLAY SORT — newest → oldest (NO GROUPING)
-logs.sort((a, b) => {
-  const ta = a.logged_at && a.logged_at.toMillis
-    ? a.logged_at.toMillis()
-    : (a.logged_at ? new Date(a.logged_at).getTime() : 0);
+    // UI DISPLAY SORT — newest → oldest (NO GROUPING)
+    logs.sort((a, b) => {
+      const ta = a.logged_at && a.logged_at.toMillis
+        ? a.logged_at.toMillis()
+        : (a.logged_at ? new Date(a.logged_at).getTime() : 0);
 
-  const tb = b.logged_at && b.logged_at.toMillis
-    ? b.logged_at.toMillis()
-    : (b.logged_at ? new Date(b.logged_at).getTime() : 0);
+      const tb = b.logged_at && b.logged_at.toMillis
+        ? b.logged_at.toMillis()
+        : (b.logged_at ? new Date(b.logged_at).getTime() : 0);
 
-  return tb - ta;  
-});
+      return tb - ta;
+    });
 
     // Save logs in-memory on window so filters/buttons can access
     window.__activityLogsCache = logs;
@@ -1483,7 +1731,7 @@ logs.sort((a, b) => {
     // Populate user and type filters
     populateUserAndTypeFilters(logs);
 
-    
+
     // Render initial UI (unfiltered)
     renderActivityLogs(logs);
 
@@ -1526,12 +1774,12 @@ function populateUserAndTypeFilters(logs = []) {
   logs.forEach(l => {
     if (l.user_id) users.set(l.user_id, l.user_name || l.user_id);
     if (l.task_type && l.task_type !== "driver_log") {
-    types.add(l.task_type);
-}
+      types.add(l.task_type);
+    }
   });
 
   userSel.innerHTML = `<option value="all">All users</option>`;
-  Array.from(users.entries()).sort((a,b) => a[1].localeCompare(b[1])).forEach(([uid, name]) => {
+  Array.from(users.entries()).sort((a, b) => a[1].localeCompare(b[1])).forEach(([uid, name]) => {
     const o = document.createElement("option");
     o.value = uid;
     o.textContent = name;
@@ -1563,7 +1811,7 @@ function renderActivityLogs(logs = []) {
 
   container.innerHTML = logs.map(log => {
     const date = (log.logged_at && log.logged_at.toDate) ? log.logged_at.toDate().toLocaleString() :
-                 (log.logged_at ? new Date(log.logged_at).toLocaleString() : "—");
+      (log.logged_at ? new Date(log.logged_at).toLocaleString() : "—");
 
     const tag = log.type === "driver"
       ? `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">Driver</span>`
@@ -1573,7 +1821,7 @@ function renderActivityLogs(logs = []) {
     const logId = log.id || (log.user_id + '_' + (log.logged_at?.toMillis ? log.logged_at.toMillis() : Date.now()) + '_' + Math.random());
     if (!window.activityLogCache) window.activityLogCache = {};
     window.activityLogCache[logId] = log;
-    
+
     return `
       <div class="bg-white border border-gray-200 rounded-lg p-4 shadow mb-3 cursor-pointer hover:shadow-md transition-shadow" onclick="openActivityLogDetails('${logId}')">
         <div class="flex justify-between items-start">
@@ -1640,7 +1888,7 @@ function applyActivityFilters() {
   }
   if (endVal) {
     const endTs = new Date(endVal);
-    endTs.setHours(23,59,59,999);
+    endTs.setHours(23, 59, 59, 999);
     filtered = filtered.filter(l => {
       const t = l.logged_at && l.logged_at.toMillis ? l.logged_at.toDate() : (l.logged_at ? new Date(l.logged_at) : null);
       return t ? t <= endTs : false;
@@ -1656,7 +1904,7 @@ function applyActivityFilters() {
 
 /* Clear filters */
 function clearActivityFilters() {
-  const ids = ["filterField","filterRole","filterUser","filterType","filterStartDate","filterEndDate"];
+  const ids = ["filterField", "filterRole", "filterUser", "filterType", "filterStartDate", "filterEndDate"];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1675,21 +1923,21 @@ function applyPreset(preset) {
 
   if (preset === "today") {
     const s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const e = new Date(s); e.setHours(23,59,59,999);
-    start.value = s.toISOString().slice(0,10);
-    end.value = e.toISOString().slice(0,10);
+    const e = new Date(s); e.setHours(23, 59, 59, 999);
+    start.value = s.toISOString().slice(0, 10);
+    end.value = e.toISOString().slice(0, 10);
   } else if (preset === "thisWeek") {
     const day = now.getDay();
     const diffStart = now.getDate() - day + (day === 0 ? -6 : 1);
     const s = new Date(now.getFullYear(), now.getMonth(), diffStart);
     const e = new Date(s); e.setDate(s.getDate() + 6);
-    start.value = s.toISOString().slice(0,10);
-    end.value = e.toISOString().slice(0,10);
+    start.value = s.toISOString().slice(0, 10);
+    end.value = e.toISOString().slice(0, 10);
   } else if (preset === "thisMonth") {
     const s = new Date(now.getFullYear(), now.getMonth(), 1);
-    const e = new Date(now.getFullYear(), now.getMonth()+1, 0);
-    start.value = s.toISOString().slice(0,10);
-    end.value = e.toISOString().slice(0,10);
+    const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    start.value = s.toISOString().slice(0, 10);
+    end.value = e.toISOString().slice(0, 10);
   }
   applyActivityFilters();
 }
@@ -1697,7 +1945,7 @@ function applyPreset(preset) {
 /* Prepare printable table in #activityLogsPrintArea */
 function preparePrintableActivityTable(logs = []) {
 
-    logs.sort((a, b) => {
+  logs.sort((a, b) => {
     const nameA = (a.user_name || "").toLowerCase();
     const nameB = (b.user_name || "").toLowerCase();
 
@@ -1716,7 +1964,7 @@ function preparePrintableActivityTable(logs = []) {
 
     return tb - ta;
   });
-  const printArea = document.getElementById("activityLogsPrintArea") || (function(){
+  const printArea = document.getElementById("activityLogsPrintArea") || (function () {
     const div = document.createElement('div');
     div.id = 'activityLogsPrintArea';
     div.style.display = 'none';
@@ -1731,7 +1979,7 @@ function preparePrintableActivityTable(logs = []) {
   // create a simple table
   const rows = logs.map(l => {
     const date = (l.logged_at && l.logged_at.toDate) ? l.logged_at.toDate().toLocaleString() :
-                 (l.logged_at ? new Date(l.logged_at).toLocaleString() : "");
+      (l.logged_at ? new Date(l.logged_at).toLocaleString() : "");
     return `<tr>
       <td>${escapeHtml(l.user_name || "")}</td>
       <td>${escapeHtml(l.type)}</td>
@@ -1777,7 +2025,7 @@ async function exportActivityCSV() {
     if (printArea && printArea.querySelector("tbody")) {
       const trs = printArea.querySelectorAll("tbody tr");
       trs.forEach(tr => {
-        const vals = Array.from(tr.children).map(td => `"${td.textContent.replace(/"/g,'""')}"`);
+        const vals = Array.from(tr.children).map(td => `"${td.textContent.replace(/"/g, '""')}"`);
         csvRows.push(vals.join(","));
       });
     } else {
@@ -1794,13 +2042,13 @@ async function exportActivityCSV() {
           l.field_name,
           date,
           l.description
-        ].map(s => `"${(s||"").toString().replace(/"/g,'""')}"`).join(","));
+        ].map(s => `"${(s || "").toString().replace(/"/g, '""')}"`).join(","));
       });
     }
 
     const csv = csvRows.join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    
+
     // sanitize title for filename
     const safeTitle = title.replace(/[^a-zA-Z0-9()\- ]/g, "");
     const filename = `${safeTitle}.csv`;
@@ -1808,7 +2056,7 @@ async function exportActivityCSV() {
     // Use Android-compatible download
     const { downloadFile } = await import('../Common/android-download.js');
     await downloadFile(blob, filename);
-    
+
     // Small delay to ensure download starts before hiding animation
     await new Promise(resolve => setTimeout(resolve, 500));
   } catch (error) {
@@ -1919,12 +2167,12 @@ function setupActivityLogsControls() {
 
 const refreshActivityBtn = document.getElementById("refreshActivityLogs");
 if (refreshActivityBtn) {
-    refreshActivityBtn.addEventListener("click", async () => {
-        const user = auth.currentUser;
-        refreshActivityBtn.disabled = true;
-        await loadActivityLogs(user.uid);
-        refreshActivityBtn.disabled = false;
-    });
+  refreshActivityBtn.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    refreshActivityBtn.disabled = true;
+    await loadActivityLogs(user.uid);
+    refreshActivityBtn.disabled = false;
+  });
 }
 
 
@@ -2015,7 +2263,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       loadedSections.add(sectionId);
-      
+
       // Initialize fields map after loading fields section
       if (sectionId === 'fields') {
         console.log('🗺️ Fields section loaded, initializing map...');
@@ -2026,8 +2274,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Initialize rent driver when it's loaded
       if (sectionId === 'rentDriver') {
-          console.log('🚚 Rent Driver section loaded, initializing UI...');
-          initializeRentDriverSection();
+        console.log('🚚 Rent Driver section loaded, initializing UI...');
+        initializeRentDriverSection();
       }
 
       if (sectionId === 'workers') {
@@ -2552,7 +2800,7 @@ function renderTaskWarnings(warnings) {
 /**
  * Navigate to tasks section when warning is clicked
  */
-window.navigateToTasksSection = function() {
+window.navigateToTasksSection = function () {
   // Click the tasks nav item
   const tasksNavItem = document.querySelector('.nav-item[data-section="tasks"]');
   if (tasksNavItem) {
@@ -2854,10 +3102,10 @@ async function initializeTasksSection(handlerId) {
       searchTimeout = setTimeout(() => {
         const searchTerm = e.target.value.toLowerCase();
         const currentFilter = filterSelect?.value || 'all';
-        
+
         // Filter tasks based on search and current filter
         let filteredTasks = allTasksData;
-        
+
         // Apply current filter
         if (currentFilter !== 'all') {
           filteredTasks = filteredTasks.filter(task => {
@@ -2882,10 +3130,10 @@ async function initializeTasksSection(handlerId) {
             const taskTitle = (task.title || task.task || task.taskType || '').toLowerCase();
             const field = (allFieldsMap.get(task.fieldId)?.name || '').toLowerCase();
             const assignedUser = task.metadata?.driver?.fullname || task.metadata?.driver?.name || '';
-            
-            return taskTitle.includes(searchTerm) || 
-                   field.includes(searchTerm) || 
-                   assignedUser.toLowerCase().includes(searchTerm);
+
+            return taskTitle.includes(searchTerm) ||
+              field.includes(searchTerm) ||
+              assignedUser.toLowerCase().includes(searchTerm);
           });
         }
 
@@ -2984,7 +3232,7 @@ function getOverallStatusBadgeClass(status) {
 /**
  * View task details in modal
  */
-window.viewTaskDetails = async function(taskId) {
+window.viewTaskDetails = async function (taskId) {
   const task = allTasksData.find(t => t.id === taskId);
   if (!task) return;
 
@@ -2996,7 +3244,7 @@ window.viewTaskDetails = async function(taskId) {
   // Determine assigned user info
   let assignedUserInfo = null;
   let assignedRole = null;
-  
+
   if (task.metadata && task.metadata.driver) {
     // Task assigned to driver
     assignedRole = 'driver';
@@ -3164,7 +3412,7 @@ window.viewTaskDetails = async function(taskId) {
 
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-  (function(){
+  (function () {
     const modal = document.getElementById('taskDetailsModal');
     if (!modal) return;
     const updateBtn = modal.querySelector('#updateDeadlineBtn');
@@ -3176,8 +3424,8 @@ window.viewTaskDetails = async function(taskId) {
 
     const fmtDate = (d) => {
       const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const da = String(d.getDate()).padStart(2,'0');
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
       return `${y}-${m}-${da}`;
     };
     if (input && deadline) input.value = fmtDate(deadline);
@@ -3204,7 +3452,7 @@ window.viewTaskDetails = async function(taskId) {
         if (editContainer) editContainer.classList.remove('hidden');
         if (updateBtn) updateBtn.textContent = 'Confirm Update';
         if (input && !input.value && deadline) input.value = fmtDate(deadline);
-        if (errorEl) { errorEl.textContent=''; errorEl.classList.add('hidden'); }
+        if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
       });
     };
 
@@ -3227,7 +3475,7 @@ window.viewTaskDetails = async function(taskId) {
     updateBtn && updateBtn.addEventListener('click', async () => {
       if (!confirmMode) { openConfirm(); return; }
       if (!input || !input.value) {
-        if (errorEl) { errorEl.textContent='Please select a deadline date.'; errorEl.classList.remove('hidden'); }
+        if (errorEl) { errorEl.textContent = 'Please select a deadline date.'; errorEl.classList.remove('hidden'); }
         return;
       }
       try {
@@ -3238,7 +3486,7 @@ window.viewTaskDetails = async function(taskId) {
         if (assigned.length > 0) {
           const taskName = task.title || task.task || task.taskType || 'Task';
           const msg = `Deadline updated: ${taskName} at ${field.name}. New: ${selected.toLocaleDateString()}`;
-          try { await createBatchNotifications(assigned, msg, 'task_updated', taskId); } catch(_) {}
+          try { await createBatchNotifications(assigned, msg, 'task_updated', taskId); } catch (_) { }
         }
         showSuccess('The deadline has been updated and assigned users notified.');
       } catch (err) {
@@ -3267,7 +3515,7 @@ window.viewTaskDetails = async function(taskId) {
 /**
  * Delete task with confirmation
  */
-window.confirmDeleteTask = async function(taskId) {
+window.confirmDeleteTask = async function (taskId) {
   const task = allTasksData.find(t => t.id === taskId);
   if (!task) return;
 
@@ -3680,48 +3928,48 @@ function setupRecentTaskActivityListener(handlerId) {
 }
 
 // Expose sync function for profile-settings to call
-window.__syncDashboardProfile = async function() {
-    try {
-        // Update display name from localStorage
-        const nickname = localStorage.getItem('farmerNickname');
-        const name = localStorage.getItem('farmerName') || 'Handler';
-        const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
-        
-        const userNameElements = document.querySelectorAll('#topUserNameHeader, #sidebarUserName');
-        userNameElements.forEach(el => { 
-            if (el) el.textContent = display; 
-        });
-        
-        // Try to fetch latest profile photo from Firestore if available
-        if (typeof auth !== 'undefined' && auth.currentUser) {
-            const uid = auth.currentUser.uid;
-            try {
-                const userRef = doc(db, 'users', uid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists() && userSnap.data().photoURL) {
-                    const photoUrl = userSnap.data().photoURL;
-                    // Update profile icons (header and sidebar)
-                    const profilePhoto = document.getElementById('profilePhoto');
-                    const profileIconDefault = document.getElementById('profileIconDefault');
-                    const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
-                    const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
-                    
-                    if (profilePhoto) {
-                        profilePhoto.src = photoUrl;
-                        profilePhoto.classList.remove('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
-                    }
-                    if (sidebarProfilePhoto) {
-                        sidebarProfilePhoto.src = photoUrl;
-                        sidebarProfilePhoto.classList.remove('hidden');
-                        if (sidebarProfileIconDefault) sidebarProfileIconDefault.classList.add('hidden');
-                    }
-                }
-            } catch(e) {
-                console.error('Error syncing profile photo:', e);
-            }
+window.__syncDashboardProfile = async function () {
+  try {
+    // Update display name from localStorage
+    const nickname = localStorage.getItem('farmerNickname');
+    const name = localStorage.getItem('farmerName') || 'Handler';
+    const display = nickname && nickname.trim().length > 0 ? nickname : name.split(' ')[0];
+
+    const userNameElements = document.querySelectorAll('#topUserNameHeader, #sidebarUserName');
+    userNameElements.forEach(el => {
+      if (el) el.textContent = display;
+    });
+
+    // Try to fetch latest profile photo from Firestore if available
+    if (typeof auth !== 'undefined' && auth.currentUser) {
+      const uid = auth.currentUser.uid;
+      try {
+        const userRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().photoURL) {
+          const photoUrl = userSnap.data().photoURL;
+          // Update profile icons (header and sidebar)
+          const profilePhoto = document.getElementById('profilePhoto');
+          const profileIconDefault = document.getElementById('profileIconDefault');
+          const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+          const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+
+          if (profilePhoto) {
+            profilePhoto.src = photoUrl;
+            profilePhoto.classList.remove('hidden');
+            if (profileIconDefault) profileIconDefault.classList.add('hidden');
+          }
+          if (sidebarProfilePhoto) {
+            sidebarProfilePhoto.src = photoUrl;
+            sidebarProfilePhoto.classList.remove('hidden');
+            if (sidebarProfileIconDefault) sidebarProfileIconDefault.classList.add('hidden');
+          }
         }
-    } catch(e) {
-        console.error('Profile sync error:', e);
+      } catch (e) {
+        console.error('Error syncing profile photo:', e);
+      }
     }
+  } catch (e) {
+    console.error('Profile sync error:', e);
+  }
 };
