@@ -1,50 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<title>CaneMap - Reports</title>
-<link rel="stylesheet" href="/css/output.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<!-- PDF Generation Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<style>
-  :root{
-    --cane-50:#f7fee7;--cane-100:#ecfcca;--cane-200:#d8f999;--cane-300:#bbf451;--cane-400:#9ae600;--cane-500:#7ccf00;--cane-600:#5ea500;--cane-700:#497d00;--cane-800:#3c6300;--cane-900:#35530e;--cane-950:#192e03;
-  }
-  .section-card{background:white;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,0.1);} 
-  .inner-box{background:var(--cane-50);border:1px solid var(--cane-200);} 
-  .drop-zone{border:2px dashed var(--cane-200);}
-  .btn-primary{background:linear-gradient(135deg,var(--cane-700),var(--cane-800));color:#fff;}
-  .btn-primary:hover{background:linear-gradient(135deg,var(--cane-800),var(--cane-900));}
-  .search-input{padding:0.65rem 0.85rem;padding-left:2.5rem;border-radius:0.75rem;border:1px solid #d9e2ec;background:#fff;font-size:0.85rem;transition:border-color 0.2s ease,box-shadow 0.2s ease;}
-  .search-input:focus{outline:none;border-color:var(--cane-500);box-shadow:0 0 0 3px rgba(124,207,0,0.15);}
-  table thead th{background:#f8fafc;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;color:#6b7280;font-weight:600;padding:1rem;}
-  table tbody tr{transition:background-color 0.15s ease;}
-  table tbody tr:hover{background-color:#f9fafb;}
-  table tbody td{padding:1.25rem 1rem;font-size:0.95rem;}
-  #reportModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:50;align-items:center;justify-content:center;}
-  #reportModal.active{display:flex;}
-  #reportModal .modal-content{background:linear-gradient(135deg,#ecfcca,#f7fee7);border-radius:1rem;max-width:1100px;width:95%;max-height:90vh;overflow-y:auto;}
-  /* Mobile responsiveness: Prevent reports section from causing horizontal scroll */
-  @media (max-width: 768px) {
-    body { overflow-x: hidden; max-width: 100vw; }
-    main { overflow-x: hidden; max-width: 100%; width: 100%; }
-    .section-card { overflow-x: hidden; max-width: 100%; width: 100%; box-sizing: border-box; }
-    /* Ensure table container doesn't overflow */
-    .section-card > div:last-of-type { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  }
-  
-  /* Android WebView specific fixes */
-  @supports (-webkit-appearance: none) {
-    .section-card { max-width: 100vw; box-sizing: border-box; }
-    .section-card > div:last-of-type { max-width: 100%; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>CaneMap - Reports</title>
+  <link rel="stylesheet" href="/css/output.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- PDF Generation Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      --cane-50: #f7fee7;
+      --cane-100: #ecfcca;
+      --cane-200: #d8f999;
+      --cane-300: #bbf451;
+      --cane-400: #9ae600;
+      --cane-500: #7ccf00;
+      --cane-600: #5ea500;
+      --cane-700: #497d00;
+      --cane-800: #3c6300;
+      --cane-900: #35530e;
+      --cane-950: #192e03;
+    }
+
+    .section-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .inner-box {
+      background: var(--cane-50);
+      border: 1px solid var(--cane-200);
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--cane-200);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cane-700), var(--cane-800));
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--cane-800), var(--cane-900));
+    }
+
+    .search-input {
+      padding: 0.65rem 0.85rem;
+      padding-left: 2.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #d9e2ec;
+      background: #fff;
+      font-size: 0.85rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--cane-500);
+      box-shadow: 0 0 0 3px rgba(124, 207, 0, 0.15);
+    }
+
+    table thead th {
+      background: #f8fafc;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7280;
+      font-weight: 600;
+      padding: 1rem;
+    }
+
+    table tbody tr {
+      transition: background-color 0.15s ease;
+    }
+
+    table tbody tr:hover {
+      background-color: #f9fafb;
+    }
+
+    table tbody td {
+      padding: 1.25rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    #reportModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #reportModal.active {
+      display: flex;
+    }
+
+    #reportModal .modal-content {
+      background: linear-gradient(135deg, #ecfcca, #f7fee7);
+      border-radius: 1rem;
+      max-width: 1100px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      margin: auto;
+    }
+
+    /* Mobile responsiveness: Prevent reports section from causing horizontal scroll */
+    @media (max-width: 768px) {
+      body {
+        overflow-x: hidden;
+        max-width: 100vw;
+      }
+
+      main {
+        overflow-x: hidden;
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .section-card {
+        overflow-x: hidden;
+        max-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* Ensure table container doesn't overflow */
+      .section-card>div:last-of-type {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    /* Android WebView specific fixes */
+    @supports (-webkit-appearance: none) {
+      .section-card {
+        max-width: 100vw;
+        box-sizing: border-box;
+      }
+
+      .section-card>div:last-of-type {
+        max-width: 100%;
+      }
+    }
+  </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen p-6">
 
   <main class="container mx-auto px-4 lg:px-6 py-6 mt-12 mb-10">
@@ -52,7 +169,8 @@
     <div class="section-card rounded-2xl p-6">
       <div class="mb-5">
         <h2 class="text-2xl font-bold text-[var(--cane-950)] mb-1 flex items-center gap-2">
-          <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cane-100)] text-[var(--cane-700)]">
+          <span
+            class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cane-100)] text-[var(--cane-700)]">
             <i class="fas fa-file-alt"></i>
           </span>
           My Reports
@@ -62,11 +180,13 @@
 
       <!-- Action Bar -->
       <div class="mb-4 flex flex-col sm:flex-row justify-between gap-3">
-        <button id="createReportBtn" class="btn-primary px-5 py-2.5 rounded-lg font-semibold shadow-md transition-all hover:shadow-lg">
+        <button id="createReportBtn"
+          class="btn-primary px-5 py-2.5 rounded-lg font-semibold shadow-md transition-all hover:shadow-lg">
           <i class="fas fa-plus mr-2"></i>Create Report
         </button>
         <div class="flex gap-3 flex-1 justify-end">
-          <select id="fieldFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--cane-600)]">
+          <select id="fieldFilter"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--cane-600)]">
             <option value="all">All Fields</option>
           </select>
           <div class="relative flex-1 sm:max-w-xs">
@@ -77,7 +197,8 @@
       </div>
 
       <!-- Reports Table -->
-      <div class="rounded-xl border border-gray-200" style="width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box;">
+      <div class="rounded-xl border border-gray-200"
+        style="width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box;">
         <table style="min-width: 100%; width: auto; table-layout: auto;">
           <thead>
             <tr>
@@ -95,8 +216,10 @@
       </div>
 
       <!-- Empty State (hidden by default) -->
-      <div id="reportsEmpty" class="hidden mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-gray-400 shadow-inner">
+      <div id="reportsEmpty"
+        class="hidden mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+        <div
+          class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-gray-400 shadow-inner">
           <i class="fas fa-file-alt text-2xl"></i>
         </div>
         <h3 class="mt-4 text-lg font-semibold text-gray-900">No reports yet</h3>
@@ -318,7 +441,7 @@
     }
 
     // View report details
-    window.viewReportDetails = async function(reportId) {
+    window.viewReportDetails = async function (reportId) {
       try {
         const reportDoc = await getDoc(doc(db, 'reports', reportId));
         if (!reportDoc.exists()) {
@@ -435,7 +558,7 @@
     };
 
     // View photo in modal (enlarge)
-    window.viewPhotoModal = function(photoUrl) {
+    window.viewPhotoModal = function (photoUrl) {
       const photoModal = document.createElement('div');
       photoModal.className = 'fixed inset-0 z-[99999] flex items-center justify-center bg-black/80';
       photoModal.innerHTML = `
@@ -475,11 +598,11 @@
     }
 
     // Download report as PDF
-    window.downloadReportPDF = async function(reportId, reportTypeLabel) {
+    window.downloadReportPDF = async function (reportId, reportTypeLabel) {
       // Find and show loading on download button
-      const downloadBtn = document.getElementById(`downloadReportBtn_${reportId}`) || 
-                         document.querySelector(`button[onclick*="downloadReportPDF('${reportId}'"]`) ||
-                         event?.target?.closest('button');
+      const downloadBtn = document.getElementById(`downloadReportBtn_${reportId}`) ||
+        document.querySelector(`button[onclick*="downloadReportPDF('${reportId}'"]`) ||
+        event?.target?.closest('button');
       const originalContent = downloadBtn ? downloadBtn.innerHTML : '';
       if (downloadBtn) {
         downloadBtn.disabled = true;
@@ -549,15 +672,15 @@
 
         // Generate PDF - use downloadFile for both browser and Android (faster)
         const { downloadFile } = await import('../../../backend/Common/android-download.js');
-        
+
         // Generate blob and use download utility (works for both browser and Android)
-          const pdfBlob = await new Promise((resolve, reject) => {
-            window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
-          });
-          await downloadFile(pdfBlob, filename);
-        
-          // Small delay to ensure download starts before hiding animation
-          await new Promise(resolve => setTimeout(resolve, 500));
+        const pdfBlob = await new Promise((resolve, reject) => {
+          window.html2pdf().set(opt).from(clone).outputPdf('blob').then(resolve).catch(reject);
+        });
+        await downloadFile(pdfBlob, filename);
+
+        // Small delay to ensure download starts before hiding animation
+        await new Promise(resolve => setTimeout(resolve, 500));
         console.log('✅ PDF generated successfully');
       } catch (error) {
         console.error('Error generating PDF:', error);
@@ -572,7 +695,7 @@
     };
 
     // Print report
-    window.printReport = function() {
+    window.printReport = function () {
       const reportContent = document.getElementById('reportDetailContent');
       if (!reportContent) return;
 
@@ -671,7 +794,7 @@
     document.getElementById('searchReports').addEventListener('input', (e) => {
       const searchTerm = e.target.value.toLowerCase();
       const rows = document.querySelectorAll('#reportsTbody tr');
-      
+
       rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(searchTerm) ? '' : 'none';
@@ -680,6 +803,5 @@
   </script>
 
 </body>
+
 </html>
-
-
