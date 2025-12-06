@@ -313,7 +313,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const barangay = form.querySelector("#barangay_select")?.value.trim() || window.selectedBarangay?.trim() || "";
     const street = form.querySelector("#street")?.value.trim() || "";
     const size = form.querySelector("#field_size")?.value.trim() || "";
-    const terrain = form.querySelector("#terrain_type")?.value.trim() || "";
 
     // ✅ NEW FIELDS: Capture additional field details
     const soilType = form.querySelector("#soil_type")?.value.trim() || "";
@@ -337,7 +336,6 @@ document.addEventListener("DOMContentLoaded", () => {
       !barangay ||
       !street ||
       !size ||
-      !terrain ||
       !sugarVariety ||
       !lat ||
       !lng ||
@@ -350,7 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
         barangay,
         street,
         size,
-        terrain,
         sugarVariety,
         lat,
         lng,
@@ -384,7 +381,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const barangayNorm = barangay.toLowerCase();
       const streetNorm = street.toLowerCase();
       const sizeNorm = size.toLowerCase();
-      const terrainNorm = terrain.toLowerCase();
       const sugarNorm = sugarVariety.toLowerCase();
       const fieldNameNorm = fieldName.toLowerCase();
       const latNorm = parseFloat(lat.toFixed(5));
@@ -401,7 +397,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const fName = (d.field_name || "").trim().toLowerCase();
         const st = (d.street || "").trim().toLowerCase();
         const s = (d.field_size || "").trim().toLowerCase();
-        const t = (d.terrain_type || "").trim().toLowerCase();
         const v = (d.sugarcane_variety || "").trim().toLowerCase();
         const lt = parseFloat((d.latitude || 0).toFixed(5));
         const lg = parseFloat((d.longitude || 0).toFixed(5));
@@ -410,7 +405,6 @@ document.addEventListener("DOMContentLoaded", () => {
           fName === fieldNameNorm &&
           st === streetNorm &&
           s === sizeNorm &&
-          t === terrainNorm &&
           v === sugarNorm &&
           lt === latNorm &&
           lg === lngNorm
@@ -420,7 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (duplicateFound) {
-        await showPopupMessage('⚠️ You already registered this field with the same field name, barangay, street, field size, terrain type, variety, and coordinates.', 'warning');
+        await showPopupMessage('⚠️ You already registered this field with the same field name, barangay, street, field size, variety, and coordinates.', 'warning');
         resetButton();
         return;
       }
@@ -477,7 +471,6 @@ document.addEventListener("DOMContentLoaded", () => {
         street,
         sugarcane_variety: sugarVariety,
         variety: sugarVariety, // Also store as 'variety' for consistency
-        terrain_type: terrain,
         field_size: size,
         area: size,
         // ✅ NEW: Additional field details for better crop management
