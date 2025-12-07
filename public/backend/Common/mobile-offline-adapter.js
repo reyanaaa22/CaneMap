@@ -1,12 +1,28 @@
 // Mobile Offline Adapter for Capacitor
 // Wraps existing offline-sync.js with Capacitor-specific network detection
+// Browser-compatible: Only loads Capacitor modules when running in native app
 
-import { Capacitor } from '@capacitor/core';
-import { Network } from '@capacitor/network';
 import { initOfflineSync, syncPendingLogs, getOnlineStatus } from './offline-sync.js';
 
 let networkListener = null;
 let isCapacitorApp = false;
+let Capacitor = null;
+let Network = null;
+
+/**
+ * Check if Capacitor is available (running in native app)
+ * @returns {boolean}
+ */
+function checkCapacitorAvailability() {
+    try {
+        // Check if window.Capacitor exists (injected by Capacitor runtime)
+        return typeof window !== 'undefined' &&
+            window.Capacitor !== undefined &&
+            window.Capacitor.isNativePlatform !== undefined;
+    } catch (error) {
+        return false;
+    }
+}
 
 /**
  * Initialize mobile offline sync
@@ -15,12 +31,27 @@ let isCapacitorApp = false;
 export async function initMobileOfflineSync() {
     console.log('Initializing mobile offline sync...');
 
-    // Check if running in Capacitor environment
-    isCapacitorApp = Capacitor.isNativePlatform();
+    // Check if Capacitor is available
+    isCapacitorApp = checkCapacitorAvailability();
 
     if (isCapacitorApp) {
-        console.log('Running in Capacitor - using native network detection');
-        await setupCapacitorNetworkMonitoring();
+        console.log('Running in Capacitor - attempting to load native network detection');
+        try {
+            // Dynamically import Capacitor modules (only available in mobile app)
+            Capacitor = window.Capacitor;
+
+            // Try to access Network plugin
+            if (window.Capacitor.Plugins && window.Capacitor.Plugins.Network) {
+                Network = window.Capacitor.Plugins.Network;
+                await setupCapacitorNetworkMonitoring();
+            } else {
+                console.warn('Capacitor Network plugin not available, falling back to browser detection');
+                isCapacitorApp = false;
+            }
+        } catch (error) {
+            console.warn('Failed to load Capacitor modules, falling back to browser detection:', error);
+            isCapacitorApp = false;
+        }
     } else {
         console.log('Running in browser - using standard offline sync');
     }
@@ -96,7 +127,7 @@ export function isCapacitor() {
  * @returns {Promise<boolean>}
  */
 export async function getNetworkStatus() {
-    if (isCapacitorApp) {
+    if (isCapacitorApp && Network) {
         try {
             const status = await Network.getStatus();
             return status.connected;
