@@ -57,12 +57,20 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
 
-<<<<<<< HEAD
             // Handle download requests coming from WebView
             webView.setDownloadListener(new DownloadListener() {
                 @Override
                 public void onDownloadStart(String url, String userAgent, String contentDisposition,
-                                            String mimetype, long contentLength) {
+                        String mimetype, long contentLength) {
+
+                    // 🔥 FIX: Prevent downloading HTML/JS/CSS pages
+                    if (url.endsWith(".html") || url.endsWith(".htm") ||
+                            url.contains(".html?") || url.contains(".htm?") ||
+                            (mimetype != null && mimetype.equals("text/html")) ||
+                            (mimetype != null && mimetype.equals("text/plain"))) {
+                        System.out.println("⛔ BLOCKED download of HTML page: " + url);
+                        return; // Don't download — WebView should load it normally
+                    }
 
                     if (checkStoragePermission()) {
                         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
@@ -72,57 +80,16 @@ public class MainActivity extends BridgeActivity {
                         request.setTitle("CaneMap Download");
                         request.allowScanningByMediaScanner();
                         request.setNotificationVisibility(
-                                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
-                        );
+                                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
                         request.setDestinationInExternalPublicDir(
                                 Environment.DIRECTORY_DOWNLOADS,
-                                getFileNameFromUrl(url, contentDisposition)
-                        );
+                                getFileNameFromUrl(url, contentDisposition));
 
                         DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
                         dm.enqueue(request);
                     }
                 }
             });
-=======
-// Handle download requests coming from WebView
-webView.setDownloadListener(new DownloadListener() {
-    @Override
-    public void onDownloadStart(String url, String userAgent, String contentDisposition,
-                                String mimetype, long contentLength) {
-
-        // 🔥 FIX: Prevent downloading HTML/JS/CSS pages
-        if (
-            url.endsWith(".html") || url.endsWith(".htm") ||
-            url.contains(".html?") || url.contains(".htm?") ||
-            (mimetype != null && mimetype.equals("text/html")) ||
-            (mimetype != null && mimetype.equals("text/plain"))
-        ) {
-            System.out.println("⛔ BLOCKED download of HTML page: " + url);
-            return; // Don't download — WebView should load it normally
-        }
-
-        if (checkStoragePermission()) {
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-            request.setMimeType(mimetype);
-            request.addRequestHeader("User-Agent", userAgent);
-            request.setDescription("Downloading file...");
-            request.setTitle("CaneMap Download");
-            request.allowScanningByMediaScanner();
-            request.setNotificationVisibility(
-                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
-            );
-            request.setDestinationInExternalPublicDir(
-                    Environment.DIRECTORY_DOWNLOADS,
-                    getFileNameFromUrl(url, contentDisposition)
-            );
-
-            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            dm.enqueue(request);
-        }
-    }
-});
->>>>>>> 332aba6b73bc6fec1a91fb8e517fb10dfb3fb346
 
             // JS interface for downloads & permissions
             webView.addJavascriptInterface(new Object() {
@@ -133,10 +100,11 @@ webView.setDownloadListener(new DownloadListener() {
                         if (checkStoragePermission()) {
                             try {
                                 byte[] fileData = Base64.decode(base64Data, Base64.DEFAULT);
-                                File downloadsDir =
-                                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                                File downloadsDir = Environment
+                                        .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
-                                if (!downloadsDir.exists()) downloadsDir.mkdirs();
+                                if (!downloadsDir.exists())
+                                    downloadsDir.mkdirs();
 
                                 File file = new File(downloadsDir, filename);
                                 FileOutputStream fos = new FileOutputStream(file);
@@ -145,10 +113,9 @@ webView.setDownloadListener(new DownloadListener() {
 
                                 android.media.MediaScannerConnection.scanFile(
                                         MainActivity.this,
-                                        new String[]{file.getAbsolutePath()},
-                                        new String[]{mimeType != null ? mimeType : "application/octet-stream"},
-                                        null
-                                );
+                                        new String[] { file.getAbsolutePath() },
+                                        new String[] { mimeType != null ? mimeType : "application/octet-stream" },
+                                        null);
                             } catch (Exception e) {
                                 android.util.Log.e("Download", "Error saving file: " + e.getMessage());
                             }
@@ -172,10 +139,10 @@ webView.setDownloadListener(new DownloadListener() {
                 public void requestCameraPermission() {
                     runOnUiThread(() -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                            !checkCameraPermission()) {
+                                !checkCameraPermission()) {
 
                             ActivityCompat.requestPermissions(MainActivity.this,
-                                    new String[]{Manifest.permission.CAMERA},
+                                    new String[] { Manifest.permission.CAMERA },
                                     PERMISSION_REQUEST_CODE);
                         }
                     });
@@ -199,30 +166,30 @@ webView.setDownloadListener(new DownloadListener() {
 
             // STORAGE BASED ON ANDROID VERSION
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-                        != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(Manifest.permission.READ_MEDIA_IMAGES);
                 }
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO)
-                        != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(Manifest.permission.READ_MEDIA_VIDEO);
                 }
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
-                        != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(Manifest.permission.READ_MEDIA_AUDIO);
                 }
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE);
                 }
             } else {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE);
                 }
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
                 }
             }
@@ -231,36 +198,34 @@ webView.setDownloadListener(new DownloadListener() {
                 ActivityCompat.requestPermissions(
                         this,
                         permissionsToRequest.toArray(new String[0]),
-                        PERMISSION_REQUEST_CODE
-                );
+                        PERMISSION_REQUEST_CODE);
             }
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String[] permissions,
-                                           int[] grantResults) {
+            String[] permissions,
+            int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     private boolean checkStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-                    == PackageManager.PERMISSION_GRANTED;
+            return ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED
+            return ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
                     || Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
         } else {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED;
+            return ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
         }
     }
 
     public boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
     }
 
     private String getFileNameFromUrl(String url, String contentDisposition) {

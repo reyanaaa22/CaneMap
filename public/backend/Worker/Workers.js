@@ -25,8 +25,8 @@ import {
 } from '../Handler/growth-tracker.js';
 import { getRecommendedTasksForDAP } from '../Handler/task-automation.js';
 
-// Offline sync support
-import { initOfflineSync } from '../Common/offline-sync.js';
+// Offline sync support (mobile-aware)
+import { initMobileOfflineSync } from '../Common/mobile-offline-adapter.js';
 
 // Helper function to get display-friendly task names
 function getTaskDisplayName(taskValue) {
@@ -302,12 +302,12 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeDashboard();
     initAuthSession();
 
-    // Initialize offline sync manager
+    // Initialize mobile offline sync manager
     try {
-        initOfflineSync();
-        console.log('Offline sync initialized on Workers dashboard');
+        initMobileOfflineSync();
+        console.log('Mobile offline sync initialized on Workers dashboard');
     } catch (error) {
-        console.error('Failed to initialize offline sync:', error);
+        console.error('Failed to initialize mobile offline sync:', error);
     }
 
     // Listen for cross-tab updates from profile-settings without reload
@@ -2250,9 +2250,9 @@ async function createWorkerLog(logData) {
                 'success',
                 { autoClose: true, timeout: 3000 }
             );
-            
+
             console.log('✅ Offline save completed successfully');
-            
+
             return;
         } catch (error) {
             console.error('❌ Error saving offline work log:', error);

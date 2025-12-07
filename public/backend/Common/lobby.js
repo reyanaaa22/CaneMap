@@ -242,14 +242,14 @@ async function getWeather() {
           uvBar.style.background = color;
           uvEl.setAttribute("data-uv-level", String(uvi));
           uvEl.title = `UV index ${uvi.toFixed(1)} — ${uvi >= 11
-              ? "Extreme"
-              : uvi >= 8
-                ? "Very High"
-                : uvi >= 6
-                  ? "High"
-                  : uvi >= 3
-                    ? "Moderate"
-                    : "Low"
+            ? "Extreme"
+            : uvi >= 8
+              ? "Very High"
+              : uvi >= 6
+                ? "High"
+                : uvi >= 3
+                  ? "Moderate"
+                  : "Low"
             }`;
         } else {
           uvEl.textContent = "--";
@@ -2035,16 +2035,16 @@ window.addEventListener("message", (e) => {
 
 // Initialize everything when page loads
 document.addEventListener("DOMContentLoaded", function () {
-  // Initialize offline sync for Worker and Driver accounts
+  // Initialize mobile offline sync for Worker and Driver accounts
   try {
-    import('../Common/offline-sync.js').then(module => {
-      module.initOfflineSync();
-      console.log('Offline sync initialized on lobby page');
+    import('../Common/mobile-offline-adapter.js').then(module => {
+      module.initMobileOfflineSync();
+      console.log('Mobile offline sync initialized on lobby page');
     }).catch(err => {
-      console.error('Failed to initialize offline sync on lobby:', err);
+      console.error('Failed to initialize mobile offline sync on lobby:', err);
     });
   } catch (error) {
-    console.error('Error loading offline sync module:', error);
+    console.error('Error loading mobile offline sync module:', error);
   }
 
   setTimeout(() => {
@@ -4764,7 +4764,7 @@ setInterval(updateDriverBadgePromoVisibility, 400);
   });
 
   window.addEventListener("resize", debounce(updateHeaderButtonsForViewport, 120));
-  
+
   // Auto-update header when role or pending status changes
   let lastRole = (localStorage.getItem("userRole") || "").toLowerCase();
   let lastPendingWorker = localStorage.getItem("pendingWorker");

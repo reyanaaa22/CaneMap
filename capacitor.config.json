@@ -8,6 +8,9 @@
       "android": {
         "path": "files"
       }
+    },
+    "Network": {
+      "alias": "CaneMapNetwork"
     }
   }
 }

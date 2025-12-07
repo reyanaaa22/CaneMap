@@ -17,8 +17,8 @@ import {
 import { onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { initializeDriverDashboard } from './driver-init.js';
 
-// Offline sync support
-import { initOfflineSync } from '../Common/offline-sync.js';
+// Offline sync support (mobile-aware)
+import { initMobileOfflineSync } from '../Common/mobile-offline-adapter.js';
 
 /*
   FUNCTION:
@@ -49,10 +49,10 @@ onAuthStateChanged(auth, async (user) => {
     // Check if dashboard is actually populated (not just initialized flag)
     const userNameEl = document.getElementById("userName");
     const isDashboardPopulated = userNameEl && userNameEl.textContent && userNameEl.textContent !== "Driver" && userNameEl.textContent.trim() !== "";
-    
+
     if (isDashboardPopulated) {
       console.log('⏭️ Driver dashboard already initialized and populated, skipping...');
-    return;
+      return;
     }
     // If dashboard is not populated, reset initialization to allow proper setup
     console.log('🔄 Dashboard not populated, re-initializing driver dashboard...');
@@ -139,7 +139,7 @@ onAuthStateChanged(auth, async (user) => {
     localStorage.setItem("userFullName", fullName);
     localStorage.setItem("userRole", role);
     localStorage.setItem("userId", user.uid);
-    
+
     // Load and display profile photo
     if (data.photoURL) {
       const profilePhoto = document.getElementById('profilePhoto');
@@ -159,12 +159,12 @@ onAuthStateChanged(auth, async (user) => {
     // ✅ Initialize dashboard after authentication
     initializeDriverDashboard();
 
-    // ✅ Initialize offline sync manager
+    // ✅ Initialize mobile offline sync manager
     try {
-      initOfflineSync();
-      console.log('Offline sync initialized on Driver dashboard');
+      initMobileOfflineSync();
+      console.log('Mobile offline sync initialized on Driver dashboard');
     } catch (error) {
-      console.error('Failed to initialize offline sync:', error);
+      console.error('Failed to initialize mobile offline sync:', error);
     }
 
     // ✅ Mark as initialized
@@ -175,7 +175,7 @@ onAuthStateChanged(auth, async (user) => {
     // CRITICAL: Remove loading overlay on error
     const existingBlur = document.getElementById("preBlurOverlay");
     if (existingBlur) existingBlur.remove();
-    
+
     // Show error message to user
     const errorOverlay = document.createElement("div");
     errorOverlay.className = "fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[9999]";
@@ -364,30 +364,30 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!userId) return;
 
     try {
-    let q = query(collection(db, "notifications"), where("userId", "==", userId));
-    let snap = await getDocs(q);
+      let q = query(collection(db, "notifications"), where("userId", "==", userId));
+      let snap = await getDocs(q);
 
       const unread = snap.docs.filter((d) => {
         const data = d.data();
         return !data.read && data.status !== "read";
       });
-      
+
       if (unread.length === 0) {
         console.log("All notifications are already read.");
         return;
       }
 
       // Update both 'read' and 'status' fields for lobby compatibility
-    await Promise.all(
-      unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
-        read: true,
+      await Promise.all(
+        unread.map((d) => updateDoc(doc(db, "notifications", d.id), {
+          read: true,
           status: "read",
-        readAt: serverTimestamp()
-      }))
-    );
+          readAt: serverTimestamp()
+        }))
+      );
 
       console.log(`✅ Marked ${unread.length} notifications as read.`);
-      
+
       // Reload notifications to reflect changes
       await loadDriverNotifications(userId);
     } catch (error) {
@@ -401,7 +401,7 @@ window.toggleNotifications = toggleNotifications;
 // ============================================================
 // 🔄 PROFILE PHOTO SYNC (called by profile-settings.js)
 // ============================================================
-window.__syncDashboardProfile = async function() {
+window.__syncDashboardProfile = async function () {
   try {
     if (!auth || !auth.currentUser) return;
     const uid = auth.currentUser.uid;
@@ -416,6 +416,6 @@ window.__syncDashboardProfile = async function() {
       if (icon) icon.classList.add('hidden');
     }
   } catch (e) {
-    try { console.error('Error syncing driver profile photo:', e); } catch(_) {}
+    try { console.error('Error syncing driver profile photo:', e); } catch (_) { }
   }
 };
