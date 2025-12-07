@@ -56,25 +56,59 @@ export async function downloadFile(blob, filename) {
         console.log('⚠️ AndroidDownload interface not available after waiting');
       }
       
-      // Method 2: Try Capacitor Filesystem API
-      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
-        const { Filesystem } = window.Capacitor.Plugins;
-        const base64 = await blobToBase64(blob);
-        
-        // Try External Storage (Downloads) first, fallback to Documents
+      // Method 2: Try Capacitor Filesystem API with Share
+      if (window.Capacitor && window.Capacitor.Plugins) {
         try {
-          // For Android, try to write to external storage Downloads
-          const result = await Filesystem.writeFile({
-            path: filename,
-            data: base64,
-            directory: Filesystem.Directory.ExternalStorage,
-            recursive: true
-          });
-          console.log('✅ File saved via Capacitor (ExternalStorage):', result.uri);
-          return;
-        } catch (externalError) {
+          const { Filesystem } = window.Capacitor.Plugins;
+          const base64 = await blobToBase64(blob);
+          
+          // Try to save to cache directory first (more reliable)
           try {
-            // Fallback to Documents
+            const result = await Filesystem.writeFile({
+              path: filename,
+              data: base64,
+              directory: Filesystem.Directory.Cache,
+              recursive: true
+            });
+            console.log('✅ File saved to cache via Capacitor:', result.uri);
+            
+            // Try to use Share plugin to open/save the file
+            if (window.Capacitor.Plugins.Share) {
+              try {
+                await window.Capacitor.Plugins.Share.share({
+                  title: 'Growth Report PDF',
+                  text: 'CaneMap Growth Tracker Report',
+                  url: result.uri,
+                  dialogTitle: 'Share or Save PDF'
+                });
+                console.log('✅ File shared via Capacitor Share');
+                return;
+              } catch (shareError) {
+                console.log('Share cancelled or not available, file saved to cache');
+                return;
+              }
+            }
+            return;
+          } catch (cacheError) {
+            console.warn('Cache write failed, trying external storage:', cacheError);
+          }
+          
+          // Try External Storage (Downloads)
+          try {
+            const result = await Filesystem.writeFile({
+              path: filename,
+              data: base64,
+              directory: Filesystem.Directory.ExternalStorage,
+              recursive: true
+            });
+            console.log('✅ File saved via Capacitor (ExternalStorage):', result.uri);
+            return;
+          } catch (externalError) {
+            console.warn('External storage failed, trying documents:', externalError);
+          }
+          
+          // Fallback to Documents
+          try {
             const result = await Filesystem.writeFile({
               path: filename,
               data: base64,
@@ -86,6 +120,8 @@ export async function downloadFile(blob, filename) {
           } catch (fsError) {
             console.warn('Filesystem write failed, trying alternative:', fsError);
           }
+        } catch (error) {
+          console.warn('Capacitor Filesystem not available:', error);
         }
       }
 

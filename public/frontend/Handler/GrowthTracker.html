@@ -987,6 +987,27 @@
       </script>
 
       <script>
+        // Wait for html2pdf to be available
+        function waitForHtml2pdf() {
+          return new Promise((resolve) => {
+            if (typeof html2pdf !== 'undefined') {
+              resolve();
+            } else {
+              const checkInterval = setInterval(() => {
+                if (typeof html2pdf !== 'undefined') {
+                  clearInterval(checkInterval);
+                  resolve();
+                }
+              }, 100);
+              // Timeout after 5 seconds
+              setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve();
+              }, 5000);
+            }
+          });
+        }
+
         // Add timestamp on print
         window.onbeforeprint = () => {
           document.getElementById("generatedStamp").textContent = new Date().toLocaleString();
@@ -1006,15 +1027,27 @@
           btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
           try {
+            // Ensure html2pdf is loaded
+            await waitForHtml2pdf();
+            
+            if (typeof html2pdf === 'undefined') {
+              throw new Error('html2pdf library failed to load');
+            }
+
             document.getElementById("generatedStamp").textContent = new Date().toLocaleString();
 
             const content = document.getElementById("captureArea");
-
             const filename = `CaneMap_Growth_Report_${Date.now()}.pdf`;
+            
             const opt = {
               margin: 10,
               filename: filename,
-              html2canvas: { scale: 2 },
+              html2canvas: { 
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+              },
               jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
@@ -1024,14 +1057,31 @@
             if (isAndroidApp()) {
               // For Android: Generate blob and use download utility
               const pdfBlob = await new Promise((resolve, reject) => {
-                html2pdf().set(opt).from(content).outputPdf('blob').then(resolve).catch(reject);
+                try {
+                  html2pdf()
+                    .set(opt)
+                    .from(content)
+                    .outputPdf('blob')
+                    .then(resolve)
+                    .catch(reject);
+                } catch (e) {
+                  reject(e);
+                }
               });
+              
+              if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('Generated PDF is empty');
+              }
+              
               await downloadFile(pdfBlob, filename);
               // Small delay to ensure download starts before hiding animation
               await new Promise(resolve => setTimeout(resolve, 500));
             } else {
               // For browser: Use standard save method
-              await html2pdf().set(opt).from(content).save();
+              await html2pdf()
+                .set(opt)
+                .from(content)
+                .save();
               // Small delay to ensure download starts before hiding animation
               await new Promise(resolve => setTimeout(resolve, 300));
             }
