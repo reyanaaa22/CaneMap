@@ -898,13 +898,32 @@ async function initNotifications(userId) {
                                         scrollWheelZoom: false,
                                     }).setView([11.0064, 124.6075], 12);
 
-                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                         attribution: '© OpenStreetMap contributors',
                                     }).addTo(map);
 
                                     const bounds = L.latLngBounds(L.latLng(10.85, 124.45), L.latLng(11.20, 124.80));
                                     map.setMaxBounds(bounds);
                                     map.on('drag', () => map.panInsideBounds(bounds, { animate: true }));
+
+                                    // Fix: some browsers/devices may grey-out tiles when the map
+                                    // is interacted with inside complex layouts. Force a refresh
+                                    // of map size and tile redraw after interactions. This is
+                                    // intentionally limited to the dashboard map instance only.
+                                    map.whenReady(() => {
+                                        try { map.invalidateSize(); } catch(_) {}
+                                    });
+
+                                    const refreshMapTiles = () => {
+                                        try {
+                                            map.invalidateSize();
+                                            // try to trigger tile redraw if available
+                                            if (tileLayer && typeof tileLayer.redraw === 'function') tileLayer.redraw();
+                                        } catch(_) {}
+                                    };
+
+                                    // After user interactions, ensure tiles are refreshed
+                                    map.on('moveend zoomend resize', () => { setTimeout(refreshMapTiles, 50); });
 
                                     // 🔥 Setup REAL-TIME listener for reviewed field pins
                                     setupRealtimeFieldsListener(map);
@@ -1805,6 +1824,34 @@ async function initNotifications(userId) {
                         }
                         // Ensure sidebar section highlights the Review menu
                         const activeNavItem = document.querySelector('[data-section="field-documents"]');
+                        if (activeNavItem) {
+                            document.querySelectorAll('.nav-item').forEach(item => {
+                                item.classList.remove('bg-slate-800', 'text-white');
+                                item.classList.add('text-slate-300');
+                            });
+                            activeNavItem.classList.add('bg-slate-800', 'text-white');
+                            activeNavItem.classList.remove('text-slate-300');
+                        }
+                    } catch(_) {}
+                });
+            }
+
+            // Click-through: Dashboard Location Mapping -> Map section
+            const dashboardMapCard = document.getElementById('dashboardFieldsMapCard');
+            if (dashboardMapCard) {
+                dashboardMapCard.addEventListener('click', async function() {
+                    try {
+                        // Switch to the Map section
+                        showSection('map');
+
+                        // Ensure the map section is initialized and visible
+                        const mapContainer2 = document.getElementById('sraFieldsMapMap');
+                        if (mapContainer2 && !mapContainer2.dataset.initialized && typeof initSraMapSection === 'function') {
+                            try { await initSraMapSection(); } catch(_) {}
+                        }
+
+                        // Highlight Map nav item explicitly
+                        const activeNavItem = document.querySelector('[data-section="map"]');
                         if (activeNavItem) {
                             document.querySelectorAll('.nav-item').forEach(item => {
                                 item.classList.remove('bg-slate-800', 'text-white');
