@@ -56,7 +56,7 @@ async function initNotifications(userId) {
         dropdown.removeAttribute('style');
         
         // Set all styles explicitly for mobile - positioned higher (40% from top)
-        dropdown.style.cssText = `
+                    dropdown.style.cssText = `
           position: fixed !important;
           left: 50% !important;
           top: 40% !important;
@@ -66,13 +66,13 @@ async function initNotifications(userId) {
           max-width: ${dropdownWidth}px !important;
           margin: 0 !important;
           max-height: ${viewportHeight - 40}px !important;
-          z-index: 50 !important;
+                    z-index: 10001 !important;
           box-sizing: border-box !important;
         `;
       } else {
         // Desktop: reset to original positioning
         dropdown.removeAttribute('style');
-        dropdown.style.cssText = `
+                dropdown.style.cssText = `
           position: absolute !important;
           right: 0 !important;
           top: 100% !important;
@@ -82,7 +82,7 @@ async function initNotifications(userId) {
           max-width: none !important;
           margin-top: 0.5rem !important;
           max-height: calc(100vh - 4rem) !important;
-          z-index: 50 !important;
+                    z-index: 10001 !important;
         `;
       }
     }
@@ -181,7 +181,10 @@ async function initNotifications(userId) {
       return;
     }
 
-    list.innerHTML = docs
+        // build a map from id -> notification object to access full data in click handlers
+        const notificationById = new Map(docs.map(d => [d.id, d]));
+
+        list.innerHTML = docs
       .map((item) => {
         const title = getNotificationTitle(item);
         const message = item.message || "";
@@ -205,21 +208,72 @@ async function initNotifications(userId) {
       })
       .join("");
 
-    Array.from(list.querySelectorAll("button[data-id]"))
-      .forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const notificationId = btn.dataset.id;
-          try {
-            await updateDoc(doc(db, "notifications", notificationId), {
-              read: true,
-              readAt: serverTimestamp()
+        Array.from(list.querySelectorAll("button[data-id]"))
+            .forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    const notificationId = btn.dataset.id;
+                    try {
+                        await updateDoc(doc(db, "notifications", notificationId), {
+                            read: true,
+                            readAt: serverTimestamp()
+                        });
+                        console.log(`✅ Marked notification ${notificationId} as read`);
+                    } catch (err) {
+                        console.warn("Failed to update notification status", err);
+                    }
+
+                    // If we have full notification data, decide where to navigate
+                    try {
+                        const notif = notificationById.get(notificationId) || {};
+                        const ntype = (notif.type || '').toString().toLowerCase();
+
+                        // Field-related notifications -> go to Applications (field-documents)
+                        const isField = ntype.startsWith('field') || ntype.includes('field') || ['field_registration', 'field_approved', 'field_rejected'].includes(ntype);
+
+                        // Report-related notifications -> go to Reports
+                        const isReport = ntype.startsWith('report') || ntype.includes('report') || ['report_requested', 'report_approved', 'report_rejected'].includes(ntype);
+
+                        if (isField) {
+                            // Load field documents partial if needed, then show section
+                            try {
+                                const container = document.getElementById('fieldDocsContainer');
+                                if (container && container.childElementCount === 0) {
+                                    const cacheBust = `?v=${Date.now()}`;
+                                    const html = await fetch(`SRA_FieldDocuments.html${cacheBust}`).then(r => r.text());
+                                    container.innerHTML = html;
+                                }
+                                // attempt to import Review module and init
+                                try {
+                                    const cacheBust = `?v=${Date.now()}`;
+                                    const mod = await import(`./Review.js${cacheBust}`);
+                                    if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                                        mod.SRAReview.init();
+                                    }
+                                } catch(_) {}
+                                showSection('field-documents');
+                                dropdown.classList.add('hidden');
+                            } catch(_) {
+                                showSection('field-documents');
+                                dropdown.classList.add('hidden');
+                            }
+                            return;
+                        }
+
+                        if (isReport) {
+                            // Show reports section (showSection will initialize table)
+                            showSection('reports');
+                            dropdown.classList.add('hidden');
+                            return;
+                        }
+
+                        // No special mapping: just close dropdown
+                        dropdown.classList.add('hidden');
+                    } catch (err) {
+                        console.warn('Notification click handler failed:', err);
+                    }
+                });
             });
-            console.log(`✅ Marked notification ${notificationId} as read`);
-          } catch (err) {
-            console.warn("Failed to update notification status", err);
-          }
-        });
-      });
   };
 
   const fetchNotifications = () => {
