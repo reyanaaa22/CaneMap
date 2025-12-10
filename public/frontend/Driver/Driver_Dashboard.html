@@ -227,6 +227,26 @@
       color: white;
       border-color: var(--cane-600);
     }
+
+    /* Task Filter Select Dropdown */
+    .task-filter-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235ea500' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.5rem;
+      transition: all 0.2s;
+    }
+
+    .task-filter-select:hover {
+      border-color: var(--cane-600);
+      box-shadow: 0 2px 4px rgba(94, 165, 0, 0.1);
+    }
+
+    .task-filter-select:focus {
+      outline: none;
+      border-color: var(--cane-600);
+      box-shadow: 0 0 0 3px rgba(94, 165, 0, 0.1);
+    }
   </style>
 </head>
 
@@ -515,32 +535,30 @@
       <!-- My Tasks Section -->
       <div id="my-tasks" class="content-section hidden">
         <div class="section-card rounded-xl p-6 shadow-sm">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div>
-              <h2 class="text-2xl font-bold text-[var(--cane-950)]">
-                My Tasks
-              </h2>
-              <p class="text-[var(--cane-700)] text-sm mt-1">
-                Tasks assigned to you across all fields
-              </p>
+          <div class="flex flex-col gap-4 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-bold text-[var(--cane-950)]">
+                  My Tasks
+                </h2>
+                <p class="text-[var(--cane-700)] text-sm mt-1">
+                  Tasks assigned to you across all fields
+                </p>
+              </div>
+              <button id="createWorkLogBtn" onclick="openDriverLogWorkModal()"
+                class="px-6 py-3 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] hover:from-[var(--cane-700)] hover:to-[var(--cane-800)] text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 sm:whitespace-nowrap">
+                <i class="fas fa-plus mr-2"></i>Log Work
+              </button>
             </div>
-            <button id="createWorkLogBtn" onclick="openDriverLogWorkModal()"
-              class="px-6 py-3 bg-gradient-to-r from-[var(--cane-600)] to-[var(--cane-700)] hover:from-[var(--cane-700)] hover:to-[var(--cane-800)] text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-              <i class="fas fa-plus mr-2"></i>Log Work
-            </button>
           </div>
 
           <!-- Task Filters -->
-          <div class="flex gap-2 mb-4">
-            <button class="task-filter-btn active px-4 py-2 rounded-lg text-sm font-medium" data-filter="all">
-              All Tasks
-            </button>
-            <button class="task-filter-btn px-4 py-2 rounded-lg text-sm font-medium" data-filter="pending">
-              Pending
-            </button>
-            <button class="task-filter-btn px-4 py-2 rounded-lg text-sm font-medium" data-filter="done">
-              Completed
-            </button>
+          <div class="mb-4">
+            <select id="taskFilterSelect" class="task-filter-select w-48 px-4 py-2 rounded-lg text-sm font-medium border-2 border-[var(--cane-500)] bg-white text-[var(--cane-700)] cursor-pointer appearance-none">
+              <option value="all" selected>All Tasks</option>
+              <option value="pending">Pending</option>
+              <option value="done">Completed</option>
+            </select>
           </div>
 
           <div id="myTasksList" class="space-y-3">

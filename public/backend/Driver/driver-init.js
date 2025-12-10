@@ -339,9 +339,9 @@ function renderTasksList(tasks) {
   const tasksList = document.getElementById("myTasksList");
   if (!tasksList) return;
 
-  // Get current filter
-  const activeFilter = document.querySelector(".task-filter-btn.active");
-  const filter = activeFilter ? activeFilter.dataset.filter : "all";
+  // Get current filter from select dropdown
+  const filterSelect = document.getElementById("taskFilterSelect");
+  const filter = filterSelect ? filterSelect.value : "all";
 
   // Filter tasks
   let filteredTasks = tasks;
@@ -498,19 +498,14 @@ function setupNavigation() {
     });
   });
 
-  // Setup task filter buttons
-  document.querySelectorAll(".task-filter-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      // Update active button
-      document
-        .querySelectorAll(".task-filter-btn")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
+  // Setup task filter select dropdown
+  const taskFilterSelect = document.getElementById("taskFilterSelect");
+  if (taskFilterSelect) {
+    taskFilterSelect.addEventListener("change", () => {
       // Re-render tasks with current filter
       renderTasksList(currentTasks);
     });
-  });
+  }
 
   // Handle mobile sidebar close
   const closeSidebarBtn = document.getElementById("closeSidebarBtn");
@@ -1681,68 +1676,86 @@ window.openDriverLogWorkModal = async function () {
       html: `
         <div class="text-left space-y-4 max-h-[70vh] overflow-y-auto px-2">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Field *</label>
-            <select id="swal-fieldId" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
-              <option value="">Select field...</option>
-              ${fieldsOptions}
-            </select>
-            <p class="text-xs text-gray-500 mt-1.5">Select the field where this work was done</p>
+            <label class="block text-sm font-medium text-[var(--cane-900)] mb-2">Field *</label>
+            <div class="relative">
+              <button id="swal-fieldBtn" type="button" class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:border-[var(--cane-600)] focus:outline-none text-base focus:ring-2 focus:ring-[var(--cane-100)] text-left bg-white text-gray-700 flex items-center justify-between hover:border-[var(--cane-400)]">
+                <span id="swal-fieldBtnText">Select field...</span>
+                <i class="fas fa-chevron-down text-[var(--cane-600)]"></i>
+              </button>
+              <input type="hidden" id="swal-fieldId" value="">
+              <div id="swal-fieldDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border-2 border-[var(--cane-300)] rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                <div class="p-2">
+                  ${fields.map(f => `
+                    <button type="button" class="swal-field-option w-full text-left px-4 py-2 hover:bg-[var(--cane-50)] rounded text-gray-700 text-sm" data-value="${f.id}">
+                      ${escapeHtml(f.fieldName || f.name || "Unknown Field")}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-[var(--cane-600)] mt-1.5">Select the field where this work was done</p>
           </div>
 
           <!-- ✅ Task suggestions panel (dynamically populated) -->
-          <div id="task-suggestions-panel" style="display: none;" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div id="task-suggestions-panel" style="display: none;" class="p-3 bg-[var(--cane-50)] border-2 border-[var(--cane-200)] rounded-lg">
             <div class="flex items-center gap-2 mb-2">
-              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-[var(--cane-600)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              <span class="text-xs font-semibold text-blue-900">Common Tasks for This Field:</span>
+              <span class="text-xs font-semibold text-[var(--cane-800)]">Common Tasks for This Field:</span>
             </div>
             <div id="task-suggestions-chips" class="flex flex-wrap gap-2"></div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Task Type *</label>
-            <select id="swal-taskType" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base">
-              <option value="">Select a field first...</option>
-            </select>
-            <p class="text-xs text-gray-500 mt-1.5">Tasks are filtered based on field status and growth stage</p>
+            <label class="block text-sm font-medium text-[var(--cane-900)] mb-2">Task Type *</label>
+            <div class="relative">
+              <button id="swal-taskTypeBtn" type="button" class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:border-[var(--cane-600)] focus:outline-none text-base focus:ring-2 focus:ring-[var(--cane-100)] text-left bg-white text-gray-700 flex items-center justify-between hover:border-[var(--cane-400)]">
+                <span id="swal-taskTypeBtnText">Select a field first...</span>
+                <i class="fas fa-chevron-down text-[var(--cane-600)]"></i>
+              </button>
+              <input type="hidden" id="swal-taskType" value="">
+              <div id="swal-taskTypeDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border-2 border-[var(--cane-300)] rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                <div class="p-2">
+                  <!-- Options will be populated dynamically -->
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-[var(--cane-600)] mt-1.5">Tasks are filtered based on field status and growth stage</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
-            <input type="date" id="swal-completionDate" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" max="${new Date().toISOString().split("T")[0]
+            <label class="block text-sm font-medium text-[var(--cane-900)] mb-2">Completion Date *</label>
+            <input type="date" id="swal-completionDate" class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:border-[var(--cane-600)] focus:outline-none text-base focus:ring-2 focus:ring-[var(--cane-100)]" max="${new Date().toISOString().split("T")[0]
         }">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Driver Name</label>
-            <input id="swal-driverName" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base" placeholder="If logging from another device...">
-            <p class="text-xs text-gray-500 mt-1.5">Leave blank if this is you</p>
+            <label class="block text-sm font-medium text-[var(--cane-900)] mb-2">Driver Name</label>
+            <input id="swal-driverName" class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:border-[var(--cane-600)] focus:outline-none text-base focus:ring-2 focus:ring-[var(--cane-100)]" placeholder="If logging from another device...">
+            <p class="text-xs text-[var(--cane-600)] mt-1.5">Leave blank if this is you</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-            <textarea id="swal-notes" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base resize-none" placeholder="Describe what you did..." rows="4"></textarea>
+            <label class="block text-sm font-medium text-[var(--cane-900)] mb-2">Notes</label>
+            <textarea id="swal-notes" class="w-full px-4 py-3 border-2 border-[var(--cane-300)] rounded-lg focus:border-[var(--cane-600)] focus:outline-none text-base focus:ring-2 focus:ring-[var(--cane-100)] resize-none" placeholder="Describe what you did..." rows="4"></textarea>
           </div>
           <div>
-  <label class="block text-sm font-medium text-gray-700 mb-2">Photo (required)</label>
+            <label class="block text-sm font-medium text-[var(--cane-900)] mb-2">Photo (required)</label>
+            <!-- Take Photo button -->
+            <div class="flex gap-2">
+              <button id="swal-takePhotoBtn" type="button" class="flex-1 px-4 py-3 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-camera mr-2"></i>Take a photo
+              </button>
+            </div>
+            <!-- Preview area (hidden until a photo is captured) -->
+            <div id="swal-photoPreviewContainer" class="mt-3 hidden">
+              <p class="text-xs text-[var(--cane-600)] mb-2 font-medium">Captured photo:</p>
+              <img id="swal-photoPreview" class="w-full max-h-48 object-contain rounded-lg border-2 border-[var(--cane-200)]" alt="Captured photo preview">
+            </div>
+            <p id="swal-photoHint" class="text-xs text-[var(--cane-600)] mt-1.5">Tap "Take a photo" to open the camera. Photo is required to log work.</p>
+          </div>
 
-  <!-- Take Photo button -->
-  <div class="flex gap-2">
-    <button id="swal-takePhotoBtn" type="button" class="flex-1 px-4 py-3 bg-[var(--cane-600)] hover:bg-[var(--cane-700)] text-white rounded-lg font-medium transition-colors">
-      <i class="fas fa-camera mr-2"></i>Take a photo
-    </button>
-  </div>
-
-  <!-- Preview area (hidden until a photo is captured) -->
-  <div id="swal-photoPreviewContainer" class="mt-3 hidden">
-    <p class="text-xs text-gray-500 mb-2">Captured photo:</p>
-    <img id="swal-photoPreview" class="w-full max-h-48 object-contain rounded-lg border border-gray-200" alt="Captured photo preview">
-  </div>
-
-  <p id="swal-photoHint" class="text-xs text-gray-500 mt-1.5">Tap "Take a photo" to open the camera. Photo is required to log work.</p>
-</div>
-
-          <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
-            <input type="checkbox" id="swal-verification" class="w-5 h-5 mt-0.5 accent-green-600">
-            <label for="swal-verification" class="text-sm text-gray-700 font-medium">I verify this work was completed as described *</label>
+          <div class="flex items-start gap-3 p-4 bg-[var(--cane-50)] rounded-lg border-2 border-[var(--cane-300)]">
+            <input type="checkbox" id="swal-verification" class="w-5 h-5 mt-0.5 accent-[var(--cane-600)]">
+            <label for="swal-verification" class="text-sm text-[var(--cane-900)] font-medium">I verify this work was completed as described *</label>
           </div>
         </div>
       `,
@@ -1755,16 +1768,55 @@ window.openDriverLogWorkModal = async function () {
       cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
       buttonsStyling: false,
       customClass: {
-        popup: "rounded-xl shadow-2xl",
-        title: "text-2xl font-bold text-gray-800 mb-4",
+        popup: "rounded-xl shadow-2xl bg-white",
+        title: "text-2xl font-bold text-[var(--cane-950)] mb-4",
         htmlContainer: "text-base",
         confirmButton:
-          "px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md mr-2",
+          "px-6 py-3 bg-[var(--cane-600)] text-white font-semibold rounded-lg hover:bg-[var(--cane-700)] transition-colors shadow-md mr-2",
         cancelButton:
-          "px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors shadow-md",
+          "px-6 py-3 bg-gray-400 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-md",
         actions: "gap-3 mt-6",
       },
       didOpen: async () => {
+        // ✅ Setup custom field dropdown for mobile
+        const fieldBtn = document.getElementById("swal-fieldBtn");
+        const fieldDropdown = document.getElementById("swal-fieldDropdown");
+        const fieldBtnText = document.getElementById("swal-fieldBtnText");
+        const fieldOptions = document.querySelectorAll(".swal-field-option");
+
+        // Toggle dropdown
+        fieldBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          fieldDropdown.classList.toggle("hidden");
+        });
+
+        // Handle field option selection
+        fieldOptions.forEach(option => {
+          option.addEventListener("click", (e) => {
+            e.preventDefault();
+            const fieldId = option.getAttribute("data-value");
+            const fieldName = option.textContent.trim();
+            
+            document.getElementById("swal-fieldId").value = fieldId;
+            fieldBtnText.textContent = fieldName;
+            fieldDropdown.classList.add("hidden");
+            
+            // Highlight selected option in green
+            fieldOptions.forEach(opt => opt.classList.remove("bg-[var(--cane-600)]", "text-white", "font-semibold"));
+            option.classList.add("bg-[var(--cane-600)]", "text-white", "font-semibold");
+            
+            // Trigger field change event
+            document.getElementById("swal-fieldId").dispatchEvent(new Event("change"));
+          });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!fieldBtn.contains(e.target) && !fieldDropdown.contains(e.target)) {
+            fieldDropdown.classList.add("hidden");
+          }
+        });
+
         // ✅ Setup field change listener to update task suggestions dynamically
         const { db } = await import("../Common/firebase-config.js");
         const { doc, getDoc } = await import(
@@ -2026,18 +2078,53 @@ window.openDriverLogWorkModal = async function () {
             // ========================================
             const availableTasks = getAvailableTasksForField(fieldData);
 
-            // Clear and populate task dropdown
-            taskTypeSelect.innerHTML =
-              '<option value="">Select task...</option>';
-            availableTasks.forEach((task) => {
-              const option = document.createElement("option");
-              option.value = task.value;
-              option.textContent = task.label;
-              if (task.disabled) {
-                option.disabled = true;
-                option.textContent += " (Not available)";
+            // Clear and populate task dropdown with custom design
+            const taskTypeBtn = document.getElementById("swal-taskTypeBtn");
+            const taskTypeBtnText = document.getElementById("swal-taskTypeBtnText");
+            const taskTypeDropdown = document.getElementById("swal-taskTypeDropdown");
+            const taskTypeDropdownContent = taskTypeDropdown.querySelector(".p-2");
+            
+            taskTypeDropdownContent.innerHTML = availableTasks
+              .map((task) => {
+                const disabledClass = task.disabled ? "opacity-50 cursor-not-allowed" : "";
+                return `
+                  <button type="button" class="swal-task-option w-full text-left px-4 py-2 hover:bg-[var(--cane-50)] rounded text-gray-700 text-sm ${disabledClass}" data-value="${task.value}" ${task.disabled ? "disabled" : ""}>
+                    ${task.label}
+                  </button>
+                `;
+              })
+              .join("");
+
+            // Setup task type dropdown listeners
+            taskTypeBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              taskTypeDropdown.classList.toggle("hidden");
+            });
+
+            const taskTypeOptions = document.querySelectorAll(".swal-task-option");
+            taskTypeOptions.forEach(option => {
+              if (!option.disabled) {
+                option.addEventListener("click", (e) => {
+                  e.preventDefault();
+                  const taskValue = option.getAttribute("data-value");
+                  const taskLabel = option.textContent.trim();
+                  
+                  document.getElementById("swal-taskType").value = taskValue;
+                  taskTypeBtnText.textContent = taskLabel;
+                  taskTypeDropdown.classList.add("hidden");
+                  
+                  // Highlight selected option in green
+                  taskTypeOptions.forEach(opt => opt.classList.remove("bg-[var(--cane-600)]", "text-white", "font-semibold"));
+                  option.classList.add("bg-[var(--cane-600)]", "text-white", "font-semibold");
+                });
               }
-              taskTypeSelect.appendChild(option);
+            });
+
+            // Close task type dropdown when clicking outside
+            document.addEventListener("click", (e) => {
+              if (!taskTypeBtn.contains(e.target) && !taskTypeDropdown.contains(e.target)) {
+                taskTypeDropdown.classList.add("hidden");
+              }
             });
 
             // ========================================
