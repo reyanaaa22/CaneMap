@@ -131,17 +131,10 @@
       }
     }
 
-    /* Keep section headers visible when sidebar is collapsed */
+    /* Hide section headers when sidebar is collapsed */
     @media (min-width: 1024px) {
       body.sidebar-collapsed #sidebar .section-header {
-        display: block !important;
-        width: 100%;
-        text-align: center;
-        padding: 0.25rem 0;
-        margin: 0.5rem 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        display: none !important;
       }
     }
 
@@ -394,17 +387,16 @@
         <nav class="space-y-2">
           <!-- Dashboard -->
           <a href="#"
-            class="nav-item flex items-center gap-3 p-3 text-white/90 hover:bg-white/10 rounded-lg transition-all duration-200"
+            class="nav-item flex items-center gap-3 p-3 text-white/90 hover:bg-white/10 rounded-lg transition-all duration-200 text-lg"
             data-section="dashboard">
             <i class="fas fa-gauge-high w-5 h-5"></i>
             <span>Dashboard</span>
           </a>
-          <p class="section-header text-xs font-medium text-white/70 uppercase tracking-wider px-4 pt-1 pb-2">Overview
-          </p>
+          <p class="section-header text-xs font-medium text-white/70 uppercase tracking-wider px-4 pt-1 pb-2">Overview</p>
 
           <!-- My Fields -->
           <a href="#"
-            class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors"
+            class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors text-lg"
             data-section="my-fields">
             <i class="fas fa-map-marked-alt w-5 h-5"></i>
             <span>My Fields</span>
@@ -412,7 +404,7 @@
 
           <!-- My Tasks -->
           <a href="#"
-            class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors"
+            class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors text-lg"
             data-section="my-tasks">
             <i class="fas fa-clipboard-check w-5 h-5"></i>
             <span>My Tasks</span>
@@ -420,7 +412,7 @@
 
           <!-- Transport/Rentals -->
           <a href="#"
-            class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors"
+            class="nav-item flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors text-lg"
             data-section="transport">
             <i class="fas fa-truck-fast w-5 h-5"></i>
             <span>Transport</span>
