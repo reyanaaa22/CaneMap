@@ -1216,15 +1216,6 @@ function setupEventListeners() {
             console.log('✅ Edit user form listener attached');
         }
 
-        // Delegate Change PIN form submission (content injected in HTML)
-        document.addEventListener('submit', (e) => {
-            const form = e.target;
-            if (form && form.id === 'changePinForm') {
-                e.preventDefault();
-                handleChangePin(form);
-            }
-        });
-
         console.log('✅ Event listeners setup complete');
     } catch (error) {
         console.error('❌ Error setting up event listeners:', error);
@@ -2500,37 +2491,6 @@ window.showFeedbackReports = async function() {
         document.getElementById('feedbackTableContainer').innerHTML = `<div class="text-red-600">Failed to load feedback.</div>`;
     }
 };
-
-// Handle Change PIN
-async function handleChangePin(form){
-    try{
-        const currentPin = (new FormData(form).get('currentPin')||'').trim();
-        const newPin = (new FormData(form).get('newPin')||'').trim();
-        const confirmPin = (new FormData(form).get('confirmPin')||'').trim();
-        if (!/^\d{6}$/.test(currentPin) || !/^\d{6}$/.test(newPin)){
-            showAlert('PIN must be 6 digits','error');
-            return;
-        }
-        if (newPin !== confirmPin){
-            showAlert('New PIN and confirmation do not match','error');
-            return;
-        }
-        // Verify current pin
-        const qOld = query(collection(db,'admin_pins'), where('pin','==', currentPin), limit(1));
-        const snapOld = await getDocs(qOld);
-        if (snapOld.empty){
-            showAlert('Current PIN is incorrect','error');
-            return;
-        }
-        const docRef = snapOld.docs[0].ref;
-        await updateDoc(docRef, { pin: newPin, updatedAt: serverTimestamp() });
-        showAlert('PIN updated successfully','success');
-        form.reset();
-    }catch(e){
-        console.error('Change PIN failed', e);
-        showAlert('Failed to update PIN','error');
-    }
-}
 
 window.__syncDashboardProfile = async function() {
     try {
