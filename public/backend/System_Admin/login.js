@@ -368,11 +368,13 @@ class AdminAuth {
             return {
                 success: true,
                 user: {
+                    docId: adminCredentials.docId,  // ✅ Include Firestore document ID
                     uid: adminCredentials.uid,
                     email: adminCredentials.email,
                     name: adminCredentials.name,
                     role: adminCredentials.role,
-                    permissions: adminCredentials.permissions
+                    permissions: adminCredentials.permissions,
+                    pin: adminCredentials.pin  // Include PIN for verification in profile settings
                 }
             };
             
@@ -394,6 +396,7 @@ class AdminAuth {
             if (!snap.empty) {
                 const d = snap.docs[0].data();
                 return {
+                    docId: snap.docs[0].id,  // ✅ Store Firestore document ID
                     uid: d.uid || ('admin_' + snap.docs[0].id),
                     email: d.email || 'admin@canemap.com',
                     pin: d.pin,
@@ -410,6 +413,7 @@ class AdminAuth {
         // This is only used if no PIN exists in Firestore yet
         if (pinCode === '123456') {
             return {
+                docId: 'default-admin',  // ✅ Default document ID for fallback
                 uid: 'admin_001',
                 email: 'admin@canemap.com',
                 pin: '123456',
@@ -431,8 +435,12 @@ class AdminAuth {
             if (snapAll.empty) {
                 // No admin PINs exist, create the default one
                 const defaultPin = '123456';
+                // Get current auth user uid if available
+                const uid = auth.currentUser?.uid || 'admin_001';
+                
                 await addDoc(collection(db, 'admin_pins'), {
                     pin: defaultPin,
+                    uid: uid,  // ✅ Store uid for permission checks
                     name: 'System Administrator',
                     email: 'admin@canemap.com',
                     role: 'super_admin',
@@ -445,6 +453,30 @@ class AdminAuth {
             }
         } catch (e) {
             console.error('Failed to seed default admin PIN', e);
+        }
+    }
+    
+    static async updateAdminPinWithUid() {
+        try {
+            // Update admin_pins records to include the current auth user's uid
+            if (!auth.currentUser) return;
+            
+            const currentUid = auth.currentUser.uid;
+            const q = query(collection(db, 'admin_pins'));
+            const snap = await getDocs(q);
+            
+            // For each admin_pins record without a uid, add the current user's uid
+            for (const doc of snap.docs) {
+                const data = doc.data();
+                if (!data.uid) {
+                    await updateDoc(doc.ref, {
+                        uid: currentUid
+                    });
+                    console.log('Updated admin_pins doc', doc.id, 'with uid', currentUid);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to update admin_pins with uid:', e);
         }
     }
     
@@ -766,7 +798,17 @@ if (authResult.success) {
 
   LoginUI.showSuccess("Authentication successful! Redirecting...");
   LoginUI.updateSecurityStatus("Authenticated");
+  
+  // ✅ Ensure docId is included in admin_user for profile settings access
   sessionStorage.setItem("admin_user", JSON.stringify(authResult.user));
+
+  // ✅ Ensure admin_pins has uid for permission checks
+  try {
+    await AdminAuth.updateAdminPinWithUid();
+  } catch (e) {
+    console.warn('Failed to update admin_pins with uid:', e);
+    // Don't fail the login if this fails
+  }
 
   // 🔁 Redirect after 1.5s
   setTimeout(() => {

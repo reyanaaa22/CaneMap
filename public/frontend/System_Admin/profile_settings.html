@@ -39,8 +39,9 @@
                     <h1 class="text-2xl font-bold text-white">Profile Settings</h1>
                 </div>
                 <div class="flex items-center space-x-3 text-white/90">
-                    <div class="w-9 h-9 bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] rounded-full flex items-center justify-center shadow">
-                        <i class="fas fa-user-shield text-white text-sm"></i>
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center shadow overflow-hidden bg-gradient-to-br from-[var(--cane-400)] to-[var(--cane-500)] relative">
+                        <i id="headerProfileIconDefault" class="fas fa-user-shield text-white text-sm absolute"></i>
+                        <img id="headerProfilePhoto" src="" alt="Profile" class="w-full h-full object-cover hidden" />
                     </div>
                     <span id="headerAdminName" class="font-semibold">Admin</span>
                 </div>
@@ -143,7 +144,7 @@
     <script type="module" src="../../backend/Common/firebase-config.js"></script>
     <script type="module">
         import { db } from '../../backend/Common/firebase-config.js';
-        import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+        import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, serverTimestamp, limit } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
 
         const alertContainer = document.getElementById('alertContainer');
         const showAlert = (message, type = 'success') => {
@@ -165,21 +166,50 @@
                 const fromSession = sessionStorage.getItem('admin_user');
                 if (!fromSession) {
                     showAlert('No admin session found', 'warning');
+                    console.warn('No admin_user in sessionStorage');
                 }
                 const sessionAdmin = fromSession ? JSON.parse(fromSession) : {};
-                // Find admin record by PIN in admin_pins collection (matches login.js logic)
-                let snap;
-                if (sessionAdmin.pin) {
-                    const q = query(collection(db, 'admin_pins'), where('pin', '==', sessionAdmin.pin), limit(1));
-                    snap = await getDocs(q);
+                
+                console.log('Session admin data:', { docId: sessionAdmin.docId, uid: sessionAdmin.uid, name: sessionAdmin.name });
+                
+                // First, try to use docId directly from session (new method)
+                if (sessionAdmin.docId) {
+                    try {
+                        const docSnap = await getDoc(doc(db, 'admin_pins', sessionAdmin.docId));
+                        if (docSnap.exists()) {
+                            adminDocId = sessionAdmin.docId;
+                            adminData = docSnap.data();
+                            console.log('✅ Loaded admin data from docId:', adminDocId, adminData);
+                        } else {
+                            console.warn('Document does not exist for docId:', sessionAdmin.docId);
+                        }
+                    } catch (e) {
+                        console.warn('Could not load by docId from session:', e);
+                    }
                 }
-                if (snap && !snap.empty) {
-                    const d = snap.docs[0];
-                    adminDocId = d.id;
-                    adminData = d.data();
-                } else {
-                    // Fallback: allow viewing a local-only profile from session
+                
+                // Fallback: Find admin record by PIN in admin_pins collection (if docId not available)
+                if (!adminDocId && sessionAdmin.pin) {
+                    try {
+                        const q = query(collection(db, 'admin_pins'), where('pin', '==', sessionAdmin.pin), limit(1));
+                        const snap = await getDocs(q);
+                        if (snap && !snap.empty) {
+                            const d = snap.docs[0];
+                            adminDocId = d.id;
+                            adminData = d.data();
+                            console.log('✅ Loaded admin data from PIN query:', adminDocId, adminData);
+                        } else {
+                            console.warn('No admin_pins document found for PIN, will create one on save');
+                        }
+                    } catch (e) {
+                        console.warn('Could not load by PIN query:', e);
+                    }
+                }
+                
+                // Last resort: allow viewing a local-only profile from session
+                if (!adminDocId && !adminData) {
                     adminData = sessionAdmin || {};
+                    console.warn('⚠️ Using session-only profile data (not persisted to Firestore)');
                 }
 
                 // Populate UI
@@ -194,6 +224,22 @@
                 document.getElementById('profileEmail').textContent = email;
                 document.getElementById('profilePhone').textContent = phone || 'N/A';
                 document.getElementById('avatarPreview').src = avatar;
+                
+                // Update header profile photo - show image only if custom avatar, otherwise show icon
+                const headerProfilePhoto = document.getElementById('headerProfilePhoto');
+                const headerProfileIconDefault = document.getElementById('headerProfileIconDefault');
+                if (headerProfilePhoto && headerProfileIconDefault) {
+                    // Check if avatar is custom (not the default ui-avatars placeholder)
+                    if (avatar && !avatar.includes('ui-avatars.com')) {
+                        headerProfilePhoto.src = avatar;
+                        headerProfilePhoto.classList.remove('hidden');
+                        headerProfileIconDefault.classList.add('hidden');
+                    } else {
+                        headerProfilePhoto.classList.add('hidden');
+                        headerProfileIconDefault.classList.remove('hidden');
+                    }
+                }
+                
                 document.getElementById('fullName').value = name;
                 document.getElementById('email').value = email;
                 document.getElementById('phone').value = phone;
@@ -221,21 +267,67 @@
                 const phone = document.getElementById('phone').value.trim();
                 const avatarUrl = document.getElementById('avatarPreview').src;
 
-                // Update session copy
+                // Update session copy FIRST (for immediate UI feedback)
                 const sessionAdmin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
                 sessionAdmin.name = name;
                 sessionAdmin.phone = phone;
                 sessionAdmin.avatarUrl = avatarUrl;
                 sessionStorage.setItem('admin_user', JSON.stringify(sessionAdmin));
 
+                // If adminDocId is still null, try to find it again
+                if (!adminDocId) {
+                    console.warn('adminDocId is null during profile save, attempting to find it...');
+                    
+                    // Try to find by docId from session
+                    if (sessionAdmin.docId) {
+                        adminDocId = sessionAdmin.docId;
+                        console.log('✅ Found adminDocId from session:', adminDocId);
+                    } else if (sessionAdmin.pin) {
+                        // Fallback: find by PIN
+                        const q = query(collection(db, 'admin_pins'), where('pin', '==', sessionAdmin.pin), limit(1));
+                        const snap = await getDocs(q);
+                        if (snap && !snap.empty) {
+                            adminDocId = snap.docs[0].id;
+                            console.log('✅ Found adminDocId by PIN query:', adminDocId);
+                        }
+                    }
+                }
+
                 // Update Firestore if doc is known (uses admin_pins collection)
                 if (adminDocId) {
-                    await updateDoc(doc(db, 'admin_pins', adminDocId), {
-                        name,
-                        phone,
-                        avatarUrl,
-                        updatedAt: serverTimestamp()
-                    });
+                    try {
+                        // Try to update existing document
+                        await updateDoc(doc(db, 'admin_pins', adminDocId), {
+                            name,
+                            phone,
+                            avatarUrl,
+                            updatedAt: serverTimestamp()
+                        });
+                        console.log('✅ Profile saved to Firestore:', { adminDocId, name, phone });
+                    } catch (updateErr) {
+                        // If document doesn't exist, create it
+                        if (updateErr.code === 'not-found') {
+                            console.warn('Document not found, creating new admin_pins record...');
+                            const sessionAdmin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+                            await setDoc(doc(db, 'admin_pins', adminDocId), {
+                                pin: sessionAdmin.pin || '123456',
+                                uid: sessionAdmin.uid,
+                                email: sessionAdmin.email || 'admin@canemap.com',
+                                role: sessionAdmin.role || 'super_admin',
+                                permissions: sessionAdmin.permissions || ['admin_access', 'system_management', 'user_management', 'security_management'],
+                                name,
+                                phone,
+                                avatarUrl,
+                                createdAt: serverTimestamp(),
+                                updatedAt: serverTimestamp()
+                            });
+                            console.log('✅ New admin_pins document created:', { adminDocId, name, phone });
+                        } else {
+                            throw updateErr;
+                        }
+                    }
+                } else {
+                    console.warn('⚠️ adminDocId not found - profile saved to session only (will be lost on logout)');
                 }
                 
                 // Also update localStorage for dashboard sync
@@ -245,6 +337,21 @@
                 document.getElementById('headerAdminName').textContent = name;
                 document.getElementById('profileName').textContent = name;
                 document.getElementById('profilePhone').textContent = phone || 'N/A';
+                
+                // Update header profile photo - show image only if custom avatar
+                const headerProfilePhoto = document.getElementById('headerProfilePhoto');
+                const headerProfileIconDefault = document.getElementById('headerProfileIconDefault');
+                if (headerProfilePhoto && headerProfileIconDefault) {
+                    if (avatarUrl && !avatarUrl.includes('ui-avatars.com')) {
+                        headerProfilePhoto.src = avatarUrl;
+                        headerProfilePhoto.classList.remove('hidden');
+                        headerProfileIconDefault.classList.add('hidden');
+                    } else {
+                        headerProfilePhoto.classList.add('hidden');
+                        headerProfileIconDefault.classList.remove('hidden');
+                    }
+                }
+                
                 showAlert('Profile updated successfully', 'success');
             } catch (e) {
                 console.error(e);
@@ -276,20 +383,79 @@
                     showAlert('Current PIN is incorrect', 'error');
                     return;
                 }
+                
+                // If adminDocId is still null, try to find it again
                 if (!adminDocId) {
-                    showAlert('Cannot update PIN: admin record not found', 'error');
+                    console.warn('adminDocId is null, attempting to find it...');
+                    const sessionAdmin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+                    
+                    // Try to find by docId from session
+                    if (sessionAdmin.docId) {
+                        adminDocId = sessionAdmin.docId;
+                        console.log('✅ Found adminDocId from session:', adminDocId);
+                    } else if (sessionAdmin.pin) {
+                        // Fallback: find by PIN
+                        const q = query(collection(db, 'admin_pins'), where('pin', '==', sessionAdmin.pin), limit(1));
+                        const snap = await getDocs(q);
+                        if (snap && !snap.empty) {
+                            adminDocId = snap.docs[0].id;
+                            console.log('✅ Found adminDocId by PIN query:', adminDocId);
+                        }
+                    }
+                }
+                
+                if (!adminDocId) {
+                    showAlert('Cannot update PIN: admin record not found. Please logout and login again.', 'error');
+                    console.error('PIN Update Error: adminDocId is null after all attempts', { adminDocId, adminData, sessionAdmin: JSON.parse(sessionStorage.getItem('admin_user')||'{}') });
                     return;
                 }
-                await updateDoc(doc(db, 'admin_pins', adminDocId), { pin: newPin, updatedAt: serverTimestamp() });
+                
+                // Log for debugging
+                console.log('Attempting PIN update:', {
+                    adminDocId,
+                    newPin: newPin.substring(0, 3) + '***',
+                    collection: 'admin_pins'
+                });
+                
+                try {
+                    // Try to update existing document
+                    await updateDoc(doc(db, 'admin_pins', adminDocId), { 
+                        pin: newPin, 
+                        updatedAt: serverTimestamp() 
+                    });
+                    console.log('✅ PIN updated in existing document');
+                } catch (updateErr) {
+                    // If document doesn't exist, create it
+                    if (updateErr.code === 'not-found') {
+                        console.warn('Document not found, creating new admin_pins record for PIN update...');
+                        const sessionAdmin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+                        await setDoc(doc(db, 'admin_pins', adminDocId), {
+                            pin: newPin,
+                            uid: sessionAdmin.uid,
+                            email: sessionAdmin.email || 'admin@canemap.com',
+                            role: sessionAdmin.role || 'super_admin',
+                            permissions: sessionAdmin.permissions || ['admin_access', 'system_management', 'user_management', 'security_management'],
+                            name: sessionAdmin.name || 'System Admin',
+                            phone: sessionAdmin.phone || '',
+                            avatarUrl: sessionAdmin.avatarUrl || '',
+                            createdAt: serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        });
+                        console.log('✅ New admin_pins document created with new PIN');
+                    } else {
+                        throw updateErr;
+                    }
+                }
+                
                 // Update session copy
                 const sessionAdmin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
                 sessionAdmin.pin = newPin;
                 sessionStorage.setItem('admin_user', JSON.stringify(sessionAdmin));
-                showAlert('PIN updated successfully', 'success');
+                showAlert('PIN updated successfully. Please use your new PIN for your next login.', 'success');
                 (['currentPin','newPin','confirmPin']).forEach(id => document.getElementById(id).value = '');
             } catch (e) {
-                console.error(e);
-                showAlert('Failed to update PIN', 'error');
+                console.error('PIN Update Error:', e);
+                showAlert('Failed to update PIN: ' + (e.message || 'Permission denied or network error'), 'error');
             }
         });
 

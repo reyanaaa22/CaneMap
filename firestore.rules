@@ -477,9 +477,24 @@ allow read: if request.auth != null &&
       // Allow creating default admin PIN only when no users exist (setup stage)
       allow create: if request.auth != null || true;
 
-      // System Admins can manage PINs
-      allow update, delete: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'system_admin';
+      // System Admins can manage PINs - Multiple methods for flexibility:
+      // 1. User has system_admin role in users collection (primary method)
+      // 2. User is updating their own admin_pins record (uid field must match auth uid)
+      // 3. User has super_admin role (absolute authority)
+      allow update: if request.auth != null && (
+        // Method 1: system_admin role in users collection
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'system_admin') ||
+        // Method 2: Self-update - user updating their own admin_pins record
+        (resource.data.uid == request.auth.uid) ||
+        // Method 3: super_admin can update any PIN
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
+      );
+
+      allow delete: if request.auth != null &&
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['system_admin', 'super_admin']);
     }
 
     match /admin_security_logs/{logId} {

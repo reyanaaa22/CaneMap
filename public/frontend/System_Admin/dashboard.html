@@ -146,9 +146,22 @@
                 transform: translateX(-100%);
                 margin-top: 4.5rem;
                 height: calc(100vh - 4.5rem);
-                overflow-y: auto;
-                overflow-x: hidden;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
             }
+            
+            /* Prevent nav from scrolling on mobile */
+            .sidebar nav {
+                overflow: visible !important;
+                flex: 0 1 auto;
+                max-height: none;
+            }
+            
+            .sidebar-footer {
+                flex-shrink: 0;
+            }
+            
             .sidebar-expanded .sidebar {
                 transform: translateX(0);
             }
@@ -344,137 +357,148 @@
             </div>
         </div>
                     
-        <!-- Sidebar Navigation -->
-        <nav class="p-6 pt-8 space-y-4 overflow-y-auto custom-scrollbar" style="height: calc(100vh - 200px);">
-            <style>
-                .nav-item {
-                    padding: 0.5rem 1rem;
-                    font-size: 0.95rem;
-                    border-radius: 0.4rem;
-                    margin-bottom: 0.1rem;
-                    display: flex;
-                    align-items: center;
-                    width: 100%;
-                    transition: all 0.2s ease;
-                }
-                .space-y-2 > * + * {
-                    margin-top: 0.1rem;
-                }
-                .nav-item i {
-                    font-size: 1.25rem;
-                    width: 1.5rem;
-                    transition: all 0.3s ease;
-                }
-                .nav-item .fa-chevron-down {
-                    font-size: 0.75rem;
-                    width: auto;
-                    margin-left: auto;
-                }
-                .sidebar {
-                    width: 20rem;
-                    transition: width 0.3s ease;
-                }
-                .sidebar-header {
-                    padding: 1.5rem 1.5rem 1rem;
-                    transition: all 0.3s ease;
-                }
-                .sidebar-logo {
-                    gap: 0.75rem;
-                    display: flex;
-                    align-items: center;
-                }
-                .sidebar-logo h2 {
-                    font-size: 1.35rem;
-                    transition: all 0.3s ease;
-                    white-space: nowrap;
-                }
-                .sidebar-collapsed .sidebar-logo h2,
-                .sidebar-collapsed .nav-item span:not(.badge) {
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                    overflow: hidden;
-                    margin: 0;
-                    padding: 0;
-                }
-                .sidebar-collapsed .nav-item {
-                    padding: 1rem;
-                    justify-content: center;
-                }
-                .sidebar-collapsed .nav-item i {
-                    margin: 0;
-                }
-            </style>
-            <!-- Dashboard -->
-            <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('dashboard')" class="nav-item text-white hover:bg-gray-800/60" id="nav-dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span class="ml-3">Dashboard</span>
-                </a>
-            </div>
-            
-            <!-- User Management -->
-            <div class="space-y-2 mb-4" data-expanded="false">
-                <button onclick="toggleSubmenu('users')" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
-                    <i class="fas fa-users"></i>
-                    <span class="ml-3 flex-1">Accounts</span>
-                    <i class="fas fa-chevron-down transition-transform duration-200" id="users-arrow"></i>
-                </button>
-                <div class="ml-2 pl-4 border-l-2 border-gray-600 mt-2 space-y-1 hidden" id="users-submenu">
-                    <a href="#" onclick="showSection('farmers')" class="flex items-center py-2 text-white/80 hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal pl-3">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span class="ml-2">Users</span>
-                    </a>
-                    <a href="#" onclick="showSection('sra-officers')" class="flex items-center py-2 text-white/80 hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal pl-3">
-                        <i class="fas fa-user-tie w-5 text-center"></i>
-                        <span class="ml-2">SRA Officers</span>
-                    </a>
-                    <a href="#" onclick="showSection('badge-requests')" class="flex items-center py-2 text-white/80 hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal pl-3">
-                        <i class="fas fa-id-badge w-5 text-center"></i>
-                        <span class="ml-2">Driver Badges</span>
+        <!-- Sidebar Navigation and Footer -->
+        <div class="flex flex-col h-full" style="height: calc(100vh - 80px);">
+            <!-- Navigation (scrollable on desktop, fixed height on mobile) -->
+            <nav class="flex-1 p-6 pt-8 space-y-4 overflow-y-auto custom-scrollbar">
+                <style>
+                    .nav-item {
+                        padding: 0.5rem 1rem;
+                        font-size: 0.95rem;
+                        border-radius: 0.4rem;
+                        margin-bottom: 0.1rem;
+                        display: flex;
+                        align-items: center;
+                        width: 100%;
+                        transition: all 0.2s ease;
+                    }
+                    .space-y-2 > * + * {
+                        margin-top: 0.1rem;
+                    }
+                    .nav-item i {
+                        font-size: 1.25rem;
+                        width: 1.5rem;
+                        transition: all 0.3s ease;
+                    }
+                    .nav-item .fa-chevron-down {
+                        font-size: 0.75rem;
+                        width: auto;
+                        margin-left: auto;
+                    }
+                    .sidebar {
+                        width: 20rem;
+                        transition: width 0.3s ease;
+                    }
+                    .sidebar-header {
+                        padding: 1.5rem 1.5rem 1rem;
+                        transition: all 0.3s ease;
+                    }
+                    .sidebar-logo {
+                        gap: 0.75rem;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .sidebar-logo h2 {
+                        font-size: 1.35rem;
+                        transition: all 0.3s ease;
+                        white-space: nowrap;
+                    }
+                    .sidebar-collapsed .sidebar-logo h2,
+                    .sidebar-collapsed .nav-item span:not(.badge) {
+                        opacity: 0;
+                        width: 0;
+                        height: 0;
+                        overflow: hidden;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .sidebar-collapsed .nav-item {
+                        padding: 1rem;
+                        justify-content: center;
+                    }
+                    .sidebar-collapsed .nav-item i {
+                        margin: 0;
+                    }
+                    
+                    /* Mobile: prevent sidebar nav from scrolling */
+                    @media (max-width: 768px) {
+                        nav {
+                            overflow-y: visible !important;
+                        }
+                    }
+                </style>
+                <!-- Dashboard -->
+                <div class="space-y-2 mb-4">
+                    <a href="#" onclick="showSection('dashboard')" class="nav-item text-white hover:bg-gray-800/60" id="nav-dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="ml-3">Dashboard</span>
                     </a>
                 </div>
-            </div>
-                    
-            <!-- Security -->
-            <div class="space-y-2 mb-1">
-                <a href="#" onclick="showSection('security-settings')" class="nav-item text-white hover:bg-gray-800/60" id="nav-security">
-                    <i class="fas fa-shield-alt"></i>
-                    <span class="ml-3">Security</span>
-                </a>
-            </div>
+                
+                <!-- User Management -->
+                <div class="space-y-2 mb-4" data-expanded="false">
+                    <button onclick="toggleSubmenu('users')" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
+                        <i class="fas fa-users"></i>
+                        <span class="ml-3 flex-1">Accounts</span>
+                        <i class="fas fa-chevron-down transition-transform duration-200" id="users-arrow"></i>
+                    </button>
+                    <div class="ml-2 pl-4 border-l-2 border-gray-600 mt-2 space-y-1 hidden" id="users-submenu">
+                        <a href="#" onclick="showSection('farmers')" class="flex items-center py-2 text-white/80 hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal pl-3">
+                            <i class="fas fa-user w-5 text-center"></i>
+                            <span class="ml-2">Users</span>
+                        </a>
+                        <a href="#" onclick="showSection('sra-officers')" class="flex items-center py-2 text-white/80 hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal pl-3">
+                            <i class="fas fa-user-tie w-5 text-center"></i>
+                            <span class="ml-2">SRA Officers</span>
+                        </a>
+                        <a href="#" onclick="showSection('badge-requests')" class="flex items-center py-2 text-white/80 hover:text-white hover:bg-gray-800/40 rounded-md transition-all duration-300 cursor-pointer text-sm font-normal pl-3">
+                            <i class="fas fa-id-badge w-5 text-center"></i>
+                            <span class="ml-2">Driver Badges</span>
+                        </a>
+                    </div>
+                </div>
+                        
+                <!-- Security -->
+                <div class="space-y-2 mb-1">
+                    <a href="#" onclick="showSection('security-settings')" class="nav-item text-white hover:bg-gray-800/60" id="nav-security">
+                        <i class="fas fa-shield-alt"></i>
+                        <span class="ml-3">Security</span>
+                    </a>
+                </div>
+                
+                <!-- Admin Tools -->
+                <div class="space-y-2 mb-4">
+                    <a href="#" onclick="showSection('admin-tools')" class="nav-item text-white hover:bg-gray-800/60" id="nav-admin-tools">
+                        <i class="fas fa-toolbox"></i>
+                        <span class="ml-3">Admin Tools</span>
+                    </a>
+                </div>
+                
+                <!-- Help & Support -->
+                <div class="space-y-2 mb-4">
+                    <a href="#" onclick="showSection('help')" class="nav-item text-white hover:bg-gray-800/60" id="nav-help">
+                        <i class="fas fa-life-ring"></i>
+                        <span class="ml-3">Help & Support</span>
+                    </a>
+                </div>
+            </nav>
             
-            <!-- Admin Tools -->
-            <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('admin-tools')" class="nav-item text-white hover:bg-gray-800/60" id="nav-admin-tools">
-                    <i class="fas fa-toolbox"></i>
-                    <span class="ml-3">Admin Tools</span>
-                </a>
+            <!-- Sidebar Footer: Sticky at bottom -->
+            <div class="sidebar-footer px-6 py-4 border-t border-[var(--cane-600)] bg-gradient-to-b from-transparent to-[var(--cane-900)]/20">
+                <!-- Profile Settings -->
+                <div class="space-y-2 mb-3">
+                    <a href="profile_settings.html" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
+                        <i class="fas fa-user-circle"></i>
+                        <span class="ml-3">Profile Settings</span>
+                    </a>
+                </div>
+                
+                <!-- Logout -->
+                <button onclick="logout()" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="ml-3">Logout</span>
+                </button>
             </div>
-            
-            <!-- Help & Support -->
-            <div class="space-y-2 mb-4">
-                <a href="#" onclick="showSection('help')" class="nav-item text-white hover:bg-gray-800/60" id="nav-help">
-                    <i class="fas fa-life-ring"></i>
-                    <span class="ml-3">Help & Support</span>
-                </a>
-            </div>
-        </nav>
-        <!-- Sidebar Footer: Logout at bottom -->
-        <div class="sidebar-footer px-6 pb-6">
-            <!-- Profile Settings -->
-            <div class="space-y-2 mb-4">
-                <a href="profile_settings.html" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="ml-3">Profile Settings</span>
-                </a>
-            </div>
-            
-            <!-- Logout -->
-            <button onclick="logout()" class="nav-item text-white hover:bg-gray-800/60 w-full text-left">
-                <i class="fas fa-sign-out-alt"></i>
-                <span class="ml-3">Logout</span>
-            </button>
         </div>
 
                         </div>
@@ -727,6 +751,10 @@
         // Initialize sidebar state when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializeSidebarState();
+            // Sync profile picture and name from localStorage/Firestore
+            if (window.__syncDashboardProfile) {
+                window.__syncDashboardProfile();
+            }
         });
     </script>
 
@@ -875,6 +903,28 @@
         }
         
         function showSection(sectionId) {
+            // Close sidebar on mobile when navigating to a section
+            if (window.innerWidth <= 768) {
+                const body = document.body;
+                if (body.classList.contains('sidebar-expanded')) {
+                    body.classList.remove('sidebar-expanded');
+                    const sidebar = document.getElementById('sidebar');
+                    const main = document.getElementById('mainContent');
+                    if (sidebar) {
+                        sidebar.style.transform = 'translateX(-100%)';
+                    }
+                    if (main) {
+                        main.style.opacity = '';
+                        main.style.pointerEvents = '';
+                        main.style.position = '';
+                    }
+                    const hamburgerIcon = document.querySelector('.hamburger-icon i');
+                    if (hamburgerIcon) {
+                        hamburgerIcon.className = 'fas fa-bars text-sm';
+                    }
+                }
+            }
+            
             // Remove active class from all sidebar items
             document.querySelectorAll('a[onclick^="showSection"]').forEach(item => {
                 item.classList.remove('bg-gray-700', 'shadow-lg');
