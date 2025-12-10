@@ -444,7 +444,7 @@
 
         <!-- Dashboard Stats -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C]">
+          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C] cursor-pointer" data-section="my-fields">
             <div class="absolute top-3 right-3">
               <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                 Live
@@ -459,7 +459,7 @@
             </div>
           </div>
 
-          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C]">
+          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C] cursor-pointer" data-section="my-tasks">
             <div class="absolute top-3 right-3">
               <span class="bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
                 All
@@ -474,7 +474,7 @@
             </div>
           </div>
 
-          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C]">
+          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C] cursor-pointer" data-section="my-tasks">
             <div class="absolute top-3 right-3">
               <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                 Pending
@@ -489,7 +489,7 @@
             </div>
           </div>
 
-          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C]">
+          <div class="section-card rounded-xl p-6 hover:shadow-md transition relative border-t-4 border-[#3EBE3C] cursor-pointer" data-section="transport">
             <div class="absolute top-3 right-3">
               <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                 Requests
@@ -709,6 +709,16 @@
         const section = a.getAttribute("data-section");
         if (section) {
           e.preventDefault();
+          showSection(section);
+        }
+      });
+    });
+
+    // Handle dashboard card clicks
+    document.querySelectorAll(".section-card[data-section]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const section = card.getAttribute("data-section");
+        if (section) {
           showSection(section);
         }
       });
