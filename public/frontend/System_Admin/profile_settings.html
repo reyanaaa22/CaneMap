@@ -167,13 +167,10 @@
                     showAlert('No admin session found', 'warning');
                 }
                 const sessionAdmin = fromSession ? JSON.parse(fromSession) : {};
-                // Find admin record by active pin (or email if available)
+                // Find admin record by PIN in admin_pins collection (matches login.js logic)
                 let snap;
                 if (sessionAdmin.pin) {
-                    const q = query(collection(db, 'admin_users'), where('pin', '==', sessionAdmin.pin), where('isActive', '==', true));
-                    snap = await getDocs(q);
-                } else if (sessionAdmin.email) {
-                    const q = query(collection(db, 'admin_users'), where('email', '==', sessionAdmin.email), where('isActive', '==', true));
+                    const q = query(collection(db, 'admin_pins'), where('pin', '==', sessionAdmin.pin), limit(1));
                     snap = await getDocs(q);
                 }
                 if (snap && !snap.empty) {
@@ -181,15 +178,15 @@
                     adminDocId = d.id;
                     adminData = d.data();
                 } else {
-                    // Fallback: allow editing a local-only profile
+                    // Fallback: allow viewing a local-only profile from session
                     adminData = sessionAdmin || {};
                 }
 
                 // Populate UI
-                const name = adminData.name || 'Admin';
-                const email = adminData.email || 'admin@example.com';
+                const name = adminData.name || 'System Admin';
+                const email = adminData.email || 'admin@canemap.com';
                 const phone = adminData.phone || '';
-                const role = 'Admin';
+                const role = 'System Admin';
                 const avatar = adminData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=7ccf00&color=fff`;
 
                 document.getElementById('headerAdminName').textContent = name;
@@ -231,15 +228,20 @@
                 sessionAdmin.avatarUrl = avatarUrl;
                 sessionStorage.setItem('admin_user', JSON.stringify(sessionAdmin));
 
-                // Update Firestore if doc is known
+                // Update Firestore if doc is known (uses admin_pins collection)
                 if (adminDocId) {
-                    await updateDoc(doc(db, 'admin_users', adminDocId), {
+                    await updateDoc(doc(db, 'admin_pins', adminDocId), {
                         name,
                         phone,
                         avatarUrl,
                         updatedAt: serverTimestamp()
                     });
                 }
+                
+                // Also update localStorage for dashboard sync
+                localStorage.setItem('farmerName', name);
+                localStorage.setItem('adminAvatarUrl', avatarUrl);
+                
                 document.getElementById('headerAdminName').textContent = name;
                 document.getElementById('profileName').textContent = name;
                 document.getElementById('profilePhone').textContent = phone || 'N/A';
@@ -278,7 +280,7 @@
                     showAlert('Cannot update PIN: admin record not found', 'error');
                     return;
                 }
-                await updateDoc(doc(db, 'admin_users', adminDocId), { pin: newPin, updatedAt: serverTimestamp() });
+                await updateDoc(doc(db, 'admin_pins', adminDocId), { pin: newPin, updatedAt: serverTimestamp() });
                 // Update session copy
                 const sessionAdmin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
                 sessionAdmin.pin = newPin;

@@ -2503,24 +2503,46 @@ window.__syncDashboardProfile = async function() {
             if (el) el.textContent = display; 
         });
         
+        // Try to sync avatar from localStorage first (from profile settings)
+        const avatarUrl = localStorage.getItem('adminAvatarUrl');
+        if (avatarUrl) {
+            const profilePhoto = document.getElementById('profilePhoto');
+            const profileIconDefault = document.getElementById('profileIconDefault');
+            
+            if (profilePhoto) {
+                profilePhoto.src = avatarUrl;
+                profilePhoto.classList.remove('hidden');
+                if (profileIconDefault) profileIconDefault.classList.add('hidden');
+            }
+        }
+        
+        // Also try to sync from admin_pins Firestore collection
         if (typeof auth !== 'undefined' && auth.currentUser) {
-            const uid = auth.currentUser.uid;
             try {
-                const userRef = doc(db, 'users', uid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists() && userSnap.data().photoURL) {
-                    const photoUrl = userSnap.data().photoURL;
-                    const profilePhoto = document.getElementById('profilePhoto');
-                    const profileIconDefault = document.getElementById('profileIconDefault');
+                const adminPin = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+                if (adminPin.pin) {
+                    const q = query(collection(db, 'admin_pins'), where('pin', '==', adminPin.pin), limit(1));
+                    const querySnap = await getDocs(q);
                     
-                    if (profilePhoto) {
-                        profilePhoto.src = photoUrl;
-                        profilePhoto.classList.remove('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                    if (!querySnap.empty) {
+                        const adminData = querySnap.docs[0].data();
+                        if (adminData.avatarUrl) {
+                            const profilePhoto = document.getElementById('profilePhoto');
+                            const profileIconDefault = document.getElementById('profileIconDefault');
+                            
+                            if (profilePhoto) {
+                                profilePhoto.src = adminData.avatarUrl;
+                                profilePhoto.classList.remove('hidden');
+                                if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                            }
+                            
+                            // Update localStorage for consistency
+                            localStorage.setItem('adminAvatarUrl', adminData.avatarUrl);
+                        }
                     }
                 }
             } catch(e) {
-                console.error('Error syncing profile photo:', e);
+                console.error('Error syncing profile photo from admin_pins:', e);
             }
         }
     } catch(e) {
