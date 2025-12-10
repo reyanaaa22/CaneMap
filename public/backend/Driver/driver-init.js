@@ -933,13 +933,28 @@ window.__syncDashboardProfile = async function () {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists() && userSnap.data().photoURL) {
           const photoUrl = userSnap.data().photoURL;
-          // Update profile icon
+          // Update header profile icon
           const profilePhoto = document.getElementById('profilePhoto');
           const profileIconDefault = document.getElementById('profileIconDefault');
           if (profilePhoto) {
             profilePhoto.src = photoUrl;
             profilePhoto.classList.remove('hidden');
-            if (profileIconDefault) profileIconDefault.classList.add('hidden');
+            if (profileIconDefault) {
+              profileIconDefault.classList.add('hidden');
+              profileIconDefault.style.display = 'none';
+            }
+          }
+          
+          // Update sidebar profile icon
+          const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+          const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+          if (sidebarProfilePhoto) {
+            sidebarProfilePhoto.src = photoUrl;
+            sidebarProfilePhoto.classList.remove('hidden');
+            if (sidebarProfileIconDefault) {
+              sidebarProfileIconDefault.classList.add('hidden');
+              sidebarProfileIconDefault.style.display = 'none';
+            }
           }
         }
       } catch (e) {

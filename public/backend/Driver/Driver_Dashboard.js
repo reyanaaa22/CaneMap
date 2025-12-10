@@ -140,14 +140,30 @@ onAuthStateChanged(auth, async (user) => {
     localStorage.setItem("userRole", role);
     localStorage.setItem("userId", user.uid);
 
-    // Load and display profile photo
+    // Load and display profile photo in header and sidebar
     if (data.photoURL) {
+      // Header profile photo
       const profilePhoto = document.getElementById('profilePhoto');
       const profileIconDefault = document.getElementById('profileIconDefault');
       if (profilePhoto) {
         profilePhoto.src = data.photoURL;
         profilePhoto.classList.remove('hidden');
-        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+        if (profileIconDefault) {
+          profileIconDefault.classList.add('hidden');
+          profileIconDefault.style.display = 'none';
+        }
+      }
+      
+      // Sidebar profile photo
+      const sidebarProfilePhoto = document.getElementById('sidebarProfilePhoto');
+      const sidebarProfileIconDefault = document.getElementById('sidebarProfileIconDefault');
+      if (sidebarProfilePhoto) {
+        sidebarProfilePhoto.src = data.photoURL;
+        sidebarProfilePhoto.classList.remove('hidden');
+        if (sidebarProfileIconDefault) {
+          sidebarProfileIconDefault.classList.add('hidden');
+          sidebarProfileIconDefault.style.display = 'none';
+        }
       }
     }
 
