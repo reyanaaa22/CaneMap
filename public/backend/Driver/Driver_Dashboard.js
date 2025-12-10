@@ -260,17 +260,24 @@ async function loadDriverNotifications(userId) {
 
         const notifItem = document.createElement('button');
         notifItem.className = `w-full text-left px-4 py-3 hover:bg-gray-50 focus:outline-none ${statusClass}`;
+        
+        // Remove any HTML links from the message to prevent external navigation
+        let cleanMessage = (notif.message || 'Notification').replace(/<a[^>]*href="[^"]*"[^>]*>([^<]*)<\/a>/gi, '$1');
+        
         notifItem.innerHTML = `
           <div class="flex items-start gap-2">
             <div class="mt-1 h-2 w-2 rounded-full ${isRead ? 'bg-gray-300' : 'bg-[var(--cane-600)]'}"></div>
             <div class="flex-1">
-              <p class="text-sm text-[var(--cane-700)] leading-snug">${notif.message || 'Notification'}</p>
+              <p class="text-sm text-[var(--cane-700)] leading-snug">${cleanMessage}</p>
               <span class="text-xs text-[var(--cane-600)] mt-1 block">${timeAgo}</span>
             </div>
           </div>
         `;
 
-        notifItem.addEventListener('click', async () => {
+        notifItem.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
           if (!read) {
             // Update both 'read' and 'status' fields for lobby compatibility
             await updateDoc(doc(db, "notifications", docSnap.id), {
@@ -280,9 +287,26 @@ async function loadDriverNotifications(userId) {
             });
           }
 
-          if (notif.message && notif.message.toLowerCase().includes("click here")) {
-            window.location.href = "../../frontend/Driver/Driver_Badge.html";
+          // Close notification dropdown
+          const dropdown = document.getElementById('notificationDropdown');
+          if (dropdown) {
+            dropdown.classList.add('hidden');
           }
+
+          // Smart routing based on notification message
+          let targetSection = 'dashboard'; // default
+          const message = (notif.message || '').toLowerCase();
+
+          if (message.includes('field') || message.includes('join request')) {
+            targetSection = 'my-fields';
+          } else if (message.includes('task') || message.includes('work')) {
+            targetSection = 'my-tasks';
+          } else if (message.includes('transport') || message.includes('rental') || message.includes('equipment')) {
+            targetSection = 'transport';
+          }
+
+          // Redirect to appropriate section (stay in Driver Dashboard)
+          showSection(targetSection);
         });
 
         notifList.appendChild(notifItem);
