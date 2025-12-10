@@ -139,12 +139,15 @@
             }
             .sidebar-mobile-hidden { display: none; }
             
-            /* On mobile, sidebar takes full width when expanded */
+            /* On mobile, sidebar takes controlled width when expanded */
             .sidebar { 
-                width: 100% !important; 
+                width: 80vw !important;
+                max-width: 320px !important;
                 transform: translateX(-100%);
                 margin-top: 4.5rem;
                 height: calc(100vh - 4.5rem);
+                overflow-y: auto;
+                overflow-x: hidden;
             }
             .sidebar-expanded .sidebar {
                 transform: translateX(0);
@@ -157,6 +160,11 @@
             .sidebar-expanded .main {
                 opacity: 0.3;
                 pointer-events: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
             }
         }
         
@@ -1582,19 +1590,21 @@ async function showBadgeRequestsContent() {
                 if (sidebar) {
                     if (isNowExpanded) {
                         sidebar.style.transform = 'translateX(0)';
-                        sidebar.style.width = '100%';
-                        sidebar.style.left = '0';
+                        sidebar.style.width = '80vw';
                     } else {
                         sidebar.style.transform = 'translateX(-100%)';
+                        sidebar.style.width = '';
                     }
                 }
                 if (main) {
                     if (isNowExpanded) {
-                        main.style.opacity = '0.35';
+                        main.style.opacity = '0.3';
                         main.style.pointerEvents = 'none';
+                        main.style.position = 'fixed';
                     } else {
                         main.style.opacity = '';
                         main.style.pointerEvents = '';
+                        main.style.position = '';
                     }
                 }
                 // update hamburger icon visual
@@ -1671,18 +1681,50 @@ async function showBadgeRequestsContent() {
                     if (main) main.style.marginLeft = '16rem';
                     if (header) header.style.left = '16rem';
                 }
+                // Ensure no mobile overlay styles remain
+                if (main) {
+                    main.style.opacity = '';
+                    main.style.pointerEvents = '';
+                    main.style.position = '';
+                }
             } else {
                 // On mobile, start with sidebar hidden
                 body.classList.remove('sidebar-expanded');
-                if (main) main.style.marginLeft = '0';
+                if (main) {
+                    main.style.marginLeft = '0';
+                    main.style.opacity = '';
+                    main.style.pointerEvents = '';
+                    main.style.position = '';
+                }
                 if (header) header.style.left = '0';
-                if (sidebar) sidebar.style.width = '0';
+                if (sidebar) {
+                    sidebar.style.width = '';
+                    sidebar.style.transform = 'translateX(-100%)';
+                }
             }
         }
         
         // Handle window resize to reset sidebar state when switching between mobile/desktop
         window.addEventListener('resize', function() {
             const isMobile = window.innerWidth <= 768;
+            const body = document.body;
+            const main = document.getElementById('mainContent');
+            const sidebar = document.getElementById('sidebar');
+            
+            // Reset mobile sidebar state when going back to desktop
+            if (!isMobile && body.classList.contains('sidebar-expanded')) {
+                body.classList.remove('sidebar-expanded');
+                if (main) {
+                    main.style.opacity = '';
+                    main.style.pointerEvents = '';
+                    main.style.position = '';
+                }
+                if (sidebar) {
+                    sidebar.style.transform = '';
+                    sidebar.style.width = '';
+                }
+            }
+            
             initializeSidebarState();
 
             const hamburgerIcon = document.querySelector('.hamburger-icon i');
@@ -1749,12 +1791,18 @@ async function showBadgeRequestsContent() {
             const isMobile = window.innerWidth <= 768;
             const body = document.body;
             const sidebar = document.querySelector('.sidebar');
+            const main = document.getElementById('mainContent');
             const hamburgerBtn = document.querySelector('.hamburger-icon');
             
             if (isMobile && body.classList.contains('sidebar-expanded')) {
                 // Check if click is outside sidebar and not on hamburger button
                 if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
                     body.classList.remove('sidebar-expanded');
+                    if (main) {
+                        main.style.opacity = '';
+                        main.style.pointerEvents = '';
+                        main.style.position = '';
+                    }
                     const hamburgerIcon = document.querySelector('.hamburger-icon i');
                     if (hamburgerIcon) {
                         hamburgerIcon.className = 'fas fa-bars text-sm';
