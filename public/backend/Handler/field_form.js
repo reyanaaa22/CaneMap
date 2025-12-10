@@ -322,60 +322,63 @@ async function openEditModal(uid, fieldId, data){
     <button id="closeModalBtn" class="text-2xl">&times;</button>
   </div>
 
-  <div class="p-5 pt-3 overflow-y-auto space-y-4 max-h-[80vh]">
+  <div class="p-5 pt-3 overflow-y-auto space-y-6 max-h-[80vh]">
 
         <div class="flex justify-end gap-3 pt-3" id="actionButtons"></div>
-        <div id="sraRemarkBox" class="hidden border border-[var(--cane-600)] bg-[var(--cane-50)] rounded-xl p-4 mt-4">
+        <div id="sraRemarkBox" class="hidden border border-[var(--cane-600)] bg-[var(--cane-50)] rounded-xl p-4">
           <h4 class="font-semibold text-[var(--cane-800)] mb-2">SRA Remarks</h4>
           <p id="sraRemarkText" class="text-sm text-[var(--cane-700)] leading-relaxed"></p>
         </div>
-    <div class="grid md:grid-cols-2 gap-6">
-      <div>
-        <label>Field Name *</label>
-        <input id="m_field_name" class="w-full border px-3 py-2 rounded" required>
-      </div>
+        
+        <!-- Basic Field Information -->
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <label>Field Name *</label>
+            <input id="m_field_name" class="w-full border px-3 py-2 rounded" required>
+          </div>
 
-      <div>
-        <label>Street *</label>
-        <input id="m_street" class="w-full border px-3 py-2 rounded" required>
-      </div>
+          <div>
+            <label>Street *</label>
+            <input id="m_street" class="w-full border px-3 py-2 rounded" required>
+          </div>
 
-      <div>
-        <label>Barangay *</label>
-        <input id="m_barangay" 
-          class="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700 font-medium" 
-          readonly>
-      </div>
+          <div>
+            <label>Barangay *</label>
+            <input id="m_barangay" 
+              class="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700 font-medium" 
+              readonly>
+          </div>
 
-      <div>
-        <label>City / Municipality *</label>
-        <input id="m_city"
-          value="Ormoc City"
-          readonly
-          class="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700 font-medium">
-      </div>
+          <div>
+            <label>City / Municipality *</label>
+            <input id="m_city"
+              value="Ormoc City"
+              readonly
+              class="w-full border px-3 py-2 rounded bg-gray-100 text-gray-700 font-medium">
+          </div>
 
-      <div>
-        <label>Terrain *</label>
-        <select id="m_terrain_type" class="w-full border px-3 py-2 rounded" required>
-          <option value="">Select terrain...</option>
-          <option>Flat</option>
-          <option>Rolling</option>
-          <option>Hilly</option>
-        </select>
-      </div>
+          <div>
+            <label>Terrain *</label>
+            <select id="m_terrain_type" class="w-full border px-3 py-2 rounded" required>
+              <option value="">Select terrain...</option>
+              <option>Flat</option>
+              <option>Rolling</option>
+              <option>Hilly</option>
+            </select>
+          </div>
 
-      <div>
-        <label>Variety *</label>
-        <select id="m_sugarcane_variety" class="w-full border px-3 py-2 rounded" required></select>
-      </div>
+          <div>
+            <label>Variety *</label>
+            <select id="m_sugarcane_variety" class="w-full border px-3 py-2 rounded" required></select>
+          </div>
 
-      <div class="md:col-span-2">
-        <label>Size (ha)</label>
-        <input id="m_field_size" type="number" step="0.01" class="w-full border px-3 py-2 rounded">
-      </div>
-    </div>
+          <div class="md:col-span-2">
+            <label>Size (ha)</label>
+            <input id="m_field_size" type="number" step="0.01" class="w-full border px-3 py-2 rounded">
+          </div>
+        </div>
 
+        <!-- Map Section -->
         <div class="space-y-3">
           <div id="m_map" class="w-full h-64 rounded-xl border"></div>
           <div class="grid grid-cols-2 gap-4">
@@ -384,14 +387,12 @@ async function openEditModal(uid, fieldId, data){
           </div>
         </div>
 
-        <div class="space-y-3">
-  <div id="docSection" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-</div>
-
-
-        <!-- Policy agreement text (only visible when "to edit") -->
-          <div id="policyNotice" class="hidden mt-3 text-sm text-gray-700">
-            <label class="flex items-start gap-2">
+        <!-- Documents and Policy Section -->
+        <div class="space-y-6">
+          <div id="docSection" class="grid grid-cols-1 gap-6 w-full"></div>
+          <!-- Policy agreement text (only visible when "to edit") -->
+          <div id="policyNotice" class="hidden mt-4 text-sm text-gray-700">
+            <label class="flex items-start gap-3">
               <input id="policyCheck" type="checkbox" class="mt-1">
               <span>
                 I agree to the 
@@ -402,9 +403,8 @@ async function openEditModal(uid, fieldId, data){
               </span>
             </label>
           </div>
-
-      <div class="flex justify-end gap-3 mt-6">
-        <button type="button" id="m_cancel" 
+        </div>        
+        <div class="flex justify-end gap-3 mt-6">        <button type="button" id="m_cancel" 
           class="px-5 py-2 bg-gray-300 text-[var(--cane-800)] rounded-lg font-medium hover:bg-gray-400 transition">
           Cancel
         </button>
@@ -439,10 +439,11 @@ async function openEditModal(uid, fieldId, data){
 
   if (editable) {
     policyNotice.classList.remove('hidden');
+    // Ensure the policy notice is visible by forcing display
+    policyNotice.style.display = 'block';
   } else {
     policyNotice.classList.add('hidden');
   }
-
   setTimeout(() => {
   initLegalModal();
 }, 300);
@@ -461,18 +462,17 @@ async function openEditModal(uid, fieldId, data){
 
 // 🔹 Document Section — perfectly aligned 2-column, centered in modal
 docSection.innerHTML = `
-<div class="w-full mx-auto px-1">
+<div class="w-full">
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 justify-items-center">
-
+  <div class="grid grid-cols-1 gap-6 w-full">
 
     <!-- Barangay Certificate -->
-    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm w-full">
       <label class="block text-sm font-semibold mb-2">Barangay Certificate</label>
-      <div id="prev_barangayCertUrl" class="text-sm text-gray-700"></div>
+      <div id="prev_barangayCertUrl" class="text-sm text-gray-700 min-h-[24px]"></div>
       ${editable ? `
         <button type="button" data-doc="barangayCertUrl"
-          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition mt-2">
           <i class="fa-solid fa-camera mr-1"></i> Change Photo
         </button>` : ''}
       <input type="file" id="file_barangayCertUrl" accept="image/*" style="display:none">
@@ -480,12 +480,12 @@ docSection.innerHTML = `
     </div>
 
     <!-- Land Title -->
-    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm w-full">
       <label class="block text-sm font-semibold mb-2">Land Title</label>
-      <div id="prev_landTitleUrl" class="text-sm text-gray-700"></div>
+      <div id="prev_landTitleUrl" class="text-sm text-gray-700 min-h-[24px]"></div>
       ${editable ? `
         <button type="button" data-doc="landTitleUrl"
-          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition mt-2">
           <i class="fa-solid fa-camera mr-1"></i> Change Photo
         </button>` : ''}
       <input type="file" id="file_landTitleUrl" accept="image/*" style="display:none">
@@ -493,12 +493,12 @@ docSection.innerHTML = `
     </div>
 
     <!-- Valid ID (Front) -->
-    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm w-full">
       <label class="block text-sm font-semibold mb-2">Valid ID (Front)</label>
-      <div id="prev_validFrontUrl" class="text-sm text-gray-700"></div>
+      <div id="prev_validFrontUrl" class="text-sm text-gray-700 min-h-[24px]"></div>
       ${editable ? `
         <button type="button" data-doc="validFrontUrl"
-          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition mt-2">
           <i class="fa-solid fa-camera mr-1"></i> Change Photo
         </button>` : ''}
       <input type="file" id="file_validFrontUrl" accept="image/*" style="display:none">
@@ -506,12 +506,12 @@ docSection.innerHTML = `
     </div>
 
     <!-- Valid ID (Back) -->
-    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm">
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm w-full">
       <label class="block text-sm font-semibold mb-2">Valid ID (Back)</label>
-      <div id="prev_validBackUrl" class="text-sm text-gray-700"></div>
+      <div id="prev_validBackUrl" class="text-sm text-gray-700 min-h-[24px]"></div>
       ${editable ? `
         <button type="button" data-doc="validBackUrl"
-          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition mt-2">
           <i class="fa-solid fa-camera mr-1"></i> Change Photo
         </button>` : ''}
       <input type="file" id="file_validBackUrl" accept="image/*" style="display:none">
@@ -519,12 +519,12 @@ docSection.innerHTML = `
     </div>
 
     <!-- Selfie with ID -->
-    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm md:col-span-2">
+    <div class="rounded-xl border border-gray-300 p-4 bg-white shadow-sm md:col-span-2 w-full">
       <label class="block text-sm font-semibold mb-2">Selfie with ID</label>
-      <div id="prev_selfieUrl" class="text-sm text-gray-700"></div>
+      <div id="prev_selfieUrl" class="text-sm text-gray-700 min-h-[24px]"></div>
       ${editable ? `
         <button type="button" data-doc="selfieUrl"
-          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition">
+          class="change-btn w-fit px-3 py-2 rounded bg-[var(--cane-700)] hover:bg-[var(--cane-800)] text-white text-sm font-medium transition mt-2">
           <i class="fa-solid fa-camera mr-1"></i> Change Photo
         </button>` : ''}
       <input type="file" id="file_selfieUrl" accept="image/*" style="display:none">
@@ -533,10 +533,7 @@ docSection.innerHTML = `
 
   </div>
 </div>
-`;
-
-
-function makeDocInput(key, label) {
+`;function makeDocInput(key, label) {
   return `
     <div>
       <label class="block text-sm font-medium mb-1">${label}</label>
@@ -594,7 +591,10 @@ function makeDocInput(key, label) {
     setPreview(modal.querySelector(`#prev_${key}`), data[key]);
   });
 
-
+  // Ensure document section is properly displayed
+  if (docSection) {
+    docSection.style.width = '100%';
+  }
   // disable inputs if not editable
   if(!editable){
     modal.querySelectorAll('input,select,button').forEach(e=>{
@@ -813,63 +813,63 @@ modal.querySelectorAll('.change-btn').forEach(btn => {
 
 // save changes (with confirmation modal)
   f('#m_save').onclick = async()=>{
+    const newData = {
+      field_name:f('#m_field_name').value.trim(),
+      street:f('#m_street').value.trim(),
+      barangay: f('#m_barangay').value,
+      city: f('#m_city').value,
+      terrain_type:f('#m_terrain_type').value,
+      sugarcane_variety:f('#m_sugarcane_variety').value,
+      field_size:f('#m_field_size').value,
+      latitude:parseFloat(f('#m_lat').value),
+      longitude:parseFloat(f('#m_lng').value)
+    };
+
+    function hasChanges(orig, updated) {
+      for (const key in updated) {
+        if (updated[key] !== orig[key]) return true;
+      }
+      return false;
+    }
+
+    function logChanges(orig, updated) {
+      const changes = [];
+      for (const key in updated) {
+        if (updated[key] !== orig[key]) {
+          changes.push({ field: key, before: orig[key], after: updated[key] });
+        }
+      }
+      console.table(changes);
+      return changes.length > 0;
+    }
+
+    // Step 1: log changes for debugging
+    const textChanged = logChanges(data, newData);
+
+    const fileKeys = ['barangayCertUrl','landTitleUrl','validFrontUrl','validBackUrl','selfieUrl'];
+    let fileChanged = false;
+
+    fileKeys.forEach(k => {
+      const val = modal.querySelector(`#b64_${k}`).value;
+      if (val && val !== (data[k] || '')) {
+        console.log(`File changed: ${k}`, 'Before:', data[k], 'After:', val);
+        fileChanged = true;
+      }
+    });
+
+    // First check if any changes were made
+    if (!textChanged && !fileChanged) {
+      showAlert("No changes detected. Please modify some fields before saving.", "error");
+      return;
+    }
+
     //  Require agreement when editable
     if (editable && !policyCheck.checked) {
       showAlert("You must agree to the Terms and Privacy Policy before saving.", "error");
       return;
     }
 
-  const newData = {
-    field_name:f('#m_field_name').value.trim(),
-    street:f('#m_street').value.trim(),
-    barangay: f('#m_barangay').value,
-    city: f('#m_city').value,
-    terrain_type:f('#m_terrain_type').value,
-    sugarcane_variety:f('#m_sugarcane_variety').value,
-    field_size:f('#m_field_size').value,
-    latitude:parseFloat(f('#m_lat').value),
-    longitude:parseFloat(f('#m_lng').value)
-  };
-
-function hasChanges(orig, updated) {
-  for (const key in updated) {
-    if (updated[key] !== orig[key]) return true;
-  }
-  return false;
-}
-
-function logChanges(orig, updated) {
-  const changes = [];
-  for (const key in updated) {
-    if (updated[key] !== orig[key]) {
-      changes.push({ field: key, before: orig[key], after: updated[key] });
-    }
-  }
-  console.table(changes);
-  return changes.length > 0;
-}
-
-// Step 1: log changes for debugging
-const textChanged = logChanges(data, newData);
-
-const fileKeys = ['barangayCertUrl','landTitleUrl','validFrontUrl','validBackUrl','selfieUrl'];
-let fileChanged = false;
-
-fileKeys.forEach(k => {
-  const val = modal.querySelector(`#b64_${k}`).value;
-  if (val && val !== (data[k] || '')) {
-    console.log(`File changed: ${k}`, 'Before:', data[k], 'After:', val);
-    fileChanged = true;
-  }
-});
-
-if (!textChanged && !fileChanged) {
-  showAlert("No changes detected. Please modify some fields before saving.", "error");
-  return;
-}
-
-
-  // Show confirmation modal
+    // Show confirmation modal
   const confirmBox = document.createElement("div");
   confirmBox.className = "fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[200]";
   confirmBox.innerHTML = `
@@ -885,7 +885,6 @@ if (!textChanged && !fileChanged) {
     </div>
   `;
   document.body.appendChild(confirmBox);
-
   confirmBox.querySelector("#cancelConfirm").onclick = () => confirmBox.remove();
   confirmBox.querySelector("#confirmSave").onclick = async () => {
       confirmBox.remove();

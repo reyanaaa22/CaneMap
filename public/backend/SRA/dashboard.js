@@ -56,7 +56,7 @@ async function initNotifications(userId) {
         dropdown.removeAttribute('style');
         
         // Set all styles explicitly for mobile - positioned higher (40% from top)
-        dropdown.style.cssText = `
+                    dropdown.style.cssText = `
           position: fixed !important;
           left: 50% !important;
           top: 40% !important;
@@ -66,13 +66,13 @@ async function initNotifications(userId) {
           max-width: ${dropdownWidth}px !important;
           margin: 0 !important;
           max-height: ${viewportHeight - 40}px !important;
-          z-index: 50 !important;
+                    z-index: 10001 !important;
           box-sizing: border-box !important;
         `;
       } else {
         // Desktop: reset to original positioning
         dropdown.removeAttribute('style');
-        dropdown.style.cssText = `
+                dropdown.style.cssText = `
           position: absolute !important;
           right: 0 !important;
           top: 100% !important;
@@ -82,7 +82,7 @@ async function initNotifications(userId) {
           max-width: none !important;
           margin-top: 0.5rem !important;
           max-height: calc(100vh - 4rem) !important;
-          z-index: 50 !important;
+                    z-index: 10001 !important;
         `;
       }
     }
@@ -181,7 +181,10 @@ async function initNotifications(userId) {
       return;
     }
 
-    list.innerHTML = docs
+        // build a map from id -> notification object to access full data in click handlers
+        const notificationById = new Map(docs.map(d => [d.id, d]));
+
+        list.innerHTML = docs
       .map((item) => {
         const title = getNotificationTitle(item);
         const message = item.message || "";
@@ -205,21 +208,72 @@ async function initNotifications(userId) {
       })
       .join("");
 
-    Array.from(list.querySelectorAll("button[data-id]"))
-      .forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const notificationId = btn.dataset.id;
-          try {
-            await updateDoc(doc(db, "notifications", notificationId), {
-              read: true,
-              readAt: serverTimestamp()
+        Array.from(list.querySelectorAll("button[data-id]"))
+            .forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    const notificationId = btn.dataset.id;
+                    try {
+                        await updateDoc(doc(db, "notifications", notificationId), {
+                            read: true,
+                            readAt: serverTimestamp()
+                        });
+                        console.log(`✅ Marked notification ${notificationId} as read`);
+                    } catch (err) {
+                        console.warn("Failed to update notification status", err);
+                    }
+
+                    // If we have full notification data, decide where to navigate
+                    try {
+                        const notif = notificationById.get(notificationId) || {};
+                        const ntype = (notif.type || '').toString().toLowerCase();
+
+                        // Field-related notifications -> go to Applications (field-documents)
+                        const isField = ntype.startsWith('field') || ntype.includes('field') || ['field_registration', 'field_approved', 'field_rejected'].includes(ntype);
+
+                        // Report-related notifications -> go to Reports
+                        const isReport = ntype.startsWith('report') || ntype.includes('report') || ['report_requested', 'report_approved', 'report_rejected'].includes(ntype);
+
+                        if (isField) {
+                            // Load field documents partial if needed, then show section
+                            try {
+                                const container = document.getElementById('fieldDocsContainer');
+                                if (container && container.childElementCount === 0) {
+                                    const cacheBust = `?v=${Date.now()}`;
+                                    const html = await fetch(`SRA_FieldDocuments.html${cacheBust}`).then(r => r.text());
+                                    container.innerHTML = html;
+                                }
+                                // attempt to import Review module and init
+                                try {
+                                    const cacheBust = `?v=${Date.now()}`;
+                                    const mod = await import(`./Review.js${cacheBust}`);
+                                    if (mod && mod.SRAReview && typeof mod.SRAReview.init === 'function') {
+                                        mod.SRAReview.init();
+                                    }
+                                } catch(_) {}
+                                showSection('field-documents');
+                                dropdown.classList.add('hidden');
+                            } catch(_) {
+                                showSection('field-documents');
+                                dropdown.classList.add('hidden');
+                            }
+                            return;
+                        }
+
+                        if (isReport) {
+                            // Show reports section (showSection will initialize table)
+                            showSection('reports');
+                            dropdown.classList.add('hidden');
+                            return;
+                        }
+
+                        // No special mapping: just close dropdown
+                        dropdown.classList.add('hidden');
+                    } catch (err) {
+                        console.warn('Notification click handler failed:', err);
+                    }
+                });
             });
-            console.log(`✅ Marked notification ${notificationId} as read`);
-          } catch (err) {
-            console.warn("Failed to update notification status", err);
-          }
-        });
-      });
   };
 
   const fetchNotifications = () => {
@@ -816,61 +870,218 @@ async function initNotifications(userId) {
 
                                 // ---------- Field Details Modal (same as lobby but Join hidden for SRA) ----------
                                 function openFieldDetailsModal(field) {
+                                    // Remove any existing modal
                                     const old = document.getElementById('fieldDetailsModal');
                                     if (old) old.remove();
 
+                                    // Create modal container with fixed height, matching Review.js style
                                     const modal = document.createElement('div');
                                     modal.id = 'fieldDetailsModal';
-                                    modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]';
+                                    modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4';
 
-                                    modal.innerHTML = `
-                                        <div class="bg-white rounded-xl p-5 w-[90%] max-w-sm relative text-[var(--cane-900)] border border-[var(--cane-200)] shadow-md">
-                                            <button id="closeFieldModal" class="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-xl font-bold transition">&times;</button>
+                                    // Helper: check if string is a URL
+                                    function isUrl(str) {
+                                        try { new URL(str); return true; } catch(_) { return false; }
+                                    }
 
-                                            <div class="flex items-center justify-center mb-3">
-                                                <div class="w-11 h-11 bg-[var(--cane-100)] text-[var(--cane-700)] rounded-full flex items-center justify-center border border-[var(--cane-200)]">
-                                                    <i class="fas fa-map-marker-alt text-lg"></i>
-                                                </div>
-                                            </div>
+                                    // Helper: format timestamps
+                                    function formatDate(ts) {
+                                        if (!ts) return '—';
+                                        try {
+                                            const date = ts.seconds ? new Date(ts.seconds * 1000) : (ts instanceof Date ? ts : new Date(ts));
+                                            return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+                                        } catch(_) { return String(ts); }
+                                    }
 
-                                            <h2 class="text-lg font-bold text-center text-[var(--cane-900)] mb-2">${field.fieldName}</h2>
+                                    // Helper: create image element with fallback
+                                    function makeImage(src) {
+                                        if (!src) {
+                                            const noImg = document.createElement('div');
+                                            noImg.className = 'text-xs text-[var(--cane-500)] bg-[var(--cane-50)] p-4 rounded-lg border border-dashed border-[var(--cane-200)] flex items-center justify-center h-48';
+                                            noImg.textContent = 'No file uploaded';
+                                            return noImg;
+                                        }
+                                        const img = document.createElement('img');
+                                        img.src = src;
+                                        img.alt = 'document';
+                                        img.className = 'w-full max-h-48 object-contain rounded-lg border border-[var(--cane-200)] bg-white shadow-sm hover:shadow-md transition cursor-pointer';
+                                        img.addEventListener('click', () => {
+                                            const viewer = document.createElement('div');
+                                            viewer.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4';
+                                            const close = document.createElement('button');
+                                            close.className = 'absolute top-4 right-4 text-white text-3xl font-bold hover:text-gray-300';
+                                            close.innerHTML = '&times;';
+                                            close.onclick = () => viewer.remove();
+                                            const fullImg = document.createElement('img');
+                                            fullImg.src = src;
+                                            fullImg.className = 'max-w-full max-h-[90vh] object-contain';
+                                            viewer.appendChild(close);
+                                            viewer.appendChild(fullImg);
+                                            viewer.onclick = (e) => { if (e.target === viewer) viewer.remove(); };
+                                            document.body.appendChild(viewer);
+                                        });
+                                        return img;
+                                    }
 
-                                            <p class="text-sm text-center mb-3 text-[var(--cane-700)]">
-                                                <span class="font-semibold">Owner:</span> ${field.applicantName}
-                                            </p>
+                                    // Build field info grid with all fields
+                                    const raw = field.raw || {};
+                                    const fieldName = field.fieldName || raw.field_name || raw.fieldName || '—';
+                                    const info = [
+                                        ['Field Name', fieldName],
+                                        ['Owner', field.applicantName || raw.applicantName || raw.owner || raw.ownerName || '—'],
+                                        ['Street / Sitio', field.street || raw.street || raw.sitio || '—'],
+                                        ['Barangay', field.barangay || raw.barangay || raw.location || '—'],
+                                        ['Size (ha)', field.size || raw.field_size || raw.size || '—'],
+                                        ['Field Terrain', raw.fieldTerrain || field.terrain || raw.terrain_type || raw.terrain || '—'],
+                                        ['Status', field.status || raw.status || '—'],
+                                        ['Latitude', field.lat != null ? Number(field.lat).toFixed(6) : (raw.lat || raw.latitude || '—')],
+                                        ['Longitude', field.lng != null ? Number(field.lng).toFixed(6) : (raw.lng || raw.longitude || '—')],
+                                        ['Sugarcane Variety', raw.sugarcane_variety || '—'],
+                                        ['Soil Type', raw.soilType || '—'],
+                                        ['Irrigation Method', raw.irrigationMethod || '—'],
+                                        ['Previous Crop', raw.previousCrop || '—'],
+                                        ['Current Growth Stage', raw.currentGrowthStage || '—'],
+                                        ['Planting Date', formatDate(raw.plantingDate)],
+                                        ['Expected Harvest Date', formatDate(raw.expectedHarvestDate)],
+                                        ['Delay Days', raw.delayDays != null ? String(raw.delayDays) : '—'],
+                                        ['Created On', formatDate(raw.createdAt)]
+                                    ];
 
-                                            <div class="text-[13px] text-[var(--cane-800)] bg-[var(--cane-50)] p-3 rounded-md border border-[var(--cane-200)] leading-relaxed mb-2 text-center">
-                                                🏠︎ ${field.street}, Brgy. ${field.barangay}, Ormoc City, Leyte
-                                            </div>
+                                    // Build modal HTML with fixed height content area
+                                    const card = document.createElement('div');
+                                    card.className = 'bg-white rounded-2xl w-[92%] max-w-4xl p-0 shadow-2xl relative overflow-hidden';
 
-                                            <div class="text-[11px] text-[var(--cane-600)] italic text-center mb-4">
-                                                ⟟ Lat: ${Number(field.lat).toFixed(5)} | Lng: ${Number(field.lng).toFixed(5)}
-                                            </div>
+                                    const header = document.createElement('div');
+                                    header.className = 'px-8 pt-6 pb-4 border-b border-[var(--cane-200)] flex items-center justify-between bg-gradient-to-r from-[var(--cane-50)] to-white';
+                                    header.innerHTML = `<h3 class="text-2xl font-bold text-[var(--cane-900)]">${fieldName}</h3>`;
 
-                                            <button id="joinBtn" class="w-full py-2.5 rounded-md bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)] transition">
-                                                Join Field
-                                            </button>
-                                        </div>
-                                    `;
+                                    const closeBtn = document.createElement('button');
+                                    closeBtn.className = 'absolute top-4 right-5 text-2xl text-gray-400 hover:text-gray-600 transition';
+                                    closeBtn.innerHTML = '&times;';
+                                    closeBtn.onclick = () => modal.remove();
+
+                                    const content = document.createElement('div');
+                                    content.className = 'max-h-[70vh] overflow-y-auto p-8 space-y-6';
+
+                                    // Field info section
+                                    const infoSection = document.createElement('div');
+                                    infoSection.className = 'space-y-4';
+                                    const infoTitle = document.createElement('div');
+                                    infoTitle.className = 'text-lg font-bold text-[var(--cane-900)] flex items-center gap-2';
+                                    infoTitle.innerHTML = '<i class="fas fa-info-circle text-[var(--cane-700)]"></i>Field Information';
+                                    infoSection.appendChild(infoTitle);
+
+                                    const grid = document.createElement('div');
+                                    grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-6';
+                                    for (const [k, v] of info) {
+                                        const item = document.createElement('div');
+                                        item.className = 'space-y-1.5';
+                                        item.innerHTML = `<div class="text-xs font-semibold text-[var(--cane-600)] uppercase tracking-wide">${k}</div><div class="text-base font-semibold text-[var(--cane-900)]">${v}</div>`;
+                                        grid.appendChild(item);
+                                    }
+                                    infoSection.appendChild(grid);
+                                    content.appendChild(infoSection);
+
+                                    // Images section (look for common image keys)
+                                    const imageKeyMap = {
+                                        'validFrontUrl': 'Valid ID Front',
+                                        'valid_id_front': 'Valid ID Front',
+                                        'valid_front': 'Valid ID Front',
+                                        'front_id': 'Valid ID Front',
+                                        'validBackUrl': 'Valid ID Back',
+                                        'valid_id_back': 'Valid ID Back',
+                                        'valid_back': 'Valid ID Back',
+                                        'back_id': 'Valid ID Back',
+                                        'selfieUrl': 'Selfie with ID',
+                                        'selfie_with_id': 'Selfie with ID',
+                                        'selfie_id': 'Selfie with ID',
+                                        'barangay_certification': 'Barangay Certification',
+                                        'barangay_certificate': 'Barangay Certificate',
+                                        'barangay_certification_url': 'Barangay Certification',
+                                        'barangay_certificate_url': 'Barangay Certificate',
+                                        'barangayCertUrl': 'Barangay Certificate',
+                                        'brgyCertUrl': 'Barangay Certificate',
+                                        'brgy_certificate': 'Barangay Certificate',
+                                        'barangayCert': 'Barangay Certificate',
+                                        'land_title': 'Land Title',
+                                        'land_title_url': 'Land Title',
+                                        'landTitleUrl': 'Land Title',
+                                        'land_titleURL': 'Land Title',
+                                        'landTitle': 'Land Title'
+                                    };
+                                    const foundImages = {};
+                                    for (const key of Object.keys(imageKeyMap)) {
+                                        if (raw[key] && isUrl(raw[key])) {
+                                            const label = imageKeyMap[key];
+                                            foundImages[label] = raw[key];
+                                        }
+                                    }
+
+                                    if (Object.keys(foundImages).length > 0) {
+                                        const imagesSection = document.createElement('div');
+                                        imagesSection.className = 'space-y-3 pb-2 border-t border-[var(--cane-200)] pt-6';
+                                        const imagesTitle = document.createElement('div');
+                                        imagesTitle.className = 'text-lg font-bold text-[var(--cane-900)] flex items-center gap-2';
+                                        imagesTitle.innerHTML = '<i class="fas fa-images text-[var(--cane-700)]"></i>Documents & Photos';
+                                        imagesSection.appendChild(imagesTitle);
+
+                                        const imagesGrid = document.createElement('div');
+                                        imagesGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+                                        for (const [label, url] of Object.entries(foundImages)) {
+                                            const imgItem = document.createElement('div');
+                                            imgItem.className = 'space-y-2';
+                                            const imgLabel = document.createElement('div');
+                                            imgLabel.className = 'text-sm font-semibold text-[var(--cane-700)]';
+                                            imgLabel.textContent = label;
+                                            imgItem.appendChild(imgLabel);
+                                            imgItem.appendChild(makeImage(url));
+                                            imagesGrid.appendChild(imgItem);
+                                        }
+                                        imagesSection.appendChild(imagesGrid);
+                                        content.appendChild(imagesSection);
+                                    }
+
+                                    card.appendChild(header);
+                                    card.appendChild(closeBtn);
+                                    card.appendChild(content);
+
+                                    // Footer actions
+                                    const footer = document.createElement('div');
+                                    footer.className = 'px-8 py-4 border-t border-[var(--cane-200)] bg-gray-50 flex items-center gap-3';
+
+                                    const closeFooterBtn = document.createElement('button');
+                                    closeFooterBtn.className = 'px-4 py-2 rounded-lg border border-[var(--cane-200)] bg-white text-[var(--cane-900)] hover:bg-[var(--cane-50)] font-medium';
+                                    closeFooterBtn.textContent = 'Close';
+                                    closeFooterBtn.onclick = () => modal.remove();
+
+                                    const actionBtn = document.createElement('button');
+                                    actionBtn.className = 'ml-auto px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)]';
+                                    actionBtn.textContent = 'Open in Applications';
+                                    actionBtn.onclick = async () => {
+                                        try {
+                                            showSection('field-documents');
+                                            if (typeof openFieldInDocuments === 'function') {
+                                                openFieldInDocuments(field.id || field.path);
+                                            }
+                                        } catch (err) {
+                                            console.warn('Failed to open field in documents:', err);
+                                        } finally {
+                                            modal.remove();
+                                        }
+                                    };
+
+                                    footer.appendChild(closeFooterBtn);
+                                    footer.appendChild(actionBtn);
+                                    card.appendChild(footer);
+
+                                    modal.appendChild(card);
+
+                                    // Close on background click
+                                    modal.addEventListener('click', (e) => {
+                                        if (e.target === modal) modal.remove();
+                                    });
+
                                     document.body.appendChild(modal);
-                                    document.getElementById('closeFieldModal').onclick = () => modal.remove();
-
-                                    const joinBtn = document.getElementById('joinBtn');
-                                    const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
-
-                                    // Hide Join button for SRA
-                                    if (userRole === 'sra') {
-                                        if (joinBtn) joinBtn.style.display = 'none';
-                                        return;
-                                    }
-
-                                    // For other roles, keep lobby behaviour (if you want the Join flow here, implement openJoinModal)
-                                    if (joinBtn) {
-                                        joinBtn.onclick = () => {
-                                            // if you want the join modal on SRA dashboard for non-SRA roles, call openJoinModal(field)
-                                            openJoinModal && openJoinModal(field);
-                                        };
-                                    }
                                 }
 
                                 // ---------- Initialize Leaflet map and wire search (same UX as lobby) ----------
@@ -898,13 +1109,32 @@ async function initNotifications(userId) {
                                         scrollWheelZoom: false,
                                     }).setView([11.0064, 124.6075], 12);
 
-                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                         attribution: '© OpenStreetMap contributors',
                                     }).addTo(map);
 
                                     const bounds = L.latLngBounds(L.latLng(10.85, 124.45), L.latLng(11.20, 124.80));
                                     map.setMaxBounds(bounds);
                                     map.on('drag', () => map.panInsideBounds(bounds, { animate: true }));
+
+                                    // Fix: some browsers/devices may grey-out tiles when the map
+                                    // is interacted with inside complex layouts. Force a refresh
+                                    // of map size and tile redraw after interactions. This is
+                                    // intentionally limited to the dashboard map instance only.
+                                    map.whenReady(() => {
+                                        try { map.invalidateSize(); } catch(_) {}
+                                    });
+
+                                    const refreshMapTiles = () => {
+                                        try {
+                                            map.invalidateSize();
+                                            // try to trigger tile redraw if available
+                                            if (tileLayer && typeof tileLayer.redraw === 'function') tileLayer.redraw();
+                                        } catch(_) {}
+                                    };
+
+                                    // After user interactions, ensure tiles are refreshed
+                                    map.on('moveend zoomend resize', () => { setTimeout(refreshMapTiles, 50); });
 
                                     // 🔥 Setup REAL-TIME listener for reviewed field pins
                                     setupRealtimeFieldsListener(map);
@@ -1159,60 +1389,218 @@ async function initNotifications(userId) {
 
                             // Open field details modal
                             function openFieldDetailsModalGlobal(field) {
+                                // Remove any existing modal
                                 const old = document.getElementById('fieldDetailsModal');
                                 if (old) old.remove();
 
+                                // Create modal container with fixed height, matching Review.js style
                                 const modal = document.createElement('div');
                                 modal.id = 'fieldDetailsModal';
-                                modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]';
+                                modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4';
 
-                                modal.innerHTML = `
-                                    <div class="bg-white rounded-xl p-5 w-[90%] max-w-sm relative text-[var(--cane-900)] border border-[var(--cane-200)] shadow-md">
-                                        <button id="closeFieldModal" class="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-xl font-bold transition">&times;</button>
+                                // Helper: check if string is a URL
+                                function isUrl(str) {
+                                    try { new URL(str); return true; } catch(_) { return false; }
+                                }
 
-                                        <div class="flex items-center justify-center mb-3">
-                                            <div class="w-11 h-11 bg-[var(--cane-100)] text-[var(--cane-700)] rounded-full flex items-center justify-center border border-[var(--cane-200)]">
-                                                <i class="fas fa-map-marker-alt text-lg"></i>
-                                            </div>
-                                        </div>
+                                // Helper: format timestamps
+                                function formatDate(ts) {
+                                    if (!ts) return '—';
+                                    try {
+                                        const date = ts.seconds ? new Date(ts.seconds * 1000) : (ts instanceof Date ? ts : new Date(ts));
+                                        return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+                                    } catch(_) { return String(ts); }
+                                }
 
-                                        <h2 class="text-lg font-bold text-center text-[var(--cane-900)] mb-2">${field.fieldName}</h2>
+                                // Helper: create image element with fallback
+                                function makeImage(src) {
+                                    if (!src) {
+                                        const noImg = document.createElement('div');
+                                        noImg.className = 'text-xs text-[var(--cane-500)] bg-[var(--cane-50)] p-4 rounded-lg border border-dashed border-[var(--cane-200)] flex items-center justify-center h-48';
+                                        noImg.textContent = 'No file uploaded';
+                                        return noImg;
+                                    }
+                                    const img = document.createElement('img');
+                                    img.src = src;
+                                    img.alt = 'document';
+                                    img.className = 'w-full max-h-48 object-contain rounded-lg border border-[var(--cane-200)] bg-white shadow-sm hover:shadow-md transition cursor-pointer';
+                                    img.addEventListener('click', () => {
+                                        const viewer = document.createElement('div');
+                                        viewer.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4';
+                                        const close = document.createElement('button');
+                                        close.className = 'absolute top-4 right-4 text-white text-3xl font-bold hover:text-gray-300';
+                                        close.innerHTML = '&times;';
+                                        close.onclick = () => viewer.remove();
+                                        const fullImg = document.createElement('img');
+                                        fullImg.src = src;
+                                        fullImg.className = 'max-w-full max-h-[90vh] object-contain';
+                                        viewer.appendChild(close);
+                                        viewer.appendChild(fullImg);
+                                        viewer.onclick = (e) => { if (e.target === viewer) viewer.remove(); };
+                                        document.body.appendChild(viewer);
+                                    });
+                                    return img;
+                                }
 
-                                        <p class="text-sm text-center mb-3 text-[var(--cane-700)]">
-                                            <span class="font-semibold">Owner:</span> ${field.applicantName}
-                                        </p>
+                                // Build field info grid with all fields
+                                const raw = field.raw || {};
+                                const fieldName = field.fieldName || raw.field_name || raw.fieldName || '—';
+                                const info = [
+                                    ['Field Name', fieldName],
+                                    ['Owner', field.applicantName || raw.applicantName || raw.owner || raw.ownerName || '—'],
+                                    ['Street / Sitio', field.street || raw.street || raw.sitio || '—'],
+                                    ['Barangay', field.barangay || raw.barangay || raw.location || '—'],
+                                    ['Size (ha)', field.size || raw.field_size || raw.size || '—'],
+                                    ['Field Terrain', raw.fieldTerrain || field.terrain || raw.terrain_type || raw.terrain || '—'],
+                                    ['Status', field.status || raw.status || '—'],
+                                    ['Latitude', field.lat != null ? Number(field.lat).toFixed(6) : (raw.lat || raw.latitude || '—')],
+                                    ['Longitude', field.lng != null ? Number(field.lng).toFixed(6) : (raw.lng || raw.longitude || '—')],
+                                    ['Sugarcane Variety', raw.sugarcane_variety || '—'],
+                                    ['Soil Type', raw.soilType || '—'],
+                                    ['Irrigation Method', raw.irrigationMethod || '—'],
+                                    ['Previous Crop', raw.previousCrop || '—'],
+                                    ['Current Growth Stage', raw.currentGrowthStage || '—'],
+                                    ['Planting Date', formatDate(raw.plantingDate)],
+                                    ['Expected Harvest Date', formatDate(raw.expectedHarvestDate)],
+                                    ['Delay Days', raw.delayDays != null ? String(raw.delayDays) : '—'],
+                                    ['Created On', formatDate(raw.createdAt)]
+                                ];
 
-                                        <div class="text-[13px] text-[var(--cane-800)] bg-[var(--cane-50)] p-3 rounded-md border border-[var(--cane-200)] leading-relaxed mb-2 text-center">
-                                            🏠︎ ${field.street}, Brgy. ${field.barangay}, Ormoc City, Leyte
-                                        </div>
+                                // Build modal HTML with fixed height content area
+                                const card = document.createElement('div');
+                                card.className = 'bg-white rounded-2xl w-[92%] max-w-4xl p-0 shadow-2xl relative overflow-hidden';
 
-                                        <div class="text-[11px] text-[var(--cane-600)] italic text-center mb-4">
-                                            ⟟ Lat: ${Number(field.lat).toFixed(5)} | Lng: ${Number(field.lng).toFixed(5)}
-                                        </div>
+                                const header = document.createElement('div');
+                                header.className = 'px-8 pt-6 pb-4 border-b border-[var(--cane-200)] flex items-center justify-between bg-gradient-to-r from-[var(--cane-50)] to-white';
+                                header.innerHTML = `<h3 class="text-2xl font-bold text-[var(--cane-900)]">${fieldName}</h3>`;
 
-                                        <button id="joinBtn" class="w-full py-2.5 rounded-md bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)] transition">
-                                            Join Field
-                                        </button>
-                                    </div>
-                                `;
+                                const closeBtn = document.createElement('button');
+                                closeBtn.className = 'absolute top-4 right-5 text-2xl text-gray-400 hover:text-gray-600 transition';
+                                closeBtn.innerHTML = '&times;';
+                                closeBtn.onclick = () => modal.remove();
+
+                                const content = document.createElement('div');
+                                content.className = 'max-h-[70vh] overflow-y-auto p-8 space-y-6';
+
+                                // Field info section
+                                const infoSection = document.createElement('div');
+                                infoSection.className = 'space-y-4';
+                                const infoTitle = document.createElement('div');
+                                infoTitle.className = 'text-lg font-bold text-[var(--cane-900)] flex items-center gap-2';
+                                infoTitle.innerHTML = '<i class="fas fa-info-circle text-[var(--cane-700)]"></i>Field Information';
+                                infoSection.appendChild(infoTitle);
+
+                                const grid = document.createElement('div');
+                                grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-6';
+                                for (const [k, v] of info) {
+                                    const item = document.createElement('div');
+                                    item.className = 'space-y-1.5';
+                                    item.innerHTML = `<div class="text-xs font-semibold text-[var(--cane-600)] uppercase tracking-wide">${k}</div><div class="text-base font-semibold text-[var(--cane-900)]">${v}</div>`;
+                                    grid.appendChild(item);
+                                }
+                                infoSection.appendChild(grid);
+                                content.appendChild(infoSection);
+
+                                // Images section (look for common image keys)
+                                const imageKeyMap = {
+                                    'validFrontUrl': 'Valid ID Front',
+                                    'valid_id_front': 'Valid ID Front',
+                                    'valid_front': 'Valid ID Front',
+                                    'front_id': 'Valid ID Front',
+                                    'validBackUrl': 'Valid ID Back',
+                                    'valid_id_back': 'Valid ID Back',
+                                    'valid_back': 'Valid ID Back',
+                                    'back_id': 'Valid ID Back',
+                                    'selfieUrl': 'Selfie with ID',
+                                    'selfie_with_id': 'Selfie with ID',
+                                    'selfie_id': 'Selfie with ID',
+                                    'barangay_certification': 'Barangay Certification',
+                                    'barangay_certificate': 'Barangay Certificate',
+                                    'barangay_certification_url': 'Barangay Certification',
+                                    'barangay_certificate_url': 'Barangay Certificate',
+                                    'barangayCertUrl': 'Barangay Certificate',
+                                    'brgyCertUrl': 'Barangay Certificate',
+                                    'brgy_certificate': 'Barangay Certificate',
+                                    'barangayCert': 'Barangay Certificate',
+                                    'land_title': 'Land Title',
+                                    'land_title_url': 'Land Title',
+                                    'landTitleUrl': 'Land Title',
+                                    'land_titleURL': 'Land Title',
+                                    'landTitle': 'Land Title'
+                                };
+                                const foundImages = {};
+                                for (const key of Object.keys(imageKeyMap)) {
+                                    if (raw[key] && isUrl(raw[key])) {
+                                        const label = imageKeyMap[key];
+                                        foundImages[label] = raw[key];
+                                    }
+                                }
+
+                                if (Object.keys(foundImages).length > 0) {
+                                    const imagesSection = document.createElement('div');
+                                    imagesSection.className = 'space-y-3 pb-2 border-t border-[var(--cane-200)] pt-6';
+                                    const imagesTitle = document.createElement('div');
+                                    imagesTitle.className = 'text-lg font-bold text-[var(--cane-900)] flex items-center gap-2';
+                                    imagesTitle.innerHTML = '<i class="fas fa-images text-[var(--cane-700)]"></i>Documents & Photos';
+                                    imagesSection.appendChild(imagesTitle);
+
+                                    const imagesGrid = document.createElement('div');
+                                    imagesGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+                                    for (const [label, url] of Object.entries(foundImages)) {
+                                        const imgItem = document.createElement('div');
+                                        imgItem.className = 'space-y-2';
+                                        const imgLabel = document.createElement('div');
+                                        imgLabel.className = 'text-sm font-semibold text-[var(--cane-700)]';
+                                        imgLabel.textContent = label;
+                                        imgItem.appendChild(imgLabel);
+                                        imgItem.appendChild(makeImage(url));
+                                        imagesGrid.appendChild(imgItem);
+                                    }
+                                    imagesSection.appendChild(imagesGrid);
+                                    content.appendChild(imagesSection);
+                                }
+
+                                card.appendChild(header);
+                                card.appendChild(closeBtn);
+                                card.appendChild(content);
+
+                                // Footer actions
+                                const footer = document.createElement('div');
+                                footer.className = 'px-8 py-4 border-t border-[var(--cane-200)] bg-gray-50 flex items-center gap-3';
+
+                                const closeFooterBtn = document.createElement('button');
+                                closeFooterBtn.className = 'px-4 py-2 rounded-lg border border-[var(--cane-200)] bg-white text-[var(--cane-900)] hover:bg-[var(--cane-50)] font-medium';
+                                closeFooterBtn.textContent = 'Close';
+                                closeFooterBtn.onclick = () => modal.remove();
+
+                                const actionBtn = document.createElement('button');
+                                actionBtn.className = 'ml-auto px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white font-semibold hover:bg-[var(--cane-800)]';
+                                actionBtn.textContent = 'Open in Applications';
+                                actionBtn.onclick = async () => {
+                                    try {
+                                        showSection('field-documents');
+                                        if (typeof openFieldInDocuments === 'function') {
+                                            openFieldInDocuments(field.id || field.path);
+                                        }
+                                    } catch (err) {
+                                        console.warn('Failed to open field in documents:', err);
+                                    } finally {
+                                        modal.remove();
+                                    }
+                                };
+
+                                footer.appendChild(closeFooterBtn);
+                                footer.appendChild(actionBtn);
+                                card.appendChild(footer);
+
+                                modal.appendChild(card);
+
+                                // Close on background click
+                                modal.addEventListener('click', (e) => {
+                                    if (e.target === modal) modal.remove();
+                                });
+
                                 document.body.appendChild(modal);
-                                document.getElementById('closeFieldModal').onclick = () => modal.remove();
-
-                                const joinBtn = document.getElementById('joinBtn');
-                                const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
-
-                                // Hide Join button for SRA
-                                if (userRole === 'sra') {
-                                    if (joinBtn) joinBtn.style.display = 'none';
-                                    return;
-                                }
-
-                                // For other roles, keep lobby behaviour
-                                if (joinBtn) {
-                                    joinBtn.onclick = () => {
-                                        openJoinModal && openJoinModal(field);
-                                    };
-                                }
                             }
                             
                             function initSraMapSection() {
@@ -1805,6 +2193,42 @@ async function initNotifications(userId) {
                         }
                         // Ensure sidebar section highlights the Review menu
                         const activeNavItem = document.querySelector('[data-section="field-documents"]');
+                        if (activeNavItem) {
+                            document.querySelectorAll('.nav-item').forEach(item => {
+                                item.classList.remove('bg-slate-800', 'text-white');
+                                item.classList.add('text-slate-300');
+                            });
+                            activeNavItem.classList.add('bg-slate-800', 'text-white');
+                            activeNavItem.classList.remove('text-slate-300');
+                        }
+                    } catch(_) {}
+                });
+            }
+
+            // Click-through: Dashboard Location Mapping -> Map section
+            const dashboardMapCard = document.getElementById('dashboardFieldsMapCard');
+            if (dashboardMapCard) {
+                dashboardMapCard.addEventListener('click', async function(e) {
+                    // If the click originated inside the actual map element, ignore it
+                    try {
+                        const mapEl = document.getElementById('sraFieldsMap');
+                        if (mapEl && (mapEl === e.target || mapEl.contains(e.target))) {
+                            // Click was on the interactive map - do not navigate away
+                            return;
+                        }
+                    } catch(_) {}
+                    try {
+                        // Switch to the Map section
+                        showSection('map');
+
+                        // Ensure the map section is initialized and visible
+                        const mapContainer2 = document.getElementById('sraFieldsMapMap');
+                        if (mapContainer2 && !mapContainer2.dataset.initialized && typeof initSraMapSection === 'function') {
+                            try { await initSraMapSection(); } catch(_) {}
+                        }
+
+                        // Highlight Map nav item explicitly
+                        const activeNavItem = document.querySelector('[data-section="map"]');
                         if (activeNavItem) {
                             document.querySelectorAll('.nav-item').forEach(item => {
                                 item.classList.remove('bg-slate-800', 'text-white');
