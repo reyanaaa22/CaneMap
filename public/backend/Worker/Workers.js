@@ -412,14 +412,31 @@ async function loadUserData(user) {
                 const profileIconContainer = document.getElementById('profileIconContainer');
 
                 if (profilePhoto) {
+                    // Hide default icon immediately when we have a photo URL
+                    if (profileIconDefault) profileIconDefault.style.display = 'none';
+                    
+                    // Set the source and handle loading/error states
                     profilePhoto.src = data.photoURL;
                     profilePhoto.onload = () => {
-                        profilePhoto.classList.remove('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                        // Show the profile photo and ensure default icon is hidden
+                        profilePhoto.style.display = 'block';
+                        if (profileIconDefault) profileIconDefault.style.display = 'none';
+                        
+                        // Also update the profile icon container to show the image
+                        if (profileIconContainer) {
+                            profileIconContainer.style.background = 'transparent';
+                        }
                     };
+                    
                     profilePhoto.onerror = () => {
-                        profilePhoto.classList.add('hidden');
-                        if (profileIconDefault) profileIconDefault.classList.remove('hidden');
+                        // If photo fails to load, show default icon and hide the broken image
+                        profilePhoto.style.display = 'none';
+                        if (profileIconDefault) profileIconDefault.style.display = 'flex';
+                        
+                        // Reset the profile icon container background
+                        if (profileIconContainer) {
+                            profileIconContainer.style.background = 'linear-gradient(135deg, var(--cane-400), var(--cane-500))';
+                        }
                     };
                 }
 
