@@ -571,6 +571,9 @@ function initializeDashboard() {
 
     // Initialize FullCalendar
     initializeCalendar();
+
+    // Show the dashboard section and highlight the nav item
+    showSection('dashboard');
 }
 
 // Update user interface elements with null checks
@@ -595,7 +598,7 @@ function updateUserInterface() {
         if (badgeIndicator) badgeIndicator.classList.add('hidden');
         dropdownUserType.textContent = 'Worker';
         if (sidebarUserType) {
-            sidebarUserType.textContent = 'Worker (no badge)';
+            sidebarUserType.textContent = 'Worker';
         }
     }
 }
@@ -773,6 +776,34 @@ function closeSidebar() {
     if (overlay) overlay.classList.remove('visible');
 }
 
+// Submenu toggle functionality
+function toggleSubmenu(menuId) {
+    const submenu = document.getElementById(menuId + '-submenu');
+    const arrow = document.getElementById(menuId + '-arrow');
+    if (!submenu || !arrow) return;
+    const isHidden = submenu.classList.contains('hidden');
+    // Close all other submenus
+    document.querySelectorAll('[id$="-submenu"]').forEach(menu => {
+        if (menu.id !== menuId + '-submenu') {
+            menu.classList.add('hidden');
+        }
+    });
+    // Reset other arrows
+    document.querySelectorAll('[id$="-arrow"]').forEach(arr => {
+        if (arr.id !== menuId + '-arrow') {
+            arr.style.transform = 'rotate(0deg)';
+        }
+    });
+    // Toggle current submenu
+    if (isHidden) {
+        submenu.classList.remove('hidden');
+        arrow.style.transform = 'rotate(180deg)';
+    } else {
+        submenu.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
 // Navigation functionality
 function showSection(sectionId) {
     // Hide all content sections
@@ -799,14 +830,17 @@ function showSection(sectionId) {
 
     // Update active nav item - highlight the corresponding sidebar menu with dark blue
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active', 'bg-gray-800', 'text-white');
+        item.classList.remove('active');
     });
 
     // Find and highlight the nav item that matches the current section
-    const activeNavItem = document.querySelector(`[data-section="${targetId}"]`);
-    if (activeNavItem) {
-        activeNavItem.classList.add('active');
-    }
+    // Look for nav items with matching data-section attribute
+    const activeNavItems = document.querySelectorAll(`.nav-item[data-section="${targetId}"]`);
+    console.log('Looking for nav items with data-section:', targetId, 'Found:', activeNavItems.length);
+    activeNavItems.forEach(item => {
+        item.classList.add('active');
+        console.log('Added active class to nav item:', item);
+    });
 
     currentSection = targetId;
 
