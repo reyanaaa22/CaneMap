@@ -2922,8 +2922,14 @@ async function loadAllTasks(handlerId) {
 // Global pagination variables
 let currentPage = 1;
 let tasksPerPage = 10;
+let totalTaskPages = 1; // for pagination state
+
 
 function renderTasksTable(filter = 'all') {
+  // Get pagination container
+  const paginationContainer = document.getElementById('tasksPagination');
+  const pageNumbersContainer = document.getElementById('tasksPageNumbers');
+
   const tbody = document.getElementById('tasksTableBody');
   const countEl = document.getElementById('tasksCountNum');
 
@@ -2957,6 +2963,20 @@ function renderTasksTable(filter = 'all') {
       return true;
     });
   }
+
+  // Sort by latest first (descending by date/time)
+  filteredTasks.sort((a, b) => {
+    const aDate = a.updatedAt || a.createdAt || a.deadline || 0;
+    const bDate = b.updatedAt || b.createdAt || b.deadline || 0;
+    const aTime = typeof aDate === 'object' && aDate.toDate ? aDate.toDate().getTime() : new Date(aDate).getTime();
+    const bTime = typeof bDate === 'object' && bDate.toDate ? bDate.toDate().getTime() : new Date(bDate).getTime();
+    return bTime - aTime;
+  });
+
+  // Calculate pagination
+  totalTaskPages = Math.max(1, Math.ceil(filteredTasks.length / tasksPerPage));
+  if (currentPage > totalTaskPages) currentPage = totalTaskPages;
+  if (currentPage < 1) currentPage = 1;
 
   // Update count
   if (countEl) {
@@ -3034,6 +3054,16 @@ function renderTasksTable(filter = 'all') {
   const end = start + tasksPerPage;
   const paginatedTasks = filteredTasks.slice(start, end);
 
+  // Render pagination controls
+  if (paginationContainer && pageNumbersContainer) {
+    renderTaskPaginationControls(currentPage, totalTaskPages, pageNumbersContainer);
+    // Enable/disable prev/next
+    const prevBtn = document.getElementById('tasksPagePrev');
+    const nextBtn = document.getElementById('tasksPageNext');
+    if (prevBtn) prevBtn.disabled = currentPage === 1;
+    if (nextBtn) nextBtn.disabled = currentPage === totalTaskPages;
+  }
+
   tbody.innerHTML = paginatedTasks.map(task => {
     const field = allFieldsMap.get(task.fieldId) || { name: 'Unknown Field' };
     const taskTitle = task.title || task.task || task.taskType || 'Untitled Task';
@@ -3060,9 +3090,47 @@ function renderTasksTable(filter = 'all') {
     `;
   }).join('');
 
-  // Reset to page 1 when filter changes
-  currentPage = 1;
 }
+
+// Render pagination controls for tasks
+function renderTaskPaginationControls(current, total, container) {
+  container.innerHTML = '';
+  const createBtn = (num, isActive) => {
+    const btn = document.createElement('button');
+    btn.textContent = num;
+    btn.className = 'px-3 py-1 rounded-md border text-sm font-medium' + (isActive ? ' bg-cane-600 text-white border-cane-600' : ' bg-white text-gray-700 border-gray-300 hover:bg-cane-50');
+    btn.style.minWidth = '2.2rem';
+    btn.disabled = isActive;
+    btn.onclick = () => {
+      currentPage = num;
+      renderTasksTable(document.getElementById('tasksFilter')?.value || 'all');
+    };
+    container.appendChild(btn);
+  };
+  // Pagination logic: 1 ... [current-1] [current] [current+1] ... total
+  if (total <= 7) {
+    for (let i = 1; i <= total; ++i) createBtn(i, i === current);
+  } else {
+    createBtn(1, current === 1);
+    if (current > 3) {
+      const dots = document.createElement('span');
+      dots.textContent = '...';
+      dots.className = 'px-2 text-gray-400';
+      container.appendChild(dots);
+    }
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); ++i) {
+      createBtn(i, i === current);
+    }
+    if (current < total - 2) {
+      const dots = document.createElement('span');
+      dots.textContent = '...';
+      dots.className = 'px-2 text-gray-400';
+      container.appendChild(dots);
+    }
+    createBtn(total, current === total);
+  }
+}
+
 
 /**
  * Initialize tasks section
@@ -3091,6 +3159,26 @@ async function initializeTasksSection(handlerId) {
         renderTasksTable(filterSelect?.value || 'all');
       }
     });
+  }
+
+  // Setup pagination next/prev listeners
+  const prevBtn = document.getElementById('tasksPagePrev');
+  const nextBtn = document.getElementById('tasksPageNext');
+  if (prevBtn) {
+    prevBtn.onclick = function() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTasksTable(filterSelect?.value || 'all');
+      }
+    };
+  }
+  if (nextBtn) {
+    nextBtn.onclick = function() {
+      if (currentPage < totalTaskPages) {
+        currentPage++;
+        renderTasksTable(filterSelect?.value || 'all');
+      }
+    };
   }
 
   // Setup search listener
