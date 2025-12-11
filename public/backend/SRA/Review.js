@@ -183,11 +183,12 @@ for (const app of allFields) {
       filtered = allFields.filter((a) => a.status === 'reviewed');
     }
 
-  // Sort newest first
   filtered.sort((a, b) => {
-    const t1 = a.createdAt?.seconds || 0;
-    const t2 = b.createdAt?.seconds || 0;
-    return t2 - t1;
+    const getTs = (x) => {
+      const cand = x.raw?.updatedAt || x.raw?.statusUpdatedAt || x.raw?.latestRemarkAt || x.createdAt || x.raw?.submittedAt || x.raw?.createdAt;
+      return cand && cand.seconds ? cand.seconds : (cand ? Math.floor(new Date(cand).getTime() / 1000) : 0);
+    };
+    return getTs(b) - getTs(a);
   });
 
   return filtered;
@@ -810,11 +811,12 @@ async function renderFromSnapshot(snapshot, status = 'all') {
     }
   }
 
-  // Sort newest first
   apps.sort((a, b) => {
-    const t1 = a.createdAt?.seconds || 0;
-    const t2 = b.createdAt?.seconds || 0;
-    return t2 - t1;
+    const getTs = (x) => {
+      const cand = x.raw?.updatedAt || x.raw?.statusUpdatedAt || x.raw?.latestRemarkAt || x.createdAt || x.raw?.submittedAt || x.raw?.createdAt;
+      return cand && cand.seconds ? cand.seconds : (cand ? Math.floor(new Date(cand).getTime() / 1000) : 0);
+    };
+    return getTs(b) - getTs(a);
   });
 
   console.log(`📋 Rendering ${apps.length} applications from snapshot`);

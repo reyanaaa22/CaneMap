@@ -490,7 +490,13 @@ async function initNotifications(userId) {
                                         }
                                     }
                                     const applications = Object.values(byKey);
-                                    applications.sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt));
+                                    applications.sort((x, y) => {
+                                        const getTs = (a) => {
+                                            const cand = a.raw?.updatedAt || a.raw?.statusUpdatedAt || a.raw?.latestRemarkAt || a.createdAt || a.raw?.submittedAt || a.raw?.createdAt;
+                                            return cand && cand.seconds ? new Date(cand.seconds * 1000) : (cand ? new Date(cand) : new Date(0));
+                                        };
+                                        return getTs(y) - getTs(x);
+                                    });
 
                                     // Render
                                     list.innerHTML = "";
@@ -498,7 +504,7 @@ async function initNotifications(userId) {
                                     for (const app of visible) {
                                         const card = document.createElement("div");
                                         card.className = "flex justify-between items-center bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:shadow-md transition cursor-pointer";
-                                        const displayCreated = formatFullDate(app.createdAt || app.raw?.updatedAt || app.raw?.statusUpdatedAt);
+                                        const displayCreated = formatFullDate(app.raw?.updatedAt || app.raw?.statusUpdatedAt || app.raw?.latestRemarkAt || app.createdAt || app.raw?.submittedAt || app.raw?.createdAt);
                                         card.innerHTML = `
                                         <div>
                                             <p class="font-semibold text-[var(--cane-900)]">${app.applicantName}</p>
