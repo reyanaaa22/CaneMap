@@ -2917,40 +2917,42 @@ async function loadAllTasks(handlerId) {
 }
 
 /**
- * Render tasks table with filter
+ * Render tasks table with filter + search + pagination
  */
-// Global pagination variables
+// Global pagination + search state
 let currentPage = 1;
 let tasksPerPage = 10;
+let taskSearchTerm = '';
 
 function renderTasksTable(filter = 'all') {
   const tbody = document.getElementById('tasksTableBody');
   const countEl = document.getElementById('tasksCountNum');
+  const perPageSelect = document.getElementById('tasksPerPageSelect');
+  const pageNumbersEl = document.getElementById('tasksPageNumbers');
+  const prevBtn = document.getElementById('tasksPagePrev');
+  const nextBtn = document.getElementById('tasksPageNext');
 
   if (!tbody) return;
 
   // Get current tasks per page from selector
-  const perPageSelect = document.getElementById('tasksPerPageSelect');
   if (perPageSelect) {
-    tasksPerPage = parseInt(perPageSelect.value) || 10;
+    tasksPerPage = parseInt(perPageSelect.value, 10) || 10;
   }
 
-  // Filter tasks
-  let filteredTasks = allTasksData;
+  // 1) Start from all tasks
+  let filteredTasks = allTasksData.slice();
+
+  // 2) Apply main filter (worker/driver/pending/done)
   if (filter !== 'all') {
-    filteredTasks = allTasksData.filter(task => {
+    filteredTasks = filteredTasks.filter(task => {
       if (filter === 'worker') {
-        // Worker tasks: have metadata.workers_count or don't have metadata.driver
         return task.metadata && (task.metadata.workers_count !== undefined || !task.metadata.driver);
       } else if (filter === 'driver') {
-        // Driver tasks: have metadata.driver
         return task.metadata && task.metadata.driver;
       } else if (filter === 'pending') {
-        // Pending (On going) tasks
         const status = (task.status || 'pending').toLowerCase();
         return status === 'pending';
       } else if (filter === 'done') {
-        // Finished (Done) tasks
         const status = (task.status || 'pending').toLowerCase();
         return status === 'done';
       }
@@ -2958,12 +2960,42 @@ function renderTasksTable(filter = 'all') {
     });
   }
 
-  // Update count
+  // 3) Apply search term (if any)
+  const searchTerm = (taskSearchTerm || '').trim().toLowerCase();
+  if (searchTerm) {
+    filteredTasks = filteredTasks.filter(task => {
+      const taskTitle = (task.title || task.task || task.taskType || '').toLowerCase();
+      const fieldName = (allFieldsMap.get(task.fieldId)?.name || '').toLowerCase();
+      const assignedUser = (task.metadata?.driver?.fullname || task.metadata?.driver?.name || '').toLowerCase();
+
+      return taskTitle.includes(searchTerm) ||
+        fieldName.includes(searchTerm) ||
+        assignedUser.includes(searchTerm);
+    });
+  }
+
+  // 4) Sort so latest tasks come first (best-effort by created/completed/deadline timestamps)
+  const getTimeValue = (task) => {
+    const ts = task.createdAt || task.created_at || task.completedAt || task.deadline || null;
+    if (!ts) return 0;
+    if (typeof ts === 'number') return ts;
+    if (ts instanceof Date) return ts.getTime();
+    if (ts && typeof ts.toDate === 'function') return ts.toDate().getTime();
+    if (typeof ts === 'string') {
+      const d = new Date(ts);
+      return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+    }
+    return 0;
+  };
+
+  filteredTasks.sort((a, b) => getTimeValue(b) - getTimeValue(a));
+
+  // 5) Update total count
   if (countEl) {
     countEl.textContent = filteredTasks.length;
   }
 
-  // Render table
+  // 6) Handle empty state
   if (filteredTasks.length === 0) {
     tbody.innerHTML = `
       <div class="text-center text-gray-500 py-10">
@@ -2971,69 +3003,49 @@ function renderTasksTable(filter = 'all') {
           <p class="text-base font-medium">No tasks found</p>
       </div>
     `;
+
+    if (pageNumbersEl) pageNumbersEl.innerHTML = '';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
     return;
   }
 
-  // Get assigned user name
-  function getAssignedUserName(task) {
-    if (task.metadata && task.metadata.driver) {
-      return task.metadata.driver.fullname || task.metadata.driver.name || 'Unknown Driver';
-    } else if (task.assignedTo && task.assignedTo.length > 0) {
-      // For workers, we'd need to fetch the name - for now use a placeholder
-      return 'Worker';
-    }
-    return 'Unassigned';
-  }
+  // 7) Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / tasksPerPage));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
 
-  // Get status badge HTML
-  function getStatusBadge(status) {
-    const statusLower = (status || 'pending').toLowerCase();
-    const statusMap = {
-      'done': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
-      'completed': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
-      'pending': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
-      'in_progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
-      'in progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' }
-    };
-    const statusInfo = statusMap[statusLower] || { icon: '○', label: 'Pending', class: 'task-status-pending' };
-    return `<span class="task-status-badge ${statusInfo.class}">
-              <span>${statusInfo.icon}</span>
-              <span>${statusInfo.label}</span>
-            </span>`;
-  }
-
-  // Get status badge HTML
-  function getStatusBadge(status) {
-    const statusLower = (status || 'pending').toLowerCase();
-    const statusMap = {
-      'done': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
-      'completed': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
-      'pending': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
-      'in_progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
-      'in progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' }
-    };
-    const statusInfo = statusMap[statusLower] || { icon: '○', label: 'Pending', class: 'task-status-pending' };
-    return `<span class="task-status-badge ${statusInfo.class}">
-              <span>${statusInfo.icon}</span>
-              <span>${statusInfo.label}</span>
-            </span>`;
-  }
-
-  // Get assigned user name
-  function getAssignedUserName(task) {
-    if (task.metadata && task.metadata.driver) {
-      return task.metadata.driver.fullname || task.metadata.driver.name || 'Unknown Driver';
-    } else if (task.assignedTo && task.assignedTo.length > 0) {
-      return 'Worker';
-    }
-    return 'Unassigned';
-  }
-
-  // Apply pagination
   const start = (currentPage - 1) * tasksPerPage;
   const end = start + tasksPerPage;
   const paginatedTasks = filteredTasks.slice(start, end);
 
+  // 8) Helpers for display
+  function getAssignedUserName(task) {
+    if (task.metadata && task.metadata.driver) {
+      return task.metadata.driver.fullname || task.metadata.driver.name || 'Unknown Driver';
+    } else if (task.assignedTo && task.assignedTo.length > 0) {
+      return 'Worker';
+    }
+    return 'Unassigned';
+  }
+
+  function getStatusBadge(status) {
+    const statusLower = (status || 'pending').toLowerCase();
+    const statusMap = {
+      'done': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
+      'completed': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
+      'pending': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
+      'in_progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
+      'in progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' }
+    };
+    const statusInfo = statusMap[statusLower] || { icon: '○', label: 'Pending', class: 'task-status-pending' };
+    return `<span class="task-status-badge ${statusInfo.class}">
+              <span>${statusInfo.icon}</span>
+              <span>${statusInfo.label}</span>
+            </span>`;
+  }
+
+  // 9) Render the visible page rows
   tbody.innerHTML = paginatedTasks.map(task => {
     const field = allFieldsMap.get(task.fieldId) || { name: 'Unknown Field' };
     const taskTitle = task.title || task.task || task.taskType || 'Untitled Task';
@@ -3060,8 +3072,84 @@ function renderTasksTable(filter = 'all') {
     `;
   }).join('');
 
-  // Reset to page 1 when filter changes
-  currentPage = 1;
+  // 10) Update pagination controls (page numbers + prev/next state)
+  if (pageNumbersEl) {
+    pageNumbersEl.innerHTML = '';
+
+    const createPageButton = (page) => {
+      const btn = document.createElement('button');
+      btn.textContent = String(page);
+      btn.className = `px-3 py-1 rounded-md border text-sm font-medium ${
+        page === currentPage
+          ? 'bg-[var(--cane-600)] text-white border-[var(--cane-600)]'
+          : 'bg-white text-gray-700 border-gray-300 hover:bg-cane-50 hover:border-cane-300 hover:text-cane-700'
+      }`;
+      btn.addEventListener('click', () => {
+        if (page !== currentPage) {
+          currentPage = page;
+          renderTasksTable(filter);
+        }
+      });
+      return btn;
+    };
+
+    const createEllipsis = () => {
+      const span = document.createElement('span');
+      span.textContent = '…';
+      span.className = 'px-2 text-gray-500 select-none';
+      return span;
+    };
+
+    const addFirst = () => {
+      pageNumbersEl.appendChild(createPageButton(1));
+    };
+
+    const addLast = () => {
+      if (totalPages > 1) {
+        pageNumbersEl.appendChild(createPageButton(totalPages));
+      }
+    };
+
+    if (totalPages <= 7) {
+      for (let page = 1; page <= totalPages; page++) {
+        pageNumbersEl.appendChild(createPageButton(page));
+      }
+    } else {
+      const windowSize = 1; // how many pages to show on each side of current
+
+      // Always show first page
+      addFirst();
+
+      // Determine window around current page
+      let startPage = Math.max(2, currentPage - windowSize);
+      let endPage = Math.min(totalPages - 1, currentPage + windowSize);
+
+      // Left ellipsis
+      if (startPage > 2) {
+        pageNumbersEl.appendChild(createEllipsis());
+      }
+
+      // Middle window pages
+      for (let page = startPage; page <= endPage; page++) {
+        pageNumbersEl.appendChild(createPageButton(page));
+      }
+
+      // Right ellipsis
+      if (endPage < totalPages - 1) {
+        pageNumbersEl.appendChild(createEllipsis());
+      }
+
+      // Last page
+      addLast();
+    }
+  }
+
+  if (prevBtn) {
+    prevBtn.disabled = currentPage <= 1;
+  }
+  if (nextBtn) {
+    nextBtn.disabled = currentPage >= totalPages;
+  }
 }
 
 /**
@@ -3076,6 +3164,7 @@ async function initializeTasksSection(handlerId) {
   const filterSelect = document.getElementById('tasksFilter');
   if (filterSelect) {
     filterSelect.addEventListener('change', (e) => {
+      currentPage = 1;
       renderTasksTable(e.target.value);
     });
   }
@@ -3100,115 +3189,28 @@ async function initializeTasksSection(handlerId) {
     searchInput.addEventListener('input', (e) => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        const searchTerm = e.target.value.toLowerCase();
-        const currentFilter = filterSelect?.value || 'all';
-
-        // Filter tasks based on search and current filter
-        let filteredTasks = allTasksData;
-
-        // Apply current filter
-        if (currentFilter !== 'all') {
-          filteredTasks = filteredTasks.filter(task => {
-            if (currentFilter === 'worker') {
-              return task.metadata && (task.metadata.workers_count !== undefined || !task.metadata.driver);
-            } else if (currentFilter === 'driver') {
-              return task.metadata && task.metadata.driver;
-            } else if (currentFilter === 'pending') {
-              const status = (task.status || 'pending').toLowerCase();
-              return status === 'pending';
-            } else if (currentFilter === 'done') {
-              const status = (task.status || 'pending').toLowerCase();
-              return status === 'done';
-            }
-            return true;
-          });
-        }
-
-        // Apply search filter
-        if (searchTerm) {
-          filteredTasks = filteredTasks.filter(task => {
-            const taskTitle = (task.title || task.task || task.taskType || '').toLowerCase();
-            const field = (allFieldsMap.get(task.fieldId)?.name || '').toLowerCase();
-            const assignedUser = task.metadata?.driver?.fullname || task.metadata?.driver?.name || '';
-
-            return taskTitle.includes(searchTerm) ||
-              field.includes(searchTerm) ||
-              assignedUser.toLowerCase().includes(searchTerm);
-          });
-        }
-
-        // Update count and render
-        const countEl = document.getElementById('tasksCountNum');
-        if (countEl) {
-          countEl.textContent = filteredTasks.length;
-        }
-
-        // Render filtered results
-        const tbody = document.getElementById('tasksTableBody');
-        if (tbody) {
-          if (filteredTasks.length === 0) {
-            tbody.innerHTML = `
-              <div class="text-center text-gray-500 py-10">
-                  <i class="fas fa-inbox text-3xl mb-2 text-gray-400"></i>
-                  <p class="text-base font-medium">No tasks found</p>
-              </div>
-            `;
-          } else {
-            // Get status badge HTML
-            function getStatusBadge(status) {
-              const statusLower = (status || 'pending').toLowerCase();
-              const statusMap = {
-                'done': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
-                'completed': { icon: '✓', label: 'Completed', class: 'task-status-completed' },
-                'pending': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
-                'in_progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' },
-                'in progress': { icon: '◉', label: 'Ongoing', class: 'task-status-ongoing' }
-              };
-              const statusInfo = statusMap[statusLower] || { icon: '○', label: 'Pending', class: 'task-status-pending' };
-              return `<span class="task-status-badge ${statusInfo.class}">
-                        <span>${statusInfo.icon}</span>
-                        <span>${statusInfo.label}</span>
-                      </span>`;
-            }
-
-            // Get assigned user name
-            function getAssignedUserName(task) {
-              if (task.metadata && task.metadata.driver) {
-                return task.metadata.driver.fullname || task.metadata.driver.name || 'Unknown Driver';
-              } else if (task.assignedTo && task.assignedTo.length > 0) {
-                return 'Worker';
-              }
-              return 'Unassigned';
-            }
-
-            tbody.innerHTML = filteredTasks.map(task => {
-              const field = allFieldsMap.get(task.fieldId) || { name: 'Unknown Field' };
-              const taskTitle = task.title || task.task || task.taskType || 'Untitled Task';
-              const assignedUser = getAssignedUserName(task);
-              const status = (task.status || 'pending').toLowerCase();
-
-              return `
-                <div class="task-row" data-task-id="${task.id}">
-                  <div>${escapeHtml(taskTitle)}</div>
-                  <div>${escapeHtml(field.name)}</div>
-                  <div>${escapeHtml(assignedUser)}</div>
-                  <div>${getStatusBadge(status)}</div>
-                  <div>
-                    <button class="task-action-btn" onclick="viewTaskDetails('${task.id}')" title="View Task Details">
-                      <i class="fas fa-eye"></i>
-                      <span class="task-icon-tooltip">View Details</span>
-                    </button>
-                    <button class="task-action-btn" onclick="confirmDeleteTask('${task.id}')" title="Delete Task">
-                      <i class="fas fa-trash"></i>
-                      <span class="task-icon-tooltip">Delete Task</span>
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join('');
-          }
-        }
+        taskSearchTerm = e.target.value || '';
+        currentPage = 1;
+        renderTasksTable(filterSelect?.value || 'all');
       }, 300);
+    });
+  }
+
+  // Setup pagination button listeners (Next/Previous)
+  const prevBtn = document.getElementById('tasksPagePrev');
+  const nextBtn = document.getElementById('tasksPageNext');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        renderTasksTable(filterSelect?.value || 'all');
+      }
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      currentPage += 1;
+      renderTasksTable(filterSelect?.value || 'all');
     });
   }
 }
