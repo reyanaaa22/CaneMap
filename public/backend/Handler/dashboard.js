@@ -284,10 +284,11 @@ async function initNotifications(userId) {
           .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
           .filter(notif => !notif.read);
 
-        // Mark all as read
+        // Mark all as read (set both `read` and legacy `status`)
         const updatePromises = unreadNotifications.map(notif =>
           updateDoc(doc(db, "notifications", notif.id), {
             read: true,
+            status: 'read',
             readAt: serverTimestamp()
           })
         );
@@ -315,6 +316,7 @@ async function markNotificationRead(userId, notificationId) {
   try {
     await updateDoc(doc(db, "notifications", notificationId), {
       read: true,
+      status: 'read',
       readAt: serverTimestamp()
     });
     console.log(`✅ Marked notification ${notificationId} as read`);
@@ -2201,11 +2203,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Sections that need to be loaded dynamically
   // Note: 'tasks' is hardcoded in dashboard.html, not dynamically loaded
   const dynamicSections = {
-    'fields': 'sections/fields.html',
-    'workers': 'sections/workers.html',
-    'analytics': 'sections/analytics.html',
-    'reports': 'sections/reports.html',
-    'rentDriver': 'sections/rent-driver.html'
+    // Use absolute paths from web root so fetch works correctly from backend JS module
+    'fields': '/frontend/Handler/sections/fields.html',
+    'workers': '/frontend/Handler/sections/workers.html',
+    'analytics': '/frontend/Handler/sections/analytics.html',
+    'reports': '/frontend/Handler/sections/reports.html',
+    'rentDriver': '/frontend/Handler/sections/rent-driver.html'
   };
 
   // Track loaded sections
@@ -3899,10 +3902,14 @@ function setupActivityLogsListener(handlerId) {
     onSnapshot(q1, () => {
       console.log("🔄 Worker activity updated");
       loadActivityLogs(handlerId);
+    }, (error) => {
+      console.warn("⚠️ Activity logs listener error (non-critical):", error.message);
     }),
     onSnapshot(q2, () => {
       console.log("🔄 Driver activity updated");
       loadActivityLogs(handlerId);
+    }, (error) => {
+      console.warn("⚠️ Driver activity listener error (non-critical):", error.message);
     })
   ];
 }
@@ -3926,6 +3933,8 @@ function setupRecentTaskActivityListener(handlerId) {
   recentActivityUnsub = onSnapshot(q, () => {
     console.log("🔄 Recent task activity updated");
     loadRecentTaskActivity(handlerId);
+  }, (error) => {
+    console.warn("⚠️ Recent activity listener error (non-critical):", error.message);
   });
 }
 

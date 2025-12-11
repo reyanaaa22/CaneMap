@@ -3818,7 +3818,8 @@ setTimeout(() => {
 
       // --- Update UI for both modal + preview ---
       function updateUI() {
-        const unread = cachedData.filter((n) => n.status === "unread").length;
+        // Use boolean `read` flag as the single source of truth
+        const unread = cachedData.filter((n) => !n.read).length;
 
         // update both badges (header + sidebar)
         const headerBadge = document.getElementById("headerNotifBadgeCount");
@@ -3851,12 +3852,13 @@ setTimeout(() => {
           cachedData.length === 0
             ? `<div class="p-6 text-center text-gray-500 border bg-[var(--cane-50)] rounded-lg">No notifications.</div>`
             : cachedData
-              .map(
-                (n) => `
-        <div class="notification-card ${n.status} flex items-start space-x-3 p-3 mb-2 border border-[var(--cane-200)] rounded-lg" data-id="${n.id}">
+              .map((n) => {
+                const isUnread = !n.read;
+                const statusClass = isUnread ? "unread" : "read";
+                return `
+        <div class="notification-card ${statusClass} flex items-start space-x-3 p-3 mb-2 border border-[var(--cane-200)] rounded-lg" data-id="${n.id}">
           <div class="notif-icon">
-            <i class="fas ${n.status === "unread" ? "fa-envelope" : "fa-envelope-open-text"
-                  } text-white text-base"></i>
+            <i class="fas ${isUnread ? "fa-envelope" : "fa-envelope-open-text"} text-white text-base"></i>
           </div>
           <div class="flex-1">
             <h4 class="font-semibold">${getNotificationTitle(n)}</h4>
@@ -3871,8 +3873,8 @@ setTimeout(() => {
                   }
             </p>
           </div>
-        </div>`
-              )
+        </div>`;
+              })
               .join("");
 
         attachClickHandlers();
@@ -3890,13 +3892,14 @@ setTimeout(() => {
               if (e.target.tagName === "A") return;
 
               try {
-                // Mark as read
-                if (notif.status === "unread") {
+                // Mark as read (use boolean `read` flag; keep `status` for compatibility)
+                if (!notif.read) {
                   await updateDoc(doc(db, "notifications", notifId), {
                     status: "read",
                     read: true,
                     readAt: serverTimestamp(),
                   });
+                  notif.read = true;
                   notif.status = "read";
                 }
 
@@ -3960,13 +3963,14 @@ setTimeout(() => {
               link.addEventListener("click", async (ev) => {
                 ev.preventDefault();
                 try {
-                  // Mark as read
-                  if (notif.status === "unread") {
+                  // Mark as read (use boolean `read` flag; keep `status` for compatibility)
+                  if (!notif.read) {
                     await updateDoc(doc(db, "notifications", notifId), {
                       status: "read",
                       read: true,
                       readAt: serverTimestamp(),
                     });
+                    notif.read = true;
                     notif.status = "read";
                   }
                 } catch (err) {
