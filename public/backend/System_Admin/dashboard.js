@@ -237,7 +237,9 @@ try {
                             if (profilePhoto) {
                                 profilePhoto.src = adminSnap.data().avatarUrl;
                                 profilePhoto.classList.remove('hidden');
-                                if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                                if (profileIconDefault) {
+                                    profileIconDefault.style.display = 'none';
+                                }
                             }
                         }
                     }
@@ -2538,7 +2540,9 @@ window.__syncDashboardProfile = async function() {
             if (profilePhoto) {
                 profilePhoto.src = avatarUrl;
                 profilePhoto.classList.remove('hidden');
-                if (profileIconDefault) profileIconDefault.classList.add('hidden');
+                if (profileIconDefault) {
+                    profileIconDefault.style.display = 'none';
+                }
             }
         }
     } catch(e) {
