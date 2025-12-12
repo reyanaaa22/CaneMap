@@ -3338,7 +3338,25 @@ function renderTasksTable(filter = 'all') {
     `;
   }).join('');
 
+ /*  MAKE EACH TASK CARD CLICKABLE — opens View Task Details */
+  const rows = document.querySelectorAll(".task-row");
+  rows.forEach(row => {
+    row.style.cursor = "pointer";
+
+    row.addEventListener("click", (e) => {
+      // keep existing buttons working
+      if (e.target.closest("button")) return;
+
+      const taskId = row.dataset.taskId;
+      if (taskId && typeof window.viewTaskDetails === "function") {
+        window.viewTaskDetails(taskId);
+      }
+    });
+  });
+
 }
+
+
 
 // Render pagination controls for tasks
 function renderTaskPaginationControls(current, total, container) {
