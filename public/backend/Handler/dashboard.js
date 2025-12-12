@@ -1654,63 +1654,63 @@ async function loadActivityLogs(handlerId) {
 
     const fieldChunks = chunk(fieldIds, 10);
 
-    // PERFORMANCE FIX: Fetch both worker and driver logs in parallel chunks
-    const [workerLogsList, driverLogsList] = await Promise.all([
-      // Fetch worker logs in parallel chunks
-      Promise.all(
-        fieldChunks.map(group =>
-          getDocs(query(collection(db, "task_logs"), where("field_id", "in", group), orderBy("logged_at", "desc")))
-        )
-      ).then(results => results.flatMap(ws => ws.docs.map(d => {
-        const data = d.data();
-        return {
-          id: d.id,
-          source: "task_logs",
-          type: "worker",
-          task_name: data.task_name || data.task || "Worker Task",
-          user_id: data.user_uid || data.user_id || data.user || null,
-          user_name: data.worker_name || data.worker || data.userName || "",
-          task_type: data.task_name || data.task || "",
-          description: data.description || "",
-          field_id: data.field_id || data.fieldId || null,
-          field_name: data.field_name || data.fieldName || "",
-          logged_at: data.logged_at || null,
-          selfie_path: data.selfie_path || null,
-          field_photo_path: data.field_photo_path || null
-        };
-      }))),
-      // Fetch driver logs in parallel chunks
-      Promise.all(
-        fieldChunks.map(group =>
-          getDocs(query(
-            collection(db, "tasks"),
-            where("fieldId", "in", group),
-            where("taskType", "==", "driver_log"),
-            orderBy("completedAt", "desc")
-          ))
-        )
-      ).then(results => results.flatMap(ds => ds.docs.map(d => {
-        const data = d.data();
-        return {
-          id: d.id,
-          source: "tasks",
-          type: "driver",
-          task_name: data.title || data.description || data.details || "Driver Activity",
-          user_id: (Array.isArray(data.assignedTo) && data.assignedTo[0]) || data.createdBy || data.created_by || null,
-          user_name: data.driverName || data.driver_name || "",
-          task_type: data.title || data.details || data.taskType || "",
-          description: data.details || data.notes || data.description || "",
-          field_id: data.fieldId || null,
-          field_name: data.fieldName || data.field_name || "",
-          logged_at: data.completedAt || data.createdAt || null,
-          selfie_path: null,
-          field_photo_path: data.photoURL || data.photo || null
-        };
-      })))
-    ]);
+// === FIXED WORKER + DRIVER LOG QUERIES ===
 
-    // Combine results
-    logs.push(...workerLogsList, ...driverLogsList);
+const [workerLogsFromTasks, driverLogsList] = await Promise.all([
+
+  // WORKER LOGS (from 'tasks')
+  getDocs(query(
+    collection(db, "tasks"),
+    where("handlerId", "==", handlerId),
+    where("taskType", "==", "worker_log"),
+    orderBy("completedAt", "desc")
+  )).then(snap => snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      source: "tasks",
+      type: "worker",
+      task_name: data.title || data.details || data.taskType || "Worker Task",
+      user_id: (Array.isArray(data.assignedTo) && data.assignedTo[0]) || data.createdBy || data.created_by || null,
+      user_name: data.workerName || "",
+      task_type: data.taskType || "",
+      description: data.notes || data.description || "",
+      field_id: data.fieldId || null,
+      field_name: data.fieldName || "",
+      logged_at: data.completedAt || null,
+      selfie_path: data.photoURL || null,
+      field_photo_path: data.photoURL || null
+    };
+  })),
+
+  // DRIVER LOGS (from tasks)
+  getDocs(query(
+    collection(db, "tasks"),
+    where("handlerId", "==", handlerId),
+    where("taskType", "==", "driver_log"),
+    orderBy("completedAt", "desc")
+  )).then(snap => snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      source: "tasks",
+      type: "driver",
+      task_name: data.title || data.details || "Driver Activity",
+      user_id: (Array.isArray(data.assignedTo) && data.assignedTo[0]) || data.createdBy,
+      user_name: data.driverName || "",
+      task_type: data.taskType || "",
+      description: data.details || data.notes || "",
+      field_id: data.fieldId || null,
+      field_name: data.fieldName || "",
+      logged_at: data.completedAt || null,
+      selfie_path: null,
+      field_photo_path: data.photoURL || null
+    };
+  }))
+]);
+
+// FINAL COMBINE (FIXED)
+logs.push(...workerLogsFromTasks, ...driverLogsList);
 
     // UI DISPLAY SORT — newest → oldest (NO GROUPING)
     logs.sort((a, b) => {
