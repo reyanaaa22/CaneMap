@@ -1734,6 +1734,121 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+/* =========
+   Dashboard quick-navigation (attach after DOMContentLoaded listeners)
+   ========= */
+
+(function attachDashboardQuickNav() {
+  // Helper: robust navigation — prefer setActiveSection or showSection, fallback to nav-item click
+  const navigateToSection = (sectionId, friendlyName) => {
+    try {
+      // prefer exposed functions
+      if (typeof setActiveSection === 'function') {
+        setActiveSection(sectionId);
+        return;
+      }
+      if (typeof showSection === 'function') {
+        showSection(sectionId);
+        return;
+      }
+      // fallback: click nav item with matching data-section
+      const navItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+      if (navItem) {
+        navItem.click();
+        return;
+      }
+      // last resort: find nav by visible friendly name
+      if (friendlyName) {
+        const navItems = Array.from(document.querySelectorAll('.nav-item'));
+        const found = navItems.find(i => i.textContent && i.textContent.toLowerCase().includes(friendlyName.toLowerCase()));
+        if (found) {
+          found.click();
+          return;
+        }
+      }
+      console.warn('Navigation target not found:', sectionId);
+    } catch (err) {
+      console.warn('navigateToSection error', err);
+    }
+  };
+
+  // Map metric elements (IDs used in your file: mFields, mPendingFields, mWorkers, mTasks)
+  // We attach click listeners to parent card if present; if your template uses different IDs for card wrapper,
+  // replace selectors accordingly (selectors are intentionally permissive).
+  const attachIfExists = (selector, handler) => {
+    const el = document.querySelector(selector);
+    if (el) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (e) => {
+        // when metric contains inner interactive elements (buttons/links), avoid hijacking them
+        if (e.target.closest('button, a, [data-join-action], [data-request-id], [data-action]')) return;
+        handler(e);
+      });
+    }
+  };
+
+  // TOTAL FIELDS -> My Fields section
+  // Attach to the numeric element (mFields) and also attempt to attach to a containing card with id/class commonly used.
+  attachIfExists('#mFields', () => navigateToSection('fields', 'My Fields'));
+  attachIfExists('#cardTotalFields, .card-total-fields, [data-card="total-fields"]', () => navigateToSection('fields', 'My Fields'));
+
+  // PENDING REVIEW (pending fields) -> Team (your ask: Pending Review goes to Team)
+  attachIfExists('#mPendingFields', () => navigateToSection('team', 'Team'));
+  attachIfExists('#cardPendingReview, .card-pending-review, [data-card="pending-review"]', () => navigateToSection('team', 'Team'));
+
+  // ACTIVE WORKERS -> Team
+  attachIfExists('#mWorkers', () => navigateToSection('team', 'Team'));
+  attachIfExists('#cardActiveWorkers, .card-active-workers, [data-card="active-workers"]', () => navigateToSection('team', 'Team'));
+
+  // PENDING TASK -> Tasks
+  attachIfExists('#mTasks', () => navigateToSection('tasks', 'Tasks'));
+  attachIfExists('#cardPendingTasks, .card-pending-tasks, [data-card="pending-tasks"]', () => navigateToSection('tasks', 'Tasks'));
+
+  // JOIN REQUESTS metric card -> Team section
+  attachIfExists('#mRequests', () => navigateToSection('team', 'Team'));
+  attachIfExists('#cardJoinRequests, .card-join-requests, [data-card="join-requests"]', () => navigateToSection('team', 'Team'));
+  
+// JOIN REQUESTS container -> Team
+  const joinRequestsContainer = document.getElementById('joinRequestsList');
+  if (joinRequestsContainer) {
+    joinRequestsContainer.style.cursor = 'pointer';
+    joinRequestsContainer.addEventListener('click', (e) => {
+      // ignore clicks on approve/reject/see-details buttons inside join requests cards
+      if (e.target.closest('button, a, [data-join-action], [data-request-id], [data-action]')) return;
+      // if clicked on a specific request item, we still navigate to Team
+      navigateToSection('team', 'Team');
+    });
+  }
+
+  // RECENT TASK ACTIVITY container -> Tasks
+  const recentActivityContainer = document.getElementById('recentTaskActivityList');
+  if (recentActivityContainer) {
+    recentActivityContainer.style.cursor = 'pointer';
+    recentActivityContainer.addEventListener('click', (e) => {
+      // ignore clicks on inner action buttons if ever present
+      if (e.target.closest('button, a, [data-action]')) return;
+      navigateToSection('tasks', 'Tasks');
+    });
+  }
+
+  // Small accessibility: allow keyboard navigation (Enter) on focused metric elements
+  ['#mFields', '#mPendingFields', '#mWorkers', '#mTasks', '#joinRequestsList', '#recentTaskActivityList']
+    .forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.setAttribute('tabindex', '0');
+        el.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            el.click();
+          }
+        });
+      }
+    });
+
+  console.log('✅ Dashboard quick-navigation attached');
+})();
+
 /* ====== loadActivityLogs + helpers (replace existing loadActivityLogs in dashboard.js) ====== */
 
 async function loadActivityLogs(handlerId) {
