@@ -202,34 +202,165 @@ async function initNotifications(userId) {
       })
       .join("");
 
-    Array.from(list.querySelectorAll("button[data-id]"))
-      .forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const notificationId = btn.dataset.id;
-          try {
-            await markNotificationRead(userId, notificationId);
+Array.from(list.querySelectorAll("button[data-id]"))
+  .forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const notificationId = btn.dataset.id;
+      try {
+        // mark it read first (your existing function)
+        await markNotificationRead(userId, notificationId);
 
-            // Handle report request notifications - navigate to reports section with pre-selected type
-            const notification = docs.find(doc => doc.id === notificationId);
-            if (notification && notification.type === 'report_requested') {
-              const reportType = notification.relatedEntityId;
-              if (reportType) {
-                // Store the requested report type and show reports section
-                sessionStorage.setItem('requestedReportType', reportType);
-                // Close notification dropdown
-                const dropdown = document.getElementById('notificationDropdown');
-                if (dropdown) dropdown.classList.add('hidden');
-                // Navigate to reports section
-                if (typeof showSection === 'function') {
-                  showSection('reports');
-                }
+        // Find the notification object from the loaded docs
+        const notification = docs.find(doc => doc.id === notificationId);
+        // Defensive helper: close the notifications dropdown & backdrop
+        const closeNotifDropdown = () => {
+          const dropdown = document.getElementById('notificationDropdown');
+          if (dropdown) dropdown.classList.add('hidden');
+          // remove backdrop if you have a function or element — replicate existing behaviour
+          if (typeof removeBackdrop === 'function') removeBackdrop();
+          else {
+            const backdrop = document.querySelector('.notification-backdrop');
+            if (backdrop) backdrop.remove();
+          }
+        };
+
+        // Robust navigation helper: try showSection -> setActiveSection -> click nav item by data-section -> click nav item by name
+        const gotoSection = (sectionId, friendlyName) => {
+          try {
+            // prefer showSection if present (you already used this for reports)
+            if (typeof showSection === 'function') {
+              closeNotifDropdown();
+              showSection(sectionId);
+              return true;
+            }
+            // fallback to setActiveSection (your nav logic uses this)
+            if (typeof setActiveSection === 'function') {
+              closeNotifDropdown();
+              setActiveSection(sectionId);
+              return true;
+            }
+            // fallback to clicking a nav-item with matching data-section
+            const navBySection = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+            if (navBySection) {
+              closeNotifDropdown();
+              navBySection.click();
+              return true;
+            }
+            // last fallback: find nav item by visible name text (case-insensitive)
+            if (friendlyName) {
+              const navItems = Array.from(document.querySelectorAll('.nav-item'));
+              const found = navItems.find(i => i.textContent && i.textContent.toLowerCase().includes(friendlyName.toLowerCase()));
+              if (found) {
+                closeNotifDropdown();
+                found.click();
+                return true;
               }
             }
-          } catch (err) {
-            console.warn("Failed to update notification status", err);
+          } catch (e) {
+            console.warn('Navigation fallback failed', e);
           }
-        });
-      });
+          return false;
+        };
+
+        // Special case: open My Fields iframe link if it exists (keeps behavior consistent with your myFields link)
+        const openFieldFormDirect = (relativePath) => {
+          // If page has the dedicated link that you created earlier, trigger it
+          const myFieldsLink = document.getElementById('linkMyFields');
+          const fieldsSection = document.getElementById('fieldsSection');
+          const fieldsIframe = document.getElementById('fieldsIframe');
+          if (myFieldsLink && fieldsSection && fieldsIframe) {
+            closeNotifDropdown();
+            // show the iframe-based fields view (same as your existing myFields click)
+            myFieldsLink.click();
+            // try to point the iframe to the requested path (relative)
+            try { fieldsIframe.src = relativePath; } catch (e) { /* ignore */ }
+            return;
+          }
+          // fallback: navigate to the relative path directly
+          closeNotifDropdown();
+          try { window.location.href = relativePath; } catch (e) { console.warn('Could not navigate to field form', e); }
+        };
+
+        // If notification exists, route based on its type or title
+        if (notification) {
+          const type = (notification.type || '').toString().toLowerCase();
+          const title = (notification.title || notification.message || '').toString().toLowerCase();
+
+          // Map common types and keywords to sections (the friendlyName helps fallbacks find the right nav item)
+          // NOTE: these keys reflect typical values — if your notifications use different `type` strings, add them here.
+          if (type === 'work_logged' || title.includes('work logged') || title.includes('work log')) {
+            // Activity Logs
+            gotoSection('activityLogs', 'Activity Logs');
+            return;
+          }
+
+          if (type === 'task_completed' || title.includes('task completed') || title.includes('task completed')) {
+            // Tasks
+            gotoSection('tasks', 'Tasks');
+            return;
+          }
+
+          if (type === 'new_join_request' || title.includes('join request') || title.includes('new join')) {
+            // Team (workers) — try friendly name 'Team' then 'Workers'
+            if (!gotoSection('team', 'Team')) gotoSection('workers', 'Team');
+            return;
+          }
+
+          if (
+              type === 'field_registration_approved' ||
+              title.includes('field registration approved') ||
+              title.includes('registration approved')
+          ) {
+              gotoSection('fields', 'My Fields');
+              return;
+          }
+
+          if (type === 'report_requested' || title.includes('report requested') || title.includes('report request')) {
+            // Reports (and preserve your existing requestedReportType behavior)
+            const reportType = notification.relatedEntityId;
+            if (reportType) {
+              sessionStorage.setItem('requestedReportType', reportType);
+            }
+            gotoSection('reports', 'Reports');
+            return;
+          }
+
+          if (type === 'report_approved' || type === 'report_rejected' || title.includes('report approved') || title.includes('report rejected')) {
+            // Reports
+            gotoSection('reports', 'Reports');
+            return;
+          }
+
+          if (type === 'driver_status_update' || title.includes('driver status') || title.includes('driver status update')) {
+            // Activity Logs (driver log should be visible there)
+            gotoSection('activityLogs', 'Activity Logs');
+            return;
+          }
+
+          if (
+              title.includes('remarks from ormoc district mill district sra officer') ||
+              title.includes('ormoc district mill') ||
+              title.includes('remarks from sra')
+          ) {
+              closeNotifDropdown();
+              window.location.href = "field_form.html";  // SAME FOLDER
+              return;
+          }
+
+          // Other / fallback -> My Fields (per your instruction)
+          gotoSection('fields', 'My Fields') || gotoSection('fieldsSection', 'My Fields') || openFieldFormDirect('Fields.html');
+          return;
+        }
+
+        // If no notification object, simply close dropdown
+        const dropdown = document.getElementById('notificationDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+      } catch (err) {
+        console.warn("Failed to update notification status or navigate", err);
+      }
+    });
+  });
+
   };
 
   const fetchNotifications = () => {
