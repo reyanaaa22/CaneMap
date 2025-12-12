@@ -1820,14 +1820,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // RECENT TASK ACTIVITY container -> Tasks
+  // RECENT TASK ACTIVITY container -> Activity Logs
   const recentActivityContainer = document.getElementById('recentTaskActivityList');
   if (recentActivityContainer) {
     recentActivityContainer.style.cursor = 'pointer';
     recentActivityContainer.addEventListener('click', (e) => {
-      // ignore clicks on inner action buttons if ever present
+      // Do not trigger navigation when clicking buttons inside
       if (e.target.closest('button, a, [data-action]')) return;
-      navigateToSection('tasks', 'Tasks');
+
+      // Correct destination
+      navigateToSection('activityLogs', 'Activity Logs');
     });
   }
 
