@@ -3753,18 +3753,85 @@ window.viewTaskDetails = async function (taskId) {
           ` : ''}
         </div>
 
-        <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-          <button id="updateDeadlineBtn" class="px-6 py-2.5 bg-[var(--cane-500)] text-white rounded-lg hover:bg-[var(--cane-600)] transition-colors font-medium text-base">Update Deadline</button>
-          <button onclick="document.getElementById('taskDetailsModal').remove()" 
-                  class="px-6 py-2.5 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors font-medium text-base">
-            Close
-          </button>
-        </div>
+      <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+        <button id="updateDeadlineBtn" class="px-6 py-2.5 bg-[var(--cane-500)] text-white rounded-lg hover:bg-[var(--cane-600)] transition-colors font-medium text-base">
+          Update Deadline
+        </button>
+
+        <button id="createTaskRedirectBtn"
+                class="px-6 py-2.5 bg-[var(--cane-600)] text-white rounded-lg hover:bg-[var(--cane-700)] transition-colors font-medium text-base">
+          Create Task
+        </button>
+      </div>
       </div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHTML);
+// Create Task Redirect Handler (SAFE – nav-item based only)
+const createBtn = document.getElementById("createTaskRedirectBtn");
+
+if (createBtn) {
+  createBtn.addEventListener("click", () => {
+    const overlay = document.createElement("div");
+    overlay.className =
+      "fixed inset-0 z-[99999] flex items-center justify-center bg-black/40";
+
+    overlay.innerHTML = `
+      <div class="bg-white rounded-xl p-6 w-[92%] max-w-sm text-center shadow-lg">
+        <h3 class="text-lg font-semibold mb-2">Create Task</h3>
+        <p class="text-sm text-gray-700 mb-5">
+          Go to <strong>My Fields</strong> to create a task?
+        </p>
+        <div class="flex justify-center gap-3">
+          <button id="ctCancel" class="px-4 py-2 border rounded-lg">Cancel</button>
+          <button id="ctOK" class="px-4 py-2 rounded-lg bg-[var(--cane-700)] text-white">
+            OK
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Cancel
+    document.getElementById("ctCancel").onclick = () => {
+      overlay.remove();
+    };
+
+document.getElementById("ctOK").onclick = () => {
+  overlay.remove();
+
+  // ✅ 1. CLOSE VIEW TASK DETAILS MODAL
+  const taskModal = document.getElementById("taskDetailsModal");
+  if (taskModal) {
+    taskModal.remove();
+  }
+
+  // fallback kung generic modal
+  document.querySelectorAll(".modal, .fixed.inset-0").forEach(m => {
+    m.remove();
+  });
+
+  // ✅ 2. NOW redirect to My Fields
+  const myFieldsNav = document.querySelector(
+    '.nav-item[data-section="fields"], ' +
+    '.nav-item[data-target="fieldsSection"], ' +
+    '#linkMyFields'
+  );
+
+  if (myFieldsNav) {
+    myFieldsNav.click();
+  } else {
+    console.error("❌ My Fields nav not found");
+  }
+};
+
+
+
+  });
+}
+
 
   (function () {
     const modal = document.getElementById('taskDetailsModal');
@@ -4327,3 +4394,4 @@ window.__syncDashboardProfile = async function () {
     console.error('Profile sync error:', e);
   }
 };
+
