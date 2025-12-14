@@ -625,7 +625,8 @@ function getAvailableTasksForHandler(fieldData) {
     tasks.push(
       { value: 'spraying', label: 'Spraying (Pest/Disease Control)' },
       { value: 'weeding', label: 'Weeding' },
-      { value: 'irrigation', label: 'Irrigation' }
+      { value: 'irrigation', label: 'Irrigation' },
+       { value: 'planting', label: 'Planting (Replanting – 0 DAP)' }
     );
 
     // Harvesting (only if mature enough and NOT already harvested)
@@ -648,9 +649,11 @@ function getAvailableTasksForHandler(fieldData) {
   if (status === 'harvested' || harvestDate) {
     tasks.push(
       { value: 'field_cleanup', label: 'Field Cleanup (Post-Harvest)' },
-      { value: 'ratoon_management', label: 'Ratoon Management' }
+      { value: 'ratoon_management', label: 'Ratoon Management' },
+      
     );
   }
+  
 
   // ========================================
   // GENERAL TASKS (always available)
@@ -755,6 +758,50 @@ export async function openCreateTaskModal(fieldId) {
           <input id="ct_time" type="time" class="px-3 py-2 border rounded-md text-sm" />
         </div>
 
+        
+        <div>
+          <label id="ct_assign_label" class="text-[var(--cane-700)] font-semibold text-[15px] block mb-2">Assign to:</label>
+          <div class="flex gap-3 mb-3">
+            <button id="ct_btn_worker" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Worker</button>
+            <button id="ct_btn_driver" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Driver</button>
+          </div>
+
+          <div id="ct_worker_options" class="hidden space-y-2 mt-2 border-t pt-3">
+            <label class="text-sm font-medium text-[var(--cane-700)] block mb-2">Select Workers:</label>
+            <div id="ct_worker_list" class="max-h-48 overflow-y-auto space-y-2 border rounded-md p-3 bg-gray-50">
+              <div class="text-xs text-gray-500">Loading workers...</div>
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <input id="ct_select_all_workers" type="checkbox" class="accent-[var(--cane-700)]" />
+              <label for="ct_select_all_workers" class="text-sm text-[var(--cane-700)]">Select all workers</label>
+            </div>
+            <div id="ct_worker_error" class="text-xs text-red-500 mt-1 hidden"></div>
+          </div>
+
+          <div id="ct_driver_options" class="hidden space-y-2 mt-2 border-t pt-3">
+            <label class="text-sm font-medium text-[var(--cane-700)] block mb-2">Select Driver:</label>
+            <div class="relative w-full">
+              <div id="ct_driver_dropdown_btn"
+                  class="px-3 py-2 border rounded-md text-sm cursor-pointer bg-white flex justify-between items-center hover:bg-gray-100 transition-colors duration-200">
+                <span>Select driver</span>
+                <svg class="w-4 h-4 text-gray-500 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </div>
+              <div id="ct_driver_dropdown_list" class="absolute left-0 bottom-full w-full border rounded shadow mb-1 bg-white hidden max-h-60 overflow-y-auto z-50"></div>
+            </div>
+            <div class="mt-2">
+              <a href="#" id="ct_rent_driver_link" class="inline-flex items-center gap-1.5 text-xs text-[var(--cane-700)] hover:text-[var(--cane-800)] font-medium transition">
+                <i class="fas fa-plus-circle"></i>
+                Rent a Driver
+              </a>
+            </div>
+            <div id="ct_driver_error" class="text-xs text-red-500 mt-1 hidden"></div>
+          </div>
+          
+        </div>
+      </div>
+
         <!-- TASK TYPE DROPDOWN (populated dynamically based on field status) -->
         <div>
           <label class="text-xs font-semibold text-[var(--cane-700)]">Task Type</label>
@@ -828,49 +875,6 @@ export async function openCreateTaskModal(fieldId) {
           <label class="text-xs font-semibold text-[var(--cane-700)]">Details</label>
           <textarea id="ct_details" rows="3" placeholder="Describe what needs to be done" class="w-full px-3 py-2 border rounded-md text-sm"></textarea>
         </div>
-
-        <div>
-          <label id="ct_assign_label" class="text-[var(--cane-700)] font-semibold text-[15px] block mb-2">Assign to:</label>
-          <div class="flex gap-3 mb-3">
-            <button id="ct_btn_worker" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Worker</button>
-            <button id="ct_btn_driver" class="flex-1 border border-[var(--cane-600)] text-[var(--cane-700)] rounded-md px-3 py-2 font-medium transition">Driver</button>
-          </div>
-
-          <div id="ct_worker_options" class="hidden space-y-2 mt-2 border-t pt-3">
-            <label class="text-sm font-medium text-[var(--cane-700)] block mb-2">Select Workers:</label>
-            <div id="ct_worker_list" class="max-h-48 overflow-y-auto space-y-2 border rounded-md p-3 bg-gray-50">
-              <div class="text-xs text-gray-500">Loading workers...</div>
-            </div>
-            <div class="flex items-center gap-2 mt-2">
-              <input id="ct_select_all_workers" type="checkbox" class="accent-[var(--cane-700)]" />
-              <label for="ct_select_all_workers" class="text-sm text-[var(--cane-700)]">Select all workers</label>
-            </div>
-            <div id="ct_worker_error" class="text-xs text-red-500 mt-1 hidden"></div>
-          </div>
-
-          <div id="ct_driver_options" class="hidden space-y-2 mt-2 border-t pt-3">
-            <label class="text-sm font-medium text-[var(--cane-700)] block mb-2">Select Driver:</label>
-            <div class="relative w-full">
-              <div id="ct_driver_dropdown_btn"
-                  class="px-3 py-2 border rounded-md text-sm cursor-pointer bg-white flex justify-between items-center hover:bg-gray-100 transition-colors duration-200">
-                <span>Select driver</span>
-                <svg class="w-4 h-4 text-gray-500 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                </svg>
-              </div>
-              <div id="ct_driver_dropdown_list" class="absolute left-0 bottom-full w-full border rounded shadow mb-1 bg-white hidden max-h-60 overflow-y-auto z-50"></div>
-            </div>
-            <div class="mt-2">
-              <a href="#" id="ct_rent_driver_link" class="inline-flex items-center gap-1.5 text-xs text-[var(--cane-700)] hover:text-[var(--cane-800)] font-medium transition">
-                <i class="fas fa-plus-circle"></i>
-                Rent a Driver
-              </a>
-            </div>
-            <div id="ct_driver_error" class="text-xs text-red-500 mt-1 hidden"></div>
-          </div>
-          
-        </div>
-      </div>
 
       <footer class="mt-6 flex items-center justify-end gap-3">
         <button id="ct_cancel" class="px-3 py-2 rounded-md border hover:bg-gray-50 text-sm">Close</button>
