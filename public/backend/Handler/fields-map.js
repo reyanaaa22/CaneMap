@@ -1021,46 +1021,54 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
 
     // ✅ Real-time field status listener - updates buttons and status badge when field is harvested
     const fieldRef = doc(db, 'fields', fieldId);
-    const fieldStatusUnsub = onSnapshot(fieldRef, (snapshot) => {
-      if (!snapshot.exists()) return;
+const fieldStatusUnsub = onSnapshot(fieldRef, async (snapshot) => {
+  if (!snapshot.exists()) return;
 
-      const updatedField = snapshot.data();
-      const newStatus = (updatedField.status || 'active').toString().toLowerCase();
+  const updatedField = snapshot.data();
+  const newStatus = (updatedField.status || 'active').toString().toLowerCase();
 
-      // Update status badge in real-time
-      const statusEl = modal.querySelector('#fd_status');
-      if (statusEl) {
-        statusEl.textContent = (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
-        // Update badge colors based on new status
-        if (newStatus.includes('review') || newStatus.includes('active')) {
-          statusEl.style.background = 'rgba(124, 207, 0, 0.12)';
-          statusEl.style.color = '#166534';
-        } else if (newStatus.includes('pending') || newStatus.includes('edit')) {
-          statusEl.style.background = 'rgba(250, 204, 21, 0.12)';
-          statusEl.style.color = '#92400e';
-        } else if (newStatus.includes('harvest')) {
-          statusEl.style.background = 'rgba(139, 69, 19, 0.12)';
-          statusEl.style.color = '#78350f';
-        } else {
-          statusEl.style.background = 'rgba(239, 68, 68, 0.08)';
-          statusEl.style.color = '#991b1b';
-        }
-      }
+  // ================================
+  // ✅ EXISTING STATUS BADGE LOGIC
+  // ================================
+  const statusEl = modal.querySelector('#fd_status');
+  if (statusEl) {
+    statusEl.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
 
-      // ✅ Toggle ratoon/replant buttons visibility based on status in real-time
-      const harvestActions = modal.querySelector('#fd_harvest_actions');
-      if (harvestActions) {
-        if (newStatus === 'harvested') {
-          harvestActions.classList.remove('invisible');
-        } else {
-          harvestActions.classList.add('invisible');
-        }
-      }
+    if (newStatus.includes('review') || newStatus.includes('active')) {
+      statusEl.style.background = 'rgba(124, 207, 0, 0.12)';
+      statusEl.style.color = '#166534';
+    } else if (newStatus.includes('pending') || newStatus.includes('edit')) {
+      statusEl.style.background = 'rgba(250, 204, 21, 0.12)';
+      statusEl.style.color = '#92400e';
+    } else if (newStatus.includes('harvest')) {
+      statusEl.style.background = 'rgba(139, 69, 19, 0.12)';
+      statusEl.style.color = '#78350f';
+    } else {
+      statusEl.style.background = 'rgba(239, 68, 68, 0.08)';
+      statusEl.style.color = '#991b1b';
+    }
+  }
 
-      console.log(`📡 Field ${fieldId} status updated in real-time: ${newStatus}`);
-    }, (error) => {
-      console.error('Error listening to field status:', error);
-    });
+  // ================================
+  // ✅ EXISTING BUTTON TOGGLE
+  // ================================
+  const harvestActions = modal.querySelector('#fd_harvest_actions');
+  if (harvestActions) {
+    harvestActions.classList.toggle('invisible', newStatus !== 'harvested');
+  }
+
+  // ================================
+  // 🔥 NEW: AUTO-UPDATE GROWTH TRACKER
+  // ================================
+  const growthContainer = modal.querySelector('#fd_growth_container');
+  if (growthContainer) {
+    const growthData = await fetchGrowthRecords(fieldId);
+    growthContainer.innerHTML = renderGrowthTable(growthData);
+  }
+
+  console.log(`🌱 Growth tracker refreshed for field ${fieldId}`);
+});
+
 
     // update visible count on resize / orientation change
     const resizeHandler = () => adjustTasksContainerVisibleCount(modal, 4, 5);
@@ -1175,14 +1183,15 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
             
             // Show success message
-            showConfirmModal(
-              '✅ Ratooning Started Successfully!',
-              `Ratoon Cycle: #${result.ratoonNumber}\nRatoon Start Date: ${ratoonDateStr}\nExpected Harvest: ${expectedHarvestStr}`,
-              () => {
-                modal.remove();
-        window.location.reload();
-              }
-            );
+        showConfirmModal(
+          '✅ Ratooning Started Successfully!',
+          `Ratoon Cycle: #${result.ratoonNumber}`,
+          () => {
+            // ✅ NO reload
+            // UI will update automatically via onSnapshot
+            console.log('Ratooning completed, modal stays open');
+          }
+        );
       } catch (err) {
         console.error('Ratooning failed:', err);
             showConfirmModal(
@@ -1215,14 +1224,14 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
         const expectedHarvestStr = result.expectedHarvestDate ? new Date(result.expectedHarvestDate).toLocaleDateString() : 'N/A';
             
             // Show success message
-            showConfirmModal(
-              '✅ Replanting Started Successfully!',
-              `Planting Cycle: #${result.plantingCycleNumber}\nPlanting Date: ${plantingDateStr}\nExpected Harvest: ${expectedHarvestStr}`,
-              () => {
-                modal.remove();
-        window.location.reload();
-              }
-            );
+        showConfirmModal(
+          '✅ Replanting Started Successfully!',
+          `Planting Cycle: #${result.plantingCycleNumber}`,
+          () => {
+            // ✅ NO reload
+            console.log('Replanting completed, modal stays open');
+          }
+        );
       } catch (err) {
         console.error('Replanting failed:', err);
             showConfirmModal(
@@ -1992,6 +2001,19 @@ function adjustTasksContainerVisibleCount(modalEl, visibleDesktop = 4, visibleMo
       initFieldsMap();
     }, 100);
   };
+
+window.addEventListener('load', () => {
+  const fieldId = sessionStorage.getItem('reopenFieldModal');
+  if (fieldId) {
+    sessionStorage.removeItem('reopenFieldModal');
+    setTimeout(() => {
+      if (typeof viewFieldDetails === 'function') {
+        viewFieldDetails(fieldId);
+      }
+    }, 600);
+  }
+});
+
 
 // ======================================================
 // DELETE TASK — CUSTOM MODAL UI
